@@ -4,25 +4,58 @@ import (
 	"time"
 
 	"github.com/awhdesmond/tiinyplanet/pkg/common"
+	"github.com/google/uuid"
 )
 
 // Trip Plan
 
 type TripPlan struct {
-	Name      string    `json:"name"`
-	ImageURL  string    `json:"imageURL"`
-	StartDate time.Time `json:"startDate"`
-	EndDate   time.Time `json:"endDate"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	CreatorID     string    `json:"creatorID"` // ID of user that created the plan
+	CoverImageURL string    `json:"coverImageURL"`
+	StartDate     time.Time `json:"startDate"`
+	EndDate       time.Time `json:"endDate"`
 
-	CreatorID string                     `json:"creatorID"` // ID of user that created the plan
-	Contents  map[string]TripContentList `json:"contents"`  // Map of trip content's list
-
-	Flights  map[string]Flight      `json:"flights"`
-	Transits map[string]BaseTransit `json:"transits"`
-	Lodgings map[string]Lodging     `json:"lodgings"`
+	Contents map[string]TripContentList `json:"contents"` // Map of trip content's list
+	Flights  map[string]Flight          `json:"flights"`
+	Transits map[string]BaseTransit     `json:"transits"`
+	Lodgings map[string]Lodging         `json:"lodgings"`
 
 	UpdatedAt time.Time `json:"updatedAt"`
 	CreatedAt time.Time `json:"createdAt"`
+
+	Labels common.Labels `json:"labels"`
+	Tags   common.Tags   `json:"tags"`
+}
+
+func NewTripPlan(creatorID, name string) TripPlan {
+	return TripPlan{
+		ID:            uuid.New().String(),
+		Name:          name,
+		CreatorID:     creatorID,
+		CoverImageURL: "",
+		StartDate:     time.Time{},
+		EndDate:       time.Time{},
+
+		Contents: map[string]TripContentList{},
+		Flights:  map[string]Flight{},
+		Transits: map[string]BaseTransit{},
+		Lodgings: map[string]Lodging{},
+
+		UpdatedAt: time.Now(),
+		CreatedAt: time.Now(),
+
+		Labels: common.Labels{},
+		Tags:   common.Tags{},
+	}
+}
+
+func NewTripPlanWithDates(creatorID, name string, start, end time.Time) TripPlan {
+	plan := NewTripPlan(creatorID, name)
+	plan.StartDate = start
+	plan.EndDate = end
+	return plan
 }
 
 // Transit
@@ -32,17 +65,17 @@ type TransitCenter struct {
 	TransitCenterType string             `json:"transitCenterType"`
 	Name              string             `json:"name"`
 	Positioning       common.Positioning `json:"positioning"`
-	Labels            map[string]string  `json:"labels"`
+	Labels            common.Labels      `json:"labels"`
 }
 
 type BaseTransit struct {
 	ID string `json:"id"`
 
-	Cost           float64           `json:"cost"`
-	ConfirmationID string            `json:"confirmationID"`
-	Notes          string            `json:"notes"`
-	Tags           map[string]string `json:"tags"`
-	Labels         map[string]string `json:"labels"`
+	Cost           float64       `json:"cost"`
+	ConfirmationID string        `json:"confirmationID"`
+	Notes          string        `json:"notes"`
+	Tags           common.Tags   `json:"tags"`
+	Labels         common.Labels `json:"labels"`
 
 	DepartTime         time.Time           `json:"departTime"`
 	DepartPositioning  common.Positioning  `json:"departPositioning"`
@@ -65,11 +98,11 @@ type Lodging struct {
 
 	NumGuests int32 `json:"numGuests"`
 
-	Cost           float64           `json:"cost"`
-	ConfirmationID string            `json:"confirmationID"`
-	Notes          string            `json:"notes"`
-	Tags           map[string]string `json:"tags"`
-	Labels         map[string]string `json:"labels"`
+	Cost           float64       `json:"cost"`
+	ConfirmationID string        `json:"confirmationID"`
+	Notes          string        `json:"notes"`
+	Tags           common.Tags   `json:"tags"`
+	Labels         common.Labels `json:"labels"`
 
 	Positioning  common.Positioning `json:"positiioning"`
 	CheckinTime  time.Time          `json:"checkinTime"`
@@ -84,6 +117,8 @@ type TripContent struct {
 	Location    LocationContent  `json:"locationContent"`
 	Notes       NoteContent      `json:"noteContent"`
 	Checklist   ChecklistContent `json:"checklistContent"`
+
+	Comments []TripContentComment `json:"comments"`
 }
 
 type TripContentList []TripContent
@@ -102,6 +137,18 @@ type ChecklistContent struct {
 	Items []string `json:"items"`
 }
 
+type TripContentComment struct {
+	ID      string `json:"id"`
+	Comment string `json:"comment"`
+
+	AuthorID    string `json:"authorID"`
+	AuthorName  string `json:"authorName"`
+	AuthorEmail string `json:"authorEmail"`
+
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
 // Itinerary
 
 type ItineraryList struct {
@@ -118,3 +165,13 @@ type ItineraryContent struct {
 }
 
 type ItineraryContentList []ItineraryContent
+
+// Collaboration
+
+type CollabOpType int32
+
+const (
+	JoinSession CollabOpType = iota
+	LeaveSession
+	UpdateContent
+)

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package trips;
+option go_package = "/trips";
+
+service Trips {
+  rpc Command (stream Request) returns (stream Response) {};
+}
+
+message Request {
+  string type = 1;
+  string data = 2;
+}
+
+message Response {
+  string type = 1;
+  string result = 2;
+}
