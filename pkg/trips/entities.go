@@ -25,9 +25,12 @@ type TripPlan struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 	CreatedAt time.Time `json:"createdAt"`
 
-	Labels common.Labels `json:"labels"`
-	Tags   common.Tags   `json:"tags"`
+	IsArchived bool          `json:"isArchived"`
+	Labels     common.Labels `json:"labels"`
+	Tags       common.Tags   `json:"tags"`
 }
+
+type TripPlansList []TripPlan
 
 func NewTripPlan(creatorID, name string) TripPlan {
 	return TripPlan{
@@ -173,5 +176,42 @@ type CollabOpType int32
 const (
 	JoinSession CollabOpType = iota
 	LeaveSession
-	UpdateContent
+	PingSession
+	FetchTrip
+	UpdateTrip
 )
+
+type CollabOpMessage struct {
+	ID         string       `json:"id"`
+	TripPlanID string       `json:"tripPlanID"`
+	OpType     CollabOpType `json:"opType"`
+
+	CollabOpJoinSessionRequest  CollabOpJoinSessionRequest  `json:"collabOpJoinSessionRequest"`
+	CollabOpLeaveSessionRequest CollabOpLeaveSessionRequest `json:"collabOpLeaveSessionRequest"`
+	CollabOpPingSessionRequest  CollabOpPingSessionRequest  `json:"collabOpPingSessionRequest"`
+	CollabOpUpdateTripRequest   CollabOpUpdateTripRequest   `json:"collabOpUpdateTripRequest"`
+}
+
+type CollabOpJoinSessionRequest struct {
+	CollaboratorID    string `json:"collaboratorID"`
+	CollaboratorName  string `json:"collaboratorName"`
+	CollaboratorEmail string `json:"collaboratorEmail"`
+}
+
+type CollabOpLeaveSessionRequest struct {
+	CollaboratorID string `json:"collaboratorID"`
+}
+
+type CollabOpPingSessionRequest struct{}
+
+type CollabOpFetchTripRequest struct{}
+
+type CollabOpUpdateTripRequest struct {
+	CollabOpUpdateTripPatch
+}
+
+type CollabOpUpdateTripPatch struct {
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+	Value string `json:"value"` // JSON string
+}

@@ -9,7 +9,8 @@ import (
 
 type Service interface {
 	CreateTripPlan(ctx context.Context, creatorID, name string, start, end time.Time) (TripPlan, error)
-	ListTripPlans(ctx context.Context) ([]TripPlan, error)
+	ReadTripPlan(ctx context.Context, ID string) (TripPlan, error)
+	ListTripPlans(ctx context.Context, ff ListTripPlansFilter) ([]TripPlan, error)
 	DeleteTripPlan(ctx context.Context, ID string) error
 }
 
@@ -25,10 +26,14 @@ func (svc *service) CreateTripPlan(ctx context.Context, creatorID, name string, 
 	plan := NewTripPlanWithDates(creatorID, name, start, end)
 	err := svc.store.SaveTripPlan(ctx, plan)
 	return plan, err
-
 }
-func (svc *service) ListTripPlans(ctx context.Context) ([]TripPlan, error) {
-	return svc.store.ListTripPlans(ctx)
+
+func (svc *service) ReadTripPlan(ctx context.Context, ID string) (TripPlan, error) {
+	return svc.store.ReadTripPlan(ctx, ID)
+}
+
+func (svc *service) ListTripPlans(ctx context.Context, ff ListTripPlansFilter) ([]TripPlan, error) {
+	return svc.store.ListTripPlans(ctx, ff)
 }
 
 func (svc *service) DeleteTripPlan(ctx context.Context, ID string) error {
@@ -37,36 +42,33 @@ func (svc *service) DeleteTripPlan(ctx context.Context, ID string) error {
 
 // Collaboration Service
 
-type CollabSessionService interface {
+type CollabService interface {
 	JoinSession(planID string) error
 	LeaveSession(planID string) error
+	FetchTripPlan(planID string) (TripPlan, error)
+	UpdateTripPlan(planID string, patch CollabOpUpdateTripPatch)
 }
 
-type CollabService interface {
-	// Flights and Transits
-	CreateFlight() error
-	DeleteFlight() error
-	UpdateFlight() error
+type collabService struct {
+	store CollabStore
+}
 
-	CreateTransit() error
-	DeleteTransit() error
-	UpdateTransit() error
+func NewCollabService(store collabStore) CollabService {
+	return &collabService{store}
+}
 
-	// Lodging
-	CreateLodging() error
-	DeleteLodging() error
-	UpdateLodging() error
+func (svc *collabService) JoinSession(planID string) error {
 
-	// Content List
-	CreateContentList() error
-	DeleteContentList() error
+}
 
-	CreateContentBlock() error
-	UpdateContentBlock() error
-	DeleteContentBlock() error
+func (svc *collabService) LeaveSession(planID string) error {
 
-	// Itinerary
-	CreateItineraryContentBlock() error
-	UpdateItineraryContentBlock() error
-	DeleteItineraryContentBlock() error
+}
+
+func (svc *collabService) FetchTripPlan(planID string) (TripPlan, error) {
+
+}
+
+func (svc *collabService) UpdateTripPlan(planID string, patch CollabOpUpdateTreePatch) {
+
 }
