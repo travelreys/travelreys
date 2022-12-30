@@ -17,6 +17,8 @@ type TripPlan struct {
 	StartDate     time.Time `json:"startDate"`
 	EndDate       time.Time `json:"endDate"`
 
+	Members map[string]TripMember `json:"members"`
+
 	Contents map[string]TripContentList `json:"contents"` // Map of trip content's list
 	Flights  map[string]Flight          `json:"flights"`
 	Transits map[string]BaseTransit     `json:"transits"`
@@ -59,6 +61,19 @@ func NewTripPlanWithDates(creatorID, name string, start, end time.Time) TripPlan
 	plan.StartDate = start
 	plan.EndDate = end
 	return plan
+}
+
+// Members
+
+const (
+	TripMemberPermCollaborator = "collaborator"
+	TripMemberPermParticipant  = "participant"
+)
+
+type TripMember struct {
+	MemberID    string `json:"memberID"`
+	MemberEmail string `json:"memberEmail"`
+	Permission  string `json:"permission"`
 }
 
 // Transit
@@ -122,6 +137,7 @@ type TripContent struct {
 	Checklist   ChecklistContent `json:"checklistContent"`
 
 	Comments []TripContentComment `json:"comments"`
+	Labels   common.Labels        `json:"labels"`
 }
 
 type TripContentList []TripContent
@@ -133,20 +149,20 @@ type LocationContent struct {
 }
 
 type NoteContent struct {
-	Note string `json:"note"`
+	ImageURL string `json:"imageURL"`
+	Note     string `json:"note"`
 }
 
 type ChecklistContent struct {
-	Items []string `json:"items"`
+	ImageURL string   `json:"imageURL"`
+	Items    []string `json:"items"`
 }
 
 type TripContentComment struct {
 	ID      string `json:"id"`
 	Comment string `json:"comment"`
 
-	AuthorID    string `json:"authorID"`
-	AuthorName  string `json:"authorName"`
-	AuthorEmail string `json:"authorEmail"`
+	Member TripMember `json:"member"`
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
@@ -170,6 +186,10 @@ type ItineraryContent struct {
 type ItineraryContentList []ItineraryContent
 
 // Collaboration
+
+type CollabSession struct {
+	Members map[string]TripMember `json:"members"`
+}
 
 type CollabOpType int32
 

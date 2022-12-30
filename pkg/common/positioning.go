@@ -7,4 +7,6 @@ type Positioning struct {
 	Longitude string `json:"longitude"`
 	Latitude  string `json:"latitude"`
 	Address   string `json:"address"`
+
+	Labels Labels `json:"labels"`
 }

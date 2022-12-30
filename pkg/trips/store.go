@@ -88,7 +88,15 @@ func (str *store) DeleteTripPlan(ctx context.Context, ID string) error {
 
 // Collaboration Store
 
-type CollabStore interface{}
+type CollabStore interface {
+	StartCollabSession(planID string) error
+	ReadCollabSession(planID string) (CollabSession, error)
+	EndCollabSession(planID string) error
+	AddMemberToCollabSession(planID string, member TripMember) error
+	RemoveMemberFromCollabSession(planID string, member TripMember) error
+
+	UpdateTripPlan(planID string, patch CollabOpUpdateTripPatch)
+}
 
 type collabStore struct {
 	natsClient *nats.Conn
