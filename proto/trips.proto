@@ -3,16 +3,19 @@ syntax = "proto3";
 package trips;
 option go_package = "/trips";
 
-service Trips {
-  rpc Command (stream Request) returns (stream Response) {};
+service CollabService {
+  rpc Command (stream CollabRequest) returns (stream CollabResponse) {};
 }
 
-message Request {
+message CollabRequest {
   string type = 1;
-  string data = 2;
+  string id = 2;
+  bytes data = 3;
 }
 
-message Response {
-  string type = 1;
-  string result = 2;
+message CollabResponse {
+  string error = 1;
+  string type = 2;
+  string id = 3;
+  bytes result = 4;
 }

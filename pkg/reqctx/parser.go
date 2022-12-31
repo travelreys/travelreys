@@ -11,7 +11,7 @@ const (
 	AuthHeader = "authorization"
 	JwtIssuer  = "tiinyPlanet"
 
-	EnvJwtSecret = "JWT_SECRET"
+	EnvJwtSecret = "TIINY_PLANET_JWT_SECRET"
 )
 
 var (

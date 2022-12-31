@@ -4,19 +4,21 @@ import (
 	"time"
 
 	"github.com/awhdesmond/tiinyplanet/pkg/common"
+	"github.com/awhdesmond/tiinyplanet/pkg/utils"
 	"github.com/google/uuid"
 )
 
 // Trip Plan
 
 type TripPlan struct {
-	ID            string    `json:"id"`
-	Name          string    `json:"name"`
-	CreatorID     string    `json:"creatorID"` // ID of user that created the plan
+	ID   string `json:"id"`
+	Name string `json:"name"`
+
 	CoverImageURL string    `json:"coverImageURL"`
 	StartDate     time.Time `json:"startDate"`
 	EndDate       time.Time `json:"endDate"`
 
+	Creator TripMember            `json:"creator"`
 	Members map[string]TripMember `json:"members"`
 
 	Contents map[string]TripContentList `json:"contents"` // Map of trip content's list
@@ -34,14 +36,16 @@ type TripPlan struct {
 
 type TripPlansList []TripPlan
 
-func NewTripPlan(creatorID, name string) TripPlan {
+func NewTripPlan(creator TripMember, name string) TripPlan {
 	return TripPlan{
 		ID:            uuid.New().String(),
 		Name:          name,
-		CreatorID:     creatorID,
 		CoverImageURL: "",
 		StartDate:     time.Time{},
 		EndDate:       time.Time{},
+
+		Creator: creator,
+		Members: map[string]TripMember{},
 
 		Contents: map[string]TripContentList{},
 		Flights:  map[string]Flight{},
@@ -51,16 +55,29 @@ func NewTripPlan(creatorID, name string) TripPlan {
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
 
-		Labels: common.Labels{},
-		Tags:   common.Tags{},
+		IsArchived: false,
+		Labels:     common.Labels{},
+		Tags:       common.Tags{},
 	}
 }
 
-func NewTripPlanWithDates(creatorID, name string, start, end time.Time) TripPlan {
-	plan := NewTripPlan(creatorID, name)
+func NewTripPlanWithDates(creator TripMember, name string, start, end time.Time) TripPlan {
+	plan := NewTripPlan(creator, name)
 	plan.StartDate = start
 	plan.EndDate = end
 	return plan
+}
+
+func (tp *TripPlan) UpdateName(name string) {
+	tp.Name = name
+}
+
+func (tp *TripPlan) UpdateCoverImageURL(url string) {
+	tp.CoverImageURL = url
+}
+
+func (tp *TripPlan) UpdateMember(member TripMember) {
+	tp.Members[member.MemberEmail] = member
 }
 
 // Members
@@ -188,49 +205,50 @@ type ItineraryContentList []ItineraryContent
 // Collaboration
 
 type CollabSession struct {
-	Members map[string]TripMember `json:"members"`
+	Members []TripMember `json:"members"`
 }
 
-type CollabOpType int32
-
 const (
-	JoinSession CollabOpType = iota
-	LeaveSession
-	PingSession
-	FetchTrip
-	UpdateTrip
+	CollabOpJoinSession  = "CollabOpJoinSession"
+	CollabOpLeaveSession = "CollabOpLeaveSession"
+	CollabOpPingSession  = "CollabOpPingSession"
+	CollabOpFetchTrip    = "CollabOpFetchTrip"
+	CollabOpUpdateTrip   = "CollabOpUpdateTrip"
 )
 
-type CollabOpMessage struct {
-	ID         string       `json:"id"`
-	TripPlanID string       `json:"tripPlanID"`
-	OpType     CollabOpType `json:"opType"`
+func isValidCollabOpType(opType string) bool {
+	return utils.StringContains([]string{
+		CollabOpJoinSession,
+		CollabOpLeaveSession,
+		CollabOpPingSession,
+		CollabOpFetchTrip,
+		CollabOpUpdateTrip,
+	}, opType)
+}
 
-	CollabOpJoinSessionRequest  CollabOpJoinSessionRequest  `json:"collabOpJoinSessionRequest"`
-	CollabOpLeaveSessionRequest CollabOpLeaveSessionRequest `json:"collabOpLeaveSessionRequest"`
-	CollabOpPingSessionRequest  CollabOpPingSessionRequest  `json:"collabOpPingSessionRequest"`
-	CollabOpUpdateTripRequest   CollabOpUpdateTripRequest   `json:"collabOpUpdateTripRequest"`
+type CollabOpMessage struct {
+	ID         string `json:"id"`
+	Counter    uint64 `json:"ts"` // Should be monotonically increasing
+	TripPlanID string `json:"tripPlanID"`
+	OpType     string `json:"opType"`
+
+	JoinSessionReq  CollabOpJoinSessionRequest  `json:"joinSessionReq"`
+	LeaveSessionReq CollabOpLeaveSessionRequest `json:"leaveSessionReq"`
+	PingSessionReq  CollabOpPingSessionRequest  `json:"pingSessionReq"`
+	UpdateTripReq   CollabOpUpdateTripRequest   `json:"updateTripReq"`
 }
 
 type CollabOpJoinSessionRequest struct {
-	CollaboratorID    string `json:"collaboratorID"`
-	CollaboratorName  string `json:"collaboratorName"`
-	CollaboratorEmail string `json:"collaboratorEmail"`
+	TripMember
 }
 
 type CollabOpLeaveSessionRequest struct {
-	CollaboratorID string `json:"collaboratorID"`
+	TripMember
 }
 
 type CollabOpPingSessionRequest struct{}
 
-type CollabOpFetchTripRequest struct{}
-
 type CollabOpUpdateTripRequest struct {
-	CollabOpUpdateTripPatch
-}
-
-type CollabOpUpdateTripPatch struct {
 	Op    string `json:"op"`
 	Path  string `json:"path"`
 	Value string `json:"value"` // JSON string
