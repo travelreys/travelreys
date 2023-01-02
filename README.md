@@ -14,19 +14,25 @@ TiinyPlanet is a travel platform that provides the following features:
 |: Dependency :|: Version :|
 |--------------|-----------|
 | Go           | v1.19.4   |
-| Node         |           |
-| MongoDB      | v6.x      |
-| Redis        | v7.x      |
-| nats.io      |           |
+| NodeJS       | v18.12.1  |
+| MongoDB      | v6.0.3    |
+| Redis        | v7.0      |
+| nats.io      | v2.9.10   |
 
 ## Getting Started
 
-```
+```bash
+# NATS.io
+
+# Redis
+
+# MongoDB
+
+# Build Server
 make
-./build/server
 ```
 
 ## Testing
-```
+```bash
 make test
 ```
