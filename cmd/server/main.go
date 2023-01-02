@@ -21,6 +21,8 @@ const (
 	cfgFlagGRPCPort = "grpc-port"
 	cfgFlagLogLevel = "log-level"
 
+	cfgFlagCORSOrigin = "cors-origin"
+
 	cfgFlagMongoURL         = "mongo-url"
 	cfgFlagMongoDBName      = "mongo-dbname"
 	cfgFlagNatsURL          = "nats-url"
@@ -34,6 +36,8 @@ type ServerConfig struct {
 	GRPCPort string `mapstructure:"grpc-port"`
 	Host     string `mapstructure:"host"`
 	Port     string `mapstructure:"port"`
+
+	CORSOrigin string `mapstructure:"cors-origin"`
 
 	NatsURL          string `mapstructure:"nats-url"`
 	RedisURL         string `mapstructure:"redis-url"`
@@ -58,6 +62,7 @@ func main() {
 	viper.SetDefault(cfgFlagPort, "2022")
 	viper.SetDefault(cfgFlagGRPCPort, "2023")
 	viper.SetDefault(cfgFlagLogLevel, "info")
+	viper.SetDefault(cfgFlagCORSOrigin, "*")
 	viper.SetDefault(cfgFlagNatsURL, "")
 	viper.SetDefault(cfgFlagRedisURL, "")
 	viper.SetDefault(cfgFlagRedisClusterMode, false)
