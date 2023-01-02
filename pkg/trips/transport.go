@@ -3,9 +3,6 @@ package trips
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"io"
-	"log"
 	"net/http"
 
 	"github.com/awhdesmond/tiinyplanet/pkg/common"
@@ -13,15 +10,7 @@ import (
 	"github.com/awhdesmond/tiinyplanet/pkg/utils"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"go.uber.org/zap"
 )
-
-var (
-	ErrInvalidCollabOp     = errors.New("invalid-collab-op")
-	ErrInvalidCollabOpData = errors.New("invalid-collab-op-data")
-)
-
-// Trips Transport
 
 const (
 	URLPathVarID = "id"
@@ -86,79 +75,4 @@ func decodeDeleteTripPlanRequest(_ context.Context, r *http.Request) (interface{
 		return nil, utils.ErrInvalidRequest
 	}
 	return DeleteTripPlanRequest{ID}, nil
-}
-
-// Collab Transport
-
-type CollabServer struct {
-	UnimplementedCollabServiceServer
-
-	collabService CollabService
-	logger        *zap.Logger
-}
-
-func MakeCollabServer(cs CollabService, logger *zap.Logger) *CollabServer {
-	return &CollabServer{collabService: cs, logger: logger}
-}
-
-func (srv *CollabServer) Command(tsrv CollabService_CommandServer) error {
-	ctx := tsrv.Context()
-
-	// srv.collabService.collabStore.SubscribeCollabOpMessages()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		req, err := tsrv.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			continue
-		}
-
-		var resp CollabResponse
-
-		opType := req.GetType()
-		if !isValidCollabOpType(opType) {
-			resp.Error = ErrInvalidCollabOp.Error()
-		} else {
-			result, err := srv.HandleCollabRequest(req)
-			resp = CollabResponse{
-				Error:  err.Error(),
-				Type:   opType,
-				Result: result,
-			}
-		}
-		if err := tsrv.Send(&resp); err != nil {
-			log.Printf("send error %v", err)
-		}
-	}
-}
-
-func (srv *CollabServer) HandleCollabRequest(req *CollabRequest) ([]byte, error) {
-	var msg CollabOpMessage
-	if err := json.Unmarshal(req.GetData(), &msg); err != nil {
-		return nil, ErrInvalidCollabOpData
-	}
-
-	opType := req.GetType()
-	switch opType {
-	case CollabOpJoinSession:
-		session, err := srv.collabService.JoinSession(reqctx.Context{}, msg.TripPlanID, msg)
-		result := common.GenericJSON{"session": session, "error": err}
-		resBytes, _ := json.Marshal(result)
-		return resBytes, nil
-	case CollabOpLeaveSession:
-		err := srv.collabService.LeaveSession(reqctx.Context{}, msg.TripPlanID, msg)
-		result := common.GenericJSON{"error": err}
-		resBytes, _ := json.Marshal(result)
-		return resBytes, nil
-	default:
-		return nil, ErrInvalidCollabOp
-	}
 }

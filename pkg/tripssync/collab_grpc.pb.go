@@ -4,7 +4,7 @@
 // - protoc             v3.21.12
 // source: trips.proto
 
-package trips
+package tripssync
 
 import (
 	context "context"

@@ -3,6 +3,7 @@ module github.com/awhdesmond/tiinyplanet
 go 1.19
 
 require (
+	github.com/evanphx/json-patch/v5 v5.6.0
 	github.com/go-kit/kit v0.12.0
 	github.com/go-redis/redis/v9 v9.0.0-rc.2
 	github.com/golang-jwt/jwt/v4 v4.4.3

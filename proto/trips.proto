@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package trips;
-option go_package = "/trips";
+option go_package = "/tripssync";
 
 service CollabService {
   rpc Command (stream CollabRequest) returns (stream CollabResponse) {};
