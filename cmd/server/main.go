@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -76,6 +77,7 @@ func main() {
 	pflag.String(cfgFlagHost, "", "host address to bind server")
 	pflag.String(cfgFlagPort, "", "http server port")
 	pflag.String(cfgFlagGRPCPort, "", "grpc server port")
+	pflag.String(cfgFlagLogLevel, "", "log level")
 	pflag.Parse()
 
 	viper.BindPFlags(pflag.CommandLine)
@@ -92,9 +94,16 @@ func main() {
 		logger.Panic("config unmarshal failed", zap.Error(err))
 	}
 
+	fmt.Printf("%+v\n", srvCfg)
+
 	logger.Info("server configuration", zap.String("config", fmt.Sprintf("%+v", srvCfg)))
 
 	// Make Servers
+	apiSrv, err := MakeAPIServer(srvCfg, logger)
+	if err != nil {
+		logger.Panic("error initialising api server", zap.Error(err))
+	}
+
 	grpcSrv, err := MakeCollabServer(srvCfg, logger)
 	if err != nil {
 		logger.Panic("error initialising grpc server", zap.Error(err))
@@ -103,6 +112,19 @@ func main() {
 	if err != nil {
 		logger.Panic("error creating grpc listener", zap.Error(err))
 	}
+
+	// Run Servers
+
+	go func() {
+		logger.Info("starting api server",
+			zap.String("host", srvCfg.Host),
+			zap.String("port", srvCfg.Port),
+		)
+		if err := http.ListenAndServe(srvCfg.HTTPBindAddress(), apiSrv.Handler); err != nil {
+			logger.Panic("error starting api server", zap.Error(err))
+			os.Exit(1)
+		}
+	}()
 
 	go func() {
 		logger.Info("starting grpc server",

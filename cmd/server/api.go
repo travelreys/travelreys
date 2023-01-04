@@ -19,6 +19,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	tripStore := trips.NewStore(db)
 	svc := trips.NewService(tripStore)
+	svc = trips.ServiceWithLoggingMiddleware(svc, logger)
 
 	r := mux.NewRouter()
 	securityMW := utils.NewSecureHeadersMiddleware(cfg.CORSOrigin)

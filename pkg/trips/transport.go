@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/awhdesmond/tiinyplanet/pkg/common"
-	"github.com/awhdesmond/tiinyplanet/pkg/reqctx"
 	"github.com/awhdesmond/tiinyplanet/pkg/utils"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
@@ -20,7 +19,7 @@ var (
 	encodeErrFn = utils.EncodeErrorFactory(ErrorToHTTPCode)
 
 	opts = []kithttp.ServerOption{
-		kithttp.ServerBefore(reqctx.MakeContextFromHTTPRequest),
+		// kithttp.ServerBefore(reqctx.MakeContextFromHTTPRequest),
 		kithttp.ServerErrorEncoder(encodeErrFn),
 	}
 )

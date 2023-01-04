@@ -31,13 +31,10 @@ func NewCreateTripPlanEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return CreateTripPlanResponse{Err: common.ErrInvalidEndpointRequestType}, nil
 		}
-		rctx, ok := ctx.(reqctx.Context)
-		if !ok {
-			return CreateTripPlanResponse{Err: common.ErrInvalidEndpointRequestContext}, nil
-		}
+		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
 		creator := TripMember{
-			MemberID:    rctx.CallerInfo.UserID,
-			MemberEmail: rctx.CallerInfo.UserEmail,
+			MemberID:    "1",
+			MemberEmail: "awhdes@gmail.com",
 			Permission:  TripMemberPermCollaborator,
 		}
 
@@ -51,7 +48,7 @@ type ReadTripPlanRequest struct {
 }
 
 type ReadTripPlanResponse struct {
-	Plan TripPlan `json:"plan"`
+	Plan TripPlan `json:"tripPlan"`
 	Err  error    `json:"error,omitempty"`
 }
 
@@ -65,11 +62,7 @@ func NewReadTripPlanEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ReadTripPlanResponse{Err: common.ErrInvalidEndpointRequestType}, nil
 		}
-		rctx, ok := ctx.(reqctx.Context)
-		if !ok {
-			return CreateTripPlanResponse{Err: common.ErrInvalidEndpointRequestContext}, nil
-		}
-
+		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
 		plan, err := svc.ReadTripPlan(rctx, req.ID)
 		return ReadTripPlanResponse{Plan: plan, Err: err}, nil
 	}
@@ -79,8 +72,8 @@ type ListTripPlansRequest struct {
 	FF ListTripPlansFilter
 }
 type ListTripPlansResponse struct {
-	Plans TripPlansList `json:"plans"`
-	Err   error         `json:"error"`
+	Plans TripPlansList `json:"tripPlans"`
+	Err   error         `json:"error,omitempty"`
 }
 
 func (r ListTripPlansResponse) Error() error {
@@ -93,11 +86,7 @@ func NewListTripPlansEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ListTripPlansResponse{Err: common.ErrInvalidEndpointRequestType}, nil
 		}
-		rctx, ok := ctx.(reqctx.Context)
-		if !ok {
-			return CreateTripPlanResponse{Err: common.ErrInvalidEndpointRequestContext}, nil
-		}
-
+		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
 		plans, err := svc.ListTripPlans(rctx, req.FF)
 		return ListTripPlansResponse{Plans: plans, Err: err}, nil
 	}
@@ -121,11 +110,7 @@ func NewDeleteTripPlanEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return DeleteTripPlanResponse{Err: common.ErrInvalidEndpointRequestType}, nil
 		}
-		rctx, ok := ctx.(reqctx.Context)
-		if !ok {
-			return CreateTripPlanResponse{Err: common.ErrInvalidEndpointRequestContext}, nil
-		}
-
+		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
 		err := svc.DeleteTripPlan(rctx, req.ID)
 		return DeleteTripPlanResponse{Err: err}, nil
 	}

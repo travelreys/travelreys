@@ -1,10 +1,13 @@
 import React, { useState, FC } from 'react';
 import {
   DateRange,
-  DayPicker,
   SelectRangeEventHandler
 } from 'react-day-picker';
 
+import _get from "lodash/get";
+
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
 import Container from '@mui/material/Container';
 import TripsJumbo from '../components/home/TripsJumbo';
 import TripsContainer from '../components/home/TripsContainer';
@@ -17,12 +20,14 @@ import TripsAPI from '../apis/trips';
 const Home: FC = () => {
 
   // State
-  const {trips, error, isLoading} = TripsAPI.readTrips();
-
-  const [newTripName, setNewTripName] = useState<string>();
+  const [newTripName, setNewTripName] = useState<string>("");
   const [newTripDates, setNewTripDates] = useState<DateRange>()
 
+  // UI State
+  const [errorMsg, setErrorMsg] = useState<string>();
   const [isCreateModelOpen, setIsCreateModalOpen] = useState(false);
+
+  let {data, error, isLoading} = TripsAPI.readTrips();
 
   // Event Handlers
   const createTripModalCloseOnClick = () => {
@@ -41,41 +46,55 @@ const Home: FC = () => {
     setNewTripDates(range);
   };
 
+  const submitNewTripOnClick = () => {
+    TripsAPI.createTrip(newTripName, newTripDates?.from, newTripDates?.to)
+    .then(res => {
+      // go to trips page
+    })
+    .catch(error => {
+      const errMsg = _get(error, "message") || _get(error.data, "error");
+      setErrorMsg(errMsg);
+    })
+  }
+
   // Renderers
   const renderTrips = () => {
     if (isLoading) {
       return (<div>Loading</div>)
     }
-    if (error) {
-      return (<div>{JSON.stringify(error)}</div>)
+
+    const err = _get(error, "message") || _get(data, "error");
+    if (err) {
+      setErrorMsg(err);
+      return;
     }
 
+    const trips = _get(data, "tripPlans", []);
+    console.log(trips, data)
     if (trips.length === 0) {
       return (<TripsJumbo onCreateTripBtnClick={createTripModalOpenOnClick} />);
     }
     return <TripsContainer trips={trips} />;
   }
 
-  // Styles
-  const modalStyle = {
-    display: "flex",
-    justifyContent: "space-around",
-    flexDirection: "column",
-    position: 'absolute' as 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: "60vw",
-    bgcolor: 'background.paper',
-    borderRadius: "0.5em",
-    padding: "2em 5em"
-  };
+  const renderErrorMsg = () => {
+    if (!errorMsg) {
+      return;
+    }
+    return (
+      <Alert severity="error">
+        <AlertTitle><b>Error</b></AlertTitle>
+        {errorMsg}
+      </Alert>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{
       marginTop: "1em",
       padding: "0 48px!important"
     }}>
+      {renderErrorMsg()}
       {renderTrips()}
       <CreateTripModal
         isOpen={isCreateModelOpen}
@@ -84,6 +103,7 @@ const Home: FC = () => {
         setTripName={newTripNameOnUpdate}
         tripDates={newTripDates}
         tripDatesOnSelect={newTripDatesOnSelect}
+        onSubmit={submitNewTripOnClick}
       />
     </Container>
   );

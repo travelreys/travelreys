@@ -14,6 +14,14 @@ type ListTripPlansFilter struct {
 	ID *string `json:"string"`
 }
 
+func (ff ListTripPlansFilter) toBSON() bson.M {
+	bsonM := bson.M{}
+	if ff.ID != nil {
+		bsonM["id"] = ff.ID
+	}
+	return bsonM
+}
+
 type Store interface {
 	SaveTripPlan(ctx context.Context, plan TripPlan) error
 	ReadTripPlan(ctx context.Context, ID string) (TripPlan, error)
@@ -47,17 +55,17 @@ func NewStore(db *mongo.Database) Store {
 	return &store{db, tripsCollection}
 }
 
-func (str *store) SaveTripPlan(ctx context.Context, plan TripPlan) error {
+func (store *store) SaveTripPlan(ctx context.Context, plan TripPlan) error {
 	saveFF := bson.M{BsonKeyID: plan.ID}
 	opts := options.Replace().SetUpsert(true)
-	_, err := str.tripsCollection.ReplaceOne(ctx, saveFF, plan, opts)
+	_, err := store.tripsCollection.ReplaceOne(ctx, saveFF, plan, opts)
 	return err
 }
 
-func (str *store) ReadTripPlan(ctx context.Context, ID string) (TripPlan, error) {
+func (store *store) ReadTripPlan(ctx context.Context, ID string) (TripPlan, error) {
 	var plan TripPlan
 
-	err := str.tripsCollection.FindOne(ctx, bson.M{ID: ID}).Decode(&plan)
+	err := store.tripsCollection.FindOne(ctx, bson.M{"id": ID}).Decode(&plan)
 	if err == mongo.ErrNoDocuments {
 		return plan, ErrPlanNotFound
 	}
@@ -67,9 +75,10 @@ func (str *store) ReadTripPlan(ctx context.Context, ID string) (TripPlan, error)
 	return plan, err
 }
 
-func (str *store) ListTripPlans(ctx context.Context, ff ListTripPlansFilter) (TripPlansList, error) {
-	var list TripPlansList
-	cursor, err := str.tripsCollection.Find(ctx, ff)
+func (store *store) ListTripPlans(ctx context.Context, ff ListTripPlansFilter) (TripPlansList, error) {
+	list := TripPlansList{}
+	bsonM := ff.toBSON()
+	cursor, err := store.tripsCollection.Find(ctx, bsonM)
 	if err != nil {
 		return list, err
 	}
@@ -77,8 +86,8 @@ func (str *store) ListTripPlans(ctx context.Context, ff ListTripPlansFilter) (Tr
 	return list, err
 }
 
-func (str *store) DeleteTripPlan(ctx context.Context, ID string) error {
+func (store *store) DeleteTripPlan(ctx context.Context, ID string) error {
 	ff := bson.M{ID: ID}
-	_, err := str.tripsCollection.DeleteOne(ctx, ff)
+	_, err := store.tripsCollection.DeleteOne(ctx, ff)
 	return err
 }
