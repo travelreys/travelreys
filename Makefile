@@ -2,7 +2,7 @@
 
 build:
 	@echo "Building..."
-	go build cmd/server -o build/server
+	go build -o build/server cmd/server/*.go
 
 protoc:
 	@echo "Generating Go files"
