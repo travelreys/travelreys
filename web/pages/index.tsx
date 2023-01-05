@@ -70,11 +70,10 @@ const Home: FC = () => {
     }
 
     const trips = _get(data, "tripPlans", []);
-    console.log(trips, data)
     if (trips.length === 0) {
       return (<TripsJumbo onCreateTripBtnClick={createTripModalOpenOnClick} />);
     }
-    return <TripsContainer trips={trips} />;
+    return <TripsContainer trips={trips} onCreateTripBtnClick={createTripModalOpenOnClick} />;
   }
 
   const renderErrorMsg = () => {
