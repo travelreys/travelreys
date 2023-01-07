@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@emotion/styled": "^11.10.5",
+    "@heroicons/react": "^2.0.13",
     "@mui/icons-material": "^5.11.0",
     "@next/font": "13.1.1",
     "@svgr/webpack": "^6.5.1",
