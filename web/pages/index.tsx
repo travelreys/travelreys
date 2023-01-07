@@ -6,18 +6,10 @@ import {
 
 import _get from "lodash/get";
 
-import Alert from '@mui/material/Alert';
-import AlertTitle from '@mui/material/AlertTitle';
-import Container from '@mui/material/Container';
-import TripsJumbo from '../components/home/TripsJumbo';
-import TripsContainer from '../components/home/TripsContainer';
-import CreateTripModal from '../components/home/CreateTripModal';
-
 import TripsAPI from '../apis/trips';
 
-// Home
 
-const Home: FC = () => {
+const HomePage: FC = () => {
 
   // State
   const [newTripName, setNewTripName] = useState<string>("");
@@ -70,43 +62,20 @@ const Home: FC = () => {
     }
 
     const trips = _get(data, "tripPlans", []);
-    if (trips.length === 0) {
-      return (<TripsJumbo onCreateTripBtnClick={createTripModalOpenOnClick} />);
-    }
-    return <TripsContainer trips={trips} onCreateTripBtnClick={createTripModalOpenOnClick} />;
-  }
-
-  const renderErrorMsg = () => {
-    if (!errorMsg) {
-      return;
-    }
-    return (
-      <Alert severity="error">
-        <AlertTitle><b>Error</b></AlertTitle>
-        {errorMsg}
-      </Alert>
-    );
+    return
+    // if (trips.length === 0) {
+    //   return (<TripsJumbo onCreateTripBtnClick={createTripModalOpenOnClick} />);
+    // }
+    // return <TripsContainer trips={trips} onCreateTripBtnClick={createTripModalOpenOnClick} />;
   }
 
   return (
-    <Container maxWidth="lg" sx={{
-      marginTop: "1em",
-      padding: "0 48px!important"
-    }}>
-      {renderErrorMsg()}
-      {renderTrips()}
-      <CreateTripModal
-        isOpen={isCreateModelOpen}
-        onClose={createTripModalCloseOnClick}
-        tripName={newTripName}
-        setTripName={newTripNameOnUpdate}
-        tripDates={newTripDates}
-        tripDatesOnSelect={newTripDatesOnSelect}
-        onSubmit={submitNewTripOnClick}
-      />
-    </Container>
+    <div>
+
+      <p className="font-mono">The quick brown fox ...</p>
+    </div>
   );
 }
 
 
-export default Home;
+export default HomePage;
