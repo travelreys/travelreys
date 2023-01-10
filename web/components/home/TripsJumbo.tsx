@@ -1,38 +1,39 @@
 import React, { useState, FC } from 'react';
+import classNames from 'classnames';
 
-// import Button from '@mui/material/Button';
-// import Container from '@mui/material/Container';
-// import Typography from '@mui/material/Typography';
+interface TripsJumboProps {
+  onCreateTripBtnClick: any,
+}
 
-// interface TripsJumboProps {
-//   onCreateTripBtnClick: any,
-// }
+const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
+  return (
+    <div>
+      <h1 className='text-4xl font-bold text-slate-700 mb-5'>
+        Plan your next adventure!
+      </h1>
+      <button type="button"
+        className={classNames(
+          "bg-gradient-to-r",
+          "font-medium",
+          "from-indigo-500",
+          "hover:bg-gradient-to-br",
+          "mb-2",
+          "mr-2",
+          "px-5",
+          "py-2.5",
+          "rounded-md",
+          "text-center",
+          "text-sm",
+          "text-white",
+          "to-indigo-700",
+          "via-indigo-600",
+        )}
+        onClick={props.onCreateTripBtnClick}
+      >
+        + Create new trip
+      </button>
+    </div>
+  );
+}
 
-// const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
-//   return (
-//     <Container disableGutters>
-//       <Typography
-//           variant="h4"
-//           color="info.main"
-//           gutterBottom
-//         >
-//           <b>Plan your next adventure!</b>
-//         </Typography>
-//         <Button
-//           disableElevation
-//           variant="contained"
-//           onClick={props.onCreateTripBtnClick}
-//           sx={{
-//             textTransform: 'none',
-//             padding: "0.25em 1.5em",
-//             borderRadius: "2em",
-//             fontWeight: "900"
-//           }}
-//         >
-//           + Create new trip
-//         </Button>
-//     </Container>
-//   );
-// }
-
-// export default TripsJumbo;
+export default TripsJumbo;

@@ -1,207 +1,114 @@
-import React, { FC, useState } from 'react';
-// import Link from 'next/link';
-// import { format, parseJSON, isEqual } from 'date-fns';
+import React, { FC } from 'react';
+import classNames from 'classnames';
+import Link from 'next/link';
+import _get from 'lodash/get';
+import { parseJSON, isEqual } from 'date-fns';
 
-// import {
-//   Avatar,
-//   Box,
-//   Button,
-//   Grid,
-//   Typography
-// } from '@mui/material';
-// import _get from 'lodash/get';
-
-// // Helper Functions
-
-// const stringToColor = (string: string) => {
-//   let hash = 0;
-//   let i;
-
-//   /* eslint-disable no-bitwise */
-//   for (i = 0; i < string.length; i += 1) {
-//     hash = string.charCodeAt(i) + ((hash << 5) - hash);
-//   }
-
-//   let color = '#';
-
-//   for (i = 0; i < 3; i += 1) {
-//     const value = (hash >> (i * 8)) & 0xff;
-//     color += `00${value.toString(16)}`.slice(-2);
-//   }
-//   /* eslint-enable no-bitwise */
-//   return color;
-// }
-
-// // TripCard
-// interface TripCardProps {
-//   trip: any
-// }
+import { datesRenderer } from '../../utils/dates';
+import Avatar from '../Avatar';
 
 
-// const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
+interface TripCardProps {
+  trip: any
+}
 
-//   const [isHover, setIsHover] = useState(false);
+const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
 
-//   // Event Handlers
-//   const handleMouseEnter = () => {
-//      setIsHover(true);
-//   };
-//   const handleMouseLeave = () => {
-//      setIsHover(false);
-//   };
+  // Renderers
+  const renderCreatorAvatar = () => {
 
-//   // Renderers
-//   const renderCreatorAvatar = () => {
-//     const stringAvatar = (name: string) => {
-//       return {
-//         sx: {
-//           bgcolor: stringToColor(name),
-//           width: 24,
-//           height: 24,
-//           fontSize: 16,
-//           fontWeight: 900
-//         },
-//         children: name.toUpperCase(),
-//       };
-//     }
+    return (<Avatar name={_get(props.trip, "creator.memberEmail")} placement="top" />);
+  }
 
-//     return (
-//       <Avatar
-//         {...stringAvatar(_get(props.trip, "creator.memberEmail.0"))}
-//       />
-//     );
-//   }
-
-//   const renderTripDates = () => {
-//     const nullDate = parseJSON("0001-01-01T00:00:00Z");
-//     const startDate = parseJSON(props.trip.startDate);
-
-//     if (isEqual(startDate, nullDate)) {
-//       return;
-//     }
-
-//     const endDate = parseJSON(props.trip.endDate);
-//     if (isEqual(endDate, nullDate)) {
-//       return (
-//         <Typography variant='body2' color="secondary">
-//           {format(startDate, "MMM d, yy ")}
-//         </Typography>
-//       );
-//     }
-
-//     return (
-//       <Typography variant='body2' color="secondary">
-//         {format(startDate, "MMM d, yy ")} - {format(endDate, "MMM d, yy ")}
-//       </Typography>
-//     );
-//   }
-
-//   // Styles
-//   const cardStyle = {
-//     borderBottom: isHover ? "3px solid #D28088" : "none",
-//     borderRadius: "6px 0 0 0",
-//     paddingBottom: "0.5em",
-//     textDecoration: "none",
-//     color: "#A1A5D8",
-//   }
-
-//   const cardImgSx = {
-//     width: "100%",
-//     borderRadius: "6px",
-//     objectFit: "cover" as "cover",
-//     boxShadow: "1px 3px 18px 0px rgba(0,0,0,0.34)",
-//   }
-
-//   return (
-//     <Link
-//       href={`/trips/${props.trip.id}`}
-//       onMouseEnter={handleMouseEnter}
-//       onMouseLeave={handleMouseLeave}
-//       style={cardStyle}
-//     >
-//       <Box>
-//         <img
-//           style={cardImgSx}
-//           src="https://source.unsplash.com/collection/582860/660x440"
-//           alt=""
-//         />
-//       </Box>
-//       <Box>
-//         <Typography gutterBottom variant='body1'><b>{props.trip.name}</b></Typography>
-//         <Box sx={{display: "flex", justifyContent: "space-between"}}>
-//           {renderCreatorAvatar()}
-//           {renderTripDates()}
-//         </Box>
-//       </Box>
-//     </Link>
-//   );
-// }
+  const renderTripDates = () => {
+    const nullDate = parseJSON("0001-01-01T00:00:00Z");
+    const startDate = parseJSON(props.trip.startDate);
+    const endDate = parseJSON(props.trip.endDate);
 
 
-// // TripsContainer
+    if (isEqual(startDate, nullDate)) {
+      return "";
+    }
+    return (
+      <p className='text-slate-500'>
+        {datesRenderer(startDate, endDate)}
+      </p>
+    );
+  }
 
-// interface TripsContainerProps {
-//   trips: Array<any>,
-//   onCreateTripBtnClick: any
-// }
+  return (
+    <Link href={`/trips/${props.trip.id}`}>
+      <div className="bg-white rounded-lg shadow-md dark:bg-gray-800 dark:border-gray-700">
+        <img
+          className="rounded-t-lg"
+          src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1421&q=80"
+          alt=""
+        />
+        <div className="p-5">
+          <h5 className="mb-2 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {props.trip.name}
+          </h5>
+          <div className='flex justify-between'>
+            {renderTripDates()}
+            {renderCreatorAvatar()}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
-// const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => {
 
-//   // Event Handlers
+// TripsContainer
 
-//   // Renderers
-//   const renderTripsTable = () => {
-//     const cards = props.trips.map((trip: any) => {
-//       return (
-//         <Grid item xs={12} sm={4} md={3}>
-//           <TripCard trip={trip} key={trip.id} />
-//         </Grid>
-//       );
-//     })
+interface TripsContainerProps {
+  trips: Array<any>,
+  onCreateTripBtnClick: any
+}
 
-//     return (
-//       <Grid container spacing={2}>
-//         {cards}
-//       </Grid>
-//     );
-//   }
+const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => {
 
-//   return (
-//     <>
-//       <Box sx={{
-//         display: "flex",
-//         justifyContent: "space-between",
-//         alignItems: "center",
-//       }}>
-//         <Typography
-//           variant="h4"
-//           color="info.main"
-//           gutterBottom
-//         >
-//           <b>Continue Planning</b>
-//         </Typography>
-//         <Box>
-//           <Button
-//               disableElevation
-//               variant="contained"
-//               onClick={props.onCreateTripBtnClick}
-//               sx={{
-//                 textTransform: 'none',
-//                 maxHeight: "2em",
-//                 padding: "1em 1.25em",
-//                 borderRadius: "2em",
-//                 fontWeight: "900"
-//               }}
-//             >
-//               + New trip
-//             </Button>
-//         </Box>
-//       </Box>
-//       <br />
-//       {renderTripsTable()}
-//     </>
-//   );
-// }
+  // Event Handlers
 
-// export default TripsContainer;
+  // Renderers
+  const renderTripsTable = () => {
+    const cards = props.trips.map((trip: any) => {
+      return <TripCard trip={trip} key={trip.id} />
+    })
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {cards}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className='flex justify-between flex-col sm:flex-row items-center mb-8'>
+        <span className='text-5xl font-bold text-slate-800'>Upcoming trips</span>
+        <button type="button"
+          className={classNames(
+            "bg-indigo-400",
+            "font-medium",
+            "hover:bg-indigo-800",
+            "px-5",
+            "py-2.5",
+            "mt-5",
+            "sm:mt-0",
+            "rounded-md",
+            "text-center",
+            "text-sm",
+            "text-white",
+          )}
+          onClick={props.onCreateTripBtnClick}
+        >
+          + Create new trip
+        </button>
+      </div>
+      {renderTripsTable()}
+    </div>
+  );
+}
+
+export default TripsContainer;
 

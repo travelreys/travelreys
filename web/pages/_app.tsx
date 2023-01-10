@@ -1,27 +1,33 @@
+import { ReactElement, ReactNode } from 'react';
+import type { NextPage } from 'next';
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
 
-import Layout from "../components/layout";
-
 import "../styles/global.css";
 import 'react-day-picker/dist/style.css';
+import Layout from '../components/layouts/Layout';
 
-interface MyAppProps extends AppProps {
+
+export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
+  getLayout?: (page: ReactElement) => ReactNode
 }
 
-export default function App(props: MyAppProps) {
-  const {
-    Component,
-    pageProps
-  } = props;
+type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout
+}
+
+export default function App(props: AppPropsWithLayout) {
+  const { Component, pageProps } = props;
+  const getLayout = Component.getLayout ?? ((page) => {
+    return (<Layout>{page}</Layout>)
+  });
+
   return (
     <>
       <Head>
         <meta name="viewport" content="initial-scale=1, width=device-width" />
       </Head>
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
+      {getLayout(<Component {...pageProps} />)}
     </>
   );
 }
