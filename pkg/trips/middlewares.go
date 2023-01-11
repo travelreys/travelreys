@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/reqctx"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 	"go.uber.org/zap"
 )
 

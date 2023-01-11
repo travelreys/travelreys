@@ -3,8 +3,8 @@ package trips
 import (
 	"time"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/common"
 	"github.com/google/uuid"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 )
 
 // Trip Plan

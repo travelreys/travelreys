@@ -2,16 +2,15 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/utils"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -19,7 +18,6 @@ const (
 	cfgFlagHost     = "host"
 	cfgFlagHostname = "hostname"
 	cfgFlagPort     = "port"
-	cfgFlagGRPCPort = "grpc-port"
 	cfgFlagLogLevel = "log-level"
 
 	cfgFlagCORSOrigin = "cors-origin"
@@ -34,9 +32,8 @@ const (
 )
 
 type ServerConfig struct {
-	GRPCPort string `mapstructure:"grpc-port"`
-	Host     string `mapstructure:"host"`
-	Port     string `mapstructure:"port"`
+	Host string `mapstructure:"host"`
+	Port string `mapstructure:"port"`
 
 	CORSOrigin string `mapstructure:"cors-origin"`
 
@@ -51,17 +48,12 @@ func (cfg ServerConfig) HTTPBindAddress() string {
 	return fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 }
 
-func (cfg ServerConfig) GRPCBindAddress() string {
-	return fmt.Sprintf("%s:%s", cfg.Host, cfg.GRPCPort)
-}
-
 func main() {
 	hostname, _ := os.Hostname()
 
 	viper.SetDefault(cfgFlagHost, "")
 	viper.SetDefault(cfgFlagHostname, hostname)
 	viper.SetDefault(cfgFlagPort, "2022")
-	viper.SetDefault(cfgFlagGRPCPort, "2023")
 	viper.SetDefault(cfgFlagLogLevel, "info")
 	viper.SetDefault(cfgFlagCORSOrigin, "*")
 	viper.SetDefault(cfgFlagNatsURL, "")
@@ -76,7 +68,6 @@ func main() {
 
 	pflag.String(cfgFlagHost, "", "host address to bind server")
 	pflag.String(cfgFlagPort, "", "http server port")
-	pflag.String(cfgFlagGRPCPort, "", "grpc server port")
 	pflag.String(cfgFlagLogLevel, "", "log level")
 	pflag.Parse()
 
@@ -104,15 +95,6 @@ func main() {
 		logger.Panic("error initialising api server", zap.Error(err))
 	}
 
-	grpcSrv, err := MakeCollabServer(srvCfg, logger)
-	if err != nil {
-		logger.Panic("error initialising grpc server", zap.Error(err))
-	}
-	grpcListener, err := net.Listen("tcp", srvCfg.GRPCBindAddress())
-	if err != nil {
-		logger.Panic("error creating grpc listener", zap.Error(err))
-	}
-
 	// Run Servers
 
 	go func() {
@@ -122,17 +104,6 @@ func main() {
 		)
 		if err := http.ListenAndServe(srvCfg.HTTPBindAddress(), apiSrv.Handler); err != nil {
 			logger.Panic("error starting api server", zap.Error(err))
-			os.Exit(1)
-		}
-	}()
-
-	go func() {
-		logger.Info("starting grpc server",
-			zap.String("host", srvCfg.Host),
-			zap.String("port", srvCfg.GRPCPort),
-		)
-		if err := grpcSrv.Serve(grpcListener); err != nil {
-			logger.Panic("error starting grpc server", zap.Error(err))
 			os.Exit(1)
 		}
 	}()

@@ -4,9 +4,9 @@ import (
 	context "context"
 	"time"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/common"
-	"github.com/awhdesmond/tiinyplanet/pkg/reqctx"
 	"github.com/go-kit/kit/endpoint"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 )
 
 // Trips Endpoints

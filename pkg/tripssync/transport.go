@@ -1,18 +1,30 @@
 package tripssync
 
 import (
-	"context"
-	"encoding/json"
+	context "context"
 	"errors"
-	"io"
 	"log"
+	"net/http"
+	"time"
 
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
 var (
 	ErrInvalidCollabOp     = errors.New("invalid-collab-op")
 	ErrInvalidCollabOpData = errors.New("invalid-collab-op-data")
+)
+
+const (
+	// Time allowed to write the file to the client.
+	writeWait = 10 * time.Second
+
+	// Time allowed to read the next pong message from the client.
+	pongWait = 60 * time.Second
+
+	// Send pings to client with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
 )
 
 /*************
@@ -32,9 +44,9 @@ type GenericSessionResponse struct {
  * Server *
  *********/
 
-type Server struct {
-	UnimplementedCollabServiceServer
+var upgrader = websocket.Upgrader{} // use default options
 
+type Server struct {
 	proxy  Proxy
 	logger *zap.Logger
 }
@@ -43,69 +55,64 @@ func MakeServer(pxy Proxy, logger *zap.Logger) *Server {
 	return &Server{proxy: pxy, logger: logger}
 }
 
-func (srv *Server) sendResp(resp *CollabResponse, tsrv CollabService_CommandServer) {
-	if err := tsrv.Send(resp); err != nil {
-		log.Printf("send error %v", err)
+func (srv *Server) HandleFunc(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		srv.logger.Error("upgrade", zap.Error(err))
+		return
 	}
-}
+	defer ws.Close()
 
-func (srv *Server) Command(tsrv CollabService_CommandServer) error {
-	ctx := tsrv.Context()
+	pingTicker := time.NewTicker(pingPeriod)
+	go func() {
+		for range pingTicker.C {
+			ws.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				return
+			}
+		}
+	}()
+
+	ws.SetReadDeadline(time.Now().Add(pongWait))
+	ws.SetPongHandler(func(string) error {
+		ws.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		req, err := tsrv.Recv()
-		if err == io.EOF {
-			return nil
-		}
+		var msg CollabOpMessage
+		err := ws.ReadJSON(&msg)
 		if err != nil {
+			log.Println("read:", err)
 			continue
 		}
 
-		var resp CollabResponse
-		opType := req.GetType()
-
-		if !isValidCollabOpType(opType) {
-			resp.Error = ErrInvalidCollabOp.Error()
-			srv.sendResp(&resp, tsrv)
+		if !isValidCollabOpType(msg.OpType) {
+			ws.WriteJSON(GenericSessionResponse{err})
 			continue
 		}
 
-		result, err := srv.HandleCollabRequest(req)
-		resp = CollabResponse{Error: err.Error(), Type: opType, Result: result}
-		srv.sendResp(&resp, tsrv)
+		resp, err := srv.HandleCollabMessage(msg)
+		if err != nil {
+			log.Println("handle:", err)
+			continue
+		}
+		ws.WriteJSON(resp)
 	}
 }
 
-func (srv *Server) HandleCollabRequest(req *CollabRequest) ([]byte, error) {
-	var msg CollabOpMessage
-	if err := json.Unmarshal(req.GetData(), &msg); err != nil {
-		return nil, ErrInvalidCollabOpData
-	}
-
+func (srv *Server) HandleCollabMessage(msg CollabOpMessage) (interface{}, error) {
 	ctx := context.Background()
 
-	opType := req.GetType()
-	switch opType {
+	switch msg.OpType {
 	case CollabOpJoinSession:
 		session, err := srv.proxy.JoinSession(ctx, msg.TripPlanID, msg)
-		resp := JoinSessionResponse{session, err}
-		respBytes, _ := json.Marshal(resp)
-		return respBytes, nil
+		return JoinSessionResponse{session, err}, nil
 	case CollabOpLeaveSession:
 		err := srv.proxy.LeaveSession(ctx, msg.TripPlanID, msg)
-		resp := GenericSessionResponse{err}
-		respBytes, _ := json.Marshal(resp)
-		return respBytes, nil
+		return GenericSessionResponse{err}, nil
 	case CollabOpUpdateTrip:
 		err := srv.proxy.UpdateTripPlan(ctx, msg.TripPlanID, msg)
-		resp := GenericSessionResponse{err}
-		respBytes, _ := json.Marshal(resp)
-		return respBytes, nil
+		return GenericSessionResponse{err}, nil
 	default:
 		return nil, ErrInvalidCollabOp
 	}

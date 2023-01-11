@@ -3,8 +3,8 @@ package images
 import (
 	"context"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/common"
 	"github.com/go-kit/kit/endpoint"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 )
 
 type SearchRequest struct {

@@ -4,10 +4,10 @@ import (
 	context "context"
 	"encoding/json"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/common"
-	"github.com/awhdesmond/tiinyplanet/pkg/trips"
 	"github.com/go-redis/redis/v9"
 	"github.com/nats-io/nats.go"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 )
 
 /*********

@@ -3,17 +3,27 @@ package main
 import (
 	"net/http"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/images"
-	"github.com/awhdesmond/tiinyplanet/pkg/trips"
-	"github.com/awhdesmond/tiinyplanet/pkg/utils"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tiinyplanet/tiinyplanet/pkg/images"
+	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
+	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 	"go.uber.org/zap"
 )
 
 func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	db, err := utils.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
+	if err != nil {
+		return nil, err
+	}
+
+	nc, err := utils.MakeNATSConn(cfg.NatsURL)
+	if err != nil {
+		return nil, err
+	}
+	rdb, err := utils.MakeRedisClient(cfg.RedisURL, cfg.RedisClusterMode)
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +43,15 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	loggingMW := utils.NewMuxLoggingMiddleware(logger)
 	metricsMW := utils.NewMetricsMiddleware()
 
+	// Collab
+	collabStore := tripssync.NewStore(tripStore, nc, rdb)
+
+	pxy, err := tripssync.NewProxy(collabStore)
+	if err != nil {
+		return nil, err
+	}
+	collabSvr := tripssync.MakeServer(pxy, logger)
+
 	r.Use(securityMW.Handler)
 	r.Use(wrwMW.Handler)
 	r.Use(loggingMW.Handler)
@@ -40,6 +59,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/healthz", utils.HealthzHandler)
+	r.HandleFunc("/ws", collabSvr.HandleFunc)
 
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))

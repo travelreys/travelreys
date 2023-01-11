@@ -76,7 +76,6 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   }
 
 
-
   // Renderers
   const renderDatesButton = () => {
     if (!_get(props.trip, "startDate")) {

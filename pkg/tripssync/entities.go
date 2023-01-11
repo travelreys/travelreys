@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/trips"
-	"github.com/awhdesmond/tiinyplanet/pkg/utils"
+	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 )
 
 // Pub/Sub Subjects
