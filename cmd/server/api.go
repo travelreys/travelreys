@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/awhdesmond/tiinyplanet/pkg/images"
 	"github.com/awhdesmond/tiinyplanet/pkg/trips"
 	"github.com/awhdesmond/tiinyplanet/pkg/utils"
 	"github.com/gorilla/mux"
@@ -17,9 +18,14 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		return nil, err
 	}
 
+	// Images
+	unsplash := images.NewWebImageAPI()
+	imageSvc := images.NewService(unsplash)
+
+	// Trips
 	tripStore := trips.NewStore(db)
-	svc := trips.NewService(tripStore)
-	svc = trips.ServiceWithLoggingMiddleware(svc, logger)
+	tripSvc := trips.NewService(tripStore)
+	tripSvc = trips.ServiceWithLoggingMiddleware(tripSvc, logger)
 
 	r := mux.NewRouter()
 	securityMW := utils.NewSecureHeadersMiddleware(cfg.CORSOrigin)
@@ -35,7 +41,8 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/healthz", utils.HealthzHandler)
 
-	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(svc))
+	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
+	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 
 	return &http.Server{
 		Handler: r,
