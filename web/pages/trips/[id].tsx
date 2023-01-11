@@ -1,4 +1,4 @@
-import React, { FC, ReactElement, useState } from 'react';
+import React, { ChangeEvent, FC, ReactElement, useState } from 'react';
 import { useRouter } from "next/router";
 import _get from "lodash/get";
 import classNames from 'classnames';
@@ -22,7 +22,7 @@ import Spinner from '../../components/Spinner';
 import TripsLayout from '../../components/layouts/TripsLayout';
 import { datesRenderer } from '../../utils/dates';
 import ImagesAPI, {images} from '../../apis/images';
-import { makeSrc, makeSrcSet, makeUserReferURL } from '../../utils/images';
+import { makeSrc, makeSrcSet, makeUserReferURL, stockImageSrc } from '../../utils/images';
 
 
 // TripPageMenu
@@ -39,6 +39,7 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   const [searchImageQuery, setSelectImageQuery] = useState("");
   const [searchImageList, setSearchImageList] = useState([] as any);
   const [isSearchImageLoading, setIsSearchImageLoading] = useState(false);
+  const [tripName, setTripName] = useState(props.trip.name);
 
   // API
   const searchImage = () => {
@@ -52,7 +53,7 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
     // setSearchImageList(images);
   }
 
-  // Event Handlers
+  // Event Handlers - Cover Image
   const searchImageQueryOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectImageQuery(event.target.value);
   }
@@ -66,6 +67,15 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   const searchImageBtnOnClick = () => {
     searchImage();
   }
+
+
+  // Event Handlers - Trip Name
+
+  const tripNameOnChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setTripName(event.target.value)
+  }
+
+
 
   // Renderers
   const renderDatesButton = () => {
@@ -93,12 +103,8 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   const renderTripJumbo = () => {
     return (
       <div className='bg-yellow-200'>
-        <div className="relative rounded-lg shadow-md dark:bg-gray-800 dark:border-gray-700">
-          <img
-            className="block h-auto max-w-full"
-            src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1421&q=80"
-            alt=""
-          />
+        <div className="relative">
+          <img className="block sm:max-h-96 w-full" src={stockImageSrc} />
           <button
             type='button'
             className='absolute top-4 right-4 h-10 w-10 bg-gray-800/50 p-2 text-center rounded-full'
@@ -109,9 +115,12 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
         </div>
         <div className='h-16 relative -top-24'>
           <div className="bg-white rounded-lg shadow-xl p-5 mx-4 mb-4">
-            <h5 className="mb-12 text-2xl sm:text-4xl font-bold text-slate-700">
-              {props.trip.name}
-            </h5>
+            <input
+              type="text"
+              value={tripName}
+              onChange={tripNameOnChange}
+              className="mb-12 text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0"
+            />
             <div className='flex justify-between'>
               {renderDatesButton()}
             </div>
@@ -229,7 +238,7 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
 
     return (
       <div className="bg-white rounded-lg p-5 mx-4 mb-4">
-        <h5 className="mb-4 text-md sm:text-4xl font-bold text-slate-700">
+        <h5 className="mb-4 text-md sm:text-2xl font-bold text-slate-700">
           Transportation and Lodging
         </h5>
         <div className="flex flex-row justify-around mx-2">
@@ -241,14 +250,14 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
 
   const renderTripStats = () => {
     return (
-      <div className='bg-yellow-200 pb-4 mb-4'>
+      <div className='bg-yellow-200 py-8 pb-4 mb-4'>
         {renderLogistics()}
       </div>
     )
   }
 
   return (
-    <div>
+    <div className='sm:max-w-xl md:max-w-2xl'>
       {renderTripJumbo()}
       {renderTripStats()}
       {renderSelectCoverImageModal()}
