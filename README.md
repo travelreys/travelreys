@@ -26,7 +26,7 @@ TiinyPlanet is a travel platform that provides the following features:
 docker run -d -p 4222:4222 -p 8222:8222 -p 6222:6222 --name nats nats:2.9.10
 
 # Redis
-docker run -d --name redis redis:7.0
+docker run -d --name redis -p6379:6379 redis:7.0
 
 # MongoDB
 docker run -d --name mongo1 -p 27017:27017 mongo:6.0.2 mongod --replSet=rs0

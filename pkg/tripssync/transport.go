@@ -44,7 +44,11 @@ type GenericSessionResponse struct {
  * Server *
  *********/
 
-var upgrader = websocket.Upgrader{} // use default options
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 type Server struct {
 	proxy  Proxy
@@ -83,7 +87,7 @@ func (srv *Server) HandleFunc(w http.ResponseWriter, r *http.Request) {
 		err := ws.ReadJSON(&msg)
 		if err != nil {
 			log.Println("read:", err)
-			continue
+			return
 		}
 
 		if !isValidCollabOpType(msg.OpType) {
@@ -93,7 +97,7 @@ func (srv *Server) HandleFunc(w http.ResponseWriter, r *http.Request) {
 
 		resp, err := srv.HandleCollabMessage(msg)
 		if err != nil {
-			log.Println("handle:", err)
+			srv.logger.Error("handle:", zap.Error(err))
 			continue
 		}
 		ws.WriteJSON(resp)

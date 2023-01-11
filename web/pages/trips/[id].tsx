@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FC, ReactElement, useState } from 'react';
+import React, { ChangeEvent, FC, ReactElement, useEffect, useState } from 'react';
 import { useRouter } from "next/router";
 import _get from "lodash/get";
 import classNames from 'classnames';
@@ -23,6 +23,7 @@ import TripsLayout from '../../components/layouts/TripsLayout';
 import { datesRenderer } from '../../utils/dates';
 import ImagesAPI, {images} from '../../apis/images';
 import { makeSrc, makeSrcSet, makeUserReferURL, stockImageSrc } from '../../utils/images';
+import { WebsocketEvents } from 'websocket-ts/lib';
 
 
 // TripPageMenu
@@ -41,6 +42,47 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   const [isSearchImageLoading, setIsSearchImageLoading] = useState(false);
   const [tripName, setTripName] = useState(props.trip.name);
 
+  const [wsInstance, setWsInstance] = useState(null as any);
+  // const [isWsOpen, setIsWsOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && wsInstance === null) {
+      const ws = TripsAPI.startTripSyncSession(props.trip.id);
+      ws.onopen = () => {
+        setWsInstance(ws)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (wsInstance) {
+      wsInstance.send(JSON.stringify({
+        id: props.trip.id,
+        ts: 1,
+        tripPlanID: props.trip.id,
+        opType: "CollabOpJoinSession",
+        joinSessionReq: {
+          memberID: "id",
+          memberEmail: "email",
+        },
+      }));
+      return () => {
+        console.log("unmount")
+        wsInstance.send(JSON.stringify({
+          id: props.trip.id,
+          ts: 1,
+          tripPlanID: props.trip.id,
+          opType: "CollabOpLeaveSession",
+          leaveSessionReq: {
+            memberID: "id",
+            memberEmail: "email",
+          },
+        }));
+      }
+    }
+  }, [wsInstance])
+
+
   // API
   const searchImage = () => {
     setIsSearchImageLoading(true);
@@ -52,6 +94,10 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
     });
     // setSearchImageList(images);
   }
+
+  // props.wsInstance?.addEventListener(WebsocketEvents.message, (i, e) => {
+  //   console.log(i, e)
+  // });
 
   // Event Handlers - Cover Image
   const searchImageQueryOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,11 +114,11 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
     searchImage();
   }
 
-
   // Event Handlers - Trip Name
 
   const tripNameOnChange = (event: ChangeEvent<HTMLInputElement>) => {
     setTripName(event.target.value)
+
   }
 
 
