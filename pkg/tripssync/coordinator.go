@@ -34,7 +34,7 @@ type Coordinator struct {
 
 	// queue maintains a FIFO Total Order Broadcast together
 	// with Counter.
-	queue chan CollabOpMessage
+	queue chan SyncMessage
 }
 
 func NewCoordinator(planID string, store CoordinatorStore) *Coordinator {
@@ -43,7 +43,7 @@ func NewCoordinator(planID string, store CoordinatorStore) *Coordinator {
 		id:      uuid.New().String(),
 		planID:  planID,
 		counter: 0,
-		queue:   make(chan CollabOpMessage, common.DefaultChSize),
+		queue:   make(chan SyncMessage, common.DefaultChSize),
 	}
 }
 
@@ -67,9 +67,9 @@ func (crd *Coordinator) Run(ctx context.Context) error {
 	// 3.3. Sends each ordered message back to the FIFO queue
 	go func() {
 		for msg := range msgCh {
-			if msg.OpType == CollabOpLeaveSession {
+			if msg.OpType == SyncOpLeaveSession {
 				// close channel when all users have left the session
-				sess, _ := crd.store.ReadCollabSession(context.Background(), crd.planID)
+				sess, _ := crd.store.ReadSyncSession(context.Background(), crd.planID)
 				if len(sess.Members) == 0 {
 					crd.store.done <- true
 					return
@@ -84,9 +84,10 @@ func (crd *Coordinator) Run(ctx context.Context) error {
 	// 4.2 Update local plan and persist the data
 	go func() {
 		for msg := range crd.queue {
-			go func(coMsg CollabOpMessage) {
+			go func(synMsg SyncMessage) {
 				// Update local copy of plan + validate if the op is valid
-				patch, _ := jsonpatch.DecodePatch(coMsg.UpdateTripReq.Bytes())
+				patchData, _ := json.Marshal(synMsg.SyncDataUpdateTrip.Value)
+				patch, _ := jsonpatch.DecodePatch(patchData)
 				modified, err := patch.Apply(crd.plan)
 				if err != nil {
 					return
@@ -99,7 +100,7 @@ func (crd *Coordinator) Run(ctx context.Context) error {
 				crd.store.tripStore.SaveTripPlan(reqctx.Context{}, plan)
 				crd.store.IncrSessionCounter(context.Background(), crd.planID)
 
-				crd.store.PublishTOBUpdates(context.Background(), crd.planID, coMsg)
+				crd.store.PublishTOBUpdates(context.Background(), crd.planID, synMsg)
 			}(msg)
 		}
 	}()
@@ -125,14 +126,14 @@ func NewCoordinatorStore(tripStore trips.Store, nc *nats.Conn, rdb redis.Univers
 	return &CoordinatorStore{tripStore, nc, rdb, doneCh}
 }
 
-// Subscription
+// Subscription clients -> coordinator
 
-func (s *CoordinatorStore) SubcribeSessUpdates(ctx context.Context, planID string) (<-chan CollabOpMessage, error) {
-	subj := collabSessUpdatesKey(planID)
+func (s *CoordinatorStore) SubcribeSessUpdates(ctx context.Context, planID string) (<-chan SyncMessage, error) {
+	subj := syncSessRequestSubj(planID)
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan CollabOpMessage, common.DefaultChSize)
+	msgCh := make(chan SyncMessage, common.DefaultChSize)
 
-	sub, err := s.nc.ChanSubscribe(subj, natsCh)
+	sub, err := s.nc.ChanQueueSubscribe(subj, "coordinators", natsCh)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +146,7 @@ func (s *CoordinatorStore) SubcribeSessUpdates(ctx context.Context, planID strin
 				close(msgCh)
 				return
 			case natsMsg := <-natsCh:
-				var msg CollabOpMessage
+				var msg SyncMessage
 				err := json.Unmarshal(natsMsg.Data, &msg)
 				if err == nil {
 					msgCh <- msg
@@ -156,10 +157,10 @@ func (s *CoordinatorStore) SubcribeSessUpdates(ctx context.Context, planID strin
 	return msgCh, nil
 }
 
-// Publish
+// Publish coordinator -> clients
 
-func (s *CoordinatorStore) PublishTOBUpdates(ctx context.Context, planID string, msg CollabOpMessage) error {
-	subj := collabSessTOBKey(planID)
+func (s *CoordinatorStore) PublishTOBUpdates(ctx context.Context, planID string, msg SyncMessage) error {
+	subj := syncSessTOBSubj(planID)
 	data, _ := json.Marshal(msg)
 	return s.nc.Publish(subj, data)
 }
@@ -167,7 +168,7 @@ func (s *CoordinatorStore) PublishTOBUpdates(ctx context.Context, planID string,
 // Counter
 
 func (s *CoordinatorStore) GetSessionCounter(ctx context.Context, planID string) (uint64, error) {
-	key := collabSessCounterKey(planID)
+	key := syncSessCounterKey(planID)
 	cmd := s.rdb.Get(ctx, key)
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
@@ -180,15 +181,15 @@ func (s *CoordinatorStore) GetSessionCounter(ctx context.Context, planID string)
 }
 
 func (s *CoordinatorStore) IncrSessionCounter(ctx context.Context, planID string) error {
-	key := collabSessCounterKey(planID)
+	key := syncSessCounterKey(planID)
 	cmd := s.rdb.Incr(ctx, key)
 	return cmd.Err()
 }
 
-func (s *CoordinatorStore) ReadCollabSession(ctx context.Context, planID string) (CollabSession, error) {
+func (s *CoordinatorStore) ReadSyncSession(ctx context.Context, planID string) (SyncSession, error) {
 	var members trips.TripMembersList
-	key := collabSessMembersKey(planID)
-	data := s.rdb.SMembers(ctx, key)
+	key := syncSessConnectionsKey(planID)
+	data := s.rdb.HVals(ctx, key)
 	err := data.ScanSlice(&members)
-	return CollabSession{members}, err
+	return SyncSession{members}, err
 }

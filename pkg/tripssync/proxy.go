@@ -3,6 +3,7 @@ package tripssync
 import (
 	context "context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/go-redis/redis/v9"
 	"github.com/nats-io/nats.go"
@@ -14,50 +15,64 @@ import (
  * Proxy *
  *********/
 
-// Proxy proxies clients' updates to the backend collab infrastructure.
+// Proxy proxies clients' updates to the backend sync infrastructure.
 type Proxy interface {
-	JoinSession(ctx context.Context, planID string, msg CollabOpMessage) (CollabSession, error)
-	LeaveSession(ctx context.Context, planID string, msg CollabOpMessage) error
-	ReadTripPlan(ctx context.Context, planID string, msg CollabOpMessage) (trips.TripPlan, error)
-	UpdateTripPlan(ctx context.Context, planID string, msg CollabOpMessage) error
+	JoinSession(ctx context.Context, planID string, msg SyncMessage) (SyncSession, error)
+	LeaveSession(ctx context.Context, planID string, msg SyncMessage) error
+	ReadTripPlan(ctx context.Context, planID string, msg SyncMessage) (trips.TripPlan, error)
+	UpdateTripPlan(ctx context.Context, planID string, msg SyncMessage) error
+
+	SubscribeTOBUpdates(ctx context.Context, planID string) (chan SyncMessage, error)
 }
 
 type proxy struct {
-	store Store
+	store        Store
+	tobUpdatesCh chan SyncMessage
 }
 
 func NewProxy(Store Store) (Proxy, error) {
-	return &proxy{Store}, nil
+	return &proxy{Store, nil}, nil
 }
 
-func (p *proxy) Run() {}
+func (p *proxy) SubscribeTOBUpdates(ctx context.Context, planID string) (chan SyncMessage, error) {
+	return p.store.SubscribeTOBUpdates(ctx, planID)
+}
 
 // Session
 
-func (p *proxy) JoinSession(ctx context.Context, planID string, msg CollabOpMessage) (CollabSession, error) {
-	err := p.store.AddMemberToCollabSession(ctx, planID, msg.JoinSessionReq.TripMember)
+func (p *proxy) JoinSession(ctx context.Context, planID string, msg SyncMessage) (SyncSession, error) {
+	conn := SyncConnection{
+		PlanID:       planID,
+		ConnectionID: msg.ID,
+		Member:       msg.SyncDataJoinSession.TripMember,
+	}
+	err := p.store.AddConnToSession(ctx, conn)
 	if err != nil {
-		return CollabSession{}, err
+		return SyncSession{}, err
 	}
 
-	p.store.PublishSessUpdates(ctx, planID, msg)
-	return p.store.ReadCollabSession(ctx, planID)
+	p.store.PublishSessRequest(ctx, planID, msg)
+	return p.store.ReadSyncSession(ctx, planID)
 }
 
-func (p *proxy) LeaveSession(ctx context.Context, planID string, msg CollabOpMessage) error {
-	p.store.RemoveMemberFromCollabSession(ctx, planID, msg.LeaveSessionReq.TripMember)
-	p.store.PublishSessUpdates(ctx, planID, msg)
+func (p *proxy) LeaveSession(ctx context.Context, planID string, msg SyncMessage) error {
+	conn := SyncConnection{
+		PlanID:       planID,
+		ConnectionID: msg.ID,
+	}
+	p.store.RemoveConnFromSession(ctx, conn)
+	p.store.PublishSessRequest(ctx, planID, msg)
 	return nil
 }
 
 // Plans
 
-func (p *proxy) ReadTripPlan(ctx context.Context, planID string, msg CollabOpMessage) (trips.TripPlan, error) {
+func (p *proxy) ReadTripPlan(ctx context.Context, planID string, msg SyncMessage) (trips.TripPlan, error) {
 	return p.store.ReadTripPlan(ctx, planID)
 }
 
-func (p *proxy) UpdateTripPlan(ctx context.Context, planID string, msg CollabOpMessage) error {
-	return p.store.PublishSessUpdates(ctx, planID, msg)
+func (p *proxy) UpdateTripPlan(ctx context.Context, planID string, msg SyncMessage) error {
+	return p.store.PublishSessRequest(ctx, planID, msg)
 }
 
 /*********
@@ -65,12 +80,12 @@ func (p *proxy) UpdateTripPlan(ctx context.Context, planID string, msg CollabOpM
  *********/
 
 type Store interface {
-	ReadCollabSession(ctx context.Context, planID string) (CollabSession, error)
-	AddMemberToCollabSession(ctx context.Context, planID string, member trips.TripMember) error
-	RemoveMemberFromCollabSession(ctx context.Context, planID string, member trips.TripMember) error
+	ReadSyncSession(ctx context.Context, planID string) (SyncSession, error)
+	AddConnToSession(ctx context.Context, conn SyncConnection) error
+	RemoveConnFromSession(ctx context.Context, conn SyncConnection) error
 
-	SubscribeTOBUpdates(ctx context.Context, planID string) (chan<- CollabOpMessage, error)
-	PublishSessUpdates(ctx context.Context, planID string, msg CollabOpMessage) error
+	SubscribeTOBUpdates(ctx context.Context, planID string) (chan SyncMessage, error)
+	PublishSessRequest(ctx context.Context, planID string, msg SyncMessage) error
 
 	ReadTripPlan(ctx context.Context, ID string) (trips.TripPlan, error)
 }
@@ -88,12 +103,12 @@ func NewStore(tripStore trips.Store, nc *nats.Conn, rdb redis.UniversalClient) S
 	return &store{tripStore, nc, rdb, doneCh}
 }
 
-// Subscribe
+// Subscribe coordinator -> client
 
-func (s *store) SubscribeTOBUpdates(ctx context.Context, planID string) (chan<- CollabOpMessage, error) {
-	subj := collabSessTOBKey(planID)
+func (s *store) SubscribeTOBUpdates(ctx context.Context, planID string) (chan SyncMessage, error) {
+	subj := syncSessTOBSubj(planID)
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan CollabOpMessage, common.DefaultChSize)
+	msgCh := make(chan SyncMessage, common.DefaultChSize)
 
 	sub, err := s.nc.ChanSubscribe(subj, natsCh)
 	if err != nil {
@@ -108,7 +123,7 @@ func (s *store) SubscribeTOBUpdates(ctx context.Context, planID string) (chan<- 
 				close(msgCh)
 				return
 			case natsMsg := <-natsCh:
-				var msg CollabOpMessage
+				var msg SyncMessage
 				err := json.Unmarshal(natsMsg.Data, &msg)
 				if err == nil {
 					msgCh <- msg
@@ -119,34 +134,47 @@ func (s *store) SubscribeTOBUpdates(ctx context.Context, planID string) (chan<- 
 	return msgCh, nil
 }
 
-// Publish
+// Publish client -> coordinator
 
-func (s *store) PublishSessUpdates(ctx context.Context, planID string, msg CollabOpMessage) error {
-	subj := collabSessUpdatesKey(planID)
+func (s *store) PublishSessRequest(ctx context.Context, planID string, msg SyncMessage) error {
+	subj := syncSessRequestSubj(planID)
 	data, _ := json.Marshal(msg)
+	fmt.Println("publishing", string(data))
 	return s.nc.Publish(subj, data)
 }
 
 // Session
 
-func (s *store) ReadCollabSession(ctx context.Context, planID string) (CollabSession, error) {
-	var members trips.TripMembersList
-	key := collabSessMembersKey(planID)
-	data := s.rdb.SMembers(ctx, key)
-	err := data.ScanSlice(&members)
-	return CollabSession{members}, err
+func (s *store) ReadSyncSession(ctx context.Context, planID string) (SyncSession, error) {
+	var strSlice []string
+	key := syncSessConnectionsKey(planID)
+	cmd := s.rdb.HVals(ctx, key)
+	err := cmd.ScanSlice(&strSlice)
+	if err != nil {
+		return SyncSession{}, err
+	}
+
+	members := trips.TripMembersList{}
+	for _, str := range strSlice {
+		var mem trips.TripMember
+		json.Unmarshal([]byte(str), &mem)
+		members = append(members, mem)
+	}
+	return SyncSession{members}, err
 }
 
-func (s *store) AddMemberToCollabSession(ctx context.Context, planID string, member trips.TripMember) error {
-	key := collabSessMembersKey(planID)
-	value, _ := json.Marshal(member)
-	cmd := s.rdb.HSet(ctx, key, member.MemberID, string(value))
+func (s *store) AddConnToSession(ctx context.Context, conn SyncConnection) error {
+	key := syncSessConnectionsKey(conn.PlanID)
+	value, _ := json.Marshal(conn.Member)
+	cmd := s.rdb.HSet(ctx, key, conn.ConnectionID, value)
 	return cmd.Err()
 }
 
-func (s *store) RemoveMemberFromCollabSession(ctx context.Context, planID string, member trips.TripMember) error {
-	key := collabSessMembersKey(planID)
-	cmd := s.rdb.HDel(ctx, key, member.MemberID)
+func (s *store) RemoveConnFromSession(ctx context.Context, conn SyncConnection) error {
+	key := syncSessConnectionsKey(conn.PlanID)
+	cmd := s.rdb.HDel(ctx, key, conn.ConnectionID)
+	fmt.Println("leaving", conn.ConnectionID)
+	fmt.Println(cmd.Err())
 	return cmd.Err()
 }
 

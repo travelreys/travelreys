@@ -1,7 +1,6 @@
 package tripssync
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
@@ -10,75 +9,90 @@ import (
 
 // Pub/Sub Subjects
 
-func collabSessMembersKey(planID string) string {
-	return fmt.Sprintf("collab-session:%s:members", planID)
+func syncSessConnectionsKey(planID string) string {
+	return fmt.Sprintf("sync-session:%s:connections", planID)
 }
 
-func collabSessUpdatesKey(planID string) string {
-	return fmt.Sprintf("collab-session:%s:updates", planID)
+func syncSessCounterKey(planID string) string {
+	return fmt.Sprintf("sync-session:%s:counter", planID)
 }
 
-func collabSessTOBKey(planID string) string {
-	return fmt.Sprintf("collab-session:%s:tob", planID)
+// syncSessRequestSub is the subj for client -> coordinator
+func syncSessRequestSubj(planID string) string {
+	return fmt.Sprintf("sync-session:%s:requests", planID)
 }
 
-func collabSessCounterKey(planID string) string {
-	return fmt.Sprintf("collab-session:%s:counter", planID)
+// syncSessTOBSubj is the subj for coordinator -> client
+func syncSessTOBSubj(planID string) string {
+	return fmt.Sprintf("sync-session:%s:tob", planID)
 }
 
-// Collaboration Session
+// Sync Session
 
-type CollabSession struct {
-	Members trips.TripMembersList `json:"members"`
+type SyncSession struct {
+	Members trips.TripMembersList `json:"members"` // who is in the current session
 }
 
 const (
-	CollabOpJoinSession  = "CollabOpJoinSession"
-	CollabOpLeaveSession = "CollabOpLeaveSession"
-	CollabOpPingSession  = "CollabOpPingSession"
-	CollabOpFetchTrip    = "CollabOpFetchTrip"
-	CollabOpUpdateTrip   = "CollabOpUpdateTrip"
+	SyncOpJoinSession  = "SyncOpJoinSession"
+	SyncOpLeaveSession = "SyncOpLeaveSession"
+	SyncOpPingSession  = "SyncOpPingSession"
+	SyncOpFetchTrip    = "SyncOpFetchTrip"
+	SyncOpUpdateTrip   = "SyncOpUpdateTrip"
 )
 
-func isValidCollabOpType(opType string) bool {
+func isValidSyncOpType(opType string) bool {
 	return utils.StringContains([]string{
-		CollabOpJoinSession,
-		CollabOpLeaveSession,
-		CollabOpPingSession,
-		CollabOpFetchTrip,
-		CollabOpUpdateTrip,
+		SyncOpJoinSession,
+		SyncOpLeaveSession,
+		SyncOpPingSession,
+		SyncOpFetchTrip,
+		SyncOpUpdateTrip,
 	}, opType)
 }
 
-type CollabOpMessage struct {
-	ID         string `json:"id"`
-	Counter    uint64 `json:"ts"` // Should be monotonically increasing
+type SyncMessage struct {
+	ID         string `json:"id"`      // Users' connection id
+	Counter    uint64 `json:"counter"` // Should be monotonically increasing
 	TripPlanID string `json:"tripPlanID"`
 	OpType     string `json:"opType"`
 
-	JoinSessionReq  CollabOpJoinSessionRequest  `json:"joinSessionReq"`
-	LeaveSessionReq CollabOpLeaveSessionRequest `json:"leaveSessionReq"`
-	PingSessionReq  CollabOpPingSessionRequest  `json:"pingSessionReq"`
-	UpdateTripReq   CollabOpUpdateTripRequest   `json:"updateTripReq"`
+	SyncDataJoinSession           `json:"syncDataJoinSession"`
+	SyncDataJoinSessionBroadcast  `json:"syncDataJoinSessionBroadcast"`
+	SyncDataLeaveSession          `json:"syncDataLeaveSession"`
+	SyncDataLeaveSessionBroadcast `json:"syncDataLeaveSessionBroadcast"`
+	SyncDataPing                  `json:"syncDataPing"`
+	SyncDataUpdateTrip            `json:"syncDataUpdateTrip"`
 }
 
-type CollabOpJoinSessionRequest struct {
+type SyncDataJoinSession struct {
 	trips.TripMember
 }
 
-type CollabOpLeaveSessionRequest struct {
+type SyncDataJoinSessionBroadcast struct {
+	trips.TripMembersList
+}
+
+type SyncDataLeaveSession struct {
 	trips.TripMember
 }
 
-type CollabOpPingSessionRequest struct{}
+type SyncDataLeaveSessionBroadcast struct {
+	trips.TripMembersList
+}
 
-type CollabOpUpdateTripRequest struct {
+type SyncDataPing struct{}
+
+type SyncDataUpdateTrip struct {
 	Op    string `json:"op"`
 	Path  string `json:"path"`
 	Value string `json:"value"` // JSON string
 }
 
-func (req CollabOpUpdateTripRequest) Bytes() []byte {
-	bytes, _ := json.Marshal(req)
-	return bytes
+// Sync Connection
+
+type SyncConnection struct {
+	PlanID       string
+	ConnectionID string
+	Member       trips.TripMember
 }

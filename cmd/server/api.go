@@ -60,7 +60,6 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/healthz", utils.HealthzHandler)
 	r.HandleFunc("/ws", collabSvr.HandleFunc)
-
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 

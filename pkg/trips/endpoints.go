@@ -35,7 +35,6 @@ func NewCreateTripPlanEndpoint(svc Service) endpoint.Endpoint {
 		creator := TripMember{
 			MemberID:    "1",
 			MemberEmail: "awhdes@gmail.com",
-			Permission:  TripMemberPermCollaborator,
 		}
 
 		plan, err := svc.CreateTripPlan(rctx, creator, req.Name, req.StartDate, req.EndDate)

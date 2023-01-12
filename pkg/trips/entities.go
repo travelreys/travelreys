@@ -89,7 +89,6 @@ const (
 type TripMember struct {
 	MemberID    string `json:"memberID" bson:"memberID"`
 	MemberEmail string `json:"memberEmail" bson:"memberEmail"`
-	Permission  string `json:"permission" bson:"permission"`
 }
 
 type TripMembersList []TripMember
