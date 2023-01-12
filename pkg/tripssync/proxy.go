@@ -198,7 +198,6 @@ func (h *ConnHandler) Run() {
 			return
 		}
 
-		// h.ws.WriteJSON(resp)
 	}
 }
 
@@ -239,7 +238,7 @@ func (h *ConnHandler) HandleSyncMessage(msg SyncMessage) error {
 
 func (h *ConnHandler) HandleProxy() {
 	for msg := range h.tobMsgCh {
-		fmt.Println(msg)
-		return
+		h.logger.Debug("recv tob", zap.String("msg", fmt.Sprintf("%+v", msg)))
+		h.ws.WriteJSON(msg)
 	}
 }

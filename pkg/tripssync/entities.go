@@ -5,7 +5,13 @@ import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 )
 
-// Sync Session
+// Sync Session State
+
+type SyncConnection struct {
+	PlanID       string
+	ConnectionID string
+	Member       trips.TripMember
+}
 
 type SyncSession struct {
 	// Members is a list of members in the current session
@@ -94,12 +100,4 @@ type SyncDataUpdateTrip struct {
 	Op    string `json:"op"`
 	Path  string `json:"path"`
 	Value string `json:"value"` // JSON string
-}
-
-// Sync Connection
-
-type SyncConnection struct {
-	PlanID       string
-	ConnectionID string
-	Member       trips.TripMember
 }

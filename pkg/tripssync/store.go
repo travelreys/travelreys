@@ -47,6 +47,7 @@ type SessionStore interface {
 
 	GetSessionCounter(ctx context.Context, planID string) (uint64, error)
 	IncrSessionCounter(ctx context.Context, planID string) error
+	DeleteSessionCounter(ctx context.Context, planID string) error
 }
 
 type sessionStore struct {
@@ -104,6 +105,12 @@ func (s *sessionStore) GetSessionCounter(ctx context.Context, planID string) (ui
 func (s *sessionStore) IncrSessionCounter(ctx context.Context, planID string) error {
 	key := syncSessCounterKey(planID)
 	cmd := s.rdb.Incr(ctx, key)
+	return cmd.Err()
+}
+
+func (s *sessionStore) DeleteSessionCounter(ctx context.Context, planID string) error {
+	key := syncSessCounterKey(planID)
+	cmd := s.rdb.Del(ctx, key)
 	return cmd.Err()
 }
 

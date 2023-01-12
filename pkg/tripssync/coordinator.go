@@ -8,7 +8,6 @@ import (
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/google/uuid"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"go.uber.org/zap"
 )
@@ -77,6 +76,7 @@ func (crd *Coordinator) Init() error {
 	}
 	planBytes, _ := json.Marshal(plan)
 	crd.plan = planBytes
+	crd.logger.Debug("loaded plan", zap.String("plan", string(crd.plan)))
 
 	// 2.Subscribe to updates from clients
 	msgCh, done, err := crd.sms.SubscribeQueue(crd.planID, GroupCoordinators)
@@ -90,6 +90,7 @@ func (crd *Coordinator) Init() error {
 }
 
 func (crd *Coordinator) Stop() {
+	crd.sesnStore.DeleteSessionCounter(context.Background(), crd.planID)
 	if crd.doneCh != nil {
 		crd.doneCh <- true
 	}
@@ -97,15 +98,21 @@ func (crd *Coordinator) Stop() {
 }
 
 func (crd *Coordinator) Run() error {
-	// 3.1. Takes in op msg indicating changes from clients
-	// 3.2. Give each message a counter
-	// 3.3. Sends each ordered message back to the FIFO queue
+	crd.logger.Info("running coordinator", zap.String("planID", crd.planID))
+
 	go func() {
-		crd.logger.Info("running coordinator", zap.String("planID", crd.planID))
+		// 3.1. Takes in op msg indicating changes from clients
 		for msg := range crd.msgCh {
 			crd.logger.Debug("recv msg", zap.String("msg", fmt.Sprintf("%+v", msg)))
-			if msg.OpType == SyncOpLeaveSession {
-				// close coordinator when all users have left the session
+
+			switch msg.OpType {
+			case SyncOpJoinSession:
+				// Got new player, reset counter
+				crd.counter = 0
+				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
+				msg = NewSyncMessageJoinSessionBroadcast(msg.TripPlanID, sess.Members)
+			case SyncOpLeaveSession:
+				// stop coordinator if no users left in session
 				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
 				if len(sess.Members) == 0 {
 					crd.logger.Info("stopping coordinator", zap.String("planID", crd.planID))
@@ -116,15 +123,10 @@ func (crd *Coordinator) Run() error {
 				msg = NewSyncMessageLeaveSessionBroadcast(msg.TripPlanID, sess.Members)
 			}
 
-			if msg.OpType == SyncOpJoinSession {
-				// Got new player, reset counter
-				crd.counter = 0
-
-				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
-				msg = NewSyncMessageJoinSessionBroadcast(msg.TripPlanID, sess.Members)
-			}
-
+			// 3.2. Give each message a counter
 			msg.Counter = crd.counter
+
+			// 3.3. Sends each ordered message back to the FIFO queue
 			crd.queue <- msg
 
 			// Need to update the counter
@@ -133,29 +135,42 @@ func (crd *Coordinator) Run() error {
 		}
 	}()
 
-	// 4.1 Broadcasts the operation to all other connected clients
-	// 4.2 Update local plan and persist the data
 	go func() {
+		// 4.1 Read message from FIFO Queue
 		for msg := range crd.queue {
+			// 4.2 Update local plan and persist the data (if required)
 			// Update local copy of plan + validate if the op is valid
-			patchData, _ := json.Marshal(msg.SyncDataUpdateTrip.Value)
-			patch, _ := jsonpatch.DecodePatch(patchData)
-			modified, err := patch.Apply(crd.plan)
-			if err != nil {
-				return
+			if msg.OpType == SyncOpUpdateTrip {
+				crd.HandleTOBSyncOpUpdateTrip(msg)
 			}
-			crd.plan = modified
-			var plan trips.TripPlan
-			json.Unmarshal(crd.plan, &plan)
-
-			// TODO: these ops must be atomic!
-			crd.tripStore.SaveTripPlan(reqctx.Context{}, plan)
-			crd.sesnStore.IncrSessionCounter(context.Background(), crd.planID)
+			// 4.3 Broadcasts the tob msg to all other connected clients
 			crd.tms.Publish(crd.planID, msg)
 		}
 	}()
 
 	return nil
+}
+
+// HandleSyncOpUpdateTrip handles SyncOpUpdateTrip messages
+func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
+	opList := []interface{}{msg.SyncDataUpdateTrip}
+	patchJSON, _ := json.Marshal(opList)
+	patch, _ := jsonpatch.DecodePatch(patchJSON)
+
+	modified, err := patch.Apply(crd.plan)
+	if err != nil {
+		crd.logger.Error("json patch apply", zap.Error(err))
+		return
+	}
+	crd.plan = modified
+	crd.logger.Debug("modified plan", zap.String("modified", string(modified)))
+
+	var toSave trips.TripPlan
+	json.Unmarshal(crd.plan, &toSave)
+
+	crd.tripStore.SaveTripPlan(context.Background(), toSave)
+	crd.sesnStore.IncrSessionCounter(context.Background(), crd.planID)
+
 }
 
 /***********
@@ -187,6 +202,8 @@ func NewCoordinatorSpawner(
 	}
 }
 
+// Run listens to SynOpJoinSession requests and spawn a
+// coordinator if there is only 1 member in the session (i.e new session)
 func (spwn *CoordinatorSpawner) Run() error {
 	msgCh, done, err := spwn.sms.Subscribe("*")
 	if err != nil {
