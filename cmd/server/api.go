@@ -44,13 +44,15 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	metricsMW := utils.NewMetricsMiddleware()
 
 	// Collab
-	collabStore := tripssync.NewStore(tripStore, nc, rdb)
+	sesnStore := tripssync.NewSessionStore(rdb)
+	smStore := tripssync.NewSyncMessageStore(nc, rdb)
+	tobStore := tripssync.NewTOBMessageStore(nc, rdb)
 
-	pxy, err := tripssync.NewProxy(collabStore)
+	pxy, err := tripssync.NewProxy(sesnStore, smStore, tobStore, tripStore)
 	if err != nil {
 		return nil, err
 	}
-	collabSvr := tripssync.MakeServer(pxy, logger)
+	proxyServer := tripssync.MakeProxyServer(pxy, logger)
 
 	r.Use(securityMW.Handler)
 	r.Use(wrwMW.Handler)
@@ -59,7 +61,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/healthz", utils.HealthzHandler)
-	r.HandleFunc("/ws", collabSvr.HandleFunc)
+	r.HandleFunc("/ws", proxyServer.HandleFunc)
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 

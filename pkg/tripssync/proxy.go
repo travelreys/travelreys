@@ -2,18 +2,16 @@ package tripssync
 
 import (
 	context "context"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"time"
 
-	"github.com/go-redis/redis/v9"
-	"github.com/nats-io/nats.go"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"go.uber.org/zap"
 )
-
-/*********
- * Proxy *
- *********/
 
 // Proxy proxies clients' updates to the backend sync infrastructure.
 type Proxy interface {
@@ -21,21 +19,23 @@ type Proxy interface {
 	LeaveSession(ctx context.Context, planID string, msg SyncMessage) error
 	ReadTripPlan(ctx context.Context, planID string, msg SyncMessage) (trips.TripPlan, error)
 	UpdateTripPlan(ctx context.Context, planID string, msg SyncMessage) error
-
-	SubscribeTOBUpdates(ctx context.Context, planID string) (chan SyncMessage, error)
+	SubscribeTOBUpdates(ctx context.Context, planID string) (<-chan SyncMessage, chan<- bool, error)
 }
 
 type proxy struct {
-	store        Store
-	tobUpdatesCh chan SyncMessage
+	sesnStore SessionStore
+	sms       SyncMessageStore
+	tms       TOBMessageStore
+	tripStore trips.Store
 }
 
-func NewProxy(Store Store) (Proxy, error) {
-	return &proxy{Store, nil}, nil
-}
-
-func (p *proxy) SubscribeTOBUpdates(ctx context.Context, planID string) (chan SyncMessage, error) {
-	return p.store.SubscribeTOBUpdates(ctx, planID)
+func NewProxy(
+	sesnStore SessionStore,
+	sms SyncMessageStore,
+	tms TOBMessageStore,
+	tripStore trips.Store,
+) (Proxy, error) {
+	return &proxy{sesnStore, sms, tms, tripStore}, nil
 }
 
 // Session
@@ -46,13 +46,13 @@ func (p *proxy) JoinSession(ctx context.Context, planID string, msg SyncMessage)
 		ConnectionID: msg.ID,
 		Member:       msg.SyncDataJoinSession.TripMember,
 	}
-	err := p.store.AddConnToSession(ctx, conn)
+	err := p.sesnStore.AddConnToSession(ctx, conn)
 	if err != nil {
 		return SyncSession{}, err
 	}
 
-	p.store.PublishSessRequest(ctx, planID, msg)
-	return p.store.ReadSyncSession(ctx, planID)
+	p.sms.Publish(planID, msg)
+	return p.sesnStore.Read(ctx, planID)
 }
 
 func (p *proxy) LeaveSession(ctx context.Context, planID string, msg SyncMessage) error {
@@ -60,126 +60,187 @@ func (p *proxy) LeaveSession(ctx context.Context, planID string, msg SyncMessage
 		PlanID:       planID,
 		ConnectionID: msg.ID,
 	}
-	p.store.RemoveConnFromSession(ctx, conn)
-	p.store.PublishSessRequest(ctx, planID, msg)
+	p.sesnStore.RemoveConnFromSession(ctx, conn)
+	p.sms.Publish(planID, msg)
 	return nil
 }
 
 // Plans
 
 func (p *proxy) ReadTripPlan(ctx context.Context, planID string, msg SyncMessage) (trips.TripPlan, error) {
-	return p.store.ReadTripPlan(ctx, planID)
+	return p.tripStore.ReadTripPlan(ctx, planID)
 }
+
+// Sync Messages
 
 func (p *proxy) UpdateTripPlan(ctx context.Context, planID string, msg SyncMessage) error {
-	return p.store.PublishSessRequest(ctx, planID, msg)
+	return p.sms.Publish(planID, msg)
 }
 
-/*********
- * Store *
- *********/
+// TOB Updates
 
-type Store interface {
-	ReadSyncSession(ctx context.Context, planID string) (SyncSession, error)
-	AddConnToSession(ctx context.Context, conn SyncConnection) error
-	RemoveConnFromSession(ctx context.Context, conn SyncConnection) error
-
-	SubscribeTOBUpdates(ctx context.Context, planID string) (chan SyncMessage, error)
-	PublishSessRequest(ctx context.Context, planID string, msg SyncMessage) error
-
-	ReadTripPlan(ctx context.Context, ID string) (trips.TripPlan, error)
+func (p *proxy) SubscribeTOBUpdates(ctx context.Context, planID string) (<-chan SyncMessage, chan<- bool, error) {
+	return p.tms.Subscribe(planID)
 }
 
-type store struct {
-	tripStore trips.Store
-	nc        *nats.Conn
-	rdb       redis.UniversalClient
+/****************
+ * Proxy Server *
+ ****************/
 
-	done chan bool
+var (
+	ErrInvalidSyncOp     = errors.New("invalid-sync-op")
+	ErrInvalidSyncOpData = errors.New("invalid-sync-op-data")
+)
+
+const (
+	// Time allowed to write the file to the client.
+	writeWait = 10 * time.Second
+
+	// Time allowed to read the next pong message from the client.
+	pongWait = 60 * time.Second
+
+	// Send pings to client with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
+)
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
-func NewStore(tripStore trips.Store, nc *nats.Conn, rdb redis.UniversalClient) Store {
-	doneCh := make(chan bool)
-	return &store{tripStore, nc, rdb, doneCh}
+// ProxyServer handles multiple incoming websocket connections from clients
+// by creating a connection handler for each connection.
+type ProxyServer struct {
+	proxy  Proxy
+	logger *zap.Logger
 }
 
-// Subscribe coordinator -> client
+func MakeProxyServer(pxy Proxy, logger *zap.Logger) *ProxyServer {
+	return &ProxyServer{proxy: pxy, logger: logger}
+}
 
-func (s *store) SubscribeTOBUpdates(ctx context.Context, planID string) (chan SyncMessage, error) {
-	subj := syncSessTOBSubj(planID)
-	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan SyncMessage, common.DefaultChSize)
-
-	sub, err := s.nc.ChanSubscribe(subj, natsCh)
+func (srv *ProxyServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		return nil, err
+		srv.logger.Error("upgrade", zap.Error(err))
+		return
 	}
+	defer ws.Close()
 
-	go func() {
-		for {
-			select {
-			case <-s.done:
-				sub.Unsubscribe()
-				close(msgCh)
-				return
-			case natsMsg := <-natsCh:
-				var msg SyncMessage
-				err := json.Unmarshal(natsMsg.Data, &msg)
-				if err == nil {
-					msgCh <- msg
-				}
-			}
-		}
+	go srv.PingPong(ws)
+
+	connHandler := ConnHandler{
+		proxy:  srv.proxy,
+		connID: uuid.New().String(),
+		ws:     ws,
+		logger: srv.logger,
+	}
+	connHandler.Run()
+}
+
+func (srv *ProxyServer) PingPong(ws *websocket.Conn) {
+	ws.SetReadDeadline(time.Now().Add(pongWait))
+	ws.SetPongHandler(func(string) error {
+		ws.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	pingTicker := time.NewTicker(pingPeriod)
+	defer func() {
+		pingTicker.Stop()
+		ws.Close()
 	}()
-	return msgCh, nil
-}
-
-// Publish client -> coordinator
-
-func (s *store) PublishSessRequest(ctx context.Context, planID string, msg SyncMessage) error {
-	subj := syncSessRequestSubj(planID)
-	data, _ := json.Marshal(msg)
-	fmt.Println("publishing", string(data))
-	return s.nc.Publish(subj, data)
-}
-
-// Session
-
-func (s *store) ReadSyncSession(ctx context.Context, planID string) (SyncSession, error) {
-	var strSlice []string
-	key := syncSessConnectionsKey(planID)
-	cmd := s.rdb.HVals(ctx, key)
-	err := cmd.ScanSlice(&strSlice)
-	if err != nil {
-		return SyncSession{}, err
+	for range pingTicker.C {
+		ws.SetWriteDeadline(time.Now().Add(writeWait))
+		if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+			return
+		}
 	}
+}
 
-	members := trips.TripMembersList{}
-	for _, str := range strSlice {
-		var mem trips.TripMember
-		json.Unmarshal([]byte(str), &mem)
-		members = append(members, mem)
+// Connection Handler
+
+type ConnHandler struct {
+	proxy      Proxy
+	ws         *websocket.Conn
+	connID     string
+	tripPlanID string
+	syncMsgCh  <-chan SyncMessage
+	doneCh     chan<- bool
+	logger     *zap.Logger
+}
+
+func (handler *ConnHandler) Run() {
+	defer func() {
+		handler.HandleSyncMessage(SyncMessage{
+			OpType:     SyncOpLeaveSession,
+			ID:         handler.connID,
+			TripPlanID: handler.tripPlanID,
+		})
+		handler.ws.Close()
+	}()
+
+	for {
+		var msg SyncMessage
+		err := handler.ws.ReadJSON(&msg)
+		if err != nil {
+			handler.logger.Error("read:", zap.Error(err))
+			return
+		}
+		if !isValidSyncMessageType(msg.OpType) {
+			continue
+		}
+		if err := handler.HandleSyncMessage(msg); err != nil {
+			handler.logger.Error("handle:", zap.Error(err))
+			continue
+		}
+		// Close session if client leaves.
+		if msg.OpType == SyncOpLeaveSession {
+			return
+		}
+
+		// handler.ws.WriteJSON(resp)
 	}
-	return SyncSession{members}, err
 }
 
-func (s *store) AddConnToSession(ctx context.Context, conn SyncConnection) error {
-	key := syncSessConnectionsKey(conn.PlanID)
-	value, _ := json.Marshal(conn.Member)
-	cmd := s.rdb.HSet(ctx, key, conn.ConnectionID, value)
-	return cmd.Err()
+func (handler *ConnHandler) HandleSyncMessage(msg SyncMessage) error {
+	ctx := context.Background()
+
+	msg.ID = handler.connID
+
+	switch msg.OpType {
+	case SyncOpJoinSession:
+		msgCh, done, err := handler.proxy.SubscribeTOBUpdates(context.Background(), msg.TripPlanID)
+		if err != nil {
+			return err
+		}
+
+		handler.syncMsgCh = msgCh
+		handler.tripPlanID = msg.TripPlanID
+		handler.doneCh = done
+
+		_, err = handler.proxy.JoinSession(ctx, msg.TripPlanID, msg)
+		if err == nil {
+			go handler.HandleProxy()
+		}
+		return err
+
+	case SyncOpLeaveSession:
+		handler.doneCh <- true
+		return handler.proxy.LeaveSession(ctx, msg.TripPlanID, msg)
+
+	case SyncOpUpdateTrip:
+		return handler.proxy.UpdateTripPlan(ctx, msg.TripPlanID, msg)
+
+	default:
+		return nil
+	}
 }
 
-func (s *store) RemoveConnFromSession(ctx context.Context, conn SyncConnection) error {
-	key := syncSessConnectionsKey(conn.PlanID)
-	cmd := s.rdb.HDel(ctx, key, conn.ConnectionID)
-	fmt.Println("leaving", conn.ConnectionID)
-	fmt.Println(cmd.Err())
-	return cmd.Err()
-}
-
-// Plans
-
-func (s *store) ReadTripPlan(ctx context.Context, ID string) (trips.TripPlan, error) {
-	return s.tripStore.ReadTripPlan(ctx, ID)
+func (handler *ConnHandler) HandleProxy() {
+	for msg := range handler.syncMsgCh {
+		fmt.Println(msg)
+		return
+	}
 }

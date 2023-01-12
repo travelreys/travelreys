@@ -14,7 +14,6 @@ const TripsAPI = {
     const fetcher = (url: string) => {
       return axios.get(url).then(res => res.data);
     }
-
     const { data, error, isLoading } = useSWR(url, fetcher);
     return { data, error, isLoading};
   },

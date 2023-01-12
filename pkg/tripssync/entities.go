@@ -1,47 +1,30 @@
 package tripssync
 
 import (
-	"fmt"
-
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 )
 
-// Pub/Sub Subjects
-
-func syncSessConnectionsKey(planID string) string {
-	return fmt.Sprintf("sync-session:%s:connections", planID)
-}
-
-func syncSessCounterKey(planID string) string {
-	return fmt.Sprintf("sync-session:%s:counter", planID)
-}
-
-// syncSessRequestSub is the subj for client -> coordinator
-func syncSessRequestSubj(planID string) string {
-	return fmt.Sprintf("sync-session:%s:requests", planID)
-}
-
-// syncSessTOBSubj is the subj for coordinator -> client
-func syncSessTOBSubj(planID string) string {
-	return fmt.Sprintf("sync-session:%s:tob", planID)
-}
-
 // Sync Session
 
 type SyncSession struct {
-	Members trips.TripMembersList `json:"members"` // who is in the current session
+	// Members is a list of members in the current session
+	Members trips.TripMembersList `json:"members"`
 }
 
+// Sync Message
+
 const (
-	SyncOpJoinSession  = "SyncOpJoinSession"
-	SyncOpLeaveSession = "SyncOpLeaveSession"
-	SyncOpPingSession  = "SyncOpPingSession"
-	SyncOpFetchTrip    = "SyncOpFetchTrip"
-	SyncOpUpdateTrip   = "SyncOpUpdateTrip"
+	SyncOpJoinSession           = "SyncOpJoinSession"
+	SyncOpJoinSessionBroadcast  = "SyncOpJoinSessionBroadcast"
+	SyncOpLeaveSession          = "SyncOpLeaveSession"
+	SyncOpLeaveSessionBroadcast = "SyncOpLeaveSessionBroadcast"
+	SyncOpPingSession           = "SyncOpPingSession"
+	SyncOpFetchTrip             = "SyncOpFetchTrip"
+	SyncOpUpdateTrip            = "SyncOpUpdateTrip"
 )
 
-func isValidSyncOpType(opType string) bool {
+func isValidSyncMessageType(opType string) bool {
 	return utils.StringContains([]string{
 		SyncOpJoinSession,
 		SyncOpLeaveSession,
