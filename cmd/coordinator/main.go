@@ -78,14 +78,13 @@ func main() {
 
 	logger.Info("spawner configuration", zap.String("config", fmt.Sprintf("%+v", srvCfg)))
 
-	// Make Spawner
+	// Make Coordinator Spawner
 	spawner, err := MakeCoordinatorSpanwer(srvCfg, logger)
 	if err != nil {
 		logger.Panic("error initialising api server", zap.Error(err))
 	}
 
-	// Run Spawner
-
+	// Run Coordinator Spawner
 	go func() {
 		logger.Info("starting spawner", zap.String("host", srvCfg.Host))
 		if err := spawner.Run(); err != nil {

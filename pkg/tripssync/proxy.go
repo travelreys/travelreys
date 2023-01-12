@@ -166,33 +166,31 @@ type ConnHandler struct {
 	ws         *websocket.Conn
 	connID     string
 	tripPlanID string
-	syncMsgCh  <-chan SyncMessage
+	tobMsgCh   <-chan SyncMessage
 	doneCh     chan<- bool
 	logger     *zap.Logger
 }
 
-func (handler *ConnHandler) Run() {
+func (h *ConnHandler) Run() {
+	h.logger.Info("new connection", zap.String("connID", h.connID))
 	defer func() {
-		handler.HandleSyncMessage(SyncMessage{
-			OpType:     SyncOpLeaveSession,
-			ID:         handler.connID,
-			TripPlanID: handler.tripPlanID,
-		})
-		handler.ws.Close()
+		h.logger.Info("closing connection", zap.String("connID", h.connID))
+		h.HandleSyncMessage(NewSyncMessageLeaveSession(h.connID, h.tripPlanID))
+		h.ws.Close()
 	}()
 
 	for {
 		var msg SyncMessage
-		err := handler.ws.ReadJSON(&msg)
+		err := h.ws.ReadJSON(&msg)
 		if err != nil {
-			handler.logger.Error("read:", zap.Error(err))
+			h.logger.Error("read:", zap.Error(err))
 			return
 		}
 		if !isValidSyncMessageType(msg.OpType) {
 			continue
 		}
-		if err := handler.HandleSyncMessage(msg); err != nil {
-			handler.logger.Error("handle:", zap.Error(err))
+		if err := h.HandleSyncMessage(msg); err != nil {
+			h.logger.Error("handle:", zap.Error(err))
 			continue
 		}
 		// Close session if client leaves.
@@ -200,46 +198,47 @@ func (handler *ConnHandler) Run() {
 			return
 		}
 
-		// handler.ws.WriteJSON(resp)
+		// h.ws.WriteJSON(resp)
 	}
 }
 
-func (handler *ConnHandler) HandleSyncMessage(msg SyncMessage) error {
+func (h *ConnHandler) HandleSyncMessage(msg SyncMessage) error {
 	ctx := context.Background()
+	msg.ID = h.connID
 
-	msg.ID = handler.connID
+	h.logger.Debug("recv msg", zap.String("msg", fmt.Sprintf("%+v", msg)))
 
 	switch msg.OpType {
 	case SyncOpJoinSession:
-		msgCh, done, err := handler.proxy.SubscribeTOBUpdates(context.Background(), msg.TripPlanID)
+		tobMsgCh, done, err := h.proxy.SubscribeTOBUpdates(context.Background(), msg.TripPlanID)
 		if err != nil {
 			return err
 		}
 
-		handler.syncMsgCh = msgCh
-		handler.tripPlanID = msg.TripPlanID
-		handler.doneCh = done
+		h.tobMsgCh = tobMsgCh
+		h.tripPlanID = msg.TripPlanID
+		h.doneCh = done
 
-		_, err = handler.proxy.JoinSession(ctx, msg.TripPlanID, msg)
+		_, err = h.proxy.JoinSession(ctx, msg.TripPlanID, msg)
 		if err == nil {
-			go handler.HandleProxy()
+			go h.HandleProxy()
 		}
 		return err
 
 	case SyncOpLeaveSession:
-		handler.doneCh <- true
-		return handler.proxy.LeaveSession(ctx, msg.TripPlanID, msg)
+		h.doneCh <- true
+		return h.proxy.LeaveSession(ctx, msg.TripPlanID, msg)
 
 	case SyncOpUpdateTrip:
-		return handler.proxy.UpdateTripPlan(ctx, msg.TripPlanID, msg)
+		return h.proxy.UpdateTripPlan(ctx, msg.TripPlanID, msg)
 
 	default:
 		return nil
 	}
 }
 
-func (handler *ConnHandler) HandleProxy() {
-	for msg := range handler.syncMsgCh {
+func (h *ConnHandler) HandleProxy() {
+	for msg := range h.tobMsgCh {
 		fmt.Println(msg)
 		return
 	}

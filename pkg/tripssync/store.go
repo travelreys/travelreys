@@ -112,6 +112,7 @@ func (s *sessionStore) IncrSessionCounter(ctx context.Context, planID string) er
 type SyncMessageStore interface {
 	Publish(planID string, msg SyncMessage) error
 	Subscribe(planID string) (<-chan SyncMessage, chan<- bool, error)
+	SubscribeQueue(planID, groupName string) (<-chan SyncMessage, chan<- bool, error)
 }
 
 type syncMsgStore struct {
@@ -125,8 +126,14 @@ func NewSyncMessageStore(nc *nats.Conn, rdb redis.UniversalClient) SyncMessageSt
 
 func (sms *syncMsgStore) Publish(planID string, msg SyncMessage) error {
 	subj := syncSessRequestSubj(planID)
-	data, _ := json.Marshal(msg)
-	return sms.nc.Publish(subj, data)
+	data, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if err = sms.nc.Publish(subj, data); err != nil {
+		return err
+	}
+	return sms.nc.Flush()
 }
 
 func (sms *syncMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- bool, error) {
@@ -136,7 +143,7 @@ func (sms *syncMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- bo
 
 	done := make(chan bool)
 
-	sub, err := sms.nc.ChanQueueSubscribe(subj, GroupCoordinators, natsCh)
+	sub, err := sms.nc.ChanSubscribe(subj, natsCh)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -154,6 +161,39 @@ func (sms *syncMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- bo
 				if err == nil {
 					msgCh <- msg
 				}
+
+			}
+		}
+	}()
+	return msgCh, done, nil
+}
+
+func (sms *syncMsgStore) SubscribeQueue(planID, groupName string) (<-chan SyncMessage, chan<- bool, error) {
+	subj := syncSessRequestSubj(planID)
+	natsCh := make(chan *nats.Msg, common.DefaultChSize)
+	msgCh := make(chan SyncMessage, common.DefaultChSize)
+
+	done := make(chan bool)
+
+	sub, err := sms.nc.QueueSubscribeSyncWithChan(subj, groupName, natsCh)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				sub.Unsubscribe()
+				close(msgCh)
+				return
+			case natsMsg := <-natsCh:
+				var msg SyncMessage
+				err := json.Unmarshal(natsMsg.Data, &msg)
+				if err == nil {
+					msgCh <- msg
+				}
+
 			}
 		}
 	}()
@@ -179,7 +219,11 @@ func NewTOBMessageStore(nc *nats.Conn, rdb redis.UniversalClient) TOBMessageStor
 func (tms *tobMsgStore) Publish(planID string, msg SyncMessage) error {
 	subj := syncSessTOBSubj(planID)
 	data, _ := json.Marshal(msg)
-	return tms.nc.Publish(subj, data)
+
+	if err := tms.nc.Publish(subj, data); err != nil {
+		return err
+	}
+	return tms.nc.Flush()
 }
 
 func (tms *tobMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- bool, error) {

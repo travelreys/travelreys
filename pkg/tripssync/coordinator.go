@@ -3,6 +3,7 @@ package tripssync
 import (
 	context "context"
 	"encoding/json"
+	"fmt"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/google/uuid"
@@ -40,6 +41,8 @@ type Coordinator struct {
 	sms       SyncMessageStore
 	tms       TOBMessageStore
 	tripStore trips.Store
+
+	logger *zap.Logger
 }
 
 func NewCoordinator(
@@ -48,6 +51,7 @@ func NewCoordinator(
 	sms SyncMessageStore,
 	tms TOBMessageStore,
 	tripStore trips.Store,
+	logger *zap.Logger,
 ) *Coordinator {
 	return &Coordinator{
 		id:        uuid.New().String(),
@@ -59,10 +63,13 @@ func NewCoordinator(
 		sms:       sms,
 		tms:       tms,
 		tripStore: tripStore,
+		logger:    logger,
 	}
 }
 
 func (crd *Coordinator) Init() error {
+	crd.logger.Info("new coordinator", zap.String("planID", crd.planID))
+
 	// 1. Initialise plan for coordinator
 	plan, err := crd.tripStore.ReadTripPlan(context.Background(), crd.planID)
 	if err != nil {
@@ -72,8 +79,9 @@ func (crd *Coordinator) Init() error {
 	crd.plan = planBytes
 
 	// 2.Subscribe to updates from clients
-	msgCh, done, err := crd.sms.Subscribe(crd.planID)
+	msgCh, done, err := crd.sms.SubscribeQueue(crd.planID, GroupCoordinators)
 	if err != nil {
+		crd.logger.Error("subscribe fail", zap.Error(err))
 		return err
 	}
 	crd.msgCh = msgCh
@@ -93,17 +101,35 @@ func (crd *Coordinator) Run() error {
 	// 3.2. Give each message a counter
 	// 3.3. Sends each ordered message back to the FIFO queue
 	go func() {
+		crd.logger.Info("running coordinator", zap.String("planID", crd.planID))
 		for msg := range crd.msgCh {
+			crd.logger.Debug("recv msg", zap.String("msg", fmt.Sprintf("%+v", msg)))
 			if msg.OpType == SyncOpLeaveSession {
 				// close coordinator when all users have left the session
 				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
 				if len(sess.Members) == 0 {
+					crd.logger.Info("stopping coordinator", zap.String("planID", crd.planID))
 					crd.Stop()
 					return
 				}
+				// Replace with leaving broadcast message
+				msg = NewSyncMessageLeaveSessionBroadcast(msg.TripPlanID, sess.Members)
 			}
+
+			if msg.OpType == SyncOpJoinSession {
+				// Got new player, reset counter
+				crd.counter = 0
+
+				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
+				msg = NewSyncMessageJoinSessionBroadcast(msg.TripPlanID, sess.Members)
+			}
+
 			msg.Counter = crd.counter
 			crd.queue <- msg
+
+			// Need to update the counter
+			crd.counter++
+			crd.logger.Debug("next counter", zap.Uint64("counter", crd.counter))
 		}
 	}()
 
@@ -142,7 +168,6 @@ type CoordinatorSpawner struct {
 	tms       TOBMessageStore
 	tripStore trips.Store
 
-	done   chan<- bool
 	logger *zap.Logger
 }
 
@@ -163,10 +188,15 @@ func NewCoordinatorSpawner(
 }
 
 func (spwn *CoordinatorSpawner) Run() error {
-	msgCh, _, err := spwn.sms.Subscribe("*")
+	msgCh, done, err := spwn.sms.Subscribe("*")
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		done <- true
+	}()
+
 	for msg := range msgCh {
 		if msg.OpType != SyncOpJoinSession {
 			continue
@@ -188,7 +218,12 @@ func (spwn *CoordinatorSpawner) Run() error {
 			spwn.sms,
 			spwn.tms,
 			spwn.tripStore,
+			spwn.logger,
 		)
+		if err := coord.Init(); err != nil {
+			spwn.logger.Error("unable to init coordinator", zap.Error(err))
+			continue
+		}
 		if err := coord.Run(); err != nil {
 			spwn.logger.Error("unable to run coordinator", zap.Error(err))
 		}

@@ -56,12 +56,36 @@ type SyncDataJoinSessionBroadcast struct {
 	trips.TripMembersList
 }
 
+func NewSyncMessageJoinSessionBroadcast(tripPlanID string, members trips.TripMembersList) SyncMessage {
+	return SyncMessage{
+		TripPlanID:                   tripPlanID,
+		OpType:                       SyncOpJoinSessionBroadcast,
+		SyncDataJoinSessionBroadcast: SyncDataJoinSessionBroadcast{members},
+	}
+}
+
 type SyncDataLeaveSession struct {
 	trips.TripMember
 }
 
+func NewSyncMessageLeaveSession(connID, tripPlanID string) SyncMessage {
+	return SyncMessage{
+		OpType:     SyncOpLeaveSession,
+		ID:         connID,
+		TripPlanID: tripPlanID,
+	}
+}
+
 type SyncDataLeaveSessionBroadcast struct {
 	trips.TripMembersList
+}
+
+func NewSyncMessageLeaveSessionBroadcast(tripPlanID string, members trips.TripMembersList) SyncMessage {
+	return SyncMessage{
+		TripPlanID:                    tripPlanID,
+		OpType:                        SyncOpLeaveSessionBroadcast,
+		SyncDataLeaveSessionBroadcast: SyncDataLeaveSessionBroadcast{members},
+	}
 }
 
 type SyncDataPing struct{}
