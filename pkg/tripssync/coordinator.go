@@ -144,6 +144,7 @@ func (crd *Coordinator) Run() error {
 				crd.HandleTOBSyncOpUpdateTrip(msg)
 			}
 			// 4.3 Broadcasts the tob msg to all other connected clients
+			fmt.Println("publishing", msg)
 			crd.tms.Publish(crd.planID, msg)
 		}
 	}()
@@ -153,6 +154,7 @@ func (crd *Coordinator) Run() error {
 
 // HandleSyncOpUpdateTrip handles SyncOpUpdateTrip messages
 func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
+	fmt.Println("handling", msg)
 	opList := []interface{}{msg.SyncDataUpdateTrip}
 	patchJSON, _ := json.Marshal(opList)
 	patch, _ := jsonpatch.DecodePatch(patchJSON)

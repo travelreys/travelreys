@@ -6,14 +6,13 @@ import React, {
   useState,
   useRef,
 } from 'react';
+import _get from "lodash/get";
+import { applyPatch } from 'json-joy/es6/json-patch';
+import { parseJSON, parseISO, isEqual } from 'date-fns';
 import { useDebounce } from 'usehooks-ts';
 import { useRouter } from "next/router";
-import _get from "lodash/get";
 import classNames from 'classnames';
-import { parseJSON, parseISO, isEqual } from 'date-fns';
-import Heap from 'heap-js';
-import { applyPatch } from 'json-joy/es6/json-patch';
-
+import { WebsocketEvents } from 'websocket-ts/lib';
 import {
   CalendarDaysIcon,
   HeartIcon,
@@ -24,16 +23,18 @@ import {
 
 import type { NextPageWithLayout } from '../_app'
 import TripsAPI from '../../apis/trips';
-import TripsSyncAPI from '../../apis/tripsSync';
+import TripsSyncAPI, { SyncMessage } from '../../apis/tripsSync';
 import ImagesAPI, { stockImageSrc, images } from '../../apis/images';
 
-import PlaneIcon from '../../components/icons/PlaneIcon';
+import { datesRenderer } from '../../utils/dates';
+import { NewSyncMessageHeap } from '../../utils/heap';
 import BusIcon from '../../components/icons/BusIcon';
 import HotelIcon from '../../components/icons/HotelIcon';
+import PlaneIcon from '../../components/icons/PlaneIcon';
 import Spinner from '../../components/Spinner';
 import TripsLayout from '../../components/layouts/TripsLayout';
-import { datesRenderer } from '../../utils/dates';
-import { WebsocketEvents } from 'websocket-ts/lib';
+
+
 
 // TripPageMenu
 
@@ -44,8 +45,6 @@ interface TripPageMenuProps {
 
 
 const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
-  console.log(props.trip)
-  console.log(props.trip.name)
 
   // UI State
   const [isSelectImageModalOpen, setIsSelectImageModalOpen] = useState(false);
@@ -291,41 +290,46 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   );
 }
 
-
 // TripPage
-
-const customPriorityComparator = (a: any, b: any) => a.counter - b.counter;
-
 
 const TripPage: NextPageWithLayout = () => {
   const router = useRouter();
   const { id } = router.query;
 
   // Trip State
+  const [tripID, setTripID] = useState("");
   const [trip, setTrip] = useState(null as any);
   const [isTripLoaded, setIsTripLoaded] = useState(false);
 
   // Sync Session State
   const wsInstance = useRef(null as any);
-  const pq = new Heap(customPriorityComparator);
+  const pq = NewSyncMessageHeap();
   const nextTobCounter = useRef(1);
 
+  const shouldSetWs = (): boolean => {
+    return (typeof window !== "undefined"
+       && wsInstance.current === null
+       && id != null)
+  }
 
   useEffect(() => {
     if (id) {
       TripsAPI.readTrip(id as string).then((data) => {
         const t = _get(data, "tripPlan", {});
         setTrip(t);
+        setTripID(id as string);
         setIsTripLoaded(true)
       });
     }
-    if (typeof window !== "undefined" && wsInstance.current === null && id) {
+    if (shouldSetWs()) {
       const ws = TripsSyncAPI.startTripSyncSession();
       wsInstance.current = ws;
 
-      ws.addEventListener(WebsocketEvents.open, (i, e) => {
+      ws.addEventListener(WebsocketEvents.open, () => {
         const joinMsg = TripsSyncAPI.makeSyncMsgJoinSession(
-          id as string, "memberID", "memberEmail");
+          id as string,
+          "memberID",
+          "memberEmail");
         ws.send(JSON.stringify(joinMsg));
       });
       return () => { ws.close(); }
@@ -333,50 +337,46 @@ const TripPage: NextPageWithLayout = () => {
   }, [id])
 
   useEffect(() => {
-    if (isTripLoaded ) {
+    if (isTripLoaded) {
       wsInstance.current.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
         const msg = JSON.parse(e.data);
-        console.log(msg)
-
-        if (msg.opType === "SyncOpJoinSessionBroadcast") {
-          console.log("resetting")
-          nextTobCounter.current = 1
-          console.log(nextTobCounter.current)
-
-          return;
+        switch (msg.opType) {
+          case "SyncOpJoinSessionBroadcast":
+            nextTobCounter.current = 1
+            return;
+          case "SyncOpUpdateTrip":
+            break
+          default:
+            nextTobCounter.current += 1
+            return;
         }
 
-        if (msg.opType !== "SyncOpUpdateTrip") {
-          console.log("updating")
-          nextTobCounter.current += 1
-          console.log(nextTobCounter.current)
-          return;
-        }
-
-
-
+        // Add message to min-heap
         pq.push(msg);
 
-        let counter = nextTobCounter.current
+        let nxtCtr = nextTobCounter.current
         while (true) {
-          console.log(pq.length)
           if (pq.length === 0) {
-            nextTobCounter.current = counter
+            nextTobCounter.current = nxtCtr
             break;
           }
-          if (pq.peek().counter !== counter) {
-            console.log(pq.peek())
-            console.log("break", "msg.c", pq.peek().counter, "exp.c", counter)
-            nextTobCounter.current = counter
+          let minMsg = pq.peek()!;
+
+          // Messages in the heap are further up in the TOB,
+          // waiting for the next in-order TOB msg
+          if (minMsg.counter !== nxtCtr) {
+            nextTobCounter.current = nxtCtr;
             break;
           }
-          const msg = pq.pop();
-          const patch = [msg.syncDataUpdateTrip];
-          console.log(trip, patch)
-          const newTrip = applyPatch(trip, patch, {mutate: false} as any);
-          console.log(newTrip);
-          counter += 1
-          console.log("set new tri[", newTrip.doc)
+
+          // Process this message
+          minMsg = pq.pop()!;
+          const patch = [minMsg.syncDataUpdateTrip] as any;
+          const newTrip = applyPatch(
+            trip, patch, {mutate: false} as any
+          );
+
+          nxtCtr += 1
           setTrip(newTrip.doc);
         }
       })
@@ -386,27 +386,26 @@ const TripPage: NextPageWithLayout = () => {
 
   // Event Handlers
   const tripStateOnUpdate = (op: string, path: string, value: string) => {
-    const updateMsg = TripsSyncAPI.makeSyncMsgUpdateTrip(id as string, op, path, value,);
+    const updateMsg = TripsSyncAPI.makeSyncMsgUpdateTrip(
+      tripID, op, path, value
+    );
     wsInstance.current.send(JSON.stringify(updateMsg));
   }
 
 
   // Renderers
-  const renderTripMenu = () => {
-    return (
-      <aside className='min-h-full min-w-full'>
-        <TripPageMenu trip={trip} tripStateOnUpdate={tripStateOnUpdate} />
-      </aside>
-    );
-  }
-
   if (!trip) {
     return (<Spinner />);
   }
 
   return (
     <div className="flex">
-      {renderTripMenu()}
+      <aside className='min-h-full min-w-full'>
+        <TripPageMenu
+          trip={trip}
+          tripStateOnUpdate={tripStateOnUpdate}
+        />
+      </aside>
     </div>
   );
 }
