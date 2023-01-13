@@ -27,7 +27,7 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
 
 
     if (isEqual(startDate, nullDate)) {
-      return "";
+      return <div className='text-slate-500'>-</div>;
     }
     return (
       <p className='text-slate-500'>

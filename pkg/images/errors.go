@@ -3,7 +3,7 @@ package images
 import (
 	"net/http"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/utils"
+	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 )
 
 var (

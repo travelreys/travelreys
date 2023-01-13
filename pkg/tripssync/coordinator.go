@@ -3,14 +3,13 @@ package tripssync
 import (
 	context "context"
 	"encoding/json"
+	"fmt"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/common"
-	"github.com/awhdesmond/tiinyplanet/pkg/reqctx"
-	"github.com/awhdesmond/tiinyplanet/pkg/trips"
 	jsonpatch "github.com/evanphx/json-patch/v5"
-	"github.com/go-redis/redis/v9"
 	"github.com/google/uuid"
-	"github.com/nats-io/nats.go"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"go.uber.org/zap"
 )
 
 /***************
@@ -18,10 +17,7 @@ import (
 /***************/
 
 type Coordinator struct {
-	store CoordinatorStore
-
-	id string
-
+	id     string
 	planID string
 
 	// plan is the coordinators' local copy of the trip plan
@@ -34,161 +30,222 @@ type Coordinator struct {
 
 	// queue maintains a FIFO Total Order Broadcast together
 	// with Counter.
-	queue chan CollabOpMessage
+	queue chan SyncMessage
+
+	// msgCh recevies request message from clients
+	msgCh  <-chan SyncMessage
+	doneCh chan<- bool
+
+	sesnStore SessionStore
+	sms       SyncMessageStore
+	tms       TOBMessageStore
+	tripStore trips.Store
+
+	logger *zap.Logger
 }
 
-func NewCoordinator(planID string, store CoordinatorStore) *Coordinator {
+func NewCoordinator(
+	planID string,
+	sesnStore SessionStore,
+	sms SyncMessageStore,
+	tms TOBMessageStore,
+	tripStore trips.Store,
+	logger *zap.Logger,
+) *Coordinator {
 	return &Coordinator{
-		store:   store,
-		id:      uuid.New().String(),
-		planID:  planID,
-		counter: 0,
-		queue:   make(chan CollabOpMessage, common.DefaultChSize),
+		id:        uuid.New().String(),
+		planID:    planID,
+		plan:      []byte{},
+		counter:   0,
+		queue:     make(chan SyncMessage, common.DefaultChSize),
+		sesnStore: sesnStore,
+		sms:       sms,
+		tms:       tms,
+		tripStore: tripStore,
+		logger:    logger,
 	}
 }
 
-func (crd *Coordinator) Run(ctx context.Context) error {
+func (crd *Coordinator) Init() error {
+	crd.logger.Info("new coordinator", zap.String("planID", crd.planID))
+
 	// 1. Initialise plan for coordinator
-	plan, err := crd.store.tripStore.ReadTripPlan(reqctx.Context{}, crd.planID)
+	plan, err := crd.tripStore.ReadTripPlan(context.Background(), crd.planID)
 	if err != nil {
 		return err
 	}
 	planBytes, _ := json.Marshal(plan)
 	crd.plan = planBytes
+	crd.logger.Debug("loaded plan", zap.String("plan", string(crd.plan)))
 
-	// 2.Subscribe to updates
-	msgCh, err := crd.store.SubcribeSessUpdates(ctx, crd.planID)
+	// 2.Subscribe to updates from clients
+	msgCh, done, err := crd.sms.SubscribeQueue(crd.planID, GroupCoordinators)
 	if err != nil {
+		crd.logger.Error("subscribe fail", zap.Error(err))
 		return err
 	}
+	crd.msgCh = msgCh
+	crd.doneCh = done
+	return nil
+}
 
-	// 3.1. Takes in op msg indicating changes from clients
-	// 3.2. Give each message a counter
-	// 3.3. Sends each ordered message back to the FIFO queue
+func (crd *Coordinator) Stop() {
+	crd.sesnStore.DeleteSessionCounter(context.Background(), crd.planID)
+	if crd.doneCh != nil {
+		crd.doneCh <- true
+	}
+	close(crd.queue)
+}
+
+func (crd *Coordinator) Run() error {
+	crd.logger.Info("running coordinator", zap.String("planID", crd.planID))
+
 	go func() {
-		for msg := range msgCh {
-			if msg.OpType == CollabOpLeaveSession {
-				// close channel when all users have left the session
-				sess, _ := crd.store.ReadCollabSession(context.Background(), crd.planID)
+		// 3.1. Takes in op msg indicating changes from clients
+		for msg := range crd.msgCh {
+			crd.logger.Debug("recv msg", zap.String("msg", fmt.Sprintf("%+v", msg)))
+
+			switch msg.OpType {
+			case SyncOpJoinSession:
+				// Got new player, reset counter
+				crd.counter = 0
+				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
+				msg = NewSyncMessageJoinSessionBroadcast(msg.TripPlanID, sess.Members)
+			case SyncOpLeaveSession:
+				// stop coordinator if no users left in session
+				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
 				if len(sess.Members) == 0 {
-					crd.store.done <- true
+					crd.logger.Info("stopping coordinator", zap.String("planID", crd.planID))
+					crd.Stop()
 					return
 				}
+				// Replace with leaving broadcast message
+				msg = NewSyncMessageLeaveSessionBroadcast(msg.TripPlanID, sess.Members)
 			}
+
+			// 3.2. Give each message a counter
 			msg.Counter = crd.counter
+
+			// 3.3. Sends each ordered message back to the FIFO queue
 			crd.queue <- msg
+
+			// Need to update the counter
+			crd.counter++
+			crd.logger.Debug("next counter", zap.Uint64("counter", crd.counter))
 		}
 	}()
 
-	// 4.1 Broadcasts the operation to all other connected clients
-	// 4.2 Update local plan and persist the data
 	go func() {
+		// 4.1 Read message from FIFO Queue
 		for msg := range crd.queue {
-			go func(coMsg CollabOpMessage) {
-				// Update local copy of plan + validate if the op is valid
-				patch, _ := jsonpatch.DecodePatch(coMsg.UpdateTripReq.Bytes())
-				modified, err := patch.Apply(crd.plan)
-				if err != nil {
-					return
-				}
-				crd.plan = modified
-				var plan trips.TripPlan
-				json.Unmarshal(crd.plan, &plan)
-
-				// TODO: these 2 ops must be atomic!
-				crd.store.tripStore.SaveTripPlan(reqctx.Context{}, plan)
-				crd.store.IncrSessionCounter(context.Background(), crd.planID)
-
-				crd.store.PublishTOBUpdates(context.Background(), crd.planID, coMsg)
-			}(msg)
+			// 4.2 Update local plan and persist the data (if required)
+			// Update local copy of plan + validate if the op is valid
+			if msg.OpType == SyncOpUpdateTrip {
+				crd.HandleTOBSyncOpUpdateTrip(msg)
+			}
+			// 4.3 Broadcasts the tob msg to all other connected clients
+			fmt.Println("publishing", msg)
+			crd.tms.Publish(crd.planID, msg)
 		}
 	}()
 
 	return nil
 }
 
-/*********************
-/* Coordinator Store *
-/*********************/
+// HandleSyncOpUpdateTrip handles SyncOpUpdateTrip messages
+func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
+	fmt.Println("handling", msg)
+	opList := []interface{}{msg.SyncDataUpdateTrip}
+	patchJSON, _ := json.Marshal(opList)
+	patch, _ := jsonpatch.DecodePatch(patchJSON)
 
-type CoordinatorStore struct {
+	modified, err := patch.Apply(crd.plan)
+	if err != nil {
+		crd.logger.Error("json patch apply", zap.Error(err))
+		return
+	}
+	crd.plan = modified
+	crd.logger.Debug("modified plan", zap.String("modified", string(modified)))
+
+	var toSave trips.TripPlan
+	json.Unmarshal(crd.plan, &toSave)
+
+	crd.tripStore.SaveTripPlan(context.Background(), toSave)
+	crd.sesnStore.IncrSessionCounter(context.Background(), crd.planID)
+
+}
+
+/***********
+/* Spawner *
+/***********/
+
+type CoordinatorSpawner struct {
+	sesnStore SessionStore
+	sms       SyncMessageStore
+	tms       TOBMessageStore
 	tripStore trips.Store
 
-	nc  *nats.Conn
-	rdb redis.UniversalClient
-
-	done chan bool
+	logger *zap.Logger
 }
 
-func NewCoordinatorStore(tripStore trips.Store, nc *nats.Conn, rdb redis.UniversalClient) *CoordinatorStore {
-	doneCh := make(chan bool)
-	return &CoordinatorStore{tripStore, nc, rdb, doneCh}
+func NewCoordinatorSpawner(
+	sesnStore SessionStore,
+	sms SyncMessageStore,
+	tms TOBMessageStore,
+	tripStore trips.Store,
+	logger *zap.Logger,
+) *CoordinatorSpawner {
+	return &CoordinatorSpawner{
+		sesnStore: sesnStore,
+		sms:       sms,
+		tms:       tms,
+		tripStore: tripStore,
+		logger:    logger,
+	}
 }
 
-// Subscription
-
-func (s *CoordinatorStore) SubcribeSessUpdates(ctx context.Context, planID string) (<-chan CollabOpMessage, error) {
-	subj := collabSessUpdatesKey(planID)
-	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan CollabOpMessage, common.DefaultChSize)
-
-	sub, err := s.nc.ChanSubscribe(subj, natsCh)
+// Run listens to SynOpJoinSession requests and spawn a
+// coordinator if there is only 1 member in the session (i.e new session)
+func (spwn *CoordinatorSpawner) Run() error {
+	msgCh, done, err := spwn.sms.Subscribe("*")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	go func() {
-		for {
-			select {
-			case <-s.done:
-				sub.Unsubscribe()
-				close(msgCh)
-				return
-			case natsMsg := <-natsCh:
-				var msg CollabOpMessage
-				err := json.Unmarshal(natsMsg.Data, &msg)
-				if err == nil {
-					msgCh <- msg
-				}
-			}
-		}
+	defer func() {
+		done <- true
 	}()
-	return msgCh, nil
-}
 
-// Publish
+	for msg := range msgCh {
+		if msg.OpType != SyncOpJoinSession {
+			continue
+		}
+		sess, err := spwn.sesnStore.Read(context.Background(), msg.TripPlanID)
+		if err != nil {
+			// TODO: handle error here
+			spwn.logger.Error("unable to read session", zap.Error(err))
+			continue
+		}
+		if len(sess.Members) > 1 {
+			// First member would have joined!
+			continue
+		}
 
-func (s *CoordinatorStore) PublishTOBUpdates(ctx context.Context, planID string, msg CollabOpMessage) error {
-	subj := collabSessTOBKey(planID)
-	data, _ := json.Marshal(msg)
-	return s.nc.Publish(subj, data)
-}
-
-// Counter
-
-func (s *CoordinatorStore) GetSessionCounter(ctx context.Context, planID string) (uint64, error) {
-	key := collabSessCounterKey(planID)
-	cmd := s.rdb.Get(ctx, key)
-	if cmd.Err() != nil {
-		return 0, cmd.Err()
+		coord := NewCoordinator(
+			msg.TripPlanID,
+			spwn.sesnStore,
+			spwn.sms,
+			spwn.tms,
+			spwn.tripStore,
+			spwn.logger,
+		)
+		if err := coord.Init(); err != nil {
+			spwn.logger.Error("unable to init coordinator", zap.Error(err))
+			continue
+		}
+		if err := coord.Run(); err != nil {
+			spwn.logger.Error("unable to run coordinator", zap.Error(err))
+		}
 	}
-	ctr, err := cmd.Int64()
-	if err != nil {
-		return 0, err
-	}
-	return uint64(ctr), err
-}
-
-func (s *CoordinatorStore) IncrSessionCounter(ctx context.Context, planID string) error {
-	key := collabSessCounterKey(planID)
-	cmd := s.rdb.Incr(ctx, key)
-	return cmd.Err()
-}
-
-func (s *CoordinatorStore) ReadCollabSession(ctx context.Context, planID string) (CollabSession, error) {
-	var members trips.TripMembersList
-	key := collabSessMembersKey(planID)
-	data := s.rdb.SMembers(ctx, key)
-	err := data.ScanSlice(&members)
-	return CollabSession{members}, err
+	return nil
 }

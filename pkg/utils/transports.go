@@ -6,7 +6,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 )
 
 var (

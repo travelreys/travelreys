@@ -4,9 +4,9 @@ import (
 	context "context"
 	"time"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/common"
-	"github.com/awhdesmond/tiinyplanet/pkg/reqctx"
 	"github.com/go-kit/kit/endpoint"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 )
 
 // Trips Endpoints
@@ -35,7 +35,6 @@ func NewCreateTripPlanEndpoint(svc Service) endpoint.Endpoint {
 		creator := TripMember{
 			MemberID:    "1",
 			MemberEmail: "awhdes@gmail.com",
-			Permission:  TripMemberPermCollaborator,
 		}
 
 		plan, err := svc.CreateTripPlan(rctx, creator, req.Name, req.StartDate, req.EndDate)

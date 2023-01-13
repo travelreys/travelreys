@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -17,10 +16,7 @@ import (
 const (
 	cfgFlagHost     = "host"
 	cfgFlagHostname = "hostname"
-	cfgFlagPort     = "port"
 	cfgFlagLogLevel = "log-level"
-
-	cfgFlagCORSOrigin = "cors-origin"
 
 	cfgFlagMongoURL         = "mongo-url"
 	cfgFlagMongoDBName      = "mongo-dbname"
@@ -44,18 +40,13 @@ type ServerConfig struct {
 	MongoDBName      string `mapstructure:"mongo-dbname"`
 }
 
-func (cfg ServerConfig) HTTPBindAddress() string {
-	return fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
-}
-
 func main() {
 	hostname, _ := os.Hostname()
 
 	viper.SetDefault(cfgFlagHost, "")
 	viper.SetDefault(cfgFlagHostname, hostname)
-	viper.SetDefault(cfgFlagPort, "2022")
 	viper.SetDefault(cfgFlagLogLevel, "info")
-	viper.SetDefault(cfgFlagCORSOrigin, "*")
+
 	viper.SetDefault(cfgFlagNatsURL, "")
 	viper.SetDefault(cfgFlagRedisURL, "")
 	viper.SetDefault(cfgFlagRedisClusterMode, false)
@@ -67,7 +58,6 @@ func main() {
 	viper.AutomaticEnv()
 
 	pflag.String(cfgFlagHost, "", "host address to bind server")
-	pflag.String(cfgFlagPort, "", "http server port")
 	pflag.String(cfgFlagLogLevel, "", "log level")
 	pflag.Parse()
 
@@ -84,26 +74,21 @@ func main() {
 	if err := viper.Unmarshal(&srvCfg); err != nil {
 		logger.Panic("config unmarshal failed", zap.Error(err))
 	}
-
 	fmt.Printf("%+v\n", srvCfg)
 
-	logger.Info("server configuration", zap.String("config", fmt.Sprintf("%+v", srvCfg)))
+	logger.Info("spawner configuration", zap.String("config", fmt.Sprintf("%+v", srvCfg)))
 
-	// Make Servers
-	apiSrv, err := MakeAPIServer(srvCfg, logger)
+	// Make Coordinator Spawner
+	spawner, err := MakeCoordinatorSpanwer(srvCfg, logger)
 	if err != nil {
 		logger.Panic("error initialising api server", zap.Error(err))
 	}
 
-	// Run Servers
-
+	// Run Coordinator Spawner
 	go func() {
-		logger.Info("starting api server",
-			zap.String("host", srvCfg.Host),
-			zap.String("port", srvCfg.Port),
-		)
-		if err := http.ListenAndServe(srvCfg.HTTPBindAddress(), apiSrv.Handler); err != nil {
-			logger.Panic("error starting api server", zap.Error(err))
+		logger.Info("starting spawner", zap.String("host", srvCfg.Host))
+		if err := spawner.Run(); err != nil {
+			logger.Panic("error starting spawner", zap.Error(err))
 			os.Exit(1)
 		}
 	}()

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/awhdesmond/tiinyplanet/pkg/common"
-	"github.com/awhdesmond/tiinyplanet/pkg/utils"
 	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 
 	"github.com/gorilla/mux"
 )

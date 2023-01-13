@@ -1,9 +1,18 @@
-import React, { ChangeEvent, FC, ReactElement, useState } from 'react';
-import { useRouter } from "next/router";
+import React, {
+  ChangeEvent,
+  FC,
+  ReactElement,
+  useEffect,
+  useState,
+  useRef,
+} from 'react';
 import _get from "lodash/get";
-import classNames from 'classnames';
+import { applyPatch } from 'json-joy/es6/json-patch';
 import { parseJSON, parseISO, isEqual } from 'date-fns';
-
+import { useDebounce } from 'usehooks-ts';
+import { useRouter } from "next/router";
+import classNames from 'classnames';
+import { WebsocketEvents } from 'websocket-ts/lib';
 import {
   CalendarDaysIcon,
   HeartIcon,
@@ -11,24 +20,27 @@ import {
   PencilIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
-import PlaneIcon from '../../components/icons/PlaneIcon';
-import BusIcon from '../../components/icons/BusIcon';
-import HotelIcon from '../../components/icons/HotelIcon';
-
-import TripsAPI from '../../apis/trips';
 
 import type { NextPageWithLayout } from '../_app'
+import TripsAPI from '../../apis/trips';
+import TripsSyncAPI, { SyncMessage } from '../../apis/tripsSync';
+import ImagesAPI, { stockImageSrc, images } from '../../apis/images';
+
+import { datesRenderer } from '../../utils/dates';
+import { NewSyncMessageHeap } from '../../utils/heap';
+import BusIcon from '../../components/icons/BusIcon';
+import HotelIcon from '../../components/icons/HotelIcon';
+import PlaneIcon from '../../components/icons/PlaneIcon';
 import Spinner from '../../components/Spinner';
 import TripsLayout from '../../components/layouts/TripsLayout';
-import { datesRenderer } from '../../utils/dates';
-import ImagesAPI, {images} from '../../apis/images';
-import { makeSrc, makeSrcSet, makeUserReferURL, stockImageSrc } from '../../utils/images';
+
 
 
 // TripPageMenu
 
 interface TripPageMenuProps {
   trip: any
+  tripStateOnUpdate: any
 }
 
 
@@ -39,7 +51,13 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   const [searchImageQuery, setSelectImageQuery] = useState("");
   const [searchImageList, setSearchImageList] = useState([] as any);
   const [isSearchImageLoading, setIsSearchImageLoading] = useState(false);
+
   const [tripName, setTripName] = useState(props.trip.name);
+
+  useEffect(() => {
+    setTripName(props.trip.name)
+  }, [props.trip])
+
 
   // API
   const searchImage = () => {
@@ -68,13 +86,15 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
     searchImage();
   }
 
-
   // Event Handlers - Trip Name
 
   const tripNameOnChange = (event: ChangeEvent<HTMLInputElement>) => {
     setTripName(event.target.value)
   }
 
+  const tripNameOnBlur = () => {
+    props.tripStateOnUpdate("replace", "/name", tripName)
+  }
 
 
   // Renderers
@@ -119,6 +139,7 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
               type="text"
               value={tripName}
               onChange={tripNameOnChange}
+              onBlur={tripNameOnBlur}
               className="mb-12 text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0"
             />
             <div className='flex justify-between'>
@@ -144,12 +165,16 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
         return (
           <figure className="relative max-w-sm transition-all rounded-lg duration-300 mb-2">
             <a href="#">
-              <img key={image.id} srcSet={makeSrcSet(image)} src={makeSrc(image)}
+              <img key={image.id}
+                srcSet={ImagesAPI.makeSrcSet(image)}
+                src={ImagesAPI.makeSrc(image)}
                 className="block rounded-lg max-w-full"
               />
             </a>
             <figcaption className="absolute px-1 text-sm text-white rounded-b-lg bg-slate-800/50 w-full bottom-0">
-              <a target="_blank" href={makeUserReferURL(_get(image, "user.username"))}>
+              <a target="_blank"
+                href={ImagesAPI.makeUserReferURL(_get(image, "user.username"))}
+              >
                 @{_get(image, "user.username")}, Unsplash
               </a>
             </figcaption>
@@ -265,32 +290,122 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   );
 }
 
-
 // TripPage
 
 const TripPage: NextPageWithLayout = () => {
   const router = useRouter();
   const { id } = router.query;
 
-  let { data, error, isLoading } = TripsAPI.readTrip(id as string);
-  const trip = _get(data, "tripPlan", {});
+  // Trip State
+  const [tripID, setTripID] = useState("");
+  const [trip, setTrip] = useState(null as any);
+  const [isTripLoaded, setIsTripLoaded] = useState(false);
 
-  // Renderers
-  const renderTripMenu = () => {
-    return (
-      <aside className='min-h-full min-w-full'>
-        <TripPageMenu trip={trip} />
-      </aside>
-    );
+  // Sync Session State
+  const wsInstance = useRef(null as any);
+  const pq = NewSyncMessageHeap();
+  const nextTobCounter = useRef(1);
+
+  const shouldSetWs = (): boolean => {
+    return (typeof window !== "undefined"
+       && wsInstance.current === null
+       && id != null)
   }
 
-  if (isLoading) {
+  useEffect(() => {
+    if (id) {
+      TripsAPI.readTrip(id as string).then((data) => {
+        const t = _get(data, "tripPlan", {});
+        setTrip(t);
+        setTripID(id as string);
+        setIsTripLoaded(true)
+      });
+    }
+    if (shouldSetWs()) {
+      const ws = TripsSyncAPI.startTripSyncSession();
+      wsInstance.current = ws;
+
+      ws.addEventListener(WebsocketEvents.open, () => {
+        const joinMsg = TripsSyncAPI.makeSyncMsgJoinSession(
+          id as string,
+          "memberID",
+          "memberEmail");
+        ws.send(JSON.stringify(joinMsg));
+      });
+      return () => { ws.close(); }
+    }
+  }, [id])
+
+  useEffect(() => {
+    if (isTripLoaded) {
+      wsInstance.current.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
+        const msg = JSON.parse(e.data);
+        switch (msg.opType) {
+          case "SyncOpJoinSessionBroadcast":
+            nextTobCounter.current = 1
+            return;
+          case "SyncOpUpdateTrip":
+            break
+          default:
+            nextTobCounter.current += 1
+            return;
+        }
+
+        // Add message to min-heap
+        pq.push(msg);
+
+        let nxtCtr = nextTobCounter.current
+        while (true) {
+          if (pq.length === 0) {
+            nextTobCounter.current = nxtCtr
+            break;
+          }
+          let minMsg = pq.peek()!;
+
+          // Messages in the heap are further up in the TOB,
+          // waiting for the next in-order TOB msg
+          if (minMsg.counter !== nxtCtr) {
+            nextTobCounter.current = nxtCtr;
+            break;
+          }
+
+          // Process this message
+          minMsg = pq.pop()!;
+          const patch = [minMsg.syncDataUpdateTrip] as any;
+          const newTrip = applyPatch(
+            trip, patch, {mutate: false} as any
+          );
+
+          nxtCtr += 1
+          setTrip(newTrip.doc);
+        }
+      })
+    }
+  }, [isTripLoaded])
+
+
+  // Event Handlers
+  const tripStateOnUpdate = (op: string, path: string, value: string) => {
+    const updateMsg = TripsSyncAPI.makeSyncMsgUpdateTrip(
+      tripID, op, path, value
+    );
+    wsInstance.current.send(JSON.stringify(updateMsg));
+  }
+
+
+  // Renderers
+  if (!trip) {
     return (<Spinner />);
   }
 
   return (
     <div className="flex">
-      {renderTripMenu()}
+      <aside className='min-h-full min-w-full'>
+        <TripPageMenu
+          trip={trip}
+          tripStateOnUpdate={tripStateOnUpdate}
+        />
+      </aside>
     </div>
   );
 }
