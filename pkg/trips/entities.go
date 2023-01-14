@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/images"
 )
 
 // Trip Plan
@@ -13,9 +14,9 @@ type TripPlan struct {
 	ID   string `json:"id" bson:"id"`
 	Name string `json:"name" bson:"name"`
 
-	CoverImageURL string    `json:"coverImageURL" bson:"coverImageURL"`
-	StartDate     time.Time `json:"startDate" bson:"startDate"`
-	EndDate       time.Time `json:"endDate" bson:"endDate"`
+	CoverImage images.ImageMetadata `json:"coverImage" bson:"coverImage"`
+	StartDate  time.Time            `json:"startDate" bson:"startDate"`
+	EndDate    time.Time            `json:"endDate" bson:"endDate"`
 
 	Creator TripMember            `json:"creator" bson:"creator"`
 	Members map[string]TripMember `json:"members" bson:"members"`
@@ -37,11 +38,11 @@ type TripPlansList []TripPlan
 
 func NewTripPlan(creator TripMember, name string) TripPlan {
 	return TripPlan{
-		ID:            uuid.New().String(),
-		Name:          name,
-		CoverImageURL: "",
-		StartDate:     time.Time{},
-		EndDate:       time.Time{},
+		ID:         uuid.New().String(),
+		Name:       name,
+		CoverImage: images.ImageMetadata{},
+		StartDate:  time.Time{},
+		EndDate:    time.Time{},
 
 		Creator: creator,
 		Members: map[string]TripMember{},
@@ -65,18 +66,6 @@ func NewTripPlanWithDates(creator TripMember, name string, start, end time.Time)
 	plan.StartDate = start
 	plan.EndDate = end
 	return plan
-}
-
-func (tp *TripPlan) UpdateName(name string) {
-	tp.Name = name
-}
-
-func (tp *TripPlan) UpdateCoverImageURL(url string) {
-	tp.CoverImageURL = url
-}
-
-func (tp *TripPlan) UpdateMember(member TripMember) {
-	tp.Members[member.MemberEmail] = member
 }
 
 // Members

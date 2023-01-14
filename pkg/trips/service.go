@@ -1,8 +1,10 @@
 package trips
 
 import (
+	"math/rand"
 	"time"
 
+	"github.com/tiinyplanet/tiinyplanet/pkg/images"
 	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 )
 
@@ -14,15 +16,17 @@ type Service interface {
 }
 
 type service struct {
-	store Store
+	store    Store
+	imageSvc images.Service
 }
 
-func NewService(store Store) Service {
-	return &service{store}
+func NewService(store Store, imageSvc images.Service) Service {
+	return &service{store, imageSvc}
 }
 
 func (svc *service) CreateTripPlan(ctx reqctx.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error) {
 	plan := NewTripPlanWithDates(creator, name, start, end)
+	plan.CoverImage = stockImageList[rand.Intn(len(stockImageList))]
 	err := svc.store.SaveTripPlan(ctx, plan)
 	return plan, err
 }

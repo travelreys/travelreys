@@ -1,6 +1,7 @@
 package tripssync
 
 import (
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 )
@@ -97,7 +98,5 @@ func NewSyncMessageLeaveSessionBroadcast(tripPlanID string, members trips.TripMe
 type SyncDataPing struct{}
 
 type SyncDataUpdateTrip struct {
-	Op    string `json:"op"`
-	Path  string `json:"path"`
-	Value string `json:"value"` // JSON string
+	Ops []common.JSONPatchOp `json:"ops"`
 }

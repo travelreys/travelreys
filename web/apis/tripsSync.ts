@@ -26,6 +26,10 @@ export interface SyncDataLeaveSession {
 export interface SyncDataPing {}
 
 export interface SyncDataUpdateTrip {
+  ops: Array<JSONPatchOp>
+}
+
+export interface JSONPatchOp {
   op: string
   path: string
   value: string
@@ -34,6 +38,10 @@ export interface SyncDataUpdateTrip {
 const TripsSyncAPI = {
   startTripSyncSession: () => {
     return new WebsocketBuilder(BASE_WS_URL).build();
+  },
+
+  makeJSONPatchOp: (op: string, path: string, value: string): JSONPatchOp => {
+    return {op, path, value}
   },
 
   makeSyncMsgJoinSession: (tripPlanID: string, memberID: string, memberEmail: string): SyncMessage => {
@@ -52,11 +60,11 @@ const TripsSyncAPI = {
     } as SyncMessage
   },
 
-  makeSyncMsgUpdateTrip: (tripPlanID: string, op: string, path: string, value: string): SyncMessage => {
+  makeSyncMsgUpdateTrip: (tripPlanID: string, ops: Array<JSONPatchOp>): SyncMessage => {
     return {
       tripPlanID,
       opType: "SyncOpUpdateTrip",
-      syncDataUpdateTrip: { op, path, value },
+      syncDataUpdateTrip: { ops },
     } as SyncMessage;
   }
 };

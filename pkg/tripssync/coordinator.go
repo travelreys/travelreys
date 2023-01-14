@@ -132,6 +132,7 @@ func (crd *Coordinator) Run() error {
 			// Need to update the counter
 			crd.counter++
 			crd.logger.Debug("next counter", zap.Uint64("counter", crd.counter))
+
 		}
 	}()
 
@@ -144,7 +145,6 @@ func (crd *Coordinator) Run() error {
 				crd.HandleTOBSyncOpUpdateTrip(msg)
 			}
 			// 4.3 Broadcasts the tob msg to all other connected clients
-			fmt.Println("publishing", msg)
 			crd.tms.Publish(crd.planID, msg)
 		}
 	}()
@@ -154,11 +154,8 @@ func (crd *Coordinator) Run() error {
 
 // HandleSyncOpUpdateTrip handles SyncOpUpdateTrip messages
 func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
-	fmt.Println("handling", msg)
-	opList := []interface{}{msg.SyncDataUpdateTrip}
-	patchJSON, _ := json.Marshal(opList)
+	patchJSON, _ := json.Marshal(msg.SyncDataUpdateTrip.Ops)
 	patch, _ := jsonpatch.DecodePatch(patchJSON)
-
 	modified, err := patch.Apply(crd.plan)
 	if err != nil {
 		crd.logger.Error("json patch apply", zap.Error(err))
