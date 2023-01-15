@@ -4,10 +4,10 @@ import Link from 'next/link';
 import _get from 'lodash/get';
 import { parseJSON, isEqual } from 'date-fns';
 
-import { datesRenderer } from '../../utils/dates';
+import ImagesAPI from '../../apis/images';
 import Avatar from '../Avatar';
 
-
+import { datesRenderer } from '../../utils/dates';
 interface TripCardProps {
   trip: any
 }
@@ -16,8 +16,12 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
 
   // Renderers
   const renderCreatorAvatar = () => {
-
-    return (<Avatar name={_get(props.trip, "creator.memberEmail")} placement="top" />);
+    return (
+      <Avatar
+        name={_get(props.trip, "creator.memberEmail")}
+        placement="top"
+      />
+    );
   }
 
   const renderTripDates = () => {
@@ -25,39 +29,38 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
     const startDate = parseJSON(props.trip.startDate);
     const endDate = parseJSON(props.trip.endDate);
 
-
     if (isEqual(startDate, nullDate)) {
       return <div className='text-slate-500'>-</div>;
     }
     return (
-      <p className='text-slate-500'>
+      <p className='text-slate-500 text-sm md:text-sm align-base'>
         {datesRenderer(startDate, endDate)}
       </p>
     );
   }
 
   return (
-    <Link href={`/trips/${props.trip.id}`}>
-      <div className="bg-white rounded-lg shadow-md dark:bg-gray-800 dark:border-gray-700">
-        <img
-          className="rounded-t-lg"
-          src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1421&q=80"
-          alt=""
-        />
-        <div className="p-5">
-          <h5 className="mb-2 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
-            {props.trip.name}
-          </h5>
-          <div className='flex justify-between'>
-            {renderTripDates()}
-            {renderCreatorAvatar()}
-          </div>
+    <Link
+      href={`/trips/${props.trip.id}`}
+      className="bg-white rounded-lg shadow-md h-fit"
+    >
+      <img
+        srcSet={ImagesAPI.makeSrcSet(props.trip.coverImage)}
+        src={ImagesAPI.makeSrc(props.trip.coverImage)}
+        className="rounded-t-lg"
+      />
+      <div className="p-5">
+        <h5 className="mb-2 text-xl font-bold tracking-tight text-slate-700 truncate">
+          {props.trip.name}
+        </h5>
+        <div className='flex justify-between items-center'>
+          {renderTripDates()}
+          {renderCreatorAvatar()}
         </div>
       </div>
     </Link>
   );
 }
-
 
 // TripsContainer
 
@@ -72,12 +75,11 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
 
   // Renderers
   const renderTripsTable = () => {
-    const cards = props.trips.map((trip: any) => {
-      return <TripCard trip={trip} key={trip.id} />
-    })
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {cards}
+      <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 gap-4 mx-3">
+        {props.trips.map((trip: any) => {
+          return <TripCard trip={trip} key={trip.id} />
+        })}
       </div>
     );
   }
@@ -85,7 +87,7 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
   return (
     <div>
       <div className='flex justify-between flex-col sm:flex-row items-center mb-8'>
-        <span className='text-5xl font-bold text-slate-800'>Upcoming trips</span>
+        <span className='text-3xl sm:text-5x font-bold text-slate-800'>Upcoming trips</span>
         <button type="button"
           className={classNames(
             "bg-indigo-400",

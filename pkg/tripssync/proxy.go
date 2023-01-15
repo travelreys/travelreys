@@ -128,7 +128,7 @@ func (srv *ProxyServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	go srv.PingPong(ws)
+	// go srv.PingPong(ws)
 
 	connHandler := ConnHandler{
 		proxy:  srv.proxy,
@@ -143,6 +143,7 @@ func (srv *ProxyServer) PingPong(ws *websocket.Conn) {
 	ws.SetReadDeadline(time.Now().Add(pongWait))
 	ws.SetPongHandler(func(string) error {
 		ws.SetReadDeadline(time.Now().Add(pongWait))
+		fmt.Println("pingpong read")
 		return nil
 	})
 
@@ -153,7 +154,10 @@ func (srv *ProxyServer) PingPong(ws *websocket.Conn) {
 	}()
 	for range pingTicker.C {
 		ws.SetWriteDeadline(time.Now().Add(writeWait))
+		fmt.Println("pingpong write deadline")
 		if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+			fmt.Println("pingpong write deadline error")
+			srv.logger.Error("ping error", zap.Error(err))
 			return
 		}
 	}

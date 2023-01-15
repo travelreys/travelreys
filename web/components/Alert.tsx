@@ -12,7 +12,7 @@ const Alert: FC<AlertProps> = (props: AlertProps) => {
   return (
     <div className="bg-red-100 mb-4 border-t-4 border-red-500 rounded-b text-red-900 px-4 py-3 shadow-md" role="alert">
       <div className="flex">
-        <div className="py-1">
+        <div className="mr-2">
           <ExclamationCircleIcon className='inline align-bottom h-6 w-6'/>
         </div>
         <div>
