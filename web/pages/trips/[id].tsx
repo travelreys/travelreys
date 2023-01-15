@@ -6,12 +6,14 @@ import React, {
   useState,
   useRef,
 } from 'react';
+import Link from 'next/link';
 import _get from "lodash/get";
+import _isEmpty from "lodash/isEmpty";
 import { applyPatch,  } from 'json-joy/es6/json-patch';
 import { useDebounce } from 'usehooks-ts';
 import { useRouter } from "next/router";
 import { WebsocketEvents } from 'websocket-ts/lib';
-import { HeartIcon } from '@heroicons/react/24/outline'
+import { GlobeAmericasIcon, HeartIcon } from '@heroicons/react/24/outline'
 
 import type { NextPageWithLayout } from '../_app'
 import TripsAPI from '../../apis/trips';
@@ -67,7 +69,7 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
 
   const renderTripStats = () => {
     return (
-      <div className='bg-yellow-200 py-8 pb-4 mb-4'>
+      <div className='bg-indigo-100 py-8 pb-4 mb-4'>
         {renderLogistics()}
       </div>
     )
@@ -75,6 +77,12 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
 
   return (
     <div className='sm:max-w-lg md:max-w-xl'>
+      <nav className="p-3 font-bold text-indigo-500" >
+        <Link href="/" className='block align-middle'>
+          <GlobeAmericasIcon className='inline h-10 w-10'/>
+          <span className='inline-block text-2xl align-middle'>tiinyplanet</span>
+        </Link>
+      </nav>
       <TripMenuJumbo
         trip={props.trip}
         tripStateOnUpdate={props.tripStateOnUpdate}
@@ -94,8 +102,6 @@ const TripPage: NextPageWithLayout = () => {
   const [tripID, setTripID] = useState("");
   const tripRef = useRef(null as any);
   const [trip, setTrip] = useState(tripRef.current);
-  const [isTripLoaded, setIsTripLoaded] = useState(false);
-
   // Sync Session State
   const wsInstance = useRef(null as any);
   const pq = NewSyncMessageHeap();
@@ -113,7 +119,6 @@ const TripPage: NextPageWithLayout = () => {
         tripRef.current = _get(data, "tripPlan", {});
         setTrip(tripRef.current);
         setTripID(id as string);
-        setIsTripLoaded(true)
       });
     }
     if (shouldSetWs()) {
@@ -127,13 +132,8 @@ const TripPage: NextPageWithLayout = () => {
           "memberEmail");
         ws.send(JSON.stringify(joinMsg));
       });
-      return () => { ws.close(); }
-    }
-  }, [id])
 
-  useEffect(() => {
-    if (isTripLoaded) {
-      wsInstance.current.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
+      ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
         const msg = JSON.parse(e.data);
         switch (msg.opType) {
           case "SyncOpJoinSessionBroadcast":
@@ -164,7 +164,6 @@ const TripPage: NextPageWithLayout = () => {
             break;
           }
 
-          console.log(minMsg)
           // Process this message
           minMsg = pq.pop()!;
           const patch = minMsg.syncDataUpdateTrip!.ops as any;
@@ -174,13 +173,12 @@ const TripPage: NextPageWithLayout = () => {
           nxtCtr += 1
           tripRef.current = newTrip.doc
           setTrip(tripRef.current);
-          console.log(tripRef.current)
-
         }
       })
-    }
-  }, [isTripLoaded])
 
+      return () => { ws.close(); }
+    }
+  }, [id])
 
   // Event Handlers
   const tripStateOnUpdate = (ops: Array<JSONPatchOp>) => {
@@ -189,7 +187,7 @@ const TripPage: NextPageWithLayout = () => {
   }
 
   // Renderers
-  if (!isTripLoaded) {
+  if (_isEmpty(trip)) {
     return (<Spinner />);
   }
 

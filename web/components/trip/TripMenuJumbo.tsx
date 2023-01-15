@@ -211,7 +211,6 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
       TripsSyncAPI.makeJSONPatchOp(
         "replace", "/coverImage", image)
     ];
-    console.log(ops)
     props.tripStateOnUpdate(ops)
   }
 
@@ -241,7 +240,7 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
 
   return (
     <>
-      <div className='bg-yellow-200'>
+      <div className='bg-indigo-100'>
         <div className="relative">
           <img
             srcSet={ImagesAPI.makeSrcSet(props.trip.coverImage)}
@@ -250,7 +249,7 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
           />
           <button
             type='button'
-            className='absolute top-4 right-4 h-10 w-10 bg-gray-800/50 p-2 text-center rounded-full'
+            className='absolute top-4 right-4 h-10 w-10 bg-gray-800/70 p-2 text-center rounded-full'
             onClick={() => { setIsCoverImageModalOpen(true) }}
           >
             <PencilIcon className='h-6 w-6 text-white' />
