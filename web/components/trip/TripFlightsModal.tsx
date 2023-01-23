@@ -2,22 +2,11 @@ import React, { FC, useState } from 'react';
 import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
-import { useMediaQuery } from 'usehooks-ts';
-import {
-  formatDuration,
-  format,
-  intervalToDuration,
-  parseISO,
-} from 'date-fns';
-import {
-  DayPicker,
-  DateRange,
-  SelectRangeEventHandler
-} from 'react-day-picker';
+import { format, formatDuration, intervalToDuration } from 'date-fns';
+import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
 
 import {
   ArrowLongRightIcon,
-  CalendarDaysIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   MapPinIcon,
@@ -29,7 +18,16 @@ import { ModalCss, FlightsModalCss } from '../../styles/global';
 
 import FlightsAPI, { flights } from '../../apis/flights';
 import Spinner from '../../components/Spinner';
-import { parseTimeFromZ, printTime, prettyPrintMins } from '../../utils/dates';
+import {
+  parseTimeFromZ,
+  printTime,
+  prettyPrintMins,
+  printFromDateFromRange,
+  printToDateFromRange
+} from '../../utils/dates';
+import { capitaliseWords } from '../../utils/strings';
+import InputDatesPicker from '../InputDatesPicker';
+import Alert from '../Alert';
 
 // TripFlightCard
 
@@ -42,7 +40,7 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
   const [isExpanded, setIsExpanded] = useState(false);
 
   const numStops = _get(props.itin, "legs").length === 1
-    ? "Non-stop" : `${_get(props.itin, "legs").length} stops`;
+    ? "Non-stop" : `${_get(props.itin, "legs").length - 1} stops`;
 
 
   // Renderers
@@ -62,7 +60,6 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
 
   const renderStopsInfo = () => {
     return props.itin.legs.map((leg: any, idx: number) => {
-
       let layoverDuration = null;
       if (idx !== props.itin.legs.length - 1) {
         layoverDuration = intervalToDuration({
@@ -72,7 +69,7 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
       }
 
       return (
-        <>
+        <div key={idx}>
           <ol className="relative border-l border-dashed border-slate-300 mt-4 ml-2">
             <li className="mb-4 ml-6">
               <div className={FlightsModalCss.FlightStopTimelineIcon} />
@@ -104,7 +101,7 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
             </li>
           </ol>
           <hr className={FlightsModalCss.FlightsStopHR} />
-        </>
+        </div>
       );
     });
   }
@@ -112,11 +109,17 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
   return (
     <div className="flex p-4 rounded shadow-md hover:shadow-lg hover:shadow-indigo-100">
       <div className="h-8 w-8 mr-4">
-        <img
-          alt={props.itin.marketingAirline.name}
+        <object
           className="h-8 w-8"
-          src={`https://www.gstatic.com/flights/airline_logos/70px/${props.itin.marketingAirline.code}.png`}
-        />
+          data={`https://www.gstatic.com/flights/airline_logos/70px/${props.itin.marketingAirline.code}.png`}
+          type="image/png"
+        >
+          <img
+            className="h-8 w-8"
+            src="https://cdn-icons-png.flaticon.com/512/4353/4353032.png"
+            alt={props.itin.marketingAirline.name}
+          />
+        </object>
       </div>
       <div className='flex-1'>
         <div className="flex">
@@ -153,26 +156,37 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
 
 // TripFlightsSearchForm
 
+const cabinClasses = [
+  { label: "Economy", value: "economy" },
+  { label: "Premium Economy", value: "premiumeconomy" },
+  { label: "Business", value: "business" },
+  { label: "First Class", value: "first" },
+];
+
 interface TripFlightsSearchFormProps {
   onSearch: any
 }
 
 const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlightsSearchFormProps) => {
 
-  const [itineraryClass, setItineraryClass] = useState(itineraryClasses[0]);
-  const [isCabinClassDropdownActive, setIsCabinClassDropdownActive] = useState(false);
+  // Data State
+  const [origIATA, setOrigIATA] = useState("");
+  const [destIATA, setDestIATA] = useState("");
+  const [cabinClass, setCabinClass] = useState(cabinClasses[0]);
   const [flightDates, setFlightDates] = useState<DateRange>();
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-  const matches = useMediaQuery('(min-width: 768px)');
+  // UI State
+  const [isCabinClassActive, setIsCabinClassActive] = useState(false);
+  const [isOrigIATAFocus, setIsOrigIATAFocus] = useState(false);
+  const [isDestIATAFocus, setIsDestIATAFocus] = useState(false);
+  const [origIATAQuery, setOrigIATAQuery] = useState("");
+  const [destIATAQuery, setDestIATAQuery] = useState("");
 
   // Event Handlers
   const searchBtnOnClick = () => {
-    props.onSearch();
-  }
-
-  const dateInputOnClick = (event: React.MouseEvent<HTMLInputElement>) => {
-    setIsCalendarOpen(!isCalendarOpen)
+    const departDate = printFromDateFromRange(flightDates, 'y-MM-dd');
+    const arrDate = printToDateFromRange(flightDates, 'y-MM-dd');
+    props.onSearch(origIATA, destIATA, departDate, arrDate, cabinClass);
   }
 
   const flightDatesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
@@ -182,18 +196,17 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
   // Renderers
   const renderCabinClassDropdown = () => {
     const cabinClassOpts = (
-      <div className="z-10 w-44 rounded-lg bg-white shadow block absolute">
-        <ul className="z-10 w-44 rounded-lg bg-white shadow">
-          {itineraryClasses.map((type: any) => (
+      <div className={FlightsModalCss.CabinClassOptCtn}>
+        <ul className={FlightsModalCss.CabinClassOptList}>
+          {cabinClasses.map((type: any) => (
             <li
               key={type.value}
-              className="block rounded-lg py-2 px-4 cursor-pointer hover:bg-indigo-100"
-              onClick={() => setItineraryClass(type)}
+              className={FlightsModalCss.CabinClassOpt}
+              onClick={() => setCabinClass(type)}
             >
               {type.label}
             </li>
-          ))
-          }
+          ))}
         </ul>
       </div>
     );
@@ -201,20 +214,20 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
     return (
       <div className='relative inline-block'>
         <button
-          onClick={() => { setIsCabinClassDropdownActive(!isCabinClassDropdownActive) }}
+          onClick={() => { setIsCabinClassActive(!isCabinClassActive) }}
           onBlur={() => {
             setTimeout(() => {
-              setIsCabinClassDropdownActive(false);
+              setIsCabinClassActive(false);
             }, 200)
           }}
-          className={FlightsModalCss.ItineraryDropdownBtn}
+          className={FlightsModalCss.CabinClassDropdownBtn}
         >
-          {itineraryClass.label}&nbsp;
-          {isCabinClassDropdownActive ?
-            <ChevronUpIcon className={FlightsModalCss.ItineraryDropdownIcon} />
-            : <ChevronDownIcon className={FlightsModalCss.ItineraryDropdownIcon} />}
+          {cabinClass.label}&nbsp;
+          {isCabinClassActive ?
+            <ChevronUpIcon className={FlightsModalCss.CabinClassDropdownIcon} />
+            : <ChevronDownIcon className={FlightsModalCss.CabinClassDropdownIcon} />}
         </button>
-        {isCabinClassDropdownActive ? cabinClassOpts : null}
+        {isCabinClassActive ? cabinClassOpts : null}
       </div>
     );
   }
@@ -235,6 +248,31 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
     );
   }
 
+  const renderAirportsAutocomplete = (isFocus: any, query: string, setIATA: any, setQuery: any, setFocus: any) => {
+    if (!isFocus || _isEmpty(query)) {
+      return (<></>);
+    }
+    return (
+      <div className={FlightsModalCss.AirportSearchOptCts}>
+        <ul className={FlightsModalCss.AirportSearchOptList}>
+          {FlightsAPI.airportAutocomplete(query).map((ap: any) => (
+              <li
+                key={ap.iata}
+                className={FlightsModalCss.AirportSearchOpt}
+                onClick={() => {
+                  setIATA(ap.iata);
+                  setQuery(capitaliseWords(ap.airport));
+                  setFocus(false)}
+                }
+              >
+                {capitaliseWords(ap.airport)} ({ap.iata.toUpperCase()})
+              </li>
+            ))}
+        </ul>
+      </div>
+    );
+  }
+
   const renderAirportsInput = () => {
     return (
       <div className='flex justify-between mb-4'>
@@ -246,7 +284,12 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
             type="text"
             className={FlightsModalCss.FlightFromInput}
             placeholder="from city, airport"
+            value={origIATAQuery}
+            onChange={(e) => {setOrigIATAQuery(e.target.value)}}
+            onFocus={() => {setIsOrigIATAFocus(true)}}
+            onBlur={(e) => {setTimeout(() => { setIsOrigIATAFocus(false) }, 200)}}
           />
+          {renderAirportsAutocomplete(isOrigIATAFocus, origIATAQuery, setOrigIATA, setOrigIATAQuery, setIsOrigIATAFocus)}
         </div>
         <div className="relative w-6/12">
           <div className={FlightsModalCss.FlightFromIconCtn}>
@@ -256,55 +299,12 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
             type="text"
             className={FlightsModalCss.FlightFromInput}
             placeholder="to city, airport"
+            value={destIATAQuery}
+            onChange={(e) => { setDestIATAQuery(e.target.value)}}
+            onFocus={() => {setIsDestIATAFocus(true)}}
+            onBlur={(e) => {setTimeout(() => { setIsDestIATAFocus(false) }, 200)}}
           />
-        </div>
-      </div>
-    );
-  }
-
-  const renderDatesInputs = () => {
-    const startInputValue = _get(flightDates, "from") ? format(_get(flightDates, "from", new Date()), 'y-MM-dd') : "";
-    const endInputValue = _get(flightDates, "to") ? format(_get(flightDates, "to", new Date()), 'y-MM-dd') : "";
-    let value = startInputValue;
-    if (!_isEmpty(endInputValue)) {
-      value = `${startInputValue} - ${endInputValue}`
-    }
-
-    return (
-      <div className={FlightsModalCss.FlightDatesCtn}>
-        <span className={FlightsModalCss.FlightDatesLabel}>
-          <CalendarDaysIcon className={FlightsModalCss.FlightDatesIcon} />
-          &nbsp;Dates
-        </span>
-        <input
-          type="text"
-          value={value}
-          onChange={() => { }}
-          onClick={dateInputOnClick}
-          className={FlightsModalCss.FlightDatesInput}
-        />
-      </div>
-    );
-  }
-
-  const renderDayPicker = () => {
-    if (!isCalendarOpen) {
-      return;
-    }
-    return (
-      <div className='relative'>
-        <div className='absolute bg-white mt-2 border border-slate-200'>
-          <DayPicker
-            mode="range"
-            numberOfMonths={matches ? 2 : 1}
-            pagedNavigation
-            styles={{ months: { margin: "0", display: "flex", justifyContent: "space-around" } }}
-            modifiersStyles={{
-              selected: { background: "#AC8AC3" }
-            }}
-            selected={flightDates}
-            onSelect={flightDatesOnSelect}
-          />
+          {renderAirportsAutocomplete(isDestIATAFocus, destIATAQuery, setDestIATA, setDestIATAQuery, setIsDestIATAFocus)}
         </div>
       </div>
     );
@@ -314,10 +314,10 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
     <div>
       {renderSearchFilters()}
       {renderAirportsInput()}
-      <div className="mb-4">
-        {renderDatesInputs()}
-        {renderDayPicker()}
-      </div>
+      <InputDatesPicker
+        onSelect={flightDatesOnSelect}
+        dates={flightDates}
+      />
     </div>
   );
 }
@@ -330,29 +330,36 @@ interface TripFlightsModalProps {
   onClose: any
 }
 
-const itineraryClasses = [
-  { label: "Economy", value: "ECO" },
-  { label: "Premium Economy", value: "PEC" },
-  { label: "Business", value: "BUS" },
-  { label: "First Class", value: "FST" },
-];
-
-
 const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProps) => {
 
   const [itineraries, setItineraries] = useState([] as any);
-
   const [isLoading, setIsLoading] = useState(false);
   const [searchInitiated, setSearchInitiated] = useState(false);
+  const [alertMsg, setAlertMsg] = useState("");
 
 
   // Event Handlers
-  const onSearch = (origIATA: string, destIATA: string, departDate: string) => {
+  const onSearch = (origIATA: string, destIATA: string, departDate: string, returnDate: string | undefined, cabinClass: string) => {
+    if (_isEmpty(origIATA)) {
+      setAlertMsg("Please select a flight origin");
+      return;
+    }
+    if (_isEmpty(destIATA)) {
+      setAlertMsg("Please select a flight destination");
+      return;
+    }
+    if (_isEmpty(departDate)) {
+      setAlertMsg("Please select a departure date");
+      return;
+    }
+
     setSearchInitiated(true);
     setIsLoading(true);
-    FlightsAPI.search("")
+    setAlertMsg("");
+
+    FlightsAPI.search(origIATA, destIATA, departDate, returnDate, cabinClass)
     .then(res => {
-      const itineraries = _sortBy(_get(res, "data.itineraries", []), "price")
+      const itineraries = _sortBy(_get(res, "data.itineraries", []), "score")
       setItineraries(itineraries);
     })
     .finally(() => {
@@ -375,11 +382,10 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
     return (
       <div>
         <p className={FlightsModalCss.FlightSearchResultsTitle}>Flights</p>
-        {itineraries.map((itin: any) => <TripFlightCard itin={itin} />)}
+        {itineraries.map((itin: any, idx: number) => <TripFlightCard key={idx} itin={itin} />)}
       </div>
     );
   }
-
 
   if (!props.isOpen) {
     return (<></>);
@@ -400,6 +406,7 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
                   <XMarkIcon className='h-6 w-6 text-slate-700' />
                 </button>
               </div>
+              {!_isEmpty(alertMsg) ? <Alert title={""} message={alertMsg} /> : null}
               <TripFlightsSearchForm onSearch={onSearch} />
               {renderItineraries()}
             </div>

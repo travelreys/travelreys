@@ -16,3 +16,10 @@ export const stringToColor = (string: string) => {
   /* eslint-enable no-bitwise */
   return color;
 }
+
+export const capitaliseWords = (string: string) => {
+  let words = string.split(" ");
+  return words.map((word: string) => {
+      return word[0].toUpperCase() + word.substring(1);
+  }).join(" ");
+}

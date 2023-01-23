@@ -1,13 +1,9 @@
 import React, { useState, FC } from 'react';
-import { useMediaQuery } from 'usehooks-ts';
-import { format } from 'date-fns';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 
-import { DayPicker } from 'react-day-picker';
-import { CalendarDaysIcon } from '@heroicons/react/24/solid'
 import { CreateTripModalCss } from '../../styles/global';
-
+import InputDatesPicker from '../InputDatesPicker';
 
 interface CreateTripModalProps {
   isOpen: boolean,
@@ -21,17 +17,9 @@ interface CreateTripModalProps {
 
 const CreateTripModal: FC<CreateTripModalProps> = (props: CreateTripModalProps) => {
 
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const matches = useMediaQuery('(min-width: 768px)')
-
-
   // Event Handlers
   const onClose = () => {
     props.onClose();
-  }
-
-  const dateInputOnClick = (event: React.MouseEvent<HTMLInputElement>) => {
-    setIsCalendarOpen(!isCalendarOpen)
   }
 
   // Renderers
@@ -52,55 +40,6 @@ const CreateTripModal: FC<CreateTripModalProps> = (props: CreateTripModalProps) 
     );
   }
 
-  const renderDatesInputs = () => {
-    const startInputValue = _get(props.tripDates, "from") ? format(_get(props.tripDates, "from"), 'y-MM-dd') : "";
-    const endInputValue = _get(props.tripDates, "to") ? format(_get(props.tripDates, "to"), 'y-MM-dd') : "";
-    let value = startInputValue;
-    if (!_isEmpty(endInputValue)) {
-      value = `${startInputValue} - ${endInputValue}`
-    }
-
-    return (
-      <div className={CreateTripModalCss.TripDatesCtn}>
-        <span className={CreateTripModalCss.TripDatesLabel}>
-          <CalendarDaysIcon className={CreateTripModalCss.TripDatesIcon} />
-          &nbsp;
-          Dates
-        </span>
-        <input
-          type="text"
-          value={value}
-          onChange={() => {}}
-          onClick={dateInputOnClick}
-          className={CreateTripModalCss.TripDatesInput}
-        />
-      </div>
-    );
-  }
-
-  const renderDayPicker = () => {
-    if (!isCalendarOpen) {
-      return;
-    }
-    return (
-      <div className='relative'>
-        <div className='absolute bg-white mt-2 border border-slate-200'>
-          <DayPicker
-            mode="range"
-            numberOfMonths={matches ? 2 : 1}
-            pagedNavigation
-            styles={{ months: { margin: "0", display: "flex", justifyContent: "space-around" } }}
-            modifiersStyles={{
-              selected: { background: "#AC8AC3" }
-            }}
-          selected={props.tripDates}
-          onSelect={props.tripDatesOnSelect}
-          />
-        </div>
-      </div>
-    );
-  }
-
 
   if (!props.isOpen) {
     return <></>;
@@ -115,8 +54,10 @@ const CreateTripModal: FC<CreateTripModalProps> = (props: CreateTripModalProps) 
             <div className="bg-white px-4 pt-5 pb-4 sm:p-8 sm:pb-4">
               <h2 className="text-2xl text-center font-medium leading-6 text-slate-900 mb-6">Create New Trip</h2>
               {renderTripNameInput()}
-              {renderDatesInputs()}
-              {renderDayPicker()}
+              <InputDatesPicker
+                onSelect={props.tripDatesOnSelect}
+                dates={props.tripDates}
+              />
             </div>
             <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
               <button type="button"

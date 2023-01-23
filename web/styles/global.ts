@@ -1,3 +1,10 @@
+export const InputDatesPickerCss = {
+  Ctn: "flex w-full border border-slate-200 rounded-lg",
+  Icon: "inline align-bottom h-5 w-5 text-gray-500",
+  Label: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
+  Input: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
+}
+
 export const ModalCss = {
   Container: "relative z-10",
   Inset: "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity",
@@ -21,10 +28,18 @@ export const TripStatsCss = {
 };
 
 export const FlightsModalCss = {
-  ItineraryDropdownBtn: "hover:bg-indigo-100 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center",
-  ItineraryDropdownIcon: "h-4 w-4 text-slate-700",
+  CabinClassDropdownBtn: "hover:bg-indigo-100 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center",
+  CabinClassDropdownIcon: "h-4 w-4 text-slate-700",
+
+  CabinClassOptCtn: "z-10 w-44 rounded-lg bg-white shadow block absolute",
+  CabinClassOptList: "z-10 w-44 rounded-lg bg-white shadow",
+  CabinClassOpt: "block rounded-lg py-2 px-4 cursor-pointer hover:bg-indigo-100",
+  AirportSearchOptCts: "z-10 rounded-lg bg-white shadow block absolute",
+  AirportSearchOptList: "z-10 rounded-lg bg-white shadow",
+  AirportSearchOpt: "block rounded-lg py-2 px-4 cursor-pointer hover:bg-indigo-100",
+
   FlightSearchBtn: "bg-indigo-500 font-medium rounded-lg text-sm text-white px-4 py-2.5 text-center inline-flex items-center",
-  FlightFromIconCtn: "absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none mb-2",
+  FlightFromIconCtn: "absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none",
   FlightFromIcon: "h-6 w-6 text-slate-700",
   FlightFromInput: "border border-slate-200 text-gray-900 text-sm rounded block w-full pl-10 p-4",
   FlightSearchHR: "h-px my-8 bg-gray-200 border-0",

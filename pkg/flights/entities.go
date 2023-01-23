@@ -40,6 +40,7 @@ type Itinerary struct {
 	NumStops  uint64    `json:"numStops"`  // Total number of stops
 	Duration  uint64    `json:"duration"`  // Total duration in mins
 	Price     float64   `json:"price"`
+	Score     float64   `json:"score"` // ranking score = price + duration + 60 * numStops
 
 	MarketingAirline   Airline `json:"marketingAirline"`   // Marketing Airline (sells the ticket)
 	BookingURL         string  `json:"bookingURL"`         // URL to book the ticket

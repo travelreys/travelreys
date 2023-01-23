@@ -138,6 +138,7 @@ func (res SkyscannerResponse) ToIinerariesList() ItinerariesList {
 			BookingURL:         pricing.URL,
 			BookingDeeplinkURL: result.DeepLink,
 			Legs:               LegsList{},
+			Score:              float64(pricing.Price.Amount) + float64(metadata.DurationInMinutes) + float64(60*metadata.StopCount),
 		}
 
 		for idx, skyseg := range metadata.Segments {
@@ -200,7 +201,7 @@ func NewSkyscannerAPI() WebFlightsAPI {
 	return &skyscanner{apiKey, apiHost}
 }
 
-func (api skyscanner) fullUrlPath() string {
+func (api skyscanner) urlpath() string {
 	return fmt.Sprintf("https://%s/search-extended", api.apiHost)
 }
 
@@ -227,7 +228,7 @@ func (api skyscanner) Search(ctx context.Context, origIATA, destIATA string, num
 		return ItinerariesList{}, ErrInvalidSearchRequest
 	}
 
-	queryURL, _ := url.Parse(api.fullUrlPath())
+	queryURL, _ := url.Parse(api.urlpath())
 	queryParams := queryURL.Query()
 
 	queryParams.Set("adults", fmt.Sprintf("%d", numAdults))

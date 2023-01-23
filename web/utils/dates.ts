@@ -1,3 +1,4 @@
+import _get from "lodash/get";
 import {
   format,
   formatDuration,
@@ -6,6 +7,7 @@ import {
   parseISO,
   parseJSON,
 } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 export const datesRenderer = (startDate: Date, endDate: Date) => {
   const nullDate = parseJSON("0001-01-01T00:00:00Z");
@@ -18,6 +20,21 @@ export const datesRenderer = (startDate: Date, endDate: Date) => {
   return `${format(startDate, "MMM d, yy ")} - ${format(endDate, "MMM d, yy ")}`;
 }
 
+export const printFromDateFromRange = (range: DateRange | undefined, fmt: string) => {
+  const date = _get(range, "from");
+  if (date) {
+    return format(date, fmt);
+  }
+  return undefined;
+}
+
+export const printToDateFromRange = (range: DateRange | undefined, fmt: string) => {
+  const date = _get(range, "to");
+  if (date) {
+    return format(date, fmt);
+  }
+  return undefined;
+}
 
 export const parseTimeFromZ = (date: string) => {
   const d = date.substring(0, date.length - 1);
@@ -27,7 +44,6 @@ export const parseTimeFromZ = (date: string) => {
 export const printTime = (date: Date) => {
   return format(date, "hh:mm aa");
 }
-
 
 export const prettyPrintMins = (mins: number) => {
   const duration = intervalToDuration({
