@@ -1,10 +1,12 @@
 import React, { useState, FC } from 'react';
-import classNames from 'classnames';
-import _get from "lodash/get";
+import { useMediaQuery } from 'usehooks-ts';
 import { format } from 'date-fns';
+import _get from "lodash/get";
+import _isEmpty from "lodash/isEmpty";
 
 import { DayPicker } from 'react-day-picker';
 import { CalendarDaysIcon } from '@heroicons/react/24/solid'
+import { CreateTripModalCss } from '../../styles/global';
 
 
 interface CreateTripModalProps {
@@ -20,6 +22,7 @@ interface CreateTripModalProps {
 const CreateTripModal: FC<CreateTripModalProps> = (props: CreateTripModalProps) => {
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const matches = useMediaQuery('(min-width: 768px)')
 
 
   // Event Handlers
@@ -34,28 +37,13 @@ const CreateTripModal: FC<CreateTripModalProps> = (props: CreateTripModalProps) 
   // Renderers
   const renderTripNameInput = () => {
     return (
-      <div className="flex mb-4">
-        <span className="inline-flex font-bold items-center px-3 text-sm bg-gray-50 text-gray-900 border border-r-0 border-gray-300 rounded-l-md dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
+      <div className={CreateTripModalCss.TripNameCtn}>
+        <span className={CreateTripModalCss.TripNameLabel}>
           Where to?
         </span>
         <input
           type="text"
-          className={classNames(
-            "bg-gray-50",
-            "block",
-            "border-gray-300",
-            "border",
-            "flex-1",
-            "focus:border-blue-500",
-            "focus:ring-blue-500",
-            "min-w-0",
-            "p-2.5",
-            "rounded-none",
-            "rounded-r-lg",
-            "text-gray-900",
-            "text-sm",
-            "w-full",
-          )}
+          className={CreateTripModalCss.TripNameInput}
           value={props.tripName}
           onChange={props.tripNameOnChange}
           placeholder="annual hiking vacation, business trip at new york ..."
@@ -67,56 +55,25 @@ const CreateTripModal: FC<CreateTripModalProps> = (props: CreateTripModalProps) 
   const renderDatesInputs = () => {
     const startInputValue = _get(props.tripDates, "from") ? format(_get(props.tripDates, "from"), 'y-MM-dd') : "";
     const endInputValue = _get(props.tripDates, "to") ? format(_get(props.tripDates, "to"), 'y-MM-dd') : "";
+    let value = startInputValue;
+    if (!_isEmpty(endInputValue)) {
+      value = `${startInputValue} - ${endInputValue}`
+    }
 
-    // HTML Classes
-    const inputClasses = classNames(
-      "bg-gray-50",
-      "block",
-      "border-gray-300",
-      "border",
-      "flex-1",
-      "focus:border-blue-500",
-      "focus:ring-blue-500",
-      "min-w-0",
-      "p-2.5",
-      "rounded-none",
-      "rounded-r-lg",
-      "text-gray-900",
-      "text-sm",
-      "w-full",
-    );
     return (
-      <div className="flex justify-between">
-        <div className="flex w-72">
-          <span className="inline-flex font-bold items-center px-3 text-sm bg-gray-50 text-gray-900 border border-r-0 border-gray-300 rounded-l-md dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
-            <CalendarDaysIcon className='inline align-bottom h-5 w-5 text-gray-500' />
-            &nbsp;
-            Start
-          </span>
-          <input
-            type="text"
-            value={startInputValue}
-            onChange={() => {}}
-            onClick={dateInputOnClick}
-            className={inputClasses}
-            placeholder="start date ..."
-          />
-        </div>
-        <div className="flex w-72">
-          <span className="inline-flex font-bold items-center px-3 text-sm bg-gray-50 text-gray-900 border border-r-0 border-gray-300 rounded-l-md dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
-            <CalendarDaysIcon className='inline align-bottom h-5 w-5 text-gray-500' />
-            &nbsp;
-            End
-          </span>
-          <input
-            type="text"
-            value={endInputValue}
-            onChange={() => {}}
-            onClick={dateInputOnClick}
-            className={inputClasses}
-            placeholder="end date ..."
-          />
-        </div>
+      <div className={CreateTripModalCss.TripDatesCtn}>
+        <span className={CreateTripModalCss.TripDatesLabel}>
+          <CalendarDaysIcon className={CreateTripModalCss.TripDatesIcon} />
+          &nbsp;
+          Dates
+        </span>
+        <input
+          type="text"
+          value={value}
+          onChange={() => {}}
+          onClick={dateInputOnClick}
+          className={CreateTripModalCss.TripDatesInput}
+        />
       </div>
     );
   }
@@ -125,13 +82,12 @@ const CreateTripModal: FC<CreateTripModalProps> = (props: CreateTripModalProps) 
     if (!isCalendarOpen) {
       return;
     }
-
     return (
       <div className='relative'>
         <div className='absolute bg-white mt-2 border border-slate-200'>
           <DayPicker
             mode="range"
-            numberOfMonths={2}
+            numberOfMonths={matches ? 2 : 1}
             pagedNavigation
             styles={{ months: { margin: "0", display: "flex", justifyContent: "space-around" } }}
             modifiersStyles={{

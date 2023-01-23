@@ -1,19 +1,24 @@
-package images
+package flights
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 )
 
 type SearchRequest struct {
-	Query string
+	origIATA   string
+	destIATA   string
+	numAdults  uint64
+	departDate time.Time
+	opts       FlightsSearchOptions
 }
 
 type SearchResponse struct {
-	Images ImageMetadataList `json:"images"`
-	Err    error             `json:"error,omitempty"`
+	Itineraries ItinerariesList `json:"itineraries"`
+	Err         error           `json:"error,omitempty"`
 }
 
 func (r SearchResponse) Error() error {
@@ -26,7 +31,7 @@ func NewSearchEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return SearchResponse{Err: common.ErrInvalidEndpointRequestType}, nil
 		}
-		images, err := svc.Search(ctx, req.Query)
-		return SearchResponse{Images: images, Err: err}, nil
+		itins, err := svc.Search(ctx, req.origIATA, req.destIATA, req.numAdults, req.departDate, req.opts)
+		return SearchResponse{Itineraries: itins, Err: err}, nil
 	}
 }

@@ -21,7 +21,7 @@ const HomePage: NextPageWithLayout = () => {
 
   // State
   const [newTripName, setNewTripName] = useState<string>("");
-  const [newTripDates, setNewTripDates] = useState<DateRange>()
+  const [newTripDates, setNewTripDates] = useState<DateRange>();
   const [isCreateModelOpen, setIsCreateModalOpen] = useState(false);
 
   let {data, error, isLoading} = TripsAPI.readTrips();

@@ -32,7 +32,7 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 
 func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
-	searchImageHandler := kithttp.NewServer(NewCreateTripPlanEndpoint(svc), decodeSearchRequest, encodeResponse, opts...)
+	searchImageHandler := kithttp.NewServer(NewSearchEndpoint(svc), decodeSearchRequest, encodeResponse, opts...)
 	r.Handle("/api/v1/images/search", searchImageHandler).Methods(http.MethodGet)
 	return r
 }

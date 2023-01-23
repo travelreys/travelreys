@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
@@ -31,6 +32,10 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Images
 	unsplash := images.NewWebImageAPI()
 	imageSvc := images.NewService(unsplash)
+
+	// Flights
+	skyscanner := flights.NewSkyscannerAPI()
+	flightsSvc := flights.NewService(skyscanner)
 
 	// Trips
 	tripStore := trips.NewStore(db)
@@ -62,8 +67,10 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/healthz", utils.HealthzHandler)
 	r.HandleFunc("/ws", proxyServer.HandleFunc)
-	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
+
+	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
+	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 
 	return &http.Server{
 		Handler: r,
