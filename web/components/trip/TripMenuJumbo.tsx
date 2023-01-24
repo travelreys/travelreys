@@ -220,7 +220,7 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
             className={TripMenuJumboCss.TripImageEditIconCtn}
             onClick={() => { setIsCoverImageModalOpen(true) }}
           >
-            <PencilIcon className={TripMenuJumboCss.TripImageEditIconCtn} />
+            <PencilIcon className={TripMenuJumboCss.TripImageEditIcon} />
           </button>
         </div>
         <div className={TripMenuJumboCss.TripNameInputCtn}>

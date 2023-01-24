@@ -28,6 +28,13 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
 
   const [isTripFlightsModalOpen, setIsTripFlightsModalOpen] = useState(false);
 
+  // Event Handler
+  const onFlightSelect = (itin: any) => {
+    props.onFlightSelect(itin);
+    setIsTripFlightsModalOpen(false);
+  }
+
+
   // Renderers
   const renderItineraries = () => {
     return (
@@ -59,7 +66,7 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
       {renderItineraries()}
       <TripFlightsModal
         isOpen={isTripFlightsModalOpen}
-        onFlightSelect={props.onFlightSelect}
+        onFlightSelect={onFlightSelect}
         onClose={() => { setIsTripFlightsModalOpen(false)}}
       />
     </div>

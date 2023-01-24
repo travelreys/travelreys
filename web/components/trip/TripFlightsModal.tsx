@@ -237,10 +237,9 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
     .finally(() => {
       setIsLoading(false);
     });
-    // const itineraries = _sortBy(_get(flights, "itineraries", []), "price")
+    // const itineraries = _sortBy(_get(flights, "itineraries", []), "score")
     // setItineraries(itineraries);
   }
-
 
   // Renderers
   const renderItineraries = () => {

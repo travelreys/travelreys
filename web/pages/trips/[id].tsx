@@ -67,7 +67,7 @@ const TripPage: NextPageWithLayout = () => {
   // Sync Session State
   const wsInstance = useRef(null as any);
   const pq = NewSyncMessageHeap();
-  const nextTobCounter = useRef(1);
+  const nextTobCounter = useRef(0);
 
   const shouldSetWs = (): boolean => {
     return (typeof window !== "undefined"
@@ -99,6 +99,7 @@ const TripPage: NextPageWithLayout = () => {
         const msg = JSON.parse(e.data);
         switch (msg.opType) {
           case "SyncOpJoinSessionBroadcast":
+            console.log("bcast")
             nextTobCounter.current = 1
             return;
           case "SyncOpUpdateTrip":
@@ -106,8 +107,9 @@ const TripPage: NextPageWithLayout = () => {
           default:
             nextTobCounter.current += 1
             return;
-        }
+          }
 
+        console.log(msg, nextTobCounter.current)
         // Add message to min-heap
         pq.push(msg);
 
