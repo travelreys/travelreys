@@ -18,7 +18,7 @@ import {
 import Spinner from '../../components/Spinner';
 import { printFromDateFromRange, printToDateFromRange } from '../../utils/dates';
 import TripsSyncAPI from '../../apis/tripsSync';
-import ImagesAPI, { stockImageSrc, images } from '../../apis/images';
+import ImagesAPI, { stockImageSrc } from '../../apis/images';
 
 import { ModalCss, TripMenuJumboCss } from '../../styles/global';
 import DatesPicker from '../DatesPicker';
@@ -41,14 +41,13 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
 
   // API
   const searchImage = () => {
-    // setIsLoading(true);
-    // ImagesAPI.search(query)
-    // .then(res => {
-    //   const images = _get(res, "data.images");
-    //   setImageList(images);
-    //   setIsLoading(false);
-    // });
-    setImageList(images);
+    setIsLoading(true);
+    ImagesAPI.search(query)
+    .then(res => {
+      const images = _get(res, "data.images");
+      setImageList(images);
+      setIsLoading(false);
+    });
   }
 
   // Event Handlers

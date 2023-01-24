@@ -6,7 +6,7 @@ import (
 )
 
 type Service interface {
-	Search(ctx context.Context, origIATA, destIATA string, numAdults uint64, departDate time.Time, opts FlightsSearchOptions) (ItinerariesList, error)
+	Search(ctx context.Context, origIATA, destIATA string, numAdults uint64, departDate time.Time, opts FlightsSearchOptions) (Itineraries, error)
 }
 
 type service struct {
@@ -24,6 +24,6 @@ func (svc *service) Search(
 	numAdults uint64,
 	departDate time.Time,
 	opts FlightsSearchOptions,
-) (ItinerariesList, error) {
+) (Itineraries, error) {
 	return svc.flightAPI.Search(ctx, origIATA, destIATA, numAdults, departDate, opts)
 }

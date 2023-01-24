@@ -23,8 +23,8 @@ type Airport struct {
 type AirportsList []Airport
 
 const (
-	ITINERARY_ROUND_TRIP = "ROUND_TRIP"
-	ITINERARY_ONE_WAY    = "ONE_WAY"
+	ITINERARY_ROUND_TRIP = "roundtrip"
+	ITINERARY_ONE_WAY    = "oneway"
 )
 
 const (
@@ -34,23 +34,46 @@ const (
 	CABIN_CLASS_FIRST           = "first"
 )
 
-type Itinerary struct {
-	Departure Departure                `json:"departure"` // Initial departure
-	Arrival   Arrival                  `json:"arrival"`   // Final arrival
-	NumStops  uint64                   `json:"numStops"`  // Total number of stops
-	Duration  uint64                   `json:"duration"`  // Total duration in mins
-	Price     common.PriceWithCurrency `json:"priceWithCurrency"`
-
-	Score float64 `json:"score"` // ranking score = price + duration + 60 * numStops
-
-	MarketingAirline   Airline `json:"marketingAirline"`   // Marketing Airline (sells the ticket)
-	BookingURL         string  `json:"bookingURL"`         // URL to book the ticket
-	BookingDeeplinkURL string  `json:"bookingDeeplinkURL"` // URL to see other options!
-
-	Legs LegsList `json:"legs"`
+type Itineraries struct {
+	Type       string       `json:"type"`
+	Oneways    OnewayList   `json:"oneways"`
+	Roundtrips RoundTripMap `json:"roundtrips"`
 }
 
-type ItinerariesList []Itinerary
+type Oneway struct {
+	DepartFlight    Flight          `json:"depart"`
+	BookingMetadata BookingMetadata `json:"bookingMetadata"`
+}
+
+type OnewayList []Oneway
+
+type RoundTrip struct {
+	DepartFlight        Flight              `json:"depart"`
+	ReturnFlights       FlightsList         `json:"returns"`
+	BookingMetadataList BookingMetadataList `json:"bookingMetadata"`
+}
+
+type RoundTripMap map[string]*RoundTrip
+
+type BookingMetadata struct {
+	Score              float64              `json:"score"`
+	Price              common.PriceMetadata `json:"priceMetadata"`
+	BookingURL         string               `json:"bookingURL"`         // URL to book the ticket
+	BookingDeeplinkURL string               `json:"bookingDeeplinkURL"` // URL to see other options!
+}
+
+type BookingMetadataList []BookingMetadata
+
+type Flight struct {
+	ID        string    `json:"id"`
+	Departure Departure `json:"departure"` // Initial departure
+	Arrival   Arrival   `json:"arrival"`   // Final arrival
+	NumStops  uint64    `json:"numStops"`  // Total number of stops
+	Duration  uint64    `json:"duration"`  // Total duration in mins
+	Legs      LegsList  `json:"legs"`
+}
+
+type FlightsList []Flight
 
 // A segment is a flight operated by a single flight number, but may have an intermediate stop
 // Example - UA 234 from BOS-ORD-SFO is a segment.

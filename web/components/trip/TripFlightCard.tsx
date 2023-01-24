@@ -20,7 +20,8 @@ import {
 
 
 interface TripFlightCardProps {
-  itin: any
+  flight: any
+  bookingMetadata: any
   onSelect: any
 }
 
@@ -28,9 +29,9 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
 
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const numStops = _get(props.itin, "legs").length === 1
-    ? "Non-stop" : `${_get(props.itin, "legs").length - 1} stops`;
-
+  const airline = _get(props.flight.legs, "0.operatingAirline", {});
+  const numStops = _get(props.flight, "legs", []).length === 1
+    ? "Non-stop" : `${_get(props.flight, "legs", []).length - 1} stops`;
 
   // Renderers
   const renderNumStops = () => {
@@ -48,11 +49,11 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
   }
 
   const renderStopsInfo = () => {
-    return props.itin.legs.map((leg: any, idx: number) => {
+    return props.flight.legs.map((leg: any, idx: number) => {
       let layoverDuration = null;
-      if (idx !== props.itin.legs.length - 1) {
+      if (idx !== props.flight.legs.length - 1) {
         layoverDuration = intervalToDuration({
-          start: parseTimeFromZ(props.itin.legs[idx + 1].departure.datetime),
+          start: parseTimeFromZ(props.flight.legs[idx + 1].departure.datetime),
           end: parseTimeFromZ(leg.arrival.datetime),
         });
       }
@@ -96,28 +97,30 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
   }
 
   const renderAirlineLogo = () => {
-    const imgUrl = `https://www.gstatic.com/flights/airline_logos/70px/${props.itin.marketingAirline.code}.png`;
+    const airline = _get(props.flight.legs, "0.operatingAirline", {});
+    const imgUrl = `https://www.gstatic.com/flights/airline_logos/70px/${airline.code}.png`;
     const fallbackUrl = "https://cdn-icons-png.flaticon.com/512/4353/4353032.png";
     return (
       <div className="h-8 w-8 mr-4">
         <object className="h-8 w-8" data={imgUrl} type="image/png">
-          <img className="h-8 w-8" src={fallbackUrl} alt={props.itin.marketingAirline.name} />
+          <img className="h-8 w-8" src={fallbackUrl} alt={airline.name} />
         </object>
       </div>
     );
   }
 
   const renderPricePill = () => {
+    if (_isEmpty(props.bookingMetadata)) {
+      return (<></>);
+    }
     const pill = (
       <span className={FlightsModalCss.FlightPricePill}>
-        {props.itin.priceWithCurrency.currency} {props.itin.priceWithCurrency.amount}
+        {props.bookingMetadata.priceMetadata.currency}
+        &nbsp;
+        {props.bookingMetadata.priceMetadata.amount}
       </span>
     );
-    return (
-      <a href={props.itin.bookingURL} target="_blank">
-        {pill}
-      </a>
-    );
+    return (<a href={props.bookingMetadata.bookingURL} target="_blank">{pill}</a>);
   }
 
   return (
@@ -126,27 +129,31 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
       <div className='flex-1'>
         <div className="flex">
           <span className=''>
-            <p className='font-medium'>{printTime(parseTimeFromZ(props.itin.departure.datetime))}</p>
-            <p className="text-xs text-slate-400">{props.itin.departure.airport.code}</p>
+            <p className='font-medium'>
+              {printTime(parseTimeFromZ(props.flight.departure.datetime), "hh:mm aa")}
+            </p>
+            <p className="text-xs text-slate-400">{props.flight.departure.airport.code}</p>
           </span>
           <ArrowLongRightIcon className='h-6 w-8' />
           <span className='mb-1'>
-            <p className='font-medium'>{printTime(parseTimeFromZ(props.itin.arrival.datetime))}</p>
-            <p className="text-xs text-slate-400">{props.itin.arrival.airport.code}</p>
+            <p className='font-medium'>
+              {printTime(parseTimeFromZ(props.flight.arrival.datetime), "hh:mm aa")}
+            </p>
+            <p className="text-xs text-slate-400">{props.flight.arrival.airport.code}</p>
           </span>
         </div>
         <span className="text-xs text-slate-400 block mb-1">
-          {prettyPrintMins(props.itin.duration)}
+          {prettyPrintMins(props.flight.duration)}
         </span>
         <span className="text-xs text-slate-400 block mb-1">
-          {props.itin.marketingAirline.name} | {renderNumStops()}
+          {airline.name} | {renderNumStops()}
         </span>
         {isExpanded ? renderStopsInfo() : null}
       </div>
       <div className='flex flex-col text-right justify-between'>
         <div className='flex flex-row-reverse'>
           <PlusCircleIcon
-            onClick={() => {props.onSelect(props.itin)}}
+            onClick={() => {props.onSelect(props.flight, props.bookingMetadata)}}
             className={FlightsModalCss.FlightPlusIcon}
           />
         </div>

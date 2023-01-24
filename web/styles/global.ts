@@ -52,7 +52,8 @@ export const TripMenuJumboCss = {
 
 
 export const TripLogisticsCss = {
-  FlightTripCard: "flex p-4 bg-gray-100 rounded shadow-md mb-2",
+  FlightTransitCard: "mb-4",
+  FlightTransit: "flex p-4 bg-gray-100 rounded shadow-md",
   FlightsTitleCtn: "flex justify-between mb-4",
   FlightTransitIcon: "h-6 w-6 text-red-500 cursor-pointer",
   FlightPricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full",
@@ -84,6 +85,10 @@ export const FlightsModalCss = {
   FlightFromInput: "border border-slate-200 text-gray-900 text-sm rounded block w-full pl-10 p-4",
   FlightSearchHR: "h-px my-8 bg-gray-200 border-0",
   FlightSearchResultsTitle: "text-lg sm:text-2xl mb-2 font-medium text-slate-900",
+  RoundTripStepperCtn: "flex items-center w-full mb-4 space-x-2 text-sm font-medium text-center text-gray-500 bg-white rounded-lg sm:p-4 sm:space-x-4",
+  RoundTripStepperActive: "flex items-center text-blue-600 dark:text-blue-500",
+  RoundTripStepper: "flex items-center",
+  RoundTripStepperText: "flex items-center",
   FlightTripCard: "flex p-4 rounded shadow-md hover:shadow-lg hover:shadow-indigo-100",
   FlightPlusIcon: "h-6 w-6 text-green-500 cursor-pointer",
   FlightPricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full",

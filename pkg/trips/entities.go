@@ -104,18 +104,21 @@ type BaseTransit struct {
 	ID   string `json:"id" bson:"id"`
 	Type string `json:"type"`
 
-	ConfirmationID string              `json:"confirmationID" bson:"confirmationID"`
-	Notes          string              `json:"notes" bson:"notes"`
-	Tags           common.Tags         `json:"tags" bson:"tags"`
-	Labels         common.Labels       `json:"labels" bson:"labels"`
-	Attachments    []common.FileObject `json:"attachments" bson:"attachments"`
+	ConfirmationID string               `json:"confirmationID" bson:"confirmationID"`
+	Notes          string               `json:"notes" bson:"notes"`
+	Price          common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
+	Tags           common.Tags          `json:"tags" bson:"tags"`
+	Labels         common.Labels        `json:"labels" bson:"labels"`
+	Attachments    []common.FileObject  `json:"attachments" bson:"attachments"`
 }
 
 // Flights
 
 type Flight struct {
 	BaseTransit
-	flights.Itinerary
+	ItineraryType string         `json:"itineraryType" bson:"itineraryType"`
+	Depart        flights.Flight `json:"depart" bson:"depart"`
+	Return        flights.Flight `json:"return" bson:"return"`
 }
 
 // Lodging
