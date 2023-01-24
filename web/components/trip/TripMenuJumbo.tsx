@@ -5,7 +5,9 @@ import React, {
   useState,
 } from 'react';
 import _get from "lodash/get";
+import _isEmpty from "lodash/isEmpty";
 import { parseJSON, isEqual } from 'date-fns';
+import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
 import {
   CalendarDaysIcon,
   MagnifyingGlassIcon,
@@ -14,11 +16,12 @@ import {
 } from '@heroicons/react/24/outline'
 
 import Spinner from '../../components/Spinner';
-import { datesRenderer } from '../../utils/dates';
+import { printFromDateFromRange, printToDateFromRange } from '../../utils/dates';
 import TripsSyncAPI from '../../apis/tripsSync';
 import ImagesAPI, { stockImageSrc, images } from '../../apis/images';
 
 import { ModalCss, TripMenuJumboCss } from '../../styles/global';
+import DatesPicker from '../DatesPicker';
 
 
 // CoverImageModal
@@ -154,16 +157,33 @@ interface TripMenuJumboProps {
   tripStateOnUpdate: any
 }
 
+const nullDate = parseJSON("0001-01-01T00:00:00Z");
+const parseTripDate = (tripDate: string | undefined) => {
+  if (_isEmpty(tripDate)) {
+    return undefined;
+  }
+  return isEqual(parseJSON(tripDate!), nullDate) ? undefined : parseJSON(tripDate!);
+}
+
 const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
+
+  // State
+  const [tripName, setTripName] = useState(props.trip.name);
+
+  const [tripStartDate, setTripStartDate] = useState(parseTripDate(props.trip.startDate));
+  const [tripEndDate, setTripEndDate] = useState(parseTripDate(props.trip.endDate));
 
   // UI State
   const [isCoverImageModalOpen, setIsCoverImageModalOpen] = useState(false);
-  const [tripName, setTripName] = useState(props.trip.name);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // When props.trip changes, need to update the name
   useEffect(() => {
-    setTripName(props.trip.name)
+    setTripName(props.trip.name);
+    setTripStartDate(parseTripDate(props.trip.startDate));
+    setTripEndDate(parseTripDate(props.trip.endDate));
   }, [props.trip])
+
 
 
   // Event Handlers - Trip Name
@@ -182,27 +202,63 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
       TripsSyncAPI.makeJSONPatchOp(
         "replace", "/coverImage", image)
     ];
-    props.tripStateOnUpdate(ops)
+    props.tripStateOnUpdate(ops);
+  }
+
+  // Event Handlers - Trip Dates
+  const tripDatesOnChange: SelectRangeEventHandler = (range: DateRange | undefined) => {
+
+    setTripStartDate(range?.from);
+    setTripEndDate(range?.to);
+  }
+
+  const tripDatesOnBlur = (e: any) => {
+    const range = {from: tripStartDate, to: tripEndDate};
+    if (!e.currentTarget.contains(e.relatedTarget) && isCalendarOpen) {
+      const ops = [];
+
+      if (range.from !== undefined) {
+        ops.push(TripsSyncAPI.makeJSONPatchOp("replace", "/startDate", range.from));
+      } else {
+        ops.push(TripsSyncAPI.makeJSONPatchOp("replace", "/startDate", nullDate));
+      }
+      if (range.to !== undefined) {
+        ops.push(TripsSyncAPI.makeJSONPatchOp("replace", "/endDate", tripEndDate));
+      } else {
+        ops.push(TripsSyncAPI.makeJSONPatchOp("replace", "/endDate", nullDate));
+      }
+      props.tripStateOnUpdate(ops);
+      setIsCalendarOpen(false);
+      return;
+    }
   }
 
   // Renderers
 
   const renderDatesButton = () => {
-    if (!_get(props.trip, "startDate")) {
-      return;
-    }
-
-    const nullDate = parseJSON("0001-01-01T00:00:00Z");
-    const startDate = parseJSON(props.trip.startDate);
-    const endDate = parseJSON(props.trip.endDate);
-
+    const range = {from: tripStartDate, to: tripEndDate}
     return (
-      <button type="button" className={TripMenuJumboCss.TripDatesBtn}>
-        <CalendarDaysIcon className={TripMenuJumboCss.TripDatesBtnIcon} />
-        &nbsp;&nbsp;
-        {!isEqual(startDate, nullDate) ?
-          <span>{datesRenderer(startDate, endDate)}</span> : null}
-      </button>
+      <div onBlur={tripDatesOnBlur}>
+        <button
+          type="button"
+          className={TripMenuJumboCss.TripDatesBtn}
+          onClick={() => { setIsCalendarOpen(true) }}
+        >
+          <CalendarDaysIcon className={TripMenuJumboCss.TripDatesBtnIcon} />
+          &nbsp;&nbsp;
+          {tripStartDate ?
+            <span>
+              {printFromDateFromRange(range, "MMM d, yy ")}
+              &nbsp;-&nbsp;
+              {printToDateFromRange(range, "MMM d, yy ")}
+            </span> : null}
+        </button>
+        <DatesPicker
+          onSelect={tripDatesOnChange}
+          isOpen={isCalendarOpen}
+          dates={{from: tripStartDate, to: tripEndDate}}
+        />
+      </div>
     );
   }
 

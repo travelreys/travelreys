@@ -99,7 +99,6 @@ const TripPage: NextPageWithLayout = () => {
         const msg = JSON.parse(e.data);
         switch (msg.opType) {
           case "SyncOpJoinSessionBroadcast":
-            console.log("bcast")
             nextTobCounter.current = 1
             return;
           case "SyncOpUpdateTrip":
@@ -109,7 +108,6 @@ const TripPage: NextPageWithLayout = () => {
             return;
           }
 
-        console.log(msg, nextTobCounter.current)
         // Add message to min-heap
         pq.push(msg);
 

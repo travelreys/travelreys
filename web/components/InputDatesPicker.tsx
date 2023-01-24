@@ -2,11 +2,12 @@ import React, { FC, useState } from 'react';
 import { useMediaQuery } from 'usehooks-ts';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
-import { format } from 'date-fns';
+
 import { DayPicker, DateRange, SelectRangeEventHandler } from 'react-day-picker';
 import { CalendarDaysIcon } from '@heroicons/react/24/outline'
 import { InputDatesPickerCss } from '../styles/global';
 import { printFromDateFromRange, printToDateFromRange } from '../utils/dates';
+import DatesPicker from './DatesPicker';
 
 interface InputDatesPicketProps {
   dates?: DateRange
@@ -16,7 +17,6 @@ interface InputDatesPicketProps {
 const InputDatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProps) => {
 
   const [isOpen, setIsOpen] = useState(false);
-  const matches = useMediaQuery('(min-width: 768px)');
 
   const startInputValue = printFromDateFromRange(props.dates, "y-MM-dd");
   const endInputValue = printToDateFromRange(props.dates, "y-MM-dd");
@@ -26,35 +26,7 @@ const InputDatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProp
     value = `${startInputValue} - ${endInputValue}`
   }
 
-  // Event Handlers
-  const datesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
-    props.onSelect(range);
-  };
-
   // Renderers
-
-  const renderDayPicker = () => {
-    if (!isOpen) {
-      return;
-    }
-    return (
-      <div className='relative'>
-        <div className='absolute bg-white border border-slate-200'>
-          <DayPicker
-            mode="range"
-            numberOfMonths={matches ? 2 : 1}
-            pagedNavigation
-            styles={{ months: { margin: "0", display: "flex", justifyContent: "space-around" } }}
-            modifiersStyles={{
-              selected: { background: "#AC8AC3" }
-            }}
-            selected={props.dates}
-            onSelect={datesOnSelect}
-          />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -78,7 +50,11 @@ const InputDatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProp
           className={InputDatesPickerCss.Input}
         />
       </div>
-      {renderDayPicker()}
+      <DatesPicker
+        dates={props.dates}
+        onSelect={props.onSelect}
+        isOpen={isOpen}
+      />
     </div>
   );
 }
