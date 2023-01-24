@@ -18,6 +18,10 @@ var (
 	ErrInvalidSearchRequest = errors.New("invalid-flights-search-request")
 )
 
+const (
+	DefaultCurrency = "USD"
+)
+
 // Flights Search
 
 type FlightsSearchOptions map[string]string
@@ -123,7 +127,7 @@ type SkyscannerResponse struct {
 	} `json:"itineraries"`
 }
 
-func (res SkyscannerResponse) ToIinerariesList() ItinerariesList {
+func (res SkyscannerResponse) ToIinerariesList(currency string) ItinerariesList {
 	list := ItinerariesList{}
 
 	for _, result := range res.Itineraries.Results {
@@ -131,9 +135,12 @@ func (res SkyscannerResponse) ToIinerariesList() ItinerariesList {
 		pricing := result.PricingOptions[0]
 		marketingAirline := metadata.Carriers.Marketing[0]
 		itinerary := Itinerary{
-			NumStops:           metadata.StopCount,
-			Duration:           metadata.DurationInMinutes,
-			Price:              pricing.Price.Amount,
+			NumStops: metadata.StopCount,
+			Duration: metadata.DurationInMinutes,
+			Price: common.PriceWithCurrency{
+				Amount:   pricing.Price.Amount,
+				Currency: currency,
+			},
 			MarketingAirline:   Airline{Name: marketingAirline.Name},
 			BookingURL:         pricing.URL,
 			BookingDeeplinkURL: result.DeepLink,
@@ -242,9 +249,12 @@ func (api skyscanner) Search(ctx context.Context, origIATA, destIATA string, num
 	if val, ok := opts["cabinClass"]; ok {
 		queryParams.Set("cabinClass", val)
 	}
+
+	currency := DefaultCurrency
 	if val, ok := opts["currency"]; ok {
-		queryParams.Set("currency", val)
+		currency = val
 	}
+	queryParams.Set("currency", currency)
 	if val, ok := opts["duration"]; ok {
 		queryParams.Set("duration", val)
 	}
@@ -264,5 +274,5 @@ func (api skyscanner) Search(ctx context.Context, origIATA, destIATA string, num
 		return ItinerariesList{}, err
 	}
 
-	return res.ToIinerariesList(), nil
+	return res.ToIinerariesList(currency), nil
 }

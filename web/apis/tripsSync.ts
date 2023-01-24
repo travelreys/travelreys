@@ -40,7 +40,7 @@ const TripsSyncAPI = {
     return new WebsocketBuilder(BASE_WS_URL).build();
   },
 
-  makeJSONPatchOp: (op: string, path: string, value: string): JSONPatchOp => {
+  makeJSONPatchOp: (op: string, path: string, value: any): JSONPatchOp => {
     return {op, path, value}
   },
 

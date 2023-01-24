@@ -1,6 +1,6 @@
 package common
 
-type Price struct {
+type PriceWithCurrency struct {
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
 }

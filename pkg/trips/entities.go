@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
 )
 
@@ -17,21 +18,24 @@ type TripPlan struct {
 	CoverImage images.ImageMetadata `json:"coverImage" bson:"coverImage"`
 	StartDate  time.Time            `json:"startDate" bson:"startDate"`
 	EndDate    time.Time            `json:"endDate" bson:"endDate"`
+	IsArchived bool                 `json:"isArchived" bson:"isArchived"`
 
+	// Trip Members
 	Creator TripMember            `json:"creator" bson:"creator"`
 	Members map[string]TripMember `json:"members" bson:"members"`
 
+	// Trip Logistics
+	Flights  map[string]Flight      `json:"flights" bson:"flights"`
+	Transits map[string]BaseTransit `json:"transits" bson:"transits"`
+	Lodgings map[string]Lodging     `json:"lodgings" bson:"lodgings"`
+
+	// Trip Contents
 	Contents map[string]TripContentList `json:"contents" bson:"contents"` // Map of trip contents
-	Flights  map[string]Flight          `json:"flights" bson:"flights"`
-	Transits map[string]BaseTransit     `json:"transits" bson:"transits"`
-	Lodgings map[string]Lodging         `json:"lodgings" bson:"lodgings"`
 
-	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
-	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
-
-	IsArchived bool          `json:"isArchived" bson:"isArchived"`
-	Labels     common.Labels `json:"labels" bson:"labels"`
-	Tags       common.Tags   `json:"tags" bson:"tags"`
+	UpdatedAt time.Time     `json:"updatedAt" bson:"updatedAt"`
+	CreatedAt time.Time     `json:"createdAt" bson:"createdAt"`
+	Labels    common.Labels `json:"labels" bson:"labels"`
+	Tags      common.Tags   `json:"tags" bson:"tags"`
 }
 
 type TripPlansList []TripPlan
@@ -84,6 +88,10 @@ type TripMembersList []TripMember
 
 // Transit
 
+const (
+	TransitTypeFlight = "flight"
+)
+
 type TransitCenter struct {
 	ID                string             `json:"id" bson:"id"`
 	TransitCenterType string             `json:"transitCenterType" bson:"transitCenterType"`
@@ -93,26 +101,21 @@ type TransitCenter struct {
 }
 
 type BaseTransit struct {
-	ID string `json:"id" bson:"id"`
+	ID   string `json:"id" bson:"id"`
+	Type string `json:"type"`
 
-	Price          common.Price  `json:"price" bson:"price"`
-	ConfirmationID string        `json:"confirmationID" bson:"confirmationID"`
-	Notes          string        `json:"notes" bson:"notes"`
-	Tags           common.Tags   `json:"tags" bson:"tags"`
-	Labels         common.Labels `json:"labels" bson:"labels"`
-
-	DepartTime         time.Time           `json:"departTime" bson:"departTime"`
-	DepartPositioning  common.Positioning  `json:"departPositioning" bson:"departPositioning"`
-	ArrivalTime        time.Time           `json:"arrivalTime" bson:"arrivalTime"`
-	ArrivalPositioning common.Positioning  `json:"arrivalPositioning" bson:"arrivalPositioning"`
-	Attachments        []common.FileObject `json:"attachments" bson:"attachments"`
+	ConfirmationID string              `json:"confirmationID" bson:"confirmationID"`
+	Notes          string              `json:"notes" bson:"notes"`
+	Tags           common.Tags         `json:"tags" bson:"tags"`
+	Labels         common.Labels       `json:"labels" bson:"labels"`
+	Attachments    []common.FileObject `json:"attachments" bson:"attachments"`
 }
 
 // Flights
 
 type Flight struct {
 	BaseTransit
-	AirplaneID string `json:"airplaneID" bson:"airplaneID"`
+	flights.Itinerary
 }
 
 // Lodging

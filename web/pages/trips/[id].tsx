@@ -1,5 +1,4 @@
 import React, {
-  ChangeEvent,
   FC,
   ReactElement,
   useEffect,
@@ -23,7 +22,7 @@ import { NewSyncMessageHeap } from '../../utils/heap';
 import Spinner from '../../components/Spinner';
 import TripsLayout from '../../components/layouts/TripsLayout';
 import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
-import TripStats from '../../components/trip/TripStats';
+import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
 
 
 // TripPageMenu
@@ -50,7 +49,10 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
         trip={props.trip}
         tripStateOnUpdate={props.tripStateOnUpdate}
       />
-      <TripStats trip={props.trip} />
+      <TripLogisticsSection
+        trip={props.trip}
+        tripStateOnUpdate={props.tripStateOnUpdate}
+      />
     </div>
   );
 }

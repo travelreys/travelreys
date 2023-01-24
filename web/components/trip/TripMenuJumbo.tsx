@@ -183,8 +183,6 @@ interface TripMenuJumboProps {
 
 const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
 
-  console.log(props.trip)
-
   // UI State
   const [isCoverImageModalOpen, setIsCoverImageModalOpen] = useState(false);
   const [tripName, setTripName] = useState(props.trip.name);
