@@ -23,6 +23,31 @@ export const CreateTripModalCss = {
   TripDatesInput: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
 }
 
+export const TripMenuJumboCss = {
+  TripDatesBtn: "font-medium text-md text-slate-500",
+  TripDatesBtnIcon: "inline h-5 w-5 align-sub",
+  TripCoverImage: "block sm:max-h-96 w-full",
+  TripImageEditIconCtn: "absolute top-4 right-4 h-10 w-10 bg-gray-800/70 p-2 text-center rounded-full",
+  TripImageEditIcon: "h-6 w-6 text-white",
+  TripNameInputCtn: "h-16 relative -top-24",
+  TripNameInputWrapper: "bg-white rounded-lg shadow-xl p-5 mx-4 mb-4",
+
+  TripNameInput: "mb-12 text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0",
+
+  Figure: "relative max-w-sm transition-all rounded-lg duration-300 mb-2 group",
+  FigureImg: "block rounded-lg max-w-full group-hover:grayscale",
+  FigureBtn: "text-white m-2 py-2 px-3 rounded-full bg-green-500 hover:bg-green-700",
+  FigureBtnCtn: "absolute group-hover:opacity-100 opacity-0 top-2 right-0",
+  FigureCaption: "absolute px-1 text-sm text-white rounded-b-lg bg-slate-800/50 w-full bottom-0",
+  SearchImageCard: "bg-white px-4 pt-5 pb-4 sm:p-8 sm:pb-4 rounded-lg",
+  SearchImageTitle: "text-lg sm:text-2xl font-bold leading-6 text-slate-900",
+  SearchImageWebTitle: "text-sm font-medium text-indigo-500 sm:text-xl text-slate-700 mb-2 ml-1",
+  SearchImageInput: "bg-gray-50 block border-gray-300 border focus:border-blue-500 focus:ring-blue-500 min-w-0 p-2.5 rounded-lg text-gray-900 text-sm w-5/6 mr-2",
+  SearchImageBtn: "flex-1 inline-flex text-white bg-indigo-500 hover:bg-indigo-800 rounded-2xl p-2.5 text-center items-center justify-around",
+  SearchImageIcon: "h-5 w-5 stroke-2 stroke-white",
+}
+
+
 export const TripLogisticsCss = {
   FlightTripCard: "flex p-4 bg-gray-100 rounded shadow-md mb-2",
   FlightsTitleCtn: "flex justify-between mb-4",

@@ -34,9 +34,6 @@ interface TripPageMenuProps {
 
 
 const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
-
-  // Renderers
-
   return (
     <div className='sm:max-w-lg md:max-w-xl'>
       <nav className="p-3 font-bold text-indigo-500" >

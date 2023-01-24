@@ -5,8 +5,7 @@ import React, {
   useState,
 } from 'react';
 import _get from "lodash/get";
-import { parseJSON, parseISO, isEqual } from 'date-fns';
-import classNames from 'classnames';
+import { parseJSON, isEqual } from 'date-fns';
 import {
   CalendarDaysIcon,
   MagnifyingGlassIcon,
@@ -14,11 +13,12 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 
-import ImagesAPI, { stockImageSrc, images } from '../../apis/images';
-
 import Spinner from '../../components/Spinner';
 import { datesRenderer } from '../../utils/dates';
 import TripsSyncAPI from '../../apis/tripsSync';
+import ImagesAPI, { stockImageSrc, images } from '../../apis/images';
+
+import { ModalCss, TripMenuJumboCss } from '../../styles/global';
 
 
 // CoverImageModal
@@ -61,50 +61,37 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
 
   // Renderers
   const renderImageThumbnails = () => {
-    const css = {
-      figure: "relative max-w-sm transition-all rounded-lg duration-300 mb-2 group",
-      figureImg: "block rounded-lg max-w-full group-hover:grayscale",
-      figureBtn: "text-white m-2 py-2 px-3 rounded-full bg-green-500 hover:bg-green-700",
-      figureBtnCtn: "absolute group-hover:opacity-100 opacity-0 top-2 right-0",
-      figureCaption: "absolute px-1 text-sm text-white rounded-b-lg bg-slate-800/50 w-full bottom-0",
-    }
-
     if (isLoading) {
       return <Spinner />
     }
 
     return (
       <div className='columns-2 md:columns-3'>
-        { imageList.map((image: any) => {
-            return (
-              <figure className={css.figure}>
-                <a href="#">
-                  <img key={image.id}
-                    srcSet={ImagesAPI.makeSrcSet(image)}
-                    src={ImagesAPI.makeSrc(image)}
-                    className={css.figureImg}
-                  />
-                  <div className={css.figureBtnCtn}>
-                    <a
-                      className={css.figureBtn}
-                      onClick={() => {props.onCoverImageSelect(image)}}
-                      href="#"
-                    >
-                      Select
-                    </a>
-                  </div>
+        { imageList.map((image: any) => (
+          <figure className={TripMenuJumboCss.Figure}>
+            <a href="#">
+              <img key={image.id}
+                srcSet={ImagesAPI.makeSrcSet(image)}
+                src={ImagesAPI.makeSrc(image)}
+                className={TripMenuJumboCss.FigureImg}
+              />
+              <div className={TripMenuJumboCss.FigureBtnCtn}>
+                <a
+                  className={TripMenuJumboCss.FigureBtn}
+                  onClick={() => {props.onCoverImageSelect(image)}}
+                  href="#"
+                >
+                  Select
                 </a>
-                <figcaption className={css.figureCaption}>
-                  <a
-                    target="_blank"
-                    href={ImagesAPI.makeUserReferURL(_get(image, "user.username"))}
-                  >
-                    @{_get(image, "user.username")}, Unsplash
-                  </a>
-                </figcaption>
-              </figure>
-            );
-          })}
+              </div>
+            </a>
+            <figcaption className={TripMenuJumboCss.FigureCaption}>
+              <a target="_blank" href={ImagesAPI.makeUserReferURL(_get(image, "user.username"))}>
+                @{_get(image, "user.username")}, Unsplash
+              </a>
+            </figcaption>
+          </figure>
+        ))}
       </div>
     );
   }
@@ -114,41 +101,27 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
   }
 
   return (
-    <div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-      <div className="fixed inset-0 z-10 overflow-y-auto">
-        <div className="flex min-h-full flex-col p-4 text-center sm:items-center sm:p-0">
-          <div className="relative transform rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-8 sm:pb-4 rounded-lg">
+    <div className={ModalCss.Container}>
+      <div className={ModalCss.Inset}></div>
+      <div className={ModalCss.Content}>
+        <div className={ModalCss.ContentContainer}>
+          <div className={ModalCss.ContentCard}>
+            <div className={TripMenuJumboCss.SearchImageCard}>
               <div className='flex justify-between mb-6'>
-                <h2 className="text-lg sm:text-2xl font-bold leading-6 text-slate-900">
+                <h2 className={TripMenuJumboCss.SearchImageTitle}>
                   Change cover image
                 </h2>
                 <button type="button" onClick={props.onClose}>
                   <XMarkIcon className='h-6 w-6 text-slate-700' />
                 </button>
               </div>
-              <h2 className="text-sm font-medium text-indigo-500 sm:text-xl text-slate-700 mb-2 ml-1">
+              <h2 className={TripMenuJumboCss.SearchImageWebTitle}>
                 Search the web
               </h2>
               <div className="flex mb-4 justify-between">
                 <input
                   type="text"
-                  className={classNames(
-                    "bg-gray-50",
-                    "block",
-                    "border-gray-300",
-                    "border",
-                    "focus:border-blue-500",
-                    "focus:ring-blue-500",
-                    "min-w-0",
-                    "p-2.5",
-                    "rounded-lg",
-                    "text-gray-900",
-                    "text-sm",
-                    "w-5/6",
-                    "mr-2"
-                  )}
+                  className={TripMenuJumboCss.SearchImageInput}
                   value={query}
                   onChange={searchImageQueryOnChange}
                   onKeyDown={searchImageQueryOnEnter}
@@ -156,10 +129,10 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
                 />
                 <button
                   type='button'
-                  className='flex-1 inline-flex text-white bg-indigo-500 hover:bg-indigo-800 rounded-2xl p-2.5 text-center items-center justify-around'
+                  className={TripMenuJumboCss.SearchImageBtn}
                   onClick={searchImage}
                 >
-                  <MagnifyingGlassIcon className='h-5 w-5 stroke-2 stroke-white'/>
+                  <MagnifyingGlassIcon className={TripMenuJumboCss.SearchImageIcon} />
                 </button>
               </div>
               {renderImageThumbnails()}
@@ -220,18 +193,15 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
     }
 
     const nullDate = parseJSON("0001-01-01T00:00:00Z");
-    const startDate = parseISO(props.trip.startDate);
+    const startDate = parseJSON(props.trip.startDate);
     const endDate = parseJSON(props.trip.endDate);
 
-    if (isEqual(startDate, nullDate)) {
-      return "";
-    }
-
     return (
-      <button type="button" className="font-medium text-md text-slate-500">
-        <CalendarDaysIcon className='inline h-5 w-5 align-sub' />
+      <button type="button" className={TripMenuJumboCss.TripDatesBtn}>
+        <CalendarDaysIcon className={TripMenuJumboCss.TripDatesBtnIcon} />
         &nbsp;&nbsp;
-        <span>{datesRenderer(startDate, endDate)}</span>
+        {!isEqual(startDate, nullDate) ?
+          <span>{datesRenderer(startDate, endDate)}</span> : null}
       </button>
     );
   }
@@ -243,42 +213,26 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
           <img
             srcSet={ImagesAPI.makeSrcSet(props.trip.coverImage)}
             src={ImagesAPI.makeSrc(props.trip.coverImage)}
-            className="block sm:max-h-96 w-full"
+            className={TripMenuJumboCss.TripCoverImage}
           />
           <button
             type='button'
-            className='absolute top-4 right-4 h-10 w-10 bg-gray-800/70 p-2 text-center rounded-full'
+            className={TripMenuJumboCss.TripImageEditIconCtn}
             onClick={() => { setIsCoverImageModalOpen(true) }}
           >
-            <PencilIcon className='h-6 w-6 text-white' />
+            <PencilIcon className={TripMenuJumboCss.TripImageEditIconCtn} />
           </button>
         </div>
-        <div className='h-16 relative -top-24'>
-          <div className="bg-white rounded-lg shadow-xl p-5 mx-4 mb-4">
+        <div className={TripMenuJumboCss.TripNameInputCtn}>
+          <div className={TripMenuJumboCss.TripNameInputWrapper}>
             <input
               type="text"
               value={tripName}
               onChange={tripNameOnChange}
               onBlur={tripNameOnBlur}
-              className={classNames(
-                "mb-12",
-                "text-2xl",
-                "sm:text-4xl",
-                "font-bold",
-                "text-slate-700",
-                "w-full",
-                "rounded-lg",
-                "p-1",
-                "border-0",
-                "hover:bg-slate-300",
-                "hover:border-0",
-                "hover:bg-slate-100",
-                "focus:ring-0",
-              )}
+              className={TripMenuJumboCss.TripNameInput}
             />
-            <div className='flex justify-between'>
-              {renderDatesButton()}
-            </div>
+            {renderDatesButton()}
           </div>
         </div>
       </div>
