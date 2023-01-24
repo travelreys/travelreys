@@ -1,5 +1,4 @@
 import React, {
-  ChangeEvent,
   FC,
   ReactElement,
   useEffect,
@@ -13,19 +12,17 @@ import { applyPatch,  } from 'json-joy/es6/json-patch';
 import { useDebounce } from 'usehooks-ts';
 import { useRouter } from "next/router";
 import { WebsocketEvents } from 'websocket-ts/lib';
-import { GlobeAmericasIcon, HeartIcon } from '@heroicons/react/24/outline'
+import { GlobeAmericasIcon } from '@heroicons/react/24/outline'
 
 import type { NextPageWithLayout } from '../_app'
 import TripsAPI from '../../apis/trips';
 import TripsSyncAPI, { JSONPatchOp } from '../../apis/tripsSync';
 
 import { NewSyncMessageHeap } from '../../utils/heap';
-import BusIcon from '../../components/icons/BusIcon';
-import HotelIcon from '../../components/icons/HotelIcon';
-import PlaneIcon from '../../components/icons/PlaneIcon';
 import Spinner from '../../components/Spinner';
 import TripsLayout from '../../components/layouts/TripsLayout';
 import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
+import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
 
 
 // TripPageMenu
@@ -37,44 +34,6 @@ interface TripPageMenuProps {
 
 
 const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
-
-  // Renderers
-
-  const renderLogistics = () => {
-    const items = [
-      { title: "Flights", icon: PlaneIcon },
-      { title: "Transits", icon: BusIcon },
-      { title: "Lodging", icon: HotelIcon },
-      { title: "Insurance", icon: HeartIcon },
-    ].map((item, idx) => {
-      return (
-        <span key={idx} className='mx-4 my-2 flex flex-col items-center '>
-          <item.icon className='h-6 w-6 mb-1' />
-          <span className='text-slate-400 text-sm'>{item.title}</span>
-        </span>
-      );
-    })
-
-    return (
-      <div className="bg-white rounded-lg p-5 mx-4 mb-4">
-        <h5 className="mb-4 text-md sm:text-2xl font-bold text-slate-700">
-          Transportation and Lodging
-        </h5>
-        <div className="flex flex-row justify-around mx-2">
-          {items}
-        </div>
-      </div>
-    );
-  }
-
-  const renderTripStats = () => {
-    return (
-      <div className='bg-indigo-100 py-8 pb-4 mb-4'>
-        {renderLogistics()}
-      </div>
-    )
-  }
-
   return (
     <div className='sm:max-w-lg md:max-w-xl'>
       <nav className="p-3 font-bold text-indigo-500" >
@@ -87,7 +46,10 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
         trip={props.trip}
         tripStateOnUpdate={props.tripStateOnUpdate}
       />
-      {renderTripStats()}
+      <TripLogisticsSection
+        trip={props.trip}
+        tripStateOnUpdate={props.tripStateOnUpdate}
+      />
     </div>
   );
 }
@@ -105,7 +67,7 @@ const TripPage: NextPageWithLayout = () => {
   // Sync Session State
   const wsInstance = useRef(null as any);
   const pq = NewSyncMessageHeap();
-  const nextTobCounter = useRef(1);
+  const nextTobCounter = useRef(0);
 
   const shouldSetWs = (): boolean => {
     return (typeof window !== "undefined"
@@ -144,7 +106,7 @@ const TripPage: NextPageWithLayout = () => {
           default:
             nextTobCounter.current += 1
             return;
-        }
+          }
 
         // Add message to min-heap
         pq.push(msg);

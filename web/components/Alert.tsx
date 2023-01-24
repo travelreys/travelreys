@@ -3,7 +3,6 @@ import React, { FC } from 'react';
 import { ExclamationCircleIcon } from '@heroicons/react/24/solid'
 
 interface AlertProps {
-  status: string
   title: string
   message: string
 }

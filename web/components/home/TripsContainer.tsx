@@ -6,8 +6,9 @@ import { parseJSON, isEqual } from 'date-fns';
 
 import ImagesAPI from '../../apis/images';
 import Avatar from '../Avatar';
+import { printFromDateFromRange, printToDateFromRange } from '../../utils/dates';
 
-import { datesRenderer } from '../../utils/dates';
+
 interface TripCardProps {
   trip: any
 }
@@ -26,15 +27,19 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
 
   const renderTripDates = () => {
     const nullDate = parseJSON("0001-01-01T00:00:00Z");
-    const startDate = parseJSON(props.trip.startDate);
-    const endDate = parseJSON(props.trip.endDate);
+    const dateRange = {
+      from: parseJSON(props.trip.startDate),
+      to: parseJSON(props.trip.endDate)
+    };
 
-    if (isEqual(startDate, nullDate)) {
+    if (isEqual(dateRange.from, nullDate)) {
       return <div className='text-slate-500'>-</div>;
     }
     return (
       <p className='text-slate-500 text-sm md:text-sm align-base'>
-        {datesRenderer(startDate, endDate)}
+        {printFromDateFromRange(dateRange, "MMM d, yy ")}
+        &nbsp;-&nbsp;
+        {printToDateFromRange(dateRange, "MMM d, yy ")}
       </p>
     );
   }

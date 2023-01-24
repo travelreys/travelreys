@@ -1,10 +1,11 @@
-import React, { ReactElement, useState, FC } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import {
   DateRange,
   SelectRangeEventHandler
 } from 'react-day-picker';
 import _get from "lodash/get";
+import _isEmpty from "lodash/isEmpty";
 
 import TripsAPI from '../apis/trips';
 
@@ -19,10 +20,11 @@ import TripsJumbo from '../components/home/TripsJumbo';
 const HomePage: NextPageWithLayout = () => {
   const router = useRouter();
 
-  // State
+  // UI State
   const [newTripName, setNewTripName] = useState<string>("");
-  const [newTripDates, setNewTripDates] = useState<DateRange>()
+  const [newTripDates, setNewTripDates] = useState<DateRange>();
   const [isCreateModelOpen, setIsCreateModalOpen] = useState(false);
+  const [alertProps, setAlertProps] = useState({} as any);
 
   let {data, error, isLoading} = TripsAPI.readTrips();
 
@@ -57,7 +59,7 @@ const HomePage: NextPageWithLayout = () => {
     })
     .catch(error => {
       const errMsg = _get(error, "message") || _get(error.data, "error");
-      // setAlertProps({title: "Unexpected Error", message: errMsg, status: "error"});
+      setAlertProps({title: "Unexpected Error", message: errMsg, status: "error"});
     })
   }
 
@@ -67,11 +69,17 @@ const HomePage: NextPageWithLayout = () => {
     if (trips.length === 0) {
       return (<TripsJumbo onCreateTripBtnClick={createTripModalOpenOnClick} />);
     }
-    return <TripsContainer trips={trips} onCreateTripBtnClick={createTripModalOpenOnClick} />;
+    return (
+      <TripsContainer
+        trips={trips}
+        onCreateTripBtnClick={createTripModalOpenOnClick}
+      />
+    );
   }
 
   return (
     <div>
+      {!_isEmpty(alertProps) ? <Alert {...alertProps} /> : null}
       {renderTrips()}
       <CreateTripModal
         isOpen={isCreateModelOpen}
