@@ -9,7 +9,6 @@ import Link from 'next/link';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import { applyPatch,  } from 'json-joy/es6/json-patch';
-import { useDebounce } from 'usehooks-ts';
 import { useRouter } from "next/router";
 import { WebsocketEvents } from 'websocket-ts/lib';
 import { GlobeAmericasIcon } from '@heroicons/react/24/outline'
@@ -35,7 +34,7 @@ interface TripPageMenuProps {
 
 const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   return (
-    <div className='sm:max-w-lg md:max-w-xl'>
+    <div className='sm:max-w-lg md:max-w-xl shadow-md'>
       <nav className="p-3 font-bold text-indigo-500" >
         <Link href="/" className='block align-middle'>
           <GlobeAmericasIcon className='inline h-10 w-10'/>
@@ -50,6 +49,7 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
         trip={props.trip}
         tripStateOnUpdate={props.tripStateOnUpdate}
       />
+
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { ModalCss, FlightsModalCss } from '../../styles/global';
 
-import FlightsAPI, { flights } from '../../apis/flights';
+import FlightsAPI from '../../apis/flights';
 import Alert from '../Alert';
 import InputDatesPicker from '../InputDatesPicker';
 import TripFlightCard from './TripFlightCard';
@@ -23,6 +23,8 @@ import {
   printToDateFromRange
 } from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
+import OnewayFlightsContainer from './OnewayFlightsContainer';
+import RoundtripFlightsContainer from './RoundtripFlightsContainer';
 
 
 // TripFlightsSearchForm
@@ -57,7 +59,7 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
   const searchBtnOnClick = () => {
     const departDate = printFromDateFromRange(flightDates, 'y-MM-dd');
     const arrDate = printToDateFromRange(flightDates, 'y-MM-dd');
-    props.onSearch(origIATA, destIATA, departDate, arrDate, cabinClass);
+    props.onSearch(origIATA, destIATA, departDate, arrDate, cabinClass.value);
   }
 
   const flightDatesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
@@ -204,7 +206,9 @@ interface TripFlightsModalProps {
 
 const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProps) => {
 
-  const [itineraries, setItineraries] = useState([] as any);
+  const [oneways, setOneways] = useState([] as any);
+  const [roundtrips, setRoundtrips] = useState({} as any);
+
   const [isLoading, setIsLoading] = useState(false);
   const [searchInitiated, setSearchInitiated] = useState(false);
   const [alertMsg, setAlertMsg] = useState("");
@@ -231,14 +235,38 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
 
     FlightsAPI.search(origIATA, destIATA, departDate, returnDate, cabinClass)
     .then(res => {
-      const itineraries = _sortBy(_get(res, "data.itineraries", []), "score")
-      setItineraries(itineraries);
+      if (_isEmpty(returnDate)) {
+        const oneways = _sortBy(_get(res, "data.itineraries.oneways", []), "bookingMetadata.score")
+        setOneways(oneways);
+        setRoundtrips({});
+      } else {
+        const roundtrips = _get(res, "data.itineraries.roundtrips", {})
+        setRoundtrips(roundtrips);
+        setOneways([]);
+      }
     })
     .finally(() => {
       setIsLoading(false);
     });
-    // const itineraries = _sortBy(_get(flights, "itineraries", []), "score")
-    // setItineraries(itineraries);
+  }
+
+  const onSelectOnewayFlight = (depart: any, bookingMetadata: any) => {
+    const tripFlight = {
+      itineraryType: "oneway",
+      depart,
+      priceMetadata: bookingMetadata.priceMetadata,
+    }
+    props.onFlightSelect(tripFlight)
+  }
+
+  const onSelectRoundTripFlight = (departFlight: any, returnFlight: any, bookingMetadata: any) => {
+    const tripFlight = {
+      priceMetadata: bookingMetadata.priceMetadata,
+      itineraryType: "roundtrip",
+      depart: departFlight,
+      return: returnFlight
+    };
+    props.onFlightSelect(tripFlight)
   }
 
   // Renderers
@@ -251,17 +279,17 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
       return <Spinner />
     }
 
+    if (!_isEmpty(oneways)) {
+      return (
+        <OnewayFlightsContainer
+          oneways={oneways}
+          onSelect={onSelectOnewayFlight} />
+      );
+    }
     return (
-      <div>
-        <p className={FlightsModalCss.FlightSearchResultsTitle}>Flights</p>
-        {itineraries.map((itin: any, idx: number) =>
-          <TripFlightCard
-            key={idx}
-            itin={itin}
-            onSelect={props.onFlightSelect}
-          />
-        )}
-      </div>
+      <RoundtripFlightsContainer
+        roundtrips={roundtrips}
+        onSelect={onSelectRoundTripFlight}/>
     );
   }
 
@@ -277,7 +305,7 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
           <div className={ModalCss.ContentCard}>
             <div className="px-4 pt-5 sm:p-8 sm:pb-2 rounded-t-lg mb-4">
               <div className='flex justify-between mb-6'>
-                <h2 className="text-lg sm:text-2xl font-bold text-center text-slate-900">
+                <h2 className="text-xl sm:text-2xl font-bold text-center text-slate-900">
                   Search flights
                 </h2>
                 <button type="button" onClick={props.onClose}>

@@ -30,8 +30,8 @@ export const parseTimeFromZ = (date: string) => {
   return parseISO(d);
 }
 
-export const printTime = (date: Date) => {
-  return format(date, "hh:mm aa");
+export const printTime = (date: Date, fmt: string) => {
+  return format(date, fmt);
 }
 
 export const prettyPrintMins = (mins: number) => {

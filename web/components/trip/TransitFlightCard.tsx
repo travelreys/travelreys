@@ -17,6 +17,7 @@ import {
   printTime,
   prettyPrintMins,
 } from '../../utils/dates';
+import {capitaliseWords} from '../../utils/strings';
 
 
 interface TransitFlightCardProps {
@@ -25,12 +26,12 @@ interface TransitFlightCardProps {
 }
 
 const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardProps) => {
-
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const numStops = _get(props.flight, "legs").length === 1
-    ? "Non-stop" : `${_get(props.flight, "legs").length - 1} stops`;
-
+  const departFlight = _get(props.flight, "depart", {});
+  const returnFlight = _get(props.flight, "return");
+  const numStops = _get(departFlight, "legs", []).length === 1
+    ? "Non-stop" : `${_get(departFlight, "legs", []).length - 1} stops`;
 
   // Renderers
   const renderNumStops = () => {
@@ -47,12 +48,12 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
     );
   }
 
-  const renderStopsInfo = () => {
-    return props.flight.legs.map((leg: any, idx: number) => {
+  const renderStopsInfo = (flight: any) => {
+    return flight.legs.map((leg: any, idx: number) => {
       let layoverDuration = null;
-      if (idx !== props.flight.legs.length - 1) {
+      if (idx !== flight.legs.length - 1) {
         layoverDuration = intervalToDuration({
-          start: parseTimeFromZ(props.flight.legs[idx + 1].departure.datetime),
+          start: parseTimeFromZ(flight.legs[idx + 1].departure.datetime),
           end: parseTimeFromZ(leg.arrival.datetime),
         });
       }
@@ -95,13 +96,14 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
     });
   }
 
-  const renderAirlineLogo = () => {
-    const imgUrl = `https://www.gstatic.com/flights/airline_logos/70px/${props.flight.marketingAirline.code}.png`;
+  const renderAirlineLogo = (flight: any) => {
+    const airline = _get(flight.legs, "0.operatingAirline", {});
+    const imgUrl = `https://www.gstatic.com/flights/airline_logos/70px/${airline.code}.png`;
     const fallbackUrl = "https://cdn-icons-png.flaticon.com/512/4353/4353032.png";
     return (
       <div className="h-8 w-8 mr-4">
         <object className="h-8 w-8" data={imgUrl} type="image/png">
-          <img className="h-8 w-8" src={fallbackUrl} alt={props.flight.marketingAirline.name} />
+          <img className="h-8 w-8" src={fallbackUrl} alt={airline.name} />
         </object>
       </div>
     );
@@ -110,43 +112,64 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
   const renderPricePill = () => {
     return (
       <span className={TripLogisticsCss.FlightPricePill}>
-        {props.flight.priceWithCurrency.currency} {props.flight.priceWithCurrency.amount}
+        {props.flight.priceMetadata.currency} {props.flight.priceMetadata.amount}
       </span>
     );
   }
 
+  const renderFlight = (flight: any, direction: string) => {
+    const airline = _get(flight.legs, "0.operatingAirline", {});
+    return (
+      <div className={TripLogisticsCss.FlightTransit}>
+        {renderAirlineLogo(flight)}
+        <div className='flex-1'>
+          <p className='text-sm text-slate-800'>
+            {capitaliseWords(direction)} Flight&nbsp;&#x2022;&nbsp;
+            {printTime(parseTimeFromZ(flight.departure.datetime), "eee, MMM d")}
+          </p>
+          <div className="flex">
+            <span className=''>
+              <p className='font-medium'>
+                {printTime(parseTimeFromZ(flight.departure.datetime), "hh:mm aa")}
+              </p>
+              <p className="text-xs text-slate-800">{flight.departure.airport.code}</p>
+            </span>
+            <ArrowLongRightIcon className='h-6 w-8' />
+            <span className='mb-1'>
+              <p className='font-medium'>
+                {printTime(parseTimeFromZ(flight.arrival.datetime), "hh:mm aa")}
+              </p>
+              <p className="text-xs text-slate-800">{flight.arrival.airport.code}</p>
+            </span>
+          </div>
+          <span className="text-xs text-slate-800 block mb-1">
+            {prettyPrintMins(flight.duration)}
+          </span>
+          <span className="text-xs text-slate-800 block mb-1">
+            {airline.name} | {renderNumStops()}
+          </span>
+          {isExpanded ? renderStopsInfo(flight) : null}
+        </div>
+        { direction !== "departing" ? null :
+          <div className='flex flex-col text-right justify-between'>
+            <div className='flex flex-row-reverse'>
+              <XCircleIcon
+                onClick={() => {props.onDelete(props.flight)}}
+                className={TripLogisticsCss.FlightTransitIcon}
+              />
+            </div>
+            {renderPricePill()}
+          </div>
+        }
+      </div>
+    );
+  }
+
   return (
-    <div className={TripLogisticsCss.FlightTripCard}>
-      {renderAirlineLogo()}
-      <div className='flex-1'>
-        <div className="flex">
-          <span className=''>
-            <p className='font-medium'>{printTime(parseTimeFromZ(props.flight.departure.datetime))}</p>
-            <p className="text-xs text-slate-800">{props.flight.departure.airport.code}</p>
-          </span>
-          <ArrowLongRightIcon className='h-6 w-8' />
-          <span className='mb-1'>
-            <p className='font-medium'>{printTime(parseTimeFromZ(props.flight.arrival.datetime))}</p>
-            <p className="text-xs text-slate-800">{props.flight.arrival.airport.code}</p>
-          </span>
-        </div>
-        <span className="text-xs text-slate-800 block mb-1">
-          {prettyPrintMins(props.flight.duration)}
-        </span>
-        <span className="text-xs text-slate-800 block mb-1">
-          {props.flight.marketingAirline.name} | {renderNumStops()}
-        </span>
-        {isExpanded ? renderStopsInfo() : null}
-      </div>
-      <div className='flex flex-col text-right justify-between'>
-        <div className='flex flex-row-reverse'>
-          <XCircleIcon
-            onClick={() => {props.onDelete(props.flight)}}
-            className={TripLogisticsCss.FlightTransitIcon}
-          />
-        </div>
-        {renderPricePill()}
-      </div>
+    <div className={TripLogisticsCss.FlightTransitCard}>
+      {renderFlight(_get(props.flight, "depart", {}), "departing")}
+      { props.flight.itineraryType === "roundtrip"
+        ? renderFlight(_get(props.flight, "return", {}), "returning") : null }
     </div>
   );
 }

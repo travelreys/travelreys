@@ -29,8 +29,8 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
   const [isTripFlightsModalOpen, setIsTripFlightsModalOpen] = useState(false);
 
   // Event Handler
-  const onFlightSelect = (itin: any) => {
-    props.onFlightSelect(itin);
+  const onFlightSelect = (transit: any) => {
+    props.onFlightSelect(transit);
     setIsTripFlightsModalOpen(false);
   }
 
@@ -53,7 +53,7 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
   return (
     <div className='p-5'>
       <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <h3 className='text-2xl sm:text-5xl font-bold text-slate-700'>
+        <h3 className='text-2xl sm:text-3xl font-bold text-slate-700'>
           Flights
         </h3>
         <button
@@ -85,9 +85,9 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   // Event Handlers
 
-  const flightOnSelect = (itin: any) => {
+  const flightOnSelect = (flight: any) => {
     let transit = { id: uuidv4(), type: "flight" }
-    transit = Object.assign(transit, itin)
+    transit = Object.assign(transit, flight)
 
     const ops = [
       TripsSyncAPI.makeJSONPatchOp(

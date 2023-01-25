@@ -17,8 +17,8 @@ type SearchRequest struct {
 }
 
 type SearchResponse struct {
-	Itineraries ItinerariesList `json:"itineraries"`
-	Err         error           `json:"error,omitempty"`
+	Itineraries Itineraries `json:"itineraries"`
+	Err         error       `json:"error,omitempty"`
 }
 
 func (r SearchResponse) Error() error {
