@@ -206,7 +206,6 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
 
   // Event Handlers - Trip Dates
   const tripDatesOnChange: SelectRangeEventHandler = (range: DateRange | undefined) => {
-
     setTripStartDate(range?.from);
     setTripEndDate(range?.to);
   }
@@ -222,7 +221,7 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
         ops.push(TripsSyncAPI.makeJSONPatchOp("replace", "/startDate", nullDate));
       }
       if (range.to !== undefined) {
-        ops.push(TripsSyncAPI.makeJSONPatchOp("replace", "/endDate", tripEndDate));
+        ops.push(TripsSyncAPI.makeJSONPatchOp("replace", "/endDate", range.to));
       } else {
         ops.push(TripsSyncAPI.makeJSONPatchOp("replace", "/endDate", nullDate));
       }

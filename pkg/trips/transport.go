@@ -16,7 +16,13 @@ const (
 )
 
 var (
-	encodeErrFn = utils.EncodeErrorFactory(ErrorToHTTPCode)
+	notFoundErrors     = []error{}
+	appErrors          = []error{}
+	unauthorisedErrors = []error{}
+)
+
+var (
+	encodeErrFn = utils.EncodeErrorFactory(utils.ErrorToHTTPCodeFactory(notFoundErrors, appErrors, unauthorisedErrors))
 
 	opts = []kithttp.ServerOption{
 		// kithttp.ServerBefore(reqctx.MakeContextFromHTTPRequest),

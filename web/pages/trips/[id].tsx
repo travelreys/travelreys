@@ -22,6 +22,7 @@ import Spinner from '../../components/Spinner';
 import TripsLayout from '../../components/layouts/TripsLayout';
 import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
 import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
+import { TripMenuCss } from '../../styles/global';
 
 
 // TripPageMenu
@@ -31,14 +32,15 @@ interface TripPageMenuProps {
   tripStateOnUpdate: any
 }
 
-
 const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   return (
-    <div className='sm:max-w-lg md:max-w-xl shadow-md'>
-      <nav className="p-3 font-bold text-indigo-500" >
+    <div className={TripMenuCss.TripMenu}>
+      <nav className={TripMenuCss.TripMenuNav}>
         <Link href="/" className='block align-middle'>
           <GlobeAmericasIcon className='inline h-10 w-10'/>
-          <span className='inline-block text-2xl align-middle'>tiinyplanet</span>
+          <span className='inline-block text-2xl align-middle'>
+            tiinyplanet
+          </span>
         </Link>
       </nav>
       <TripMenuJumbo
@@ -49,7 +51,6 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
         trip={props.trip}
         tripStateOnUpdate={props.tripStateOnUpdate}
       />
-
     </div>
   );
 }

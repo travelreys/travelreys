@@ -1,9 +1,11 @@
 package common
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
-	ErrInvalidEndpointRequestType    = errors.New("endpoint-invalid-req-type")
+	ErrorInvalidEndpointRequestType  = errors.New("endpoint-invalid-req-type")
 	ErrInvalidEndpointRequestContext = errors.New("endpoint-invalid-req-context")
 )
 

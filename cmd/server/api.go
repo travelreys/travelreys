@@ -7,6 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
+	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
 	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
@@ -32,6 +33,12 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Images
 	unsplash := images.NewWebImageAPI()
 	imageSvc := images.NewService(unsplash)
+
+	// Maps
+	mapsSvc, err := maps.NewService()
+	if err != nil {
+		return nil, err
+	}
 
 	// Flights
 	skyscanner := flights.NewSkyscannerAPI()
@@ -68,8 +75,9 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.HandleFunc("/healthz", utils.HealthzHandler)
 	r.HandleFunc("/ws", proxyServer.HandleFunc)
 
-	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
+	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
+	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 
 	return &http.Server{

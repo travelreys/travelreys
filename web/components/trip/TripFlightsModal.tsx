@@ -16,7 +16,6 @@ import { ModalCss, FlightsModalCss } from '../../styles/global';
 import FlightsAPI from '../../apis/flights';
 import Alert from '../Alert';
 import InputDatesPicker from '../InputDatesPicker';
-import TripFlightCard from './TripFlightCard';
 import Spinner from '../../components/Spinner';
 import {
   printFromDateFromRange,
@@ -255,8 +254,8 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
       itineraryType: "oneway",
       depart,
       priceMetadata: bookingMetadata.priceMetadata,
-    }
-    props.onFlightSelect(tripFlight)
+    };
+    props.onFlightSelect(tripFlight);
   }
 
   const onSelectRoundTripFlight = (departFlight: any, returnFlight: any, bookingMetadata: any) => {
@@ -266,7 +265,7 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
       depart: departFlight,
       return: returnFlight
     };
-    props.onFlightSelect(tripFlight)
+    props.onFlightSelect(tripFlight);
   }
 
   // Renderers

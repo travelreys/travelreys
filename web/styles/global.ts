@@ -1,7 +1,7 @@
 export const InputDatesPickerCss = {
   Ctn: "flex w-full border border-slate-200 rounded-lg",
   Icon: "inline align-bottom h-5 w-5 text-gray-500",
-  Label: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
+  Label: "inline-flex bg-gray-200 font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   Input: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
 }
 
@@ -26,6 +26,11 @@ export const CreateTripModalCss = {
   CreateTripBtnsCtn: "bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6",
   CreateTripBtn: "inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm",
   CreateTripCancelBtn: "mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm",
+}
+
+export const TripMenuCss = {
+  TripMenu: "shadow-md pb-40 sm:max-w-lg md:max-w-xl",
+  TripMenuNav: "p-3 font-bold text-indigo-500",
 }
 
 export const TripMenuJumboCss = {
@@ -53,7 +58,7 @@ export const TripMenuJumboCss = {
 
 export const TripLogisticsCss = {
   FlightTransitCard: "mb-4",
-  FlightTransit: "flex p-4 bg-gray-100 rounded shadow-md",
+  FlightTransit: "flex p-4 bg-slate-50 rounded-lg shadow-md",
   FlightsTitleCtn: "flex justify-between mb-4",
   FlightTransitIcon: "h-6 w-6 text-red-500 cursor-pointer",
   FlightPricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full",
@@ -103,4 +108,11 @@ export const FlightsModalCss = {
   FlightsStopTimelineText: "mb-2 text-sm font-normal leading-none text-slate-800",
   FlightsStopLayoverText: "mb-1 text-sm font-normal leading-none text-red-800",
   FlightsStopHR: "w-48 h-1 mx-auto my-4 bg-gray-100 border-0 rounded md:my-10",
+}
+
+export const LodgingsModalCss = {
+  SearchIconCtn: "absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none",
+  SearchIcon: "h-6 w-6 text-slate-700",
+  SearchInput: "border border-slate-200 text-gray-900 text-sm rounded block w-full pl-10 p-4",
+  AddBtn: "mt-2 bg-indigo-500 font-medium rounded-lg text-sm text-white px-4 py-2.5"
 }

@@ -39,3 +39,19 @@ func EncodeErrorFactory(errToCode func(error) int) func(context.Context, error, 
 		json.NewEncoder(w).Encode(common.GenericJSON{"error": err.Error()})
 	}
 }
+
+func ErrorToHTTPCodeFactory(notFoundErrors, appErrors, unauthorisedErrors []error) func(err error) int {
+	return func(err error) int {
+		if ErrorContains(notFoundErrors, err) {
+			return http.StatusNotFound
+		}
+		if ErrorContains(appErrors, err) {
+			return http.StatusUnprocessableEntity
+		}
+		if ErrorContains(unauthorisedErrors, err) {
+			return http.StatusUnauthorized
+		}
+		return http.StatusInternalServerError
+
+	}
+}

@@ -12,6 +12,8 @@ import DatesPicker from './DatesPicker';
 interface InputDatesPicketProps {
   dates?: DateRange
   onSelect: any
+  WrapperCss?: any
+  CtnCss?: string
 }
 
 const InputDatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProps) => {
@@ -30,14 +32,14 @@ const InputDatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProp
 
   return (
     <div
-      className="mb-4"
+      className={props.WrapperCss || "mb-4"}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget) && isOpen) {
           setIsOpen(false);
         }
       }}
     >
-      <div className={InputDatesPickerCss.Ctn}>
+      <div className={props.CtnCss || InputDatesPickerCss.Ctn}>
         <span className={InputDatesPickerCss.Label}>
           <CalendarDaysIcon className={InputDatesPickerCss.Icon} />
           &nbsp;Dates

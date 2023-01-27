@@ -24,7 +24,7 @@ func NewSearchEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(SearchRequest)
 		if !ok {
-			return SearchResponse{Err: common.ErrInvalidEndpointRequestType}, nil
+			return SearchResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
 		}
 		images, err := svc.Search(ctx, req.Query)
 		return SearchResponse{Images: images, Err: err}, nil

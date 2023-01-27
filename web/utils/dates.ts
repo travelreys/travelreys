@@ -9,6 +9,11 @@ import {
 } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
+export const isNullDate = (date: Date) => {
+  const nullDate = parseJSON("0001-01-01T00:00:00Z");
+  return isEqual(date, nullDate);
+}
+
 export const printFromDateFromRange = (range: DateRange | undefined, fmt: string) => {
   const date = _get(range, "from");
   if (date) {

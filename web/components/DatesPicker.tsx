@@ -26,7 +26,7 @@ const DatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProps) =>
   }
 
   return (
-    <div className='relative'>
+    <div className='relative z-50'>
       <div className='absolute bg-white border border-slate-200'>
         <DayPicker
           mode="range"

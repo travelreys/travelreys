@@ -155,6 +155,7 @@ func (crd *Coordinator) Run() error {
 // HandleSyncOpUpdateTrip handles SyncOpUpdateTrip messages
 func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
 	patchJSON, _ := json.Marshal(msg.SyncDataUpdateTrip.Ops)
+
 	patch, _ := jsonpatch.DecodePatch(patchJSON)
 	modified, err := patch.Apply(crd.plan)
 	if err != nil {
@@ -165,11 +166,16 @@ func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
 	crd.logger.Debug("modified plan", zap.String("modified", string(modified)))
 
 	var toSave trips.TripPlan
-	json.Unmarshal(crd.plan, &toSave)
+	err = json.Unmarshal(crd.plan, &toSave)
+	if err != nil {
+		crd.logger.Error("json unmarshall", zap.Error(err))
+	}
 
-	crd.tripStore.SaveTripPlan(context.Background(), toSave)
+	err = crd.tripStore.SaveTripPlan(context.Background(), toSave)
+	if err != nil {
+		crd.logger.Error("json unmarshall", zap.Error(err))
+	}
 	crd.sesnStore.IncrSessionCounter(context.Background(), crd.planID)
-
 }
 
 /***********

@@ -58,13 +58,14 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
         });
       }
 
+
       return (
         <div key={idx}>
           <ol className={TripLogisticsCss.FlightStopTimelineCtn}>
             <li className="mb-4 ml-6">
               <div className={TripLogisticsCss.FlightStopTimelineIcon} />
               <h3 className={TripLogisticsCss.FlightStopTimelineTime}>
-                {printTime(parseTimeFromZ(leg.departure.datetime))}
+                {printTime(parseTimeFromZ(leg.departure.datetime), "hh:mm aa")}
               </h3>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.departure.airport.code} ({leg.departure.airport.name})
@@ -79,7 +80,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
             <li className="mb-4 ml-6">
               <div className={TripLogisticsCss.FlightStopTimelineIcon} />
               <h3 className={TripLogisticsCss.FlightStopTimelineTime}>
-                {printTime(parseTimeFromZ(leg.arrival.datetime))}
+                {printTime(parseTimeFromZ(leg.arrival.datetime), "hh:mm aa")}
               </h3>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.arrival.airport.code} ({leg.arrival.airport.name})

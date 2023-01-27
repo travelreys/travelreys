@@ -7,6 +7,7 @@ import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
+	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 )
 
 // Trip Plan
@@ -107,9 +108,10 @@ type BaseTransit struct {
 	ConfirmationID string               `json:"confirmationID" bson:"confirmationID"`
 	Notes          string               `json:"notes" bson:"notes"`
 	Price          common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
-	Tags           common.Tags          `json:"tags" bson:"tags"`
-	Labels         common.Labels        `json:"labels" bson:"labels"`
-	Attachments    []common.FileObject  `json:"attachments" bson:"attachments"`
+
+	Tags        common.Tags         `json:"tags" bson:"tags"`
+	Labels      common.Labels       `json:"labels" bson:"labels"`
+	Attachments []common.FileObject `json:"attachments" bson:"attachments"`
 }
 
 // Flights
@@ -126,17 +128,17 @@ type Flight struct {
 type Lodging struct {
 	ID string `json:"id" bson:"id"`
 
-	NumGuests int32 `json:"numGuests" bson:"numGuests"`
+	NumGuests      int32                `json:"numGuests" bson:"numGuests"`
+	CheckinTime    time.Time            `json:"checkinTime" bson:"checkinTime"`
+	CheckoutTime   time.Time            `json:"checkoutTime" bson:"checkoutTime"`
+	Price          common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
+	ConfirmationID string               `json:"confirmationID" bson:"confirmationID"`
+	Notes          string               `json:"notes" bson:"notes"`
+	Place          maps.Place           `json:"place" bson:"place"`
 
-	Cost           float64       `json:"cost" bson:"cost"`
-	ConfirmationID string        `json:"confirmationID" bson:"confirmationID"`
-	Notes          string        `json:"notes" bson:"notes"`
-	Tags           common.Tags   `json:"tags" bson:"tags"`
-	Labels         common.Labels `json:"labels" bson:"labels"`
-
-	Positioning  common.Positioning `json:"positiioning" bson:"positiioning"`
-	CheckinTime  time.Time          `json:"checkinTime" bson:"checkinTime"`
-	CheckoutTime time.Time          `json:"checkoutTime" bson:"checkoutTime"`
+	Tags        common.Tags         `json:"tags" bson:"tags"`
+	Labels      common.Labels       `json:"labels" bson:"labels"`
+	Attachments []common.FileObject `json:"attachments" bson:"attachments"`
 }
 
 // Trip Content

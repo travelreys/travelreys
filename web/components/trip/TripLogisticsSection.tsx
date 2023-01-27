@@ -14,6 +14,8 @@ import TripsSyncAPI from '../../apis/tripsSync';
 import TransitFlightCard from './TransitFlightCard';
 
 import { TripLogisticsCss } from '../../styles/global';
+import TripLodgingsModal from './TripLodgingsModal';
+import TripLodgingCard from './TripLodgingCard';
 
 
 // TripFlightsSection
@@ -74,6 +76,60 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
 }
 
 
+// TripLodgingSection
+
+interface TripLodgingSectionProps {
+  trip: any
+  onLodgingSelect: any
+  onLodgingUpdate: any
+  onLodgingDelete: any
+}
+
+const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSectionProps) => {
+
+  const [isLodgingModalOpen, setIsLogdingModalOpen] = useState(false);
+
+  // Event Handlers
+  const onLodgingSelect = (lodging: any) => {
+    props.onLodgingSelect(lodging);
+    setIsLogdingModalOpen(false);
+  }
+
+  // Renderers
+  const renderLodgings = () => {
+    return Object.values(props.trip.lodgings).map((lodge: any) => (
+      <TripLodgingCard
+        key={lodge.id}
+        lodging={lodge}
+        onDelete={props.onLodgingDelete}
+        onUpdate={props.onLodgingUpdate}
+      />
+    ));
+  }
+
+  return (
+    <div className='p-5'>
+      <div className={TripLogisticsCss.FlightsTitleCtn}>
+        <h3 className='text-2xl sm:text-3xl font-bold text-slate-700'>
+          Hotels and Lodgings
+        </h3>
+        <button
+          className='text-slate-500 text-sm mt-1 font-bold'
+          onClick={() => {setIsLogdingModalOpen(true)}}
+        >
+          +&nbsp;&nbsp;Add a lodging
+        </button>
+      </div>
+      {renderLodgings()}
+      <TripLodgingsModal
+        isOpen={isLodgingModalOpen}
+        onLodgingSelect={onLodgingSelect}
+        onClose={() => { setIsLogdingModalOpen(false) }}
+      />
+    </div>
+  );
+}
+
 // Trip Logistics
 
 interface TripLogisticsSectionProps {
@@ -83,7 +139,7 @@ interface TripLogisticsSectionProps {
 
 const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogisticsSectionProps) => {
 
-  // Event Handlers
+  // Event Handlers - Flights
 
   const flightOnSelect = (flight: any) => {
     let transit = { id: uuidv4(), type: "flight" }
@@ -100,6 +156,35 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
     const ops = [
       TripsSyncAPI.makeJSONPatchOp(
         "remove", `/flights/${transit.id}`, transit)
+    ];
+    props.tripStateOnUpdate(ops);
+  }
+
+  // Event Handlers - Lodging
+
+  const lodgingOnSelect = (lodging: any) => {
+    lodging = Object.assign(lodging, {id: uuidv4()});
+    const ops = [
+      TripsSyncAPI.makeJSONPatchOp(
+        "add", `/lodgings/${lodging.id}`, lodging)
+    ];
+    props.tripStateOnUpdate(ops);
+  }
+
+  const lodgingOnUpdate = (lodging: any, updates: any) => {
+    const ops = [] as any;
+    Object.entries(updates).forEach(([key, value]) => {
+      const fullpath = `/lodgings/${lodging.id}/${key}`;
+      ops.push(TripsSyncAPI.makeJSONPatchOp("replace", fullpath, value));
+    });
+    console.log(ops);
+    props.tripStateOnUpdate(ops);
+  }
+
+  const lodgingOnDelete = (lodging: any) => {
+    const ops = [
+      TripsSyncAPI.makeJSONPatchOp(
+        "remove", `/lodgings/${lodging.id}`, lodging)
     ];
     props.tripStateOnUpdate(ops);
   }
@@ -145,6 +230,12 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
         trip={props.trip}
         onFlightSelect={flightOnSelect}
         onFlightDelete={flightOnDelete}
+      />
+      <TripLodgingSection
+        trip={props.trip}
+        onLodgingSelect={lodgingOnSelect}
+        onLodgingUpdate={lodgingOnUpdate}
+        onLodgingDelete={lodgingOnDelete}
       />
     </div>
   );
