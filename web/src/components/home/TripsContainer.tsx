@@ -1,6 +1,6 @@
 import React, { FC } from 'react';
 import classNames from 'classnames';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import _get from 'lodash/get';
 import { parseJSON, isEqual } from 'date-fns';
 
@@ -46,7 +46,7 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
 
   return (
     <Link
-      href={`/trips/${props.trip.id}`}
+      to={`/trips/${props.trip.id}`}
       className="bg-white rounded-lg shadow-md h-fit"
     >
       <img

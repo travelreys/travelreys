@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useRouter } from 'next/router';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import {
   DateRange,
   SelectRangeEventHandler
@@ -7,36 +7,37 @@ import {
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 
-import TripsAPI from '../apis/trips';
+import TripsAPI from '../../apis/trips';
 
-import type { NextPageWithLayout } from './_app'
-import Alert from '../components/Alert';
-import CreateTripModal from '../components/home/CreateTripModal';
-import Spinner from '../components/Spinner';
-import TripsContainer from '../components/home/TripsContainer';
-import TripsJumbo from '../components/home/TripsJumbo';
+import type { NextPageWithLayout } from '../../../../web.back/pages/_app'
+import Alert from '../../components/Alert';
+import CreateTripModal from '../../components/home/CreateTripModal';
+import Spinner from '../../components/Spinner';
+import TripsContainer from '../../components/home/TripsContainer';
+import TripsJumbo from '../../components/home/TripsJumbo';
 
 
 const HomePage: NextPageWithLayout = () => {
-  const router = useRouter();
+  const history = useNavigate();
 
   // UI State
+  const [isLoading, setIsLoading] = useState(false);
+  const [trips, setTrips] = useState([] as any);
+
   const [newTripName, setNewTripName] = useState<string>("");
   const [newTripDates, setNewTripDates] = useState<DateRange>();
   const [isCreateModelOpen, setIsCreateModalOpen] = useState(false);
   const [alertProps, setAlertProps] = useState({} as any);
 
-  let {data, error, isLoading} = TripsAPI.readTrips();
-
-  if (isLoading) {
-    return (<Spinner />);
-  }
-
-  const err = _get(error, "message") || _get(data, "error");
-  if (err) {
-    const props = {title: "Unexpected Error", message: err, status: "error"}
-    return (<Alert {...props} />)
-  }
+  useEffect(() => {
+    setIsLoading(true);
+    TripsAPI.readTrips()
+    .then((res) => {
+      console.log(res)
+      setTrips(_get(res, "tripPlans", []));
+      setIsLoading(false);
+    })
+  }, [])
 
   // Event Handlers
 
@@ -55,7 +56,7 @@ const HomePage: NextPageWithLayout = () => {
   const submitNewTripOnClick = () => {
     TripsAPI.createTrip(newTripName, newTripDates?.from, newTripDates?.to)
     .then((res: any) => {
-      router.push(`/trips/${_get(res, 'data.tripPlan.id')}`);
+      history(`/trips/${_get(res, 'data.tripPlan.id')}`);
     })
     .catch(error => {
       const errMsg = _get(error, "message") || _get(error.data, "error");
@@ -65,7 +66,6 @@ const HomePage: NextPageWithLayout = () => {
 
   // Renderers
   const renderTrips = () => {
-    const trips = _get(data, "tripPlans", []);
     if (trips.length === 0) {
       return (<TripsJumbo onCreateTripBtnClick={createTripModalOpenOnClick} />);
     }
@@ -75,6 +75,10 @@ const HomePage: NextPageWithLayout = () => {
         onCreateTripBtnClick={createTripModalOpenOnClick}
       />
     );
+  }
+
+  if (isLoading) {
+    return (<Spinner />);
   }
 
   return (

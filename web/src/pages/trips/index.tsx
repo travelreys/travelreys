@@ -5,21 +5,18 @@ import React, {
   useState,
   useRef,
 } from 'react';
-import Link from 'next/link';
+import { Link, useParams } from "react-router-dom";
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import { applyPatch,  } from 'json-joy/es6/json-patch';
-import { useRouter } from "next/router";
 import { WebsocketEvents } from 'websocket-ts/lib';
 import { GlobeAmericasIcon } from '@heroicons/react/24/outline'
 
-import type { NextPageWithLayout } from '../_app'
 import TripsAPI from '../../apis/trips';
 import TripsSyncAPI, { JSONPatchOp } from '../../apis/tripsSync';
 
 import { NewSyncMessageHeap } from '../../utils/heap';
 import Spinner from '../../components/Spinner';
-import TripsLayout from '../../components/layouts/TripsLayout';
 import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
 import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
 import { TripMenuCss } from '../../styles/global';
@@ -36,7 +33,7 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
   return (
     <div className={TripMenuCss.TripMenu}>
       <nav className={TripMenuCss.TripMenuNav}>
-        <Link href="/" className='block align-middle'>
+        <Link to="/" className='block align-middle'>
           <GlobeAmericasIcon className='inline h-10 w-10'/>
           <span className='inline-block text-2xl align-middle'>
             tiinyplanet
@@ -57,23 +54,22 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
 
 // TripPage
 
-const TripPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const { id } = router.query;
+const TripPage: FC = () => {
+  const routerParams = useParams();
+  const { id } = routerParams;
 
   // Trip State
   const [tripID, setTripID] = useState("");
   const tripRef = useRef(null as any);
   const [trip, setTrip] = useState(tripRef.current);
+
   // Sync Session State
   const wsInstance = useRef(null as any);
   const pq = NewSyncMessageHeap();
   const nextTobCounter = useRef(0);
 
   const shouldSetWs = (): boolean => {
-    return (typeof window !== "undefined"
-       && wsInstance.current === null
-       && id != null)
+    return (wsInstance.current === null && id != null)
   }
 
   useEffect(() => {
@@ -93,6 +89,7 @@ const TripPage: NextPageWithLayout = () => {
           id as string,
           "memberID",
           "memberEmail");
+        console.log(JSON.stringify(joinMsg))
         ws.send(JSON.stringify(joinMsg));
       });
 
@@ -138,10 +135,18 @@ const TripPage: NextPageWithLayout = () => {
           setTrip(tripRef.current);
         }
       })
-
-      return () => { ws.close(); }
     }
   }, [id])
+
+  useEffect(() => {
+    return () => {
+      const ws = wsInstance.current;
+      if (ws.underlyingWebsocket?.readyState) {
+        ws.close();
+      }
+    }
+  }, [])
+
 
   // Event Handlers
   const tripStateOnUpdate = (ops: Array<JSONPatchOp>) => {
@@ -167,10 +172,3 @@ const TripPage: NextPageWithLayout = () => {
 }
 
 export default TripPage;
-
-TripPage.getLayout = function getLayout(page: ReactElement) {
-  return (
-    <TripsLayout>{page}</TripsLayout>
-  )
-}
-

@@ -4,7 +4,7 @@ import _filter from 'lodash/filter';
 
 import { BASE_URL } from './common';
 
-import airports from '../public/airports.json';
+import airports from '../assets/airports.json';
 
 const FlightsAPI = {
   search: (

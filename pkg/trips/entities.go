@@ -21,16 +21,16 @@ type TripPlan struct {
 	EndDate    time.Time            `json:"endDate" bson:"endDate"`
 	IsArchived bool                 `json:"isArchived" bson:"isArchived"`
 
-	// Trip Members
+	// Members
 	Creator TripMember            `json:"creator" bson:"creator"`
 	Members map[string]TripMember `json:"members" bson:"members"`
 
-	// Trip Logistics
+	// Logistics
 	Flights  map[string]Flight      `json:"flights" bson:"flights"`
 	Transits map[string]BaseTransit `json:"transits" bson:"transits"`
 	Lodgings map[string]Lodging     `json:"lodgings" bson:"lodgings"`
 
-	// Trip Contents
+	// Contents
 	Contents map[string]TripContentList `json:"contents" bson:"contents"` // Map of trip contents
 
 	UpdatedAt time.Time     `json:"updatedAt" bson:"updatedAt"`

@@ -24,7 +24,18 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { PLACE_IMAGE_APIKEY } from '../../apis/maps';
+import { capitaliseWords } from '../../utils/strings';
 
+
+const gMapsPlaceImageSrcURL = (ref: string) => {
+  return [
+    "https://maps.googleapis.com/maps/api/place/photo",
+    "?maxwidth=1024",
+    `&photo_reference=${ref}`,
+    `&key=${PLACE_IMAGE_APIKEY}`,
+  ].join("");
+}
 
 // TripLodgingPhotosCarosel
 
@@ -33,39 +44,22 @@ interface TripLodgingPhotosCaroselProps {
 }
 
 const TripLodgingPhotosCarosel: FC<TripLodgingPhotosCaroselProps> = (props: TripLodgingPhotosCaroselProps) => {
-  console.log(props.photos)
-  const renderLodgingImgs = () => {
-    return props.photos.map((photo: any) => (
-      <SwiperSlide key={photo.photo_reference}>
-        <img src={gMapsPlaceImageSrcURL(photo.photo_reference)} className="rounded" />
-      </SwiperSlide>
-    ));
-  }
-
   if (props.photos.length === 0) {
     return (<></>);
   }
 
   return (
-    <Swiper
-      modules={[Navigation, Pagination]}
-
-      slidesPerView={1}
-      navigation
-      pagination={{ clickable: true }}
-      scrollbar={{ draggable: true }}
-      onSwiper={(swiper) => console.log(swiper)}
-      onSlideChange={() => console.log('slide change')}
-    >
-      {renderLodgingImgs()}
+    <Swiper slidesPerView={1}>
+      {props.photos.map((photo: any) => (
+        <SwiperSlide key={photo.photo_reference}>
+          <img
+            className="rounded h-72 w-full"
+            src={gMapsPlaceImageSrcURL(photo.photo_reference)} />
+        </SwiperSlide>
+      ))}
     </Swiper>
   );
 }
-
-
-
-
-
 
 
 // TripLogdingCardProps
@@ -75,16 +69,6 @@ interface TripLodgingCardProps {
   onUpdate: any
   onDelete: any
 }
-
-const gMapsPlaceImageSrcURL = (ref: string) => {
-  return [
-    "https://maps.googleapis.com/maps/api/place/photo",
-    "?maxwidth=800",
-    `&photo_reference=${ref}`,
-    `&key=${"AIzaSyBgNwirAT6TSS208emcC0Lbgex6i3EwhR0"}`,
-  ].join("");
-}
-
 
 const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) => {
   const place = _get(props.lodging, "place");
@@ -159,14 +143,13 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     return (
       <div>
         <p className='text-slate-600 text-sm flex items-center mb-1'>
-          <MapPinIcon className='h-4 w-4' />&nbsp;
           {place.formatted_address}
         </p>
         <p className='text-slate-600 text-sm flex items-center mb-1'>
           <PhoneIcon className='h-4 w-4' />&nbsp;
           {place.international_phone_number}
         </p>
-        <p className='text-slate-600 text-sm flex items-center mb-1'>
+        <p className='text-slate-600 text-sm flex items-center mb-2'>
           <CalendarDaysIcon className='h-4 w-4' />&nbsp;
           {isNullDate(checkinTime) ? null : printTime(checkinTime, "eee, MMM dd")}
           {isNullDate(checkinTime) ? null : " - " + printTime(checkoutTime, "eee, MMM dd")}
@@ -222,9 +205,9 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
       className='p-4 bg-slate-50 rounded-lg shadow-md mb-4 cursor-pointer'
       onClick={cardOnDoubleClick}
     >
-      <div className='flex justify-between items-center'>
-        <h4 className='font-bold mb-1'>{place.name}</h4>
-      </div>
+      <h4 className='font-bold text-sm mb-1'>
+        {capitaliseWords(place.name)}
+      </h4>
       {isShowEdit ? renderEditForm() : renderNonEdit()}
     </div>
   );

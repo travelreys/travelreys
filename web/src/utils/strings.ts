@@ -20,6 +20,6 @@ export const stringToColor = (string: string) => {
 export const capitaliseWords = (string: string) => {
   let words = string.split(" ");
   return words.map((word: string) => {
-      return word[0].toUpperCase() + word.substring(1);
+      return word[0].toUpperCase() + word.toLowerCase().substring(1);
   }).join(" ");
 }

@@ -1,5 +1,4 @@
 import axios from 'axios'
-import useSWR from 'swr';
 
 import { BASE_URL } from './common';
 
@@ -11,11 +10,7 @@ const TripsAPI = {
 
   readTrips: () => {
     const url = `${BASE_URL}/api/v1/trips`;
-    const fetcher = (url: string) => {
-      return axios.get(url).then(res => res.data);
-    }
-    const { data, error, isLoading } = useSWR(url, fetcher);
-    return { data, error, isLoading};
+    return axios.get(url).then(res => res.data);
   },
 
   readTrip: (id: string | undefined) => {
