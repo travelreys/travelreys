@@ -1,3 +1,5 @@
+// Components
+
 export const InputDatesPickerCss = {
   Ctn: "flex w-full border border-slate-200 rounded-lg",
   Icon: "inline align-bottom h-5 w-5 text-gray-500",
@@ -10,12 +12,14 @@ export const ModalCss = {
   Inset: "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity",
   Content: "fixed inset-0 z-10 overflow-y-auto",
   ContentContainer: "flex min-h-full flex-col p-4 text-center sm:items-center sm:p-0",
-  ContentCard: "bg-white relative transform rounded-lg text-left shadow-xl transition-all pb-5 sm:my-8 sm:w-full sm:max-w-2xl",
+  ContentCard: "bg-white relative transform rounded-lg text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl",
 }
 
+// Trips
+
 export const CreateTripModalCss = {
-  CreateModalCard: "bg-white px-4 pt-5 pb-4 sm:p-8 sm:pb-4",
-  CreateTripTitle: "text-2xl text-center font-medium leading-6 text-slate-900 mb-6",
+  CreateModalCard: "bg-white rounded-lg px-4 pt-5 pb-4 sm:p-8 sm:pb-4",
+  CreateTripTitle: "text-2xl font-bold text-center leading-6 text-slate-900 mb-6",
   TripNameCtn: "flex mb-4 border border-slate-200 rounded-lg",
   TripNameLabel: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   TripNameInput: "block flex-1 border-0 rounded-r-lg min-w-0 p-2.5 text-gray-900 text-sm w-full",
@@ -23,12 +27,16 @@ export const CreateTripModalCss = {
   TripDatesIcon: "inline align-bottom h-5 w-5 text-gray-500",
   TripDatesLabel: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   TripDatesInput: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
-  CreateTripBtnsCtn: "bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6",
+  CreateTripBtnsCtn: "bg-gray-50 px-4 pt-3 pb-5 rounded-b-lg sm:flex sm:flex-row-reverse sm:px-6",
   CreateTripBtn: "inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm",
   CreateTripCancelBtn: "mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm",
 }
 
+
+// Trip Page
+
 export const TripMenuCss = {
+  TripMenuCtn: "min-h-screen min-w-full z-50 relative sm:w-fit sm:min-w-fit sm:shadow-xl sm:shadow-slate-900",
   TripMenu: "shadow-md pb-40 sm:max-w-lg md:max-w-xl",
   TripMenuNav: "p-3 font-bold text-indigo-500",
 }

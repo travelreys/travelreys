@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
+import _get from "lodash/get";
+import _isEmpty from "lodash/isEmpty";
 import {
   DateRange,
   SelectRangeEventHandler
 } from 'react-day-picker';
-import _get from "lodash/get";
-import _isEmpty from "lodash/isEmpty";
 
 import TripsAPI from '../../apis/trips';
 
-import type { NextPageWithLayout } from '../../../../web.back/pages/_app'
 import Alert from '../../components/Alert';
 import CreateTripModal from '../../components/home/CreateTripModal';
 import Spinner from '../../components/Spinner';
@@ -17,7 +16,7 @@ import TripsContainer from '../../components/home/TripsContainer';
 import TripsJumbo from '../../components/home/TripsJumbo';
 
 
-const HomePage: NextPageWithLayout = () => {
+const HomePage: FC = () => {
   const history = useNavigate();
 
   // UI State
@@ -33,7 +32,6 @@ const HomePage: NextPageWithLayout = () => {
     setIsLoading(true);
     TripsAPI.readTrips()
     .then((res) => {
-      console.log(res)
       setTrips(_get(res, "tripPlans", []));
       setIsLoading(false);
     })

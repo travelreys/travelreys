@@ -81,7 +81,7 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
   // Renderers
   const renderTripsTable = () => {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 gap-4 mx-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 gap-4">
         {props.trips.map((trip: any) => {
           return <TripCard trip={trip} key={trip.id} />
         })}
@@ -90,7 +90,7 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
   }
 
   return (
-    <div>
+    <>
       <div className='flex justify-between flex-col sm:flex-row items-center mb-8'>
         <span className='text-3xl sm:text-5x font-bold text-slate-800'>Upcoming trips</span>
         <button type="button"
@@ -113,7 +113,7 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
         </button>
       </div>
       {renderTripsTable()}
-    </div>
+    </>
   );
 }
 

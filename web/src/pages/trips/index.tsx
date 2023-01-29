@@ -1,6 +1,5 @@
 import React, {
   FC,
-  ReactElement,
   useEffect,
   useState,
   useRef,
@@ -19,7 +18,9 @@ import { NewSyncMessageHeap } from '../../utils/heap';
 import Spinner from '../../components/Spinner';
 import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
 import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
+
 import { TripMenuCss } from '../../styles/global';
+import MapComponent from '../../components/maps/MapComponent';
 
 
 // TripPageMenu
@@ -89,7 +90,6 @@ const TripPage: FC = () => {
           id as string,
           "memberID",
           "memberEmail");
-        console.log(JSON.stringify(joinMsg))
         ws.send(JSON.stringify(joinMsg));
       });
 
@@ -161,12 +161,17 @@ const TripPage: FC = () => {
 
   return (
     <div className="flex">
-      <aside className='min-h-full min-w-full'>
+      <aside className={TripMenuCss.TripMenuCtn}>
         <TripPageMenu
-          trip={trip}
+          trip={tripRef.current}
           tripStateOnUpdate={tripStateOnUpdate}
         />
       </aside>
+      <div>
+        <div className='flex-1 fixed h-screen w-screen'>
+          <MapComponent />
+        </div>
+      </div>
     </div>
   );
 }
