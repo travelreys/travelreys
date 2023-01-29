@@ -36,7 +36,7 @@ export const CreateTripModalCss = {
 // Trip Page
 
 export const TripMenuCss = {
-  TripMenuCtn: "min-h-screen min-w-full z-50 relative sm:w-fit sm:min-w-fit sm:shadow-xl sm:shadow-slate-900",
+  TripMenuCtn: "min-h-screen w-full z-50 sm:w-fit sm:shadow-xl sm:shadow-slate-900",
   TripMenu: "shadow-md pb-40 sm:max-w-lg md:max-w-xl",
   TripMenuNav: "p-3 font-bold text-indigo-500",
 }

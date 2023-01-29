@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useState,
   useRef,
+  useCallback,
 } from 'react';
 import { Link, useParams } from "react-router-dom";
 import _get from "lodash/get";
@@ -20,7 +21,7 @@ import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
 import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
 
 import { TripMenuCss } from '../../styles/global';
-import MapComponent from '../../components/maps/MapComponent';
+import TripMap from '../../components/maps/TripMap';
 
 
 // TripPageMenu
@@ -60,9 +61,19 @@ const TripPage: FC = () => {
   const { id } = routerParams;
 
   // Trip State
-  const [tripID, setTripID] = useState("");
   const tripRef = useRef(null as any);
+  const [tripID, setTripID] = useState("");
   const [trip, setTrip] = useState(tripRef.current);
+
+  const [mapNode, setMapNode] = useState(null) as any;
+  const [width, setWidth] = useState(0);
+  const measuredRef = useCallback((node: any) => {
+    if (node) {
+      setMapNode(node)
+      // console.log(node.getBoundingClientRect().width)
+      setWidth(node.getBoundingClientRect().width);
+    }
+  }, []);
 
   // Sync Session State
   const wsInstance = useRef(null as any);
@@ -147,6 +158,13 @@ const TripPage: FC = () => {
     }
   }, [])
 
+  useEffect(() => {
+    window.addEventListener("resize", () => {
+      if(mapNode) {
+        setWidth(mapNode.getBoundingClientRect().width);
+      }
+    })
+  }, [mapNode])
 
   // Event Handlers
   const tripStateOnUpdate = (ops: Array<JSONPatchOp>) => {
@@ -155,6 +173,7 @@ const TripPage: FC = () => {
   }
 
   // Renderers
+
   if (_isEmpty(trip)) {
     return (<Spinner />);
   }
@@ -167,9 +186,9 @@ const TripPage: FC = () => {
           tripStateOnUpdate={tripStateOnUpdate}
         />
       </aside>
-      <div>
-        <div className='flex-1 fixed h-screen w-screen'>
-          <MapComponent />
+      <div className='flex-1' ref={measuredRef}>
+        <div className="absolute bg-green-200 w-96 h-screen">
+          <TripMap trip={tripRef.current} width={width} />
         </div>
       </div>
     </div>

@@ -8,7 +8,7 @@ import BusIcon from '../icons/BusIcon';
 import HotelIcon from '../icons/HotelIcon';
 import PlaneIcon from '../icons/PlaneIcon';
 import TripFlightsModal from './TripFlightsModal';
-import { HeartIcon } from '@heroicons/react/24/outline'
+import { FolderArrowDownIcon } from '@heroicons/react/24/outline'
 
 import TripsSyncAPI from '../../apis/tripsSync';
 import TransitFlightCard from './TransitFlightCard';
@@ -196,7 +196,7 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
       { title: "Flights", icon: PlaneIcon },
       { title: "Transits", icon: BusIcon },
       { title: "Lodging", icon: HotelIcon },
-      { title: "Insurance", icon: HeartIcon },
+      { title: "Attachments", icon: FolderArrowDownIcon },
     ].map((item, idx) => {
       return (
         <button
@@ -213,7 +213,7 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
       <div className='bg-indigo-100 py-8 pb-4 mb-4'>
         <div className="bg-white rounded-lg p-5 mx-4 mb-4">
           <h5 className="mb-4 text-md sm:text-2xl font-bold text-slate-700">
-            Transportation and Lodging
+            Logistics
           </h5>
           <div className="flex flex-row justify-around mx-2">
             {items}
