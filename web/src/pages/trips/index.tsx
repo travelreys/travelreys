@@ -22,6 +22,8 @@ import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
 
 import { TripMenuCss } from '../../styles/global';
 import TripMap from '../../components/maps/TripMap';
+import TripActivitiesAndNotesSection from '../../components/trip/TripContentSection';
+import { MapsProvider } from '../../context/maps-context';
 
 
 // TripPageMenu
@@ -32,8 +34,10 @@ interface TripPageMenuProps {
 }
 
 const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
-  return (
-    <div className={TripMenuCss.TripMenu}>
+
+  // Renderers
+  const renderNavBar = () => {
+    return (
       <nav className={TripMenuCss.TripMenuNav}>
         <Link to="/" className='block align-middle'>
           <GlobeAmericasIcon className='inline h-10 w-10'/>
@@ -42,11 +46,23 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
           </span>
         </Link>
       </nav>
+    );
+  }
+
+
+  return (
+    <div className={TripMenuCss.TripMenu}>
+      {renderNavBar()}
       <TripMenuJumbo
         trip={props.trip}
         tripStateOnUpdate={props.tripStateOnUpdate}
       />
       <TripLogisticsSection
+        trip={props.trip}
+        tripStateOnUpdate={props.tripStateOnUpdate}
+      />
+      <hr className='w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded'/>
+      <TripActivitiesAndNotesSection
         trip={props.trip}
         tripStateOnUpdate={props.tripStateOnUpdate}
       />
@@ -66,12 +82,11 @@ const TripPage: FC = () => {
   const [trip, setTrip] = useState(tripRef.current);
 
   const [mapNode, setMapNode] = useState(null) as any;
-  const [width, setWidth] = useState(0);
+  const [mapDivWidth, setMapDivWidth] = useState(0);
   const measuredRef = useCallback((node: any) => {
     if (node) {
       setMapNode(node)
-      // console.log(node.getBoundingClientRect().width)
-      setWidth(node.getBoundingClientRect().width);
+      setMapDivWidth(node.getBoundingClientRect().width);
     }
   }, []);
 
@@ -84,6 +99,17 @@ const TripPage: FC = () => {
     return (wsInstance.current === null && id != null)
   }
 
+  // Close WS when leaving page
+  useEffect(() => {
+    return () => {
+      const ws = wsInstance.current;
+      if (ws.underlyingWebsocket?.readyState) {
+        ws.close();
+      }
+    }
+  }, [])
+
+  // Set up WS Connection
   useEffect(() => {
     if (id) {
       TripsAPI.readTrip(id as string).then((data) => {
@@ -149,19 +175,11 @@ const TripPage: FC = () => {
     }
   }, [id])
 
-  useEffect(() => {
-    return () => {
-      const ws = wsInstance.current;
-      if (ws.underlyingWebsocket?.readyState) {
-        ws.close();
-      }
-    }
-  }, [])
 
   useEffect(() => {
     window.addEventListener("resize", () => {
       if(mapNode) {
-        setWidth(mapNode.getBoundingClientRect().width);
+        setMapDivWidth(mapNode.getBoundingClientRect().width);
       }
     })
   }, [mapNode])
@@ -179,19 +197,25 @@ const TripPage: FC = () => {
   }
 
   return (
-    <div className="flex">
-      <aside className={TripMenuCss.TripMenuCtn}>
-        <TripPageMenu
-          trip={tripRef.current}
-          tripStateOnUpdate={tripStateOnUpdate}
-        />
-      </aside>
-      <div className='flex-1' ref={measuredRef}>
-        <div className="absolute bg-green-200 w-96 h-screen">
-          <TripMap trip={tripRef.current} width={width} />
+    <MapsProvider>
+      <div className="flex">
+        <aside className={TripMenuCss.TripMenuCtn}>
+          <TripPageMenu
+            trip={tripRef.current}
+            tripStateOnUpdate={tripStateOnUpdate}
+          />
+        </aside>
+        <div className='flex-1' ref={measuredRef}>
+          <div className="fixed w-screen h-screen"
+            style={{width: mapDivWidth}}>
+            <TripMap
+              trip={tripRef.current}
+              width={mapDivWidth}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </MapsProvider>
   );
 }
 

@@ -7,62 +7,19 @@ import { SelectRangeEventHandler, DateRange } from 'react-day-picker';
 import {
   CalendarDaysIcon,
   PhoneIcon,
-  MapPinIcon,
   TrashIcon,
 } from '@heroicons/react/24/solid';
 import { CurrencyDollarIcon } from '@heroicons/react/24/outline';
 
 import InputDatesPicker from '../InputDatesPicker';
-import { printTime, isNullDate } from '../../utils/dates';
+import PlacePicturesCarousel from './PlacePicturesCarousel';
 import { InputDatesPickerCss } from '../../styles/global';
-
-import { Navigation, Pagination } from 'swiper';
-
-import { Swiper, SwiperSlide } from 'swiper/react';
-
-// Import Swiper styles
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import { PLACE_IMAGE_APIKEY } from '../../apis/maps';
+import { printTime, isNullDate } from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
 
 
-const gMapsPlaceImageSrcURL = (ref: string) => {
-  return [
-    "https://maps.googleapis.com/maps/api/place/photo",
-    "?maxwidth=1024",
-    `&photo_reference=${ref}`,
-    `&key=${PLACE_IMAGE_APIKEY}`,
-  ].join("");
-}
 
-// TripLodgingPhotosCarosel
-
-interface TripLodgingPhotosCaroselProps {
-  photos: any
-}
-
-const TripLodgingPhotosCarosel: FC<TripLodgingPhotosCaroselProps> = (props: TripLodgingPhotosCaroselProps) => {
-  if (props.photos.length === 0) {
-    return (<></>);
-  }
-
-  return (
-    <Swiper slidesPerView={1}>
-      {props.photos.map((photo: any) => (
-        <SwiperSlide key={photo.photo_reference}>
-          <img
-            className="rounded h-72 w-full"
-            src={gMapsPlaceImageSrcURL(photo.photo_reference)} />
-        </SwiperSlide>
-      ))}
-    </Swiper>
-  );
-}
-
-
-// TripLogdingCardProps
+// TripLodgingCard
 
 interface TripLodgingCardProps {
   lodging: any
@@ -112,7 +69,6 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
   }
 
   const datesOnChange: SelectRangeEventHandler = (range: DateRange | undefined) => {
-    console.log(range)
     setCheckinDates(range);
     setUpdatedPaths(Object.assign(updatedPaths, {
       "checkinTime": range?.from,
@@ -155,7 +111,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
           {isNullDate(checkinTime) ? null : " - " + printTime(checkoutTime, "eee, MMM dd")}
         </p>
         {renderPriceMetadata()}
-        <TripLodgingPhotosCarosel photos={props.lodging.place.photos} />
+        <PlacePicturesCarousel photos={props.lodging.place.photos} />
       </div>
     );
   }

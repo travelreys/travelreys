@@ -5,24 +5,47 @@ import React, {
   useRef
 } from 'react';
 import _get from "lodash/get";
+import _flatten from "lodash/flatten";
 import _isEmpty from "lodash/isEmpty";
 
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 import { PLACE_IMAGE_APIKEY } from '../../apis/maps';
 
 import Spinner from '../Spinner';
-import { makeHotelPin } from './GMapsPinIcon';
+import { makeActivityPin, makeHotelPin } from './GMapsPinIcon';
+import { useMap } from '../../context/maps-context';
+
+
+const defaultMapCenter = { lat: 33.3960897, lng: 126.264522 }
+const defaultMapOpts = {
+  center: defaultMapCenter,
+  zoom: 10,
+  mapTypeControl: false,
+  streetViewControl: false,
+  fullscreenControl: false,
+  rotateControl: false,
+  keyboardShortcuts: true,
+  gestureHandling: "greedy"
+}
+
+interface PlaceMarker {
+  elem: HTMLElement
+  place: any
+}
+
 
 interface InnerMapProps {
-  markers: any
+  markers: Array<PlaceMarker>
   width: any
 }
 
 const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
   const ref = useRef() as any;
   const map = useRef() as any;
+  const {state, dispatch} = useMap();
 
   const currentPopups = useRef([]) as any;
+  const currentMapCenter = useRef(null) as any;
 
   class Popup extends google.maps.OverlayView {
     position: google.maps.LatLng;
@@ -50,6 +73,16 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
     /** Called when the popup is added to the map. */
     onAdd() {
       this.getPanes()!.floatPane.appendChild(this.containerDiv);
+      this.getPanes()!.overlayMouseTarget.appendChild(this.containerDiv);
+
+      // set this as locally scoped var so event does not get confused
+      var me = this;
+
+      // Add a listener - we'll accept clicks anywhere on this div, but you may want
+      // to validate the click i.e. verify it occurred in some portion of your overlay.
+      this.containerDiv.addEventListener('click', function() {
+        google.maps.event.trigger(me, 'click');
+      });
     }
 
     /** Called when the popup is removed from the map. */
@@ -83,39 +116,60 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
   }
 
   useEffect(() => {
-    console.log("rendering")
-    map.current = new window.google.maps.Map(ref.current, {
-      center: { lat: 33.3960897, lng: 126.264522 },
-      zoom: 10,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      rotateControl: false,
-      keyboardShortcuts: true,
-      gestureHandling: "greedy"
-    })
+    map.current = new window.google.maps.Map(ref.current, defaultMapOpts)
+    map.current.addListener("center_changed", () => {
+      currentMapCenter.current = map.current.getCenter();
+      if (state.selectedPlace !== null) {
+        dispatch({type:"setSelectedPlace", value: null})
+      }
+    });
   }, [])
 
   useEffect(() => {
+    if (!_isEmpty(state.selectedPlace)) {
+      const center = _get(state.selectedPlace, "geometry.location", {});
+      map.current.setCenter(center);
+    }
+  }, [state.selectedPlace])
+
+  useEffect(() => {
+    // Clear all markers from the previous render
     currentPopups.current.forEach((pp: any) => {
       pp.setMap(null);
     })
     currentPopups.current = [];
 
+    // Make new markers
     const bounds = new google.maps.LatLngBounds();
-    props.markers.forEach((marker: any) => {
-      const popup = new Popup(marker.latlng, marker.elem);
+    props.markers.forEach((marker: PlaceMarker) => {
+      const latlng = _get(marker, "place.geometry.location") as any;
+      const popup = new Popup(latlng, marker.elem);
       popup.setMap(map.current);
-      currentPopups.current.push(popup)
+      popup.addListener("click", () => {
+        map.current.setCenter(popup.position);
+        currentMapCenter.current = popup.position;
+        dispatch({type: "setSelectedPlace", value: marker.place})
+      })
+
+      currentPopups.current.push(popup);
       bounds.extend(popup.position);
     });
-    map.current.setCenter(bounds.getCenter());
-    // map.current.fitBounds(bounds);
 
+    if (_isEmpty(currentMapCenter.current)) {
+      map.current.setCenter(bounds.getCenter());
+      currentMapCenter.current = bounds.getCenter();
+    } else {
+      map.current.setCenter(currentMapCenter.current);
+    }
+    // map.current.fitBounds(bounds);
   }, [props.markers])
 
   return (
-    <div ref={ref} id="map" className='h-full' style={{width: props.width}}/>
+    <div ref={ref}
+      id="map"
+      className='h-full'
+      style={{width: props.width}}
+    />
   );
 }
 
@@ -128,24 +182,28 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
 
   // Map Markers
   const lodgingToMapMarkers = () => {
-    const lodgings = _get(props.trip, "lodgings", []);
-    if (_isEmpty(lodgings)) {
-      return [];
-    }
+    const lodgings = _get(props.trip, "lodgings", {});
+    return Object.values(lodgings).map((lodge: any) => ({
+      elem: makeHotelPin(lodge.place.name),
+      place: lodge.place
+    }));
+  }
 
-    return Object.values(lodgings).map((lodge: any) => {
-      const elem = makeHotelPin(lodge.place.name);
-      const latlng = {
-        lat: lodge.place.geometry.location.lat,
-        lng: lodge.place.geometry.location.lng,
-      } as any;
-      return {latlng, elem}
-    });
+  const contentToMapMarkers = () => {
+    return _flatten(
+      Object.values(_get(props.trip, "contents", {}))
+      .map((list: any) => list.contents)
+    )
+    .map((ct: any) => ({
+      elem: makeHotelPin(ct.place.name),
+      place: ct.place
+    }));
   }
 
   const makeMarkers = () => {
     let markers = [] as any;
     markers = markers.concat(lodgingToMapMarkers());
+    markers = markers.concat(contentToMapMarkers());
     return markers;
   }
 

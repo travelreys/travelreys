@@ -4,11 +4,16 @@ import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import { v4 as uuidv4 } from 'uuid';
 
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  FolderArrowDownIcon
+} from '@heroicons/react/24/outline'
+
 import BusIcon from '../icons/BusIcon';
 import HotelIcon from '../icons/HotelIcon';
 import PlaneIcon from '../icons/PlaneIcon';
 import TripFlightsModal from './TripFlightsModal';
-import { FolderArrowDownIcon } from '@heroicons/react/24/outline'
 
 import TripsSyncAPI from '../../apis/tripsSync';
 import TransitFlightCard from './TransitFlightCard';
@@ -29,6 +34,7 @@ interface TripFlightsSectionProps {
 const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSectionProps) => {
 
   const [isTripFlightsModalOpen, setIsTripFlightsModalOpen] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
 
   // Event Handler
   const onFlightSelect = (transit: any) => {
@@ -36,28 +42,44 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
     setIsTripFlightsModalOpen(false);
   }
 
-
   // Renderers
-  const renderItineraries = () => {
+  const renderHiddenToggle = () => {
+    let icon = <ChevronDownIcon className='h-4 w-4'/>;
+    if (isHidden) {
+      icon = <ChevronUpIcon className='h-4 w-4' />;
+    }
     return (
-      <div>
-        {Object.values(props.trip.flights).map((flight: any, idx: number) =>
-          <TransitFlightCard
-            key={idx}
-            flight={flight}
-            onDelete={props.onFlightDelete}
-          />
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={() => {setIsHidden(!isHidden)}}
+      >
+      {icon}
+      </button>
     );
+  }
+
+  const renderItineraries = () => {
+    if (isHidden) {
+      return null;
+    }
+
+    const flights = Object.values(props.trip.flights);
+    return flights.map((flight: any, idx: number) =>
+      <TransitFlightCard
+        key={idx}
+        flight={flight}
+        onDelete={props.onFlightDelete}
+      />
+    )
   }
 
   return (
     <div className='p-5'>
       <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <h3 className='text-2xl sm:text-3xl font-bold text-slate-700'>
-          Flights
-        </h3>
+        <div className='text-2xl sm:text-3xl font-bold text-slate-700'>
+          <span>Flights&nbsp;&nbsp;</span>
+          {renderHiddenToggle()}
+        </div>
         <button
           className='text-slate-500 text-sm mt-1 font-bold'
           onClick={() => {setIsTripFlightsModalOpen(true)}}
@@ -88,6 +110,7 @@ interface TripLodgingSectionProps {
 const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSectionProps) => {
 
   const [isLodgingModalOpen, setIsLogdingModalOpen] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
 
   // Event Handlers
   const onLodgingSelect = (lodging: any) => {
@@ -96,8 +119,27 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
   }
 
   // Renderers
+  const renderHiddenToggle = () => {
+    let icon = <ChevronDownIcon className='h-4 w-4'/>;
+    if (isHidden) {
+      icon = <ChevronUpIcon className='h-4 w-4' />;
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => {setIsHidden(!isHidden)}}
+      >
+      {icon}
+      </button>
+    );
+  }
+
   const renderLodgings = () => {
-    return Object.values(props.trip.lodgings).map((lodge: any) => (
+    if (isHidden) {
+      return null;
+    }
+    const lodgings = Object.values(props.trip.lodgings);
+    return lodgings.map((lodge: any) => (
       <TripLodgingCard
         key={lodge.id}
         lodging={lodge}
@@ -110,9 +152,11 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
   return (
     <div className='p-5'>
       <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <h3 className='text-2xl sm:text-3xl font-bold text-slate-700'>
-          Hotels and Lodgings
-        </h3>
+        <div className='text-2xl sm:text-3xl font-bold text-slate-700'>
+          <span>Hotels and Lodgings&nbsp;&nbsp;</span>
+          {renderHiddenToggle()}
+        </div>
+
         <button
           className='text-slate-500 text-sm mt-1 font-bold'
           onClick={() => {setIsLogdingModalOpen(true)}}
@@ -177,7 +221,6 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
       const fullpath = `/lodgings/${lodging.id}/${key}`;
       ops.push(TripsSyncAPI.makeJSONPatchOp("replace", fullpath, value));
     });
-    console.log(ops);
     props.tripStateOnUpdate(ops);
   }
 

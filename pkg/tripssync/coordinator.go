@@ -157,6 +157,9 @@ func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
 	patchJSON, _ := json.Marshal(msg.SyncDataUpdateTrip.Ops)
 
 	patch, _ := jsonpatch.DecodePatch(patchJSON)
+	fmt.Printf("%+v\n", string(crd.plan))
+	fmt.Println(string(patchJSON))
+	fmt.Println(patch)
 	modified, err := patch.Apply(crd.plan)
 	if err != nil {
 		crd.logger.Error("json patch apply", zap.Error(err))

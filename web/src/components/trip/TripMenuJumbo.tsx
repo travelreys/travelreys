@@ -38,7 +38,6 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
   const [imageList, setImageList] = useState([] as any);
   const [isLoading, setIsLoading] = useState(false);
 
-
   // API
   const searchImage = () => {
     setIsLoading(true);

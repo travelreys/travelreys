@@ -51,7 +51,6 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
     .then((res) => {
       setPredictions(_get(res, "data.predictions", []))
     });
-    // setPredictions(preds.predictions);
   }
 
   const getPlaceDetails = (placeID: string) => {
