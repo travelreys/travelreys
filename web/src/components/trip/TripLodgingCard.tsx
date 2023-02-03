@@ -80,7 +80,6 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
 
   // Renderers
 
-
   const renderPriceMetadata = () => {
     const amount = _get(props.lodging, "priceMetadata.amount");
     if (amount === 0 || amount === undefined) {
@@ -89,7 +88,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     return (
       <p className='mb-2'>
         <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-          $ {props.lodging.priceMetadata.amount}
+          $ {amount}
         </span>
       </p>
     );
@@ -108,7 +107,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
         <p className='text-slate-600 text-sm flex items-center mb-2'>
           <CalendarDaysIcon className='h-4 w-4' />&nbsp;
           {isNullDate(checkinTime) ? null : printTime(checkinTime, "eee, MMM dd")}
-          {isNullDate(checkinTime) ? null : " - " + printTime(checkoutTime, "eee, MMM dd")}
+          {isNullDate(checkoutTime) ? null : " - " + printTime(checkoutTime, "eee, MMM dd")}
         </p>
         {renderPriceMetadata()}
         <PlacePicturesCarousel photos={props.lodging.place.photos} />

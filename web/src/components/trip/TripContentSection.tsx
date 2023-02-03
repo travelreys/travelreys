@@ -116,7 +116,6 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     );
   }
 
-
   const renderPlace = () => {
     let placeNode;
     if (isAddingPlace) {

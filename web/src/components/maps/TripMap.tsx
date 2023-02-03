@@ -158,8 +158,6 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
     if (_isEmpty(currentMapCenter.current)) {
       map.current.setCenter(bounds.getCenter());
       currentMapCenter.current = bounds.getCenter();
-    } else {
-      map.current.setCenter(currentMapCenter.current);
     }
     // map.current.fitBounds(bounds);
   }, [props.markers])
@@ -194,8 +192,9 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
       Object.values(_get(props.trip, "contents", {}))
       .map((list: any) => list.contents)
     )
+    .filter((ct: any) => !_isEmpty(ct.place))
     .map((ct: any) => ({
-      elem: makeHotelPin(ct.place.name),
+      elem: makeActivityPin(ct.place.name),
       place: ct.place
     }));
   }

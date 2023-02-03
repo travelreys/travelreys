@@ -15,12 +15,14 @@ import HotelIcon from '../icons/HotelIcon';
 import PlaneIcon from '../icons/PlaneIcon';
 import TripFlightsModal from './TripFlightsModal';
 
+import { Trips } from '../../apis/types';
 import TripsSyncAPI from '../../apis/tripsSync';
 import TransitFlightCard from './TransitFlightCard';
 
 import { TripLogisticsCss } from '../../styles/global';
 import TripLodgingsModal from './TripLodgingsModal';
 import TripLodgingCard from './TripLodgingCard';
+
 
 
 // TripFlightsSection
@@ -44,16 +46,14 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
 
   // Renderers
   const renderHiddenToggle = () => {
-    let icon = <ChevronDownIcon className='h-4 w-4'/>;
-    if (isHidden) {
-      icon = <ChevronUpIcon className='h-4 w-4' />;
-    }
     return (
       <button
         type="button"
+        className={TripLogisticsCss.FlightsToggleBtn}
         onClick={() => {setIsHidden(!isHidden)}}
       >
-      {icon}
+      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
+        : <ChevronDownIcon className='h-4 w-4'/> }
       </button>
     );
   }
@@ -76,12 +76,12 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
   return (
     <div className='p-5'>
       <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <div className='text-2xl sm:text-3xl font-bold text-slate-700'>
-          <span>Flights&nbsp;&nbsp;</span>
+        <div className={TripLogisticsCss.FlightsHeaderCtn}>
           {renderHiddenToggle()}
+          <span>Flights</span>
         </div>
         <button
-          className='text-slate-500 text-sm mt-1 font-bold'
+          className={TripLogisticsCss.SearchFlightBtn}
           onClick={() => {setIsTripFlightsModalOpen(true)}}
         >
           +&nbsp;&nbsp;Search for a flight
@@ -120,16 +120,14 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
 
   // Renderers
   const renderHiddenToggle = () => {
-    let icon = <ChevronDownIcon className='h-4 w-4'/>;
-    if (isHidden) {
-      icon = <ChevronUpIcon className='h-4 w-4' />;
-    }
     return (
       <button
         type="button"
+        className={TripLogisticsCss.FlightsToggleBtn}
         onClick={() => {setIsHidden(!isHidden)}}
       >
-      {icon}
+      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
+        : <ChevronDownIcon className='h-4 w-4'/>}
       </button>
     );
   }
@@ -152,13 +150,13 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
   return (
     <div className='p-5'>
       <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <div className='text-2xl sm:text-3xl font-bold text-slate-700'>
-          <span>Hotels and Lodgings&nbsp;&nbsp;</span>
+        <div className={TripLogisticsCss.FlightsHeaderCtn}>
           {renderHiddenToggle()}
+          <span>Hotels and Lodgings</span>
         </div>
 
         <button
-          className='text-slate-500 text-sm mt-1 font-bold'
+          className={TripLogisticsCss.SearchFlightBtn}
           onClick={() => {setIsLogdingModalOpen(true)}}
         >
           +&nbsp;&nbsp;Add a lodging
@@ -185,13 +183,10 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   // Event Handlers - Flights
 
-  const flightOnSelect = (flight: any) => {
-    let transit = { id: uuidv4(), type: "flight" }
-    transit = Object.assign(transit, flight)
-
+  const flightOnSelect = (flight: Trips.Flight) => {
     const ops = [
       TripsSyncAPI.makeJSONPatchOp(
-        "add", `/flights/${transit.id}`, transit)
+        "add", `/flights/${flight.id}`, flight)
     ];
     props.tripStateOnUpdate(ops);
   }

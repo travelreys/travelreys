@@ -86,6 +86,7 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
       checkinTime: checkinDates?.from,
       checkoutTime: checkinDates?.to,
       place: selectedPlace,
+      priceMetadata: {},
     };
     props.onLodgingSelect(tripLodging);
   }
