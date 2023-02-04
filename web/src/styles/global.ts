@@ -1,7 +1,7 @@
 // Components
 
 export const InputDatesPickerCss = {
-  Ctn: "flex w-full border border-slate-200 rounded-lg",
+  Ctn: "flex w-full border border-slate-200 rounded-lg mr-2",
   Icon: "inline align-bottom h-5 w-5 text-gray-500",
   Label: "inline-flex bg-gray-200 font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   Input: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
@@ -43,7 +43,7 @@ export const TripMenuCss = {
 
 export const TripMenuJumboCss = {
   TripDatesBtn: "font-medium text-md text-slate-500",
-  TripDatesBtnIcon: "inline h-5 w-5 align-sub",
+  TripDatesBtnIcon: "inline h-5 w-5 align-sub mr-2",
   TripCoverImage: "block sm:max-h-96 w-full",
   TripImageEditIconCtn: "absolute top-4 right-4 h-10 w-10 bg-gray-800/70 p-2 text-center rounded-full",
   TripImageEditIcon: "h-6 w-6 text-white",
@@ -65,6 +65,12 @@ export const TripMenuJumboCss = {
 
 
 export const TripLogisticsCss = {
+  TabsCtn: "bg-indigo-100 py-8 pb-4 mb-4",
+  TabsWrapper: "bg-white rounded-lg p-5 mx-4 mb-4",
+  TabsCtnHeader: "mb-4 text-md sm:text-2xl font-bold text-slate-700",
+  TabItemCtn: "flex flex-row justify-around mx-2",
+  TabItemBtn: "mx-4 my-2 flex flex-col items-center",
+  TabItemBtnTxt: "text-slate-400 text-sm",
   FlightDatesCtn: "flex w-full border border-slate-400 rounded-lg",
   FlightDatesIcon: "inline align-bottom h-5 w-5 text-gray-500",
   SearchFlightBtn: "text-slate-500 text-sm mt-1 font-bold",
@@ -122,8 +128,29 @@ export const FlightsModalCss = {
 }
 
 export const LodgingsModalCss = {
+  Ctn: "px-4 pt-5 sm:p-8 sm:pb-2 rounded-t-lg mb-4",
+  Wrapper: "flex justify-between mb-6",
+  Header: "text-xl sm:text-2xl font-bold text-center text-slate-900",
+  CloseIcon: "h-6 w-6 text-slate-700",
   SearchIconCtn: "absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none",
   SearchIcon: "h-6 w-6 text-slate-700",
   SearchInput: "border border-slate-200 text-gray-900 text-sm rounded block w-full pl-10 p-4",
-  AddBtn: "mt-2 bg-indigo-500 font-medium rounded-lg text-sm text-white px-4 py-2.5"
+  InputDatesCtn: "flex w-full border border-slate-200 rounded",
+  AddBtn: "mt-2 bg-indigo-500 font-medium rounded-lg text-sm text-white px-4 py-2.5",
+  PredictionsCtn: "flex items-center mb-4 cursor-pointer group",
+  PredictionIconCtn: "p-1 group-hover:text-indigo-500",
+  PredictionMain: "text-slate-900 group-hover:text-indigo-500 text-sm font-medium",
+  PredictionSecondary: "text-slate-400 group-hover:text-indigo-500 text-xs",
+}
+
+export const LodgingCardCss = {
+  Ctn: "p-4 bg-slate-50 rounded-lg shadow-md mb-4 cursor-pointer",
+  Header: "font-bold text-sm mb-1",
+  AddrTxt: "text-slate-600 text-sm flex items-center mb-1",
+  PhoneTxt: "text-slate-600 text-sm flex items-center mb-1",
+  DatesTxt: "text-slate-600 text-sm flex items-center mb-2",
+  PricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full mb-2 w-fit",
+  DatesPickerCtn: "flex w-full rounded",
+  PriceInputCtn: "flex w-full rounded mb-2",
+  DeleteBtn: "bg-red-500 py-2 px-4 rounded-lg text-white",
 }

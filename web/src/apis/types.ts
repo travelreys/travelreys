@@ -2,7 +2,7 @@
 
 export namespace Common {
   export interface PriceMetadata {
-    amount: number
+    amount?: number
     currency: string
   }
   export interface Positioning {
@@ -112,9 +112,9 @@ export namespace Trips {
 
   export interface Lodging {
     id: string
-    numGuests: number
-    checkinTime: Date
-    checkoutTime: Date
+    numGuests?: number
+    checkinTime?: Date | string
+    checkoutTime?: Date | string
     priceMetadata: Common.PriceMetadata
     confirmationID?: string
     notes?: string

@@ -15,25 +15,25 @@ import { GlobeAmericasIcon } from '@heroicons/react/24/outline'
 import TripsAPI from '../../apis/trips';
 import TripsSyncAPI, { JSONPatchOp } from '../../apis/tripsSync';
 
-import { NewSyncMessageHeap } from '../../utils/heap';
 import Spinner from '../../components/Spinner';
-import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
+import TripActivitiesAndNotesSection from '../../components/trip/TripContentSection';
 import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
+import TripMap from '../../components/maps/TripMap';
+import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
 
 import { TripMenuCss } from '../../styles/global';
-import TripMap from '../../components/maps/TripMap';
-import TripActivitiesAndNotesSection from '../../components/trip/TripContentSection';
 import { MapsProvider } from '../../context/maps-context';
+import { NewSyncMessageHeap } from '../../utils/heap';
 
 
-// TripPageMenu
+// TripPlanningMenu
 
-interface TripPageMenuProps {
+interface TripPlanningMenuProps {
   trip: any
   tripStateOnUpdate: any
 }
 
-const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
+const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProps) => {
 
   // Renderers
   const renderNavBar = () => {
@@ -49,24 +49,25 @@ const TripPageMenu: FC<TripPageMenuProps> = (props: TripPageMenuProps) => {
     );
   }
 
-
   return (
-    <div className={TripMenuCss.TripMenu}>
-      {renderNavBar()}
-      <TripMenuJumbo
-        trip={props.trip}
-        tripStateOnUpdate={props.tripStateOnUpdate}
-      />
-      <TripLogisticsSection
-        trip={props.trip}
-        tripStateOnUpdate={props.tripStateOnUpdate}
-      />
-      <hr className='w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded'/>
-      <TripActivitiesAndNotesSection
-        trip={props.trip}
-        tripStateOnUpdate={props.tripStateOnUpdate}
-      />
-    </div>
+    <aside className={TripMenuCss.TripMenuCtn}>
+      <div className={TripMenuCss.TripMenu}>
+        {renderNavBar()}
+        <TripMenuJumbo
+          trip={props.trip}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+        <TripLogisticsSection
+          trip={props.trip}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+        <hr className='w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded'/>
+        <TripActivitiesAndNotesSection
+          trip={props.trip}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+      </div>
+    </aside>
   );
 }
 
@@ -81,6 +82,7 @@ const TripPage: FC = () => {
   const [tripID, setTripID] = useState("");
   const [trip, setTrip] = useState(tripRef.current);
 
+  // Map UI State
   const [mapNode, setMapNode] = useState(null) as any;
   const [mapDivWidth, setMapDivWidth] = useState(0);
   const measuredRef = useCallback((node: any) => {
@@ -91,26 +93,29 @@ const TripPage: FC = () => {
   }, []);
 
   // Sync Session State
-  const wsInstance = useRef(null as any);
+  const wsRef = useRef(null as any);
   const pq = NewSyncMessageHeap();
   const nextTobCounter = useRef(0);
 
   const shouldSetWs = (): boolean => {
-    return (wsInstance.current === null && id != null)
+    return (wsRef.current === null && id != null)
   }
+
+  // Use Effects
 
   // Close WS when leaving page
   useEffect(() => {
     return () => {
-      const ws = wsInstance.current;
+      const ws = wsRef.current;
       if (ws.underlyingWebsocket?.readyState) {
         ws.close();
       }
     }
   }, [])
 
-  // Set up WS Connection
+
   useEffect(() => {
+    // Fetch Trip
     if (id) {
       TripsAPI.readTrip(id as string).then((data) => {
         tripRef.current = _get(data, "tripPlan", {});
@@ -118,9 +123,10 @@ const TripPage: FC = () => {
         setTripID(id as string);
       });
     }
+    // Set up WS Connection
     if (shouldSetWs()) {
       const ws = TripsSyncAPI.startTripSyncSession();
-      wsInstance.current = ws;
+      wsRef.current = ws;
 
       ws.addEventListener(WebsocketEvents.open, () => {
         const joinMsg = TripsSyncAPI.makeSyncMsgJoinSession(
@@ -187,7 +193,7 @@ const TripPage: FC = () => {
   // Event Handlers
   const tripStateOnUpdate = (ops: Array<JSONPatchOp>) => {
     const updateMsg = TripsSyncAPI.makeSyncMsgUpdateTrip(tripID, ops);
-    wsInstance.current.send(JSON.stringify(updateMsg));
+    wsRef.current.send(JSON.stringify(updateMsg));
   }
 
   // Renderers
@@ -199,12 +205,10 @@ const TripPage: FC = () => {
   return (
     <MapsProvider>
       <div className="flex">
-        <aside className={TripMenuCss.TripMenuCtn}>
-          <TripPageMenu
-            trip={tripRef.current}
-            tripStateOnUpdate={tripStateOnUpdate}
-          />
-        </aside>
+        <TripPlanningMenu
+          trip={tripRef.current}
+          tripStateOnUpdate={tripStateOnUpdate}
+        />
         <div className='flex-1' ref={measuredRef}>
           <div className="fixed w-screen h-screen"
             style={{width: mapDivWidth}}>

@@ -184,29 +184,22 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
   // Event Handlers - Flights
 
   const flightOnSelect = (flight: Trips.Flight) => {
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "add", `/flights/${flight.id}`, flight)
-    ];
+    const ops = [];
+    ops.push(TripsSyncAPI.makeAddOp(`/flights/${flight.id}`, flight));
     props.tripStateOnUpdate(ops);
   }
 
-  const flightOnDelete = (transit: any) => {
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "remove", `/flights/${transit.id}`, transit)
-    ];
+  const flightOnDelete = (flight: Trips.Flight) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeRemoveOp(`/flights/${flight.id}`, flight))
     props.tripStateOnUpdate(ops);
   }
 
   // Event Handlers - Lodging
 
-  const lodgingOnSelect = (lodging: any) => {
-    lodging = Object.assign(lodging, {id: uuidv4()});
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "add", `/lodgings/${lodging.id}`, lodging)
-    ];
+  const lodgingOnSelect = (lodging: Trips.Lodging) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeAddOp(`/lodgings/${lodging.id}`, lodging))
     props.tripStateOnUpdate(ops);
   }
 
@@ -214,47 +207,45 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
     const ops = [] as any;
     Object.entries(updates).forEach(([key, value]) => {
       const fullpath = `/lodgings/${lodging.id}/${key}`;
-      ops.push(TripsSyncAPI.makeJSONPatchOp("replace", fullpath, value));
+      ops.push(TripsSyncAPI.makeReplaceOp(fullpath, value));
     });
     props.tripStateOnUpdate(ops);
   }
 
-  const lodgingOnDelete = (lodging: any) => {
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "remove", `/lodgings/${lodging.id}`, lodging)
-    ];
+  const lodgingOnDelete = (lodging: Trips.Lodging) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeRemoveOp(`/lodgings/${lodging.id}`, lodging))
     props.tripStateOnUpdate(ops);
   }
 
   // Renderers
 
   const renderTabs = () => {
-    const items = [
+    const tabs = [
       { title: "Flights", icon: PlaneIcon },
       { title: "Transits", icon: BusIcon },
       { title: "Lodging", icon: HotelIcon },
       { title: "Attachments", icon: FolderArrowDownIcon },
-    ].map((item, idx) => {
-      return (
-        <button
-          key={idx} type="button"
-          className='mx-4 my-2 flex flex-col items-center'
-        >
-          <item.icon className='h-6 w-6 mb-1' />
-          <span className='text-slate-400 text-sm'>{item.title}</span>
-        </button>
-      );
-    })
+    ];
 
     return (
-      <div className='bg-indigo-100 py-8 pb-4 mb-4'>
-        <div className="bg-white rounded-lg p-5 mx-4 mb-4">
-          <h5 className="mb-4 text-md sm:text-2xl font-bold text-slate-700">
+      <div className={TripLogisticsCss.TabsCtn}>
+        <div className={TripLogisticsCss.TabsWrapper}>
+          <h5 className={TripLogisticsCss.TabsCtnHeader}>
             Logistics
           </h5>
-          <div className="flex flex-row justify-around mx-2">
-            {items}
+          <div className={TripLogisticsCss.TabItemCtn}>
+            {tabs.map((tab: any, idx: number) => (
+              <button
+                key={idx} type="button"
+                className={TripLogisticsCss.TabItemBtn}
+              >
+                <tab.icon className='h-6 w-6 mb-1'/>
+                <span className={TripLogisticsCss.TabItemBtnTxt}>
+                  {tab.title}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

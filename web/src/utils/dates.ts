@@ -1,4 +1,5 @@
 import _get from "lodash/get";
+import _isEmpty from "lodash/isEmpty";
 import {
   format,
   formatDuration,
@@ -9,9 +10,16 @@ import {
 } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
-export const isNullDate = (date: Date) => {
-  const nullDate = parseJSON("0001-01-01T00:00:00Z");
-  return isEqual(date, nullDate);
+
+export const nullDate = parseJSON("0001-01-01T00:00:00Z");
+export const isEmptyDate = (date: Date | string | undefined) => {
+  if (_isEmpty(date)) {
+    return true;
+  }
+  if (typeof date === "object") {
+    return isEqual(date, nullDate);
+  }
+  return false
 }
 
 export const printFromDateFromRange = (range: DateRange | undefined, fmt: string) => {
@@ -36,6 +44,8 @@ export const parseTimeFromZ = (date: string) => {
 }
 
 export const printTime = (date: Date, fmt: string) => {
+  console.log(date)
+  console.log(typeof date)
   return format(date, fmt);
 }
 
