@@ -64,6 +64,12 @@ export const TripMenuJumboCss = {
 }
 
 
+export const TripNodesCss = {
+  TitleCtn: "flex justify-between mb-4",
+  HeaderCtn: "text-2xl sm:text-3xl font-bold text-slate-700",
+  ToggleBtn: "mr-2"
+}
+
 export const TripLogisticsCss = {
   TabsCtn: "bg-indigo-100 py-8 pb-4 mb-4",
   TabsWrapper: "bg-white rounded-lg p-5 mx-4 mb-4",

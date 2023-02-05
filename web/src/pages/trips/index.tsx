@@ -24,6 +24,7 @@ import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
 import { TripMenuCss } from '../../styles/global';
 import { MapsProvider } from '../../context/maps-context';
 import { NewSyncMessageHeap } from '../../utils/heap';
+import TripNotesSection from '../../components/trip/TripNotes';
 
 
 // TripPlanningMenu
@@ -54,6 +55,10 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
       <div className={TripMenuCss.TripMenu}>
         {renderNavBar()}
         <TripMenuJumbo
+          trip={props.trip}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+        <TripNotesSection
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
