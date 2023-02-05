@@ -13,7 +13,7 @@ import { DateRange } from 'react-day-picker';
 
 export const nullDate = parseJSON("0001-01-01T00:00:00Z");
 export const isEmptyDate = (date: Date | string | undefined) => {
-  if (_isEmpty(date)) {
+  if (date === undefined) {
     return true;
   }
   if (typeof date === "object") {
@@ -44,8 +44,6 @@ export const parseTimeFromZ = (date: string) => {
 }
 
 export const printTime = (date: Date, fmt: string) => {
-  console.log(date)
-  console.log(typeof date)
   return format(date, fmt);
 }
 

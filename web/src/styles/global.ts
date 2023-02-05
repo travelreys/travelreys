@@ -154,3 +154,26 @@ export const LodgingCardCss = {
   PriceInputCtn: "flex w-full rounded mb-2",
   DeleteBtn: "bg-red-500 py-2 px-4 rounded-lg text-white",
 }
+
+export const TripContentSectionCss = {
+  HeaderCtn: "flex justify-between mb-4",
+  Header: "text-2xl sm:text-3xl font-bold text-slate-700",
+  AddBtn: "text-white py-2 px-4 bg-indigo-500 rounded-lg text-sm font-semibold",
+  Hr: "w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded"
+}
+
+export const TripContentListCss = {
+  Ctn: "rounded-lg shadow-xs mb-4",
+  NameInput: "p-0 text-xl mb-1 sm:text-2xl font-bold text-gray-800 placeholder:text-gray-400 rounded border-0 hover:bg-gray-300 hover:border-0 focus:ring-0 focus:p-1 duration-500",
+  NewContentCtn: "flex my-4 w-full",
+  NewContentInput: "flex-1 mr-1 text-md sm:text-md font-bold text-gray-800 placeholder:font-normal placeholder:text-gray-300 placeholder:italic rounded border-0 bg-gray-100 hover:border-0 focus:ring-0",
+  NewContentBtn: "text-green-600 w-1/12 hover:bg-green-50 rounded-lg text-sm font-bold inline-flex justify-around items-center",
+}
+
+export const TripContentCss = {
+  Ctn: "bg-slate-50 rounded-lg shadow-xs mb-4 p-4 relative",
+  TitleInput: "p-0 mb-1 font-bold text-gray-800 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
+  AutocompleteCtn: "p-1 bg-white absolute left-0 w-full border border-slate-200 rounded-lg",
+  PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
+}
+

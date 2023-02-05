@@ -1,7 +1,7 @@
 import React, { ChangeEvent, FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
-import { parseJSON } from 'date-fns';
+import { parseJSON, parseISO } from 'date-fns';
 import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
 import {
   CalendarDaysIcon,
@@ -13,6 +13,7 @@ import {
 import TripsSyncAPI from '../../apis/tripsSync';
 import ImagesAPI from '../../apis/images';
 
+import Modal from '../Modal';
 import DatesPicker from '../DatesPicker';
 import Spinner from '../../components/Spinner';
 
@@ -23,7 +24,6 @@ import {
   printFromDateFromRange,
   printToDateFromRange
 } from '../../utils/dates';
-import Modal from '../Modal';
 
 
 // CoverImageModal
@@ -144,15 +144,16 @@ const parseTripDate = (tripDate: string | undefined) => {
   if (_isEmpty(tripDate)) {
     return undefined;
   }
-  return isEmptyDate(parseJSON(tripDate!)) ? undefined : parseJSON(tripDate!);
+  const td = tripDate!
+  return isEmptyDate(parseISO(td)) ? undefined : parseISO(td);
 }
 
 const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
 
   // State
-  const [tripName, setTripName] = useState(props.trip.name);
-  const [startDt, setStartDt] = useState(parseTripDate(props.trip.startDate));
-  const [endDt, setEndDt] = useState(parseTripDate(props.trip.endDate));
+  const [tripName, setTripName] = useState<string>();
+  const [startDt, setStartDt] = useState<Date|undefined>();
+  const [endDt, setEndDt] = useState<Date|undefined>();
 
   // UI State
   const [isCoverImageModalOpen, setIsCoverImageModalOpen] = useState(false);

@@ -16,7 +16,7 @@ import Alert from '../Alert';
 import InputDatesPicker from '../InputDatesPicker';
 import Modal from '../Modal';
 
-import MapsAPI, { EMBED_MAPS_APIKEY } from '../../apis/maps';
+import MapsAPI, { EMBED_MAPS_APIKEY, placeFields } from '../../apis/maps';
 import { LodgingsModalCss, ModalCss } from '../../styles/global';
 import { Trips } from '../../apis/types';
 
@@ -54,23 +54,7 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
   }
 
   const getPlaceDetails = (placeID: string) => {
-    const fields = [
-      "address_component",
-      "adr_address",
-      "business_status",
-      "formatted_address",
-      "geometry",
-      "name",
-      "photos",
-      "place_id",
-      "types",
-      "utc_offset",
-      "opening_hours",
-      "formatted_phone_number",
-      "international_phone_number",
-      "website",
-    ];
-    MapsAPI.placeDetails(placeID, fields, sessionToken)
+    MapsAPI.placeDetails(placeID, placeFields, sessionToken)
     .then((res) => {
       setPredictions([]);
       setSelectedPlaceID(placeID);

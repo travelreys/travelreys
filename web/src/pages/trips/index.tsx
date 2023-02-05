@@ -16,7 +16,7 @@ import TripsAPI from '../../apis/trips';
 import TripsSyncAPI, { JSONPatchOp } from '../../apis/tripsSync';
 
 import Spinner from '../../components/Spinner';
-import TripActivitiesAndNotesSection from '../../components/trip/TripContentSection';
+import TripContentSection from '../../components/trip/TripContentSection';
 import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
 import TripMap from '../../components/maps/TripMap';
 import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
@@ -62,7 +62,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
         <hr className='w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded'/>
-        <TripActivitiesAndNotesSection
+        <TripContentSection
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />

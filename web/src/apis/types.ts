@@ -123,26 +123,19 @@ export namespace Trips {
     labels: Map<string, string>
   }
 
-  export interface TripContent {
+  export interface Content {
     id: string
     title: string
     place: Maps.Place
     notes: string
     labels: Map<string, string>
+    comments: any
   }
 
-  export interface TripContentList {
+  export interface ContentList {
     id: string
-    name: string
-    contents: Array<TripContent>
-  }
-
-  export interface TripContent {
-    id: string
-    title: string
-    place: Maps.Place
-    notes: string
-    labels: Map<string, string>
+    name?: string
+    contents: Array<Content>
   }
 
 }
