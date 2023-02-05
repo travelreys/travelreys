@@ -30,7 +30,7 @@ type TripPlan struct {
 	Lodgings map[string]Lodging     `json:"lodgings" bson:"lodgings"`
 
 	// Contents
-	Contents map[string]TripContentList `json:"contents" bson:"contents"` // Map of trip contents
+	Contents map[string]TripContentList `json:"contents" bson:"contents"`
 
 	UpdatedAt  time.Time `json:"updatedAt" bson:"updatedAt"`
 	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`

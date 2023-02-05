@@ -93,6 +93,10 @@ export const TripLogisticsCss = {
 };
 
 export const FlightsModalCss = {
+  Ctn: "px-4 pt-5 sm:p-8 sm:pb-2 rounded-t-lg mb-4",
+  Wrapper: "flex justify-between mb-6",
+  Header: "text-xl sm:text-2xl font-bold text-center text-slate-900",
+  CloseIcon: "h-6 w-6 text-slate-700",
   CabinClassDropdownBtn: "hover:bg-indigo-100 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center",
   CabinClassDropdownIcon: "h-4 w-4 text-slate-700",
   CabinClassOptCtn: "z-10 w-44 rounded-lg bg-white shadow block absolute",
@@ -159,7 +163,8 @@ export const TripContentSectionCss = {
   HeaderCtn: "flex justify-between mb-4",
   Header: "text-2xl sm:text-3xl font-bold text-slate-700",
   AddBtn: "text-white py-2 px-4 bg-indigo-500 rounded-lg text-sm font-semibold",
-  Hr: "w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded"
+  Hr: "w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded",
+  ToggleBtn: "mr-2",
 }
 
 export const TripContentListCss = {

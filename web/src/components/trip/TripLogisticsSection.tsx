@@ -89,6 +89,7 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
       </div>
       {renderItineraries()}
       <TripFlightsModal
+        trip={props.trip}
         isOpen={isTripFlightsModalOpen}
         onFlightSelect={onFlightSelect}
         onClose={() => { setIsTripFlightsModalOpen(false)}}
@@ -164,6 +165,7 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
       </div>
       {renderLodgings()}
       <TripLodgingsModal
+        trip={props.trip}
         isOpen={isLodgingModalOpen}
         onLodgingSelect={onLodgingSelect}
         onClose={() => { setIsLogdingModalOpen(false) }}
@@ -254,7 +256,7 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   return (
     <div>
-      {renderTabs()}
+      {/* {renderTabs()} */}
       <TripFlightsSection
         trip={props.trip}
         onFlightSelect={flightOnSelect}

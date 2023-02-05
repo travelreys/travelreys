@@ -19,10 +19,12 @@ import Modal from '../Modal';
 import MapsAPI, { EMBED_MAPS_APIKEY, placeFields } from '../../apis/maps';
 import { LodgingsModalCss, ModalCss } from '../../styles/global';
 import { Trips } from '../../apis/types';
+import { parseTripDate } from '../../utils/dates';
 
 // TripLodgingsModal
 
 interface TripLodgingsModalProps {
+  readonly trip: any
   isOpen: boolean
   onClose: any
   onLodgingSelect: any
@@ -39,6 +41,20 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
 
   const [alertMsg, setAlertMsg] = useState("");
   const debouncedValue = useDebounce<string>(searchQuery, 500);
+
+  useEffect(() => {
+    if (!_isEmpty(debouncedValue)) {
+      autocomplete(debouncedValue);
+    }
+  }, [debouncedValue]);
+
+  useEffect(() => {
+    setCheckinDates({
+      from: parseTripDate(props.trip.startDate || undefined),
+      to: parseTripDate(props.trip.endDate || undefined),
+    });
+  }, [props.trip])
+
 
   // API
   const autocomplete = (query: string) => {
@@ -66,12 +82,6 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
   }
 
   // Event Handlers
-  useEffect(() => {
-    if (!_isEmpty(debouncedValue)) {
-      autocomplete(debouncedValue);
-    }
-  }, [debouncedValue])
-
 
   const predictionOnSelect = (placeID: string) => {
     getPlaceDetails(placeID);
@@ -91,6 +101,10 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
   }
 
   // Renderers
+  const renderAlert = () => {
+    return !_isEmpty(alertMsg) ? <Alert title={""} message={alertMsg} /> : null
+  }
+
   const renderSearchInput = () => {
     return (
       <div className="relative mb-2">
@@ -176,14 +190,15 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
             <XMarkIcon className={LodgingsModalCss.CloseIcon} />
           </button>
         </div>
-        {!_isEmpty(alertMsg) ? <Alert title={""} message={alertMsg} /> : null}
+        {renderAlert()}
+        {renderSearchInput()}
         <InputDatesPicker
           onSelect={(range: DateRange) => { setCheckinDates(range); }}
           dates={checkinDates}
           WrapperCss={"mb-2"}
           CtnCss={LodgingsModalCss.InputDatesCtn}
         />
-        {renderSearchInput()}
+
         {renderAutocomplete()}
         {renderMapForSelectedPlace()}
       </div>

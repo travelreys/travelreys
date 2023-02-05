@@ -2,7 +2,6 @@ import React, { FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
-import { parseJSON } from 'date-fns';
 import { SelectRangeEventHandler, DateRange } from 'react-day-picker';
 import {
   CalendarDaysIcon,
@@ -15,7 +14,12 @@ import InputDatesPicker from '../InputDatesPicker';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
 import { Trips } from '../../apis/types';
 import { InputDatesPickerCss, LodgingCardCss } from '../../styles/global';
-import { printTime, isEmptyDate, parseTimeFromZ } from '../../utils/dates';
+import {
+  printTime,
+  isEmptyDate,
+  parseTimeFromZ,
+  parseTripDate
+} from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
 
 
@@ -38,8 +42,8 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
 
   useEffect(() => {
     setCheckinDates({
-      from: props.lodging.checkinTime ? parseJSON(props.lodging.checkinTime): undefined,
-      to: props.lodging.checkoutTime ? parseJSON(props.lodging.checkoutTime): undefined,
+      from: parseTripDate(props.lodging.checkinTime as (string|undefined)),
+      to: parseTripDate(props.lodging.checkoutTime as (string|undefined)),
     });
     setPriceAmount(props.lodging.priceMetadata.amount);
   }, [props.lodging])

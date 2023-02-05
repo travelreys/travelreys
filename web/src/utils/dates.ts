@@ -43,6 +43,15 @@ export const parseTimeFromZ = (date: string) => {
   return parseISO(d);
 }
 
+export const parseTripDate = (tripDate: string | undefined) => {
+  if (_isEmpty(tripDate)) {
+    return undefined;
+  }
+  const td = tripDate!
+  return isEmptyDate(parseISO(td)) ? undefined : parseISO(td);
+}
+
+
 export const printTime = (date: Date, fmt: string) => {
   return format(date, fmt);
 }

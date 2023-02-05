@@ -8,7 +8,12 @@ import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import { v4 as uuidv4 } from 'uuid';
 import { useDebounce } from 'usehooks-ts';
-import { MapPinIcon, PlusIcon } from '@heroicons/react/24/outline'
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  MapPinIcon,
+  PlusIcon
+} from '@heroicons/react/24/outline'
 
 import PlacePicturesCarousel from './PlacePicturesCarousel';
 import TripsSyncAPI from '../../apis/tripsSync';
@@ -214,6 +219,7 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
 
   const [name, setName] = useState<string>();
   const [newContentTitle, setNewContentTitle] = useState("");
+  const [isHidden, setIsHidden] = useState<boolean>(false);
 
   useEffect(() => {
     setName(props.contentList.name);
@@ -247,8 +253,23 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
   }
 
   // Renderers
+  const renderHiddenToggle = () => {
+    return (
+      <button
+        type="button"
+        className={TripContentSectionCss.ToggleBtn}
+        onClick={() => {setIsHidden(!isHidden)}}
+      >
+      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
+        : <ChevronDownIcon className='h-4 w-4'/>}
+      </button>
+    );
+  }
 
   const renderTripContent = () => {
+    if (isHidden) {
+      return null;
+    }
     const contents = _get(props.contentList, "contents", []);
     return (
       <div>
@@ -266,6 +287,10 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
   }
 
   const renderAddNewContent = () => {
+    if (isHidden) {
+      return null;
+    }
+
     return (
       <div className={TripContentListCss.NewContentCtn}>
         <input
@@ -287,6 +312,7 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
 
   return (
     <div className={TripContentListCss.Ctn}>
+      {renderHiddenToggle()}
       <input
         type="text"
         value={name}
@@ -311,6 +337,8 @@ interface TripContentSectionProps {
 
 const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSectionProps) => {
 
+  const [isHidden, setIsHidden] = useState(false);
+
   // Event Handlers
   const addBtnOnClick = () => {
     let list: Trips.ContentList = {
@@ -324,7 +352,23 @@ const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSecti
 
   // Renderers
 
+  const renderHiddenToggle = () => {
+    return (
+      <button
+        type="button"
+        className={TripContentSectionCss.ToggleBtn}
+        onClick={() => {setIsHidden(!isHidden)}}
+      >
+      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
+        : <ChevronDownIcon className='h-4 w-4'/>}
+      </button>
+    );
+  }
+
   const renderContentLists = () => {
+    if (isHidden) {
+      return null;
+    }
     const contentLists = Object.values(_get(props.trip, "contents", {}));
     return contentLists.map((contentList: any) => {
       return (
@@ -342,9 +386,12 @@ const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSecti
   return (
     <div className='p-5'>
       <div className={TripContentSectionCss.HeaderCtn}>
-        <h3 className={TripContentSectionCss.Header}>
-          Activities
-        </h3>
+        <div>
+          {renderHiddenToggle()}
+          <span className={TripContentSectionCss.Header}>
+            Activities
+          </span>
+        </div>
         <button
           className={TripContentSectionCss.AddBtn}
           onClick={() => {addBtnOnClick()}}
