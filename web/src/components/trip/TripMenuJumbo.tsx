@@ -142,7 +142,7 @@ interface TripMenuJumboProps {
 const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
 
   // State
-  const [tripName, setTripName] = useState<string>();
+  const [tripName, setTripName] = useState<string>("");
   const [startDt, setStartDt] = useState<Date|undefined>();
   const [endDt, setEndDt] = useState<Date|undefined>();
 

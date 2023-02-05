@@ -25,6 +25,7 @@ type TripPlan struct {
 	Members map[string]TripMember `json:"members" bson:"members"`
 
 	// Logistics
+	Notes    string                 `json:"notes" bson:"notes"`
 	Flights  map[string]Flight      `json:"flights" bson:"flights"`
 	Transits map[string]BaseTransit `json:"transits" bson:"transits"`
 	Lodgings map[string]Lodging     `json:"lodgings" bson:"lodgings"`

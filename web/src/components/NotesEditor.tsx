@@ -1,141 +1,163 @@
 import React, {
   FC,
-  Ref,
-  PropsWithChildren,
   useEffect,
   useMemo,
   useCallback,
-  useRef
+  useRef,
+  useState
 } from 'react';
 import ReactDOM from 'react-dom';
-import isHotkey from 'is-hotkey';
 import {
   Editor,
   Text,
   Transforms,
-  createEditor,
   Descendant,
+  Point,
   Range,
   Element as SlateElement,
-} from 'slate'
+  createEditor,
+} from 'slate';
 import {
   Slate,
   Editable,
+  ReactEditor,
   useSlate,
   useFocused,
-  withReact
-} from 'slate-react'
-import { withHistory } from 'slate-history'
+  useSlateStatic,
+  useReadOnly,
+  withReact,
+} from 'slate-react';
+import { withHistory } from 'slate-history';
+import _isEmpty from "lodash/isEmpty";
+import { encode, decode } from 'js-base64';
+
+import {  ListBulletIcon } from '@heroicons/react/24/outline';
+
 import BoldIcon from './icons/BoldIcon';
 import ItalicIcon from './icons/ItalicIcon';
 import UnderlineIcon from './icons/UnderlineIcon';
 import HeaderOneIcon from './icons/HeaderOneIcon';
 import NumberlistIcon from './icons/NumberlistIcon';
-import { ListBulletIcon } from '@heroicons/react/24/outline';
 import HeaderTwoIcon from './icons/HeaderTwoIcon';
+import StrikethroughIcon from './icons/StrikethroughIcon';
+import ChecklistIcon from './icons/ChecklistIcon';
 
-
-const HOTKEYS = {
-  'mod+b': 'bold',
-  'mod+i': 'italic',
-  'mod+u': 'underline',
-} as any;
 
 const LIST_TYPES = ['numbered-list', 'bulleted-list']
 const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify']
+const defaultEditorValues = [
+  { type: 'paragraph', children: [{ text: '' }] },
+];
+
 
 interface NotesEditorProps {
-  placeholder?: string
+  base64Notes: string
+  notesOnChange: any
 }
-
 
 const NotesEditor: FC<NotesEditorProps> = (props: NotesEditorProps) => {
 
-  const renderElement = useCallback((props: ElementProps) => <Element {...props} />, [])
-  const renderLeaf = useCallback((props: LeafProps) => <Leaf {...props} />, [])
-  const editor = useMemo(() => withHistory(withReact(createEditor())), [])
+  const renderElement = useCallback((props: ElementProps) => <Element {...props} />, []);
+  const renderLeaf = useCallback((props: LeafProps) => <Leaf {...props} />, []);
+  const editor = useMemo(() => withChecklists(withHistory(withReact(createEditor()))), []);
 
-  const initialValue = [
-    {
-      type: 'paragraph',
-      children: [{ text: 'A line of text in a paragraph.' }],
-    },
-  ]
+  const currentVal = useRef<string>(props.base64Notes);
+  const initialValue = defaultEditorValues // JSON.parse(decode(props.base64Notes)));
 
-  // Helpers
-  const isMarkActive = (editor: any, format: any) => {
-    const marks = Editor.marks(editor) as any;
-    return marks ? marks[format] === true : false
-  }
-
-  const toggleMark = (editor: any, format: any) => {
-    if (isMarkActive(editor, format)) {
-      Editor.removeMark(editor, format)
-    } else {
-      Editor.addMark(editor, format, true)
-    }
-  }
-
-  const isFormatActive = (edt: any, format: any) => {
-    const [match]: any = Editor.nodes(edt, {
-      match: (n: any) => n[format] === true,
-      mode: 'all',
-    })
-    return !!match
-  }
-
-  const toggleFormat = (edt: any, format: any) => {
-    const isActive = isFormatActive(edt, format)
-    Transforms.setNodes(
-      editor,
-      { [format]: isActive ? null : true },
-      { match: Text.isText, split: true }
-    )
-  }
+  useEffect(() => {
+    Transforms.removeNodes(editor, {
+      at: {
+        anchor: Editor.start(editor, []),
+        focus: Editor.end(editor, []),
+      },
+    });
+    const nodes = _isEmpty(props.base64Notes)
+      ? defaultEditorValues : JSON.parse(decode(props.base64Notes))
+    Transforms.insertNodes(editor, nodes, {})
+  }, [props.base64Notes])
 
   // Event Handlers
+  const editorOnBlur = () => {
+    props.notesOnChange(currentVal.current);
+  }
 
-  const onKeyDown = (e :any) => {
-    for (const hotkey in HOTKEYS) {
-      if (isHotkey(hotkey, e as any)) {
-        e.preventDefault()
-        const mark = HOTKEYS[hotkey];
-        toggleMark(editor, mark)
-      }
+  const editorOnChange = (value: any) => {
+    const isAstChange = editor.operations.some(
+      op => 'set_selection' !== op.type
+    )
+    if (isAstChange) {
+      // Save the value to Local Storage.
+      const content = encode(JSON.stringify(value));
+      currentVal.current = content;
     }
   }
 
   return (
-    <div className='p-4 bg-gray-50'>
-      <Slate editor={editor} value={initialValue}>
+    <div
+      className='p-4 bg-gray-50'
+      onBlur={editorOnBlur}
+    >
+      <Slate
+        editor={editor}
+        value={initialValue}
+        onChange={editorOnChange}
+      >
         <HoveringToolbar />
         <Editable
           renderElement={renderElement}
           renderLeaf={renderLeaf}
-          placeholder={props.placeholder || "Enter notes..."}
           spellCheck
-          onKeyDown={onKeyDown}
-          onDOMBeforeInput={(event: InputEvent) => {
-            switch (event.inputType) {
-              case 'formatBold':
-                event.preventDefault()
-                return toggleFormat(editor, 'bold')
-              case 'formatItalic':
-                event.preventDefault()
-                return toggleFormat(editor, 'italic')
-              case 'formatUnderline':
-                event.preventDefault()
-                return toggleFormat(editor, 'underlined')
-            }
-          }}
         />
       </Slate>
-
     </div>
   );
 }
 
 export default NotesEditor;
+
+// withChecklists
+
+const withChecklists = (editor: ReactEditor) => {
+  const { deleteBackward } = editor
+
+  editor.deleteBackward = (...args) => {
+    const { selection } = editor
+
+    if (selection && Range.isCollapsed(selection)) {
+      //@ts-ignore
+      const [match] = Editor.nodes(editor, {
+        match: n =>
+          !Editor.isEditor(n) &&
+          SlateElement.isElement(n) &&
+          //@ts-ignore
+          n.type === 'check-list-item',
+      })
+
+      if (match) {
+        const [, path] = match
+        const start = Editor.start(editor, path)
+
+        if (Point.equals(selection.anchor, start)) {
+          const newProperties: Partial<SlateElement> = {
+            type: 'paragraph',
+          } as any;
+          Transforms.setNodes(editor, newProperties, {
+            match: n =>
+              !Editor.isEditor(n) &&
+              SlateElement.isElement(n) &&
+              //@ts-ignore
+              n.type === 'check-list-item',
+          })
+          return
+        }
+      }
+    }
+
+    deleteBackward(...args)
+  }
+
+  return editor
+}
 
 
 // Element
@@ -157,42 +179,43 @@ const Element = (props: ElementProps) => {
         <ul style={style} className="list-disc list-inside" {...attributes}>
           {children}
         </ul>
-      )
+      );
     case 'heading-one':
       return (
         <h1 style={style} className="text-xl font-bold" {...attributes}>
           {children}
         </h1>
-      )
+      );
     case 'heading-two':
       return (
         <h2 style={style} className="text-lg font-bold" {...attributes}>
           {children}
         </h2>
-      )
+      );
     case 'list-item':
       return (
         <li style={style} {...attributes}>
           {children}
         </li>
-      )
+      );
     case 'numbered-list':
       return (
         <ol style={style} className="list-decimal" {...attributes}>
           {children}
         </ol>
-      )
+      );
+    case 'check-list-item':
+      return <CheckListItemElement {...props} />;
     default:
       return (
         <p style={style} {...attributes}>
           {children}
         </p>
-      )
+      );
   }
 }
 
 // Leaf
-
 
 interface LeafProps {
   attributes: any
@@ -210,6 +233,9 @@ const Leaf = (props: LeafProps) => {
   }
   if (leaf.underlined) {
     children = <u>{children}</u>
+  }
+  if (leaf.strikethrough) {
+    children = <s>{children}</s>
   }
   return <span {...attributes}>{children}</span>
 }
@@ -277,6 +303,7 @@ const HoveringToolbar: FC<HoveringToolbarProps> = (props: HoveringToolbarProps) 
       {format: "bold", icon: BoldIcon},
       {format: "italic", icon: ItalicIcon},
       {format: "underlined", icon: UnderlineIcon},
+      {format: "strikethrough", icon: StrikethroughIcon}
     ].map((btn: any) => (
       <FormatButton
         key={btn.format}
@@ -292,6 +319,7 @@ const HoveringToolbar: FC<HoveringToolbarProps> = (props: HoveringToolbarProps) 
       {format: "heading-two", icon: HeaderTwoIcon},
       {format: "bulleted-list", icon: ListBulletIcon},
       {format: "numbered-list", icon: NumberlistIcon},
+      {format: "check-list-item", icon: ChecklistIcon},
     ].map((btn: any) => (
       <BlockButton
         key={btn.format}
@@ -305,16 +333,19 @@ const HoveringToolbar: FC<HoveringToolbarProps> = (props: HoveringToolbarProps) 
     <Portal>
       <div
         ref={ref}
-        className={`inline-block p-2 absolute z-50 -mt-3 bg-gray-800 rounded-lg`}
+        className="inline-block p-2 absolute z-50 -mt-3 bg-gray-800 rounded-lg"
         onMouseDown={onMouseDown}
       >
         {renderFormatButtons()}
+        <span className='border-l border-white'>&nbsp;</span>
         {renderBlockButtons()}
       </div>
     </Portal>
   )
 }
 
+
+// Block Buttons
 
 interface BlockButtonProps {
   format: string
@@ -393,7 +424,8 @@ const BlockButton: FC<BlockButtonProps> = (props: BlockButtonProps) => {
   return (
     <button
       type="button"
-      className={'cursor-pointer p-1 mr-1 rounded' + (isActive ? " bg-indigo-500" : "")}
+      className={'cursor-pointer p-1 mr-1 rounded'
+        + (isActive ? " bg-indigo-500" : "")}
       onClick={onMouseDown}
     >
       <props.icon
@@ -404,6 +436,8 @@ const BlockButton: FC<BlockButtonProps> = (props: BlockButtonProps) => {
 
 }
 
+
+// FormatButton
 
 interface FormatButtonProps {
   format: string
@@ -435,12 +469,62 @@ const FormatButton: FC<FormatButtonProps> = (props: FormatButtonProps) => {
   return (
     <button
       type="button"
-      className={'cursor-pointer p-1 mr-1 rounded' + (isActive ? " bg-indigo-500" : "")}
+      className={
+        'cursor-pointer p-1 mr-1 rounded'
+          + (isActive ? " bg-indigo-500" : "")}
       onClick={() => toggleFormat(editor, props.format)}
     >
       <props.icon
         className='h-4 w-4 rounded stroke-white'
       />
     </button>
+  )
+}
+
+// ChecklistElement
+
+interface ChecklistElementProps {
+  attributes: any
+  children: any
+  element: any
+}
+
+const CheckListItemElement: FC<ChecklistElementProps> = (props: ChecklistElementProps) => {
+  const editor = useSlateStatic() as any;
+  const readOnly = useReadOnly();
+  const { checked } = props.element;
+
+  const spanCss = checked ? "flex-1 text-gray-500 line-through" : "flex-1";
+
+  return (
+    <div
+      {...props.attributes}
+      className="flex items-center mt-2"
+    >
+      <span
+        contentEditable={false}
+        className="mr-2"
+      >
+        <input
+          type="checkbox"
+          checked={checked}
+          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+          onChange={event => {
+            const path = ReactEditor.findPath(editor, props.element)
+            const newProperties: Partial<SlateElement> = {
+              checked: event.target.checked,
+            } as any;
+            Transforms.setNodes(editor, newProperties, { at: path })
+          }}
+        />
+      </span>
+      <span
+        contentEditable={!readOnly}
+        suppressContentEditableWarning
+        className={spanCss}
+      >
+        {props.children}
+      </span>
+    </div>
   )
 }
