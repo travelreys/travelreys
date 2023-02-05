@@ -3,6 +3,7 @@ import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
+import { v4 as uuidv4 } from 'uuid';
 
 import {
   ChevronDownIcon,
@@ -14,17 +15,17 @@ import {
 import { ModalCss, FlightsModalCss } from '../../styles/global';
 
 import FlightsAPI from '../../apis/flights';
+import { Trips } from '../../apis/types';
 import Alert from '../Alert';
 import InputDatesPicker from '../InputDatesPicker';
 import Spinner from '../../components/Spinner';
+import OnewayFlightsContainer from './OnewayFlightsContainer';
+import RoundtripFlightsContainer from './RoundtripFlightsContainer';
 import {
   printFromDateFromRange,
   printToDateFromRange
 } from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
-import OnewayFlightsContainer from './OnewayFlightsContainer';
-import RoundtripFlightsContainer from './RoundtripFlightsContainer';
-
 
 // TripFlightsSearchForm
 
@@ -250,20 +251,29 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
   }
 
   const onSelectOnewayFlight = (depart: any, bookingMetadata: any) => {
-    const tripFlight = {
+    const tripFlight: Trips.Flight = {
+      id: uuidv4(),
+      type: "flight",
+      tags: new Map<string, string>(),
+      labels: new Map<string, string>(),
       itineraryType: "oneway",
       depart,
-      priceMetadata: bookingMetadata.priceMetadata,
+      return: {} as any,
+      price: bookingMetadata.priceMetadata,
     };
     props.onFlightSelect(tripFlight);
   }
 
   const onSelectRoundTripFlight = (departFlight: any, returnFlight: any, bookingMetadata: any) => {
-    const tripFlight = {
-      priceMetadata: bookingMetadata.priceMetadata,
+    const tripFlight: Trips.Flight = {
+      id: uuidv4(),
+      type: "flight",
+      tags: new Map<string, string>(),
+      labels: new Map<string, string>(),
       itineraryType: "roundtrip",
       depart: departFlight,
-      return: returnFlight
+      return: returnFlight,
+      price: bookingMetadata.priceMetadata,
     };
     props.onFlightSelect(tripFlight);
   }

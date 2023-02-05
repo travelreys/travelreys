@@ -7,89 +7,41 @@ import { SelectRangeEventHandler, DateRange } from 'react-day-picker';
 import {
   CalendarDaysIcon,
   PhoneIcon,
-  MapPinIcon,
   TrashIcon,
 } from '@heroicons/react/24/solid';
 import { CurrencyDollarIcon } from '@heroicons/react/24/outline';
 
 import InputDatesPicker from '../InputDatesPicker';
-import { printTime, isNullDate } from '../../utils/dates';
-import { InputDatesPickerCss } from '../../styles/global';
-
-import { Navigation, Pagination } from 'swiper';
-
-import { Swiper, SwiperSlide } from 'swiper/react';
-
-// Import Swiper styles
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import { PLACE_IMAGE_APIKEY } from '../../apis/maps';
+import PlacePicturesCarousel from './PlacePicturesCarousel';
+import { Trips } from '../../apis/types';
+import { InputDatesPickerCss, LodgingCardCss } from '../../styles/global';
+import { printTime, isEmptyDate, parseTimeFromZ } from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
 
 
-const gMapsPlaceImageSrcURL = (ref: string) => {
-  return [
-    "https://maps.googleapis.com/maps/api/place/photo",
-    "?maxwidth=1024",
-    `&photo_reference=${ref}`,
-    `&key=${PLACE_IMAGE_APIKEY}`,
-  ].join("");
-}
-
-// TripLodgingPhotosCarosel
-
-interface TripLodgingPhotosCaroselProps {
-  photos: any
-}
-
-const TripLodgingPhotosCarosel: FC<TripLodgingPhotosCaroselProps> = (props: TripLodgingPhotosCaroselProps) => {
-  if (props.photos.length === 0) {
-    return (<></>);
-  }
-
-  return (
-    <Swiper slidesPerView={1}>
-      {props.photos.map((photo: any) => (
-        <SwiperSlide key={photo.photo_reference}>
-          <img
-            className="rounded h-72 w-full"
-            src={gMapsPlaceImageSrcURL(photo.photo_reference)} />
-        </SwiperSlide>
-      ))}
-    </Swiper>
-  );
-}
-
-
-// TripLogdingCardProps
+// TripLodgingCard
 
 interface TripLodgingCardProps {
-  lodging: any
+  lodging: Trips.Lodging
   onUpdate: any
   onDelete: any
 }
 
 const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) => {
   const place = _get(props.lodging, "place");
-  const checkinTime = parseJSON(_get(props.lodging, "checkinTime"));
-  const checkoutTime = parseJSON(_get(props.lodging, "checkoutTime"));
 
   // UI State
-  const [isShowEdit, setIsShowEdit] = useState(false);
-  const [checkinDates, setCheckinDates] = useState({
-    from: checkinTime,
-    to: checkoutTime,
-  } as any);
-  const [priceMetadata, setPriceMetadata] = useState(props.lodging.priceMetadata);
+  const [isShowEdit, setIsShowEdit] = useState<Boolean>(false);
+  const [checkinDates, setCheckinDates] = useState<DateRange>();
+  const [priceAmount, setPriceAmount] = useState<Number>();
   const [updatedPaths, setUpdatedPaths] = useState({} as any);
 
   useEffect(() => {
     setCheckinDates({
-      from: parseJSON(_get(props.lodging, "checkinTime")),
-      to: parseJSON(_get(props.lodging, "checkoutTime")),
+      from: props.lodging.checkinTime ? parseJSON(props.lodging.checkinTime): undefined,
+      to: props.lodging.checkoutTime ? parseJSON(props.lodging.checkoutTime): undefined,
     });
-    setPriceMetadata(props.lodging.priceMetadata);
+    setPriceAmount(props.lodging.priceMetadata.amount);
   }, [props.lodging])
 
   // Event Handlers
@@ -111,51 +63,60 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     setIsShowEdit(false);
   }
 
+  const editFormOnClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  }
+
   const datesOnChange: SelectRangeEventHandler = (range: DateRange | undefined) => {
-    console.log(range)
     setCheckinDates(range);
+    setUpdatedPaths(Object.assign(updatedPaths, {"checkinTime": range?.from,}));
+    setUpdatedPaths(Object.assign(updatedPaths, {"checkoutTime": range?.to,}));
+  }
+
+  const priceOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPriceAmount(e.target.value ? Number(e.target.value) : undefined);
     setUpdatedPaths(Object.assign(updatedPaths, {
-      "checkinTime": range?.from,
-    }));
-    setUpdatedPaths(Object.assign(updatedPaths, {
-      "checkoutTime": range?.to,
+      "priceMetadata/amount": Number(e.target.value),
     }));
   }
 
+  const deleteBtnOnClick = (e: React.MouseEvent) => {
+    props.onDelete(props.lodging)
+  }
+
+
   // Renderers
-
-
   const renderPriceMetadata = () => {
-    const amount = _get(props.lodging, "priceMetadata.amount");
-    if (amount === 0 || amount === undefined) {
+    if (priceAmount === undefined || priceAmount === 0) {
       return null;
     }
     return (
-      <p className='mb-2'>
-        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-          $ {props.lodging.priceMetadata.amount}
-        </span>
+      <p className={LodgingCardCss.PricePill}>
+        $ {String(priceAmount)}
       </p>
     );
   }
 
   const renderNonEdit = () => {
+    const dateFmt = "eee, MMM dd"
     return (
       <div>
-        <p className='text-slate-600 text-sm flex items-center mb-1'>
+        <p className={LodgingCardCss.AddrTxt}>
           {place.formatted_address}
         </p>
-        <p className='text-slate-600 text-sm flex items-center mb-1'>
+        <p className={LodgingCardCss.PhoneTxt}>
           <PhoneIcon className='h-4 w-4' />&nbsp;
           {place.international_phone_number}
         </p>
-        <p className='text-slate-600 text-sm flex items-center mb-2'>
+        <p className={LodgingCardCss.DatesTxt}>
           <CalendarDaysIcon className='h-4 w-4' />&nbsp;
-          {isNullDate(checkinTime) ? null : printTime(checkinTime, "eee, MMM dd")}
-          {isNullDate(checkinTime) ? null : " - " + printTime(checkoutTime, "eee, MMM dd")}
+          {isEmptyDate(props.lodging.checkinTime) ? null
+            : printTime(parseTimeFromZ(props.lodging.checkinTime as string), dateFmt)}
+          {isEmptyDate(props.lodging.checkoutTime) ? null :
+            " - " + printTime(parseTimeFromZ(props.lodging.checkoutTime as string), dateFmt)}
         </p>
         {renderPriceMetadata()}
-        <TripLodgingPhotosCarosel photos={props.lodging.place.photos} />
+        <PlacePicturesCarousel photos={props.lodging.place.photos} />
       </div>
     );
   }
@@ -164,35 +125,30 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     return (
       <div
         className='mt-2'
-        onClick={(e) => { e.stopPropagation() }}
+        onClick={editFormOnClick}
       >
         <InputDatesPicker
           WrapperCss={"mb-2"}
-          CtnCss={"flex w-full rounded"}
+          CtnCss={LodgingCardCss.DatesPickerCtn}
           onSelect={datesOnChange}
           dates={checkinDates}
         />
-        <div className="flex w-full rounded mb-2">
+        <div className={LodgingCardCss.PriceInputCtn}>
           <span className={InputDatesPickerCss.Label}>
             <CurrencyDollarIcon className={InputDatesPickerCss.Icon} />
             &nbsp;Amount
           </span>
           <input
             type="number"
-            value={priceMetadata.amount || undefined}
-            onChange={(e) => {
-              setPriceMetadata({ amount: e.target.value });
-              setUpdatedPaths(Object.assign(updatedPaths, {
-                "priceMetadata/amount": Number(e.target.value),
-              }));
-            }}
+            value={priceAmount as any}
+            onChange={priceOnChange}
             className={InputDatesPickerCss.Input}
           />
         </div>
         <button
           type='button'
-          className='bg-red-500 py-2 px-4 rounded-lg text-white'
-          onClick={() => { props.onDelete(props.lodging) }}
+          className={LodgingCardCss.DeleteBtn}
+          onClick={deleteBtnOnClick}
         >
           <TrashIcon className='h-4 w-4' />
         </button>
@@ -201,17 +157,13 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
 
   // Renderers
   return (
-    <div
-      className='p-4 bg-slate-50 rounded-lg shadow-md mb-4 cursor-pointer'
-      onClick={cardOnDoubleClick}
-    >
-      <h4 className='font-bold text-sm mb-1'>
+    <div className={LodgingCardCss.Ctn} onClick={cardOnDoubleClick}>
+      <h4 className={LodgingCardCss.Header}>
         {capitaliseWords(place.name)}
       </h4>
       {isShowEdit ? renderEditForm() : renderNonEdit()}
     </div>
   );
-
 }
 
 export default TripLodgingCard;

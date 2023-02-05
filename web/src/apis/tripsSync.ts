@@ -44,6 +44,18 @@ const TripsSyncAPI = {
     return {op, path, value}
   },
 
+  makeReplaceOp: (path: string, value: any): JSONPatchOp => {
+    return {op: "replace", path, value}
+  },
+
+  makeAddOp: (path: string, value: any) => {
+    return {op: "add", path, value}
+  },
+
+  makeRemoveOp: (path: string, value: any) => {
+    return {op: "remove", path, value}
+  },
+
   makeSyncMsgJoinSession: (tripPlanID: string, memberID: string, memberEmail: string): SyncMessage => {
     return {
       tripPlanID,

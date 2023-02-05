@@ -13,10 +13,8 @@ const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
       </h1>
       <button type="button"
         className={classNames(
-          "bg-gradient-to-r",
+          "bg-indigo-500",
           "font-medium",
-          "from-indigo-500",
-          "hover:bg-gradient-to-br",
           "mb-2",
           "mr-2",
           "px-5",
@@ -25,8 +23,7 @@ const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
           "text-center",
           "text-sm",
           "text-white",
-          "to-indigo-700",
-          "via-indigo-600",
+          "hover:bg-indigo-700"
         )}
         onClick={props.onCreateTripBtnClick}
       >

@@ -4,18 +4,25 @@ import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import { v4 as uuidv4 } from 'uuid';
 
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  FolderArrowDownIcon
+} from '@heroicons/react/24/outline'
+
 import BusIcon from '../icons/BusIcon';
 import HotelIcon from '../icons/HotelIcon';
 import PlaneIcon from '../icons/PlaneIcon';
 import TripFlightsModal from './TripFlightsModal';
-import { HeartIcon } from '@heroicons/react/24/outline'
 
+import { Trips } from '../../apis/types';
 import TripsSyncAPI from '../../apis/tripsSync';
 import TransitFlightCard from './TransitFlightCard';
 
 import { TripLogisticsCss } from '../../styles/global';
 import TripLodgingsModal from './TripLodgingsModal';
 import TripLodgingCard from './TripLodgingCard';
+
 
 
 // TripFlightsSection
@@ -29,6 +36,7 @@ interface TripFlightsSectionProps {
 const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSectionProps) => {
 
   const [isTripFlightsModalOpen, setIsTripFlightsModalOpen] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
 
   // Event Handler
   const onFlightSelect = (transit: any) => {
@@ -36,30 +44,44 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
     setIsTripFlightsModalOpen(false);
   }
 
-
   // Renderers
-  const renderItineraries = () => {
+  const renderHiddenToggle = () => {
     return (
-      <div>
-        {Object.values(props.trip.flights).map((flight: any, idx: number) =>
-          <TransitFlightCard
-            key={idx}
-            flight={flight}
-            onDelete={props.onFlightDelete}
-          />
-        )}
-      </div>
+      <button
+        type="button"
+        className={TripLogisticsCss.FlightsToggleBtn}
+        onClick={() => {setIsHidden(!isHidden)}}
+      >
+      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
+        : <ChevronDownIcon className='h-4 w-4'/> }
+      </button>
     );
+  }
+
+  const renderItineraries = () => {
+    if (isHidden) {
+      return null;
+    }
+
+    const flights = Object.values(props.trip.flights);
+    return flights.map((flight: any, idx: number) =>
+      <TransitFlightCard
+        key={idx}
+        flight={flight}
+        onDelete={props.onFlightDelete}
+      />
+    )
   }
 
   return (
     <div className='p-5'>
       <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <h3 className='text-2xl sm:text-3xl font-bold text-slate-700'>
-          Flights
-        </h3>
+        <div className={TripLogisticsCss.FlightsHeaderCtn}>
+          {renderHiddenToggle()}
+          <span>Flights</span>
+        </div>
         <button
-          className='text-slate-500 text-sm mt-1 font-bold'
+          className={TripLogisticsCss.SearchFlightBtn}
           onClick={() => {setIsTripFlightsModalOpen(true)}}
         >
           +&nbsp;&nbsp;Search for a flight
@@ -88,6 +110,7 @@ interface TripLodgingSectionProps {
 const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSectionProps) => {
 
   const [isLodgingModalOpen, setIsLogdingModalOpen] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
 
   // Event Handlers
   const onLodgingSelect = (lodging: any) => {
@@ -96,8 +119,25 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
   }
 
   // Renderers
+  const renderHiddenToggle = () => {
+    return (
+      <button
+        type="button"
+        className={TripLogisticsCss.FlightsToggleBtn}
+        onClick={() => {setIsHidden(!isHidden)}}
+      >
+      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
+        : <ChevronDownIcon className='h-4 w-4'/>}
+      </button>
+    );
+  }
+
   const renderLodgings = () => {
-    return Object.values(props.trip.lodgings).map((lodge: any) => (
+    if (isHidden) {
+      return null;
+    }
+    const lodgings = Object.values(props.trip.lodgings);
+    return lodgings.map((lodge: any) => (
       <TripLodgingCard
         key={lodge.id}
         lodging={lodge}
@@ -110,11 +150,13 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
   return (
     <div className='p-5'>
       <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <h3 className='text-2xl sm:text-3xl font-bold text-slate-700'>
-          Hotels and Lodgings
-        </h3>
+        <div className={TripLogisticsCss.FlightsHeaderCtn}>
+          {renderHiddenToggle()}
+          <span>Hotels and Lodgings</span>
+        </div>
+
         <button
-          className='text-slate-500 text-sm mt-1 font-bold'
+          className={TripLogisticsCss.SearchFlightBtn}
           onClick={() => {setIsLogdingModalOpen(true)}}
         >
           +&nbsp;&nbsp;Add a lodging
@@ -141,33 +183,23 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   // Event Handlers - Flights
 
-  const flightOnSelect = (flight: any) => {
-    let transit = { id: uuidv4(), type: "flight" }
-    transit = Object.assign(transit, flight)
-
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "add", `/flights/${transit.id}`, transit)
-    ];
+  const flightOnSelect = (flight: Trips.Flight) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeAddOp(`/flights/${flight.id}`, flight));
     props.tripStateOnUpdate(ops);
   }
 
-  const flightOnDelete = (transit: any) => {
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "remove", `/flights/${transit.id}`, transit)
-    ];
+  const flightOnDelete = (flight: Trips.Flight) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeRemoveOp(`/flights/${flight.id}`, flight))
     props.tripStateOnUpdate(ops);
   }
 
   // Event Handlers - Lodging
 
-  const lodgingOnSelect = (lodging: any) => {
-    lodging = Object.assign(lodging, {id: uuidv4()});
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "add", `/lodgings/${lodging.id}`, lodging)
-    ];
+  const lodgingOnSelect = (lodging: Trips.Lodging) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeAddOp(`/lodgings/${lodging.id}`, lodging))
     props.tripStateOnUpdate(ops);
   }
 
@@ -175,48 +207,45 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
     const ops = [] as any;
     Object.entries(updates).forEach(([key, value]) => {
       const fullpath = `/lodgings/${lodging.id}/${key}`;
-      ops.push(TripsSyncAPI.makeJSONPatchOp("replace", fullpath, value));
+      ops.push(TripsSyncAPI.makeReplaceOp(fullpath, value));
     });
-    console.log(ops);
     props.tripStateOnUpdate(ops);
   }
 
-  const lodgingOnDelete = (lodging: any) => {
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "remove", `/lodgings/${lodging.id}`, lodging)
-    ];
+  const lodgingOnDelete = (lodging: Trips.Lodging) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeRemoveOp(`/lodgings/${lodging.id}`, lodging))
     props.tripStateOnUpdate(ops);
   }
 
   // Renderers
 
   const renderTabs = () => {
-    const items = [
+    const tabs = [
       { title: "Flights", icon: PlaneIcon },
       { title: "Transits", icon: BusIcon },
       { title: "Lodging", icon: HotelIcon },
-      { title: "Insurance", icon: HeartIcon },
-    ].map((item, idx) => {
-      return (
-        <button
-          key={idx} type="button"
-          className='mx-4 my-2 flex flex-col items-center'
-        >
-          <item.icon className='h-6 w-6 mb-1' />
-          <span className='text-slate-400 text-sm'>{item.title}</span>
-        </button>
-      );
-    })
+      { title: "Attachments", icon: FolderArrowDownIcon },
+    ];
 
     return (
-      <div className='bg-indigo-100 py-8 pb-4 mb-4'>
-        <div className="bg-white rounded-lg p-5 mx-4 mb-4">
-          <h5 className="mb-4 text-md sm:text-2xl font-bold text-slate-700">
-            Transportation and Lodging
+      <div className={TripLogisticsCss.TabsCtn}>
+        <div className={TripLogisticsCss.TabsWrapper}>
+          <h5 className={TripLogisticsCss.TabsCtnHeader}>
+            Logistics
           </h5>
-          <div className="flex flex-row justify-around mx-2">
-            {items}
+          <div className={TripLogisticsCss.TabItemCtn}>
+            {tabs.map((tab: any, idx: number) => (
+              <button
+                key={idx} type="button"
+                className={TripLogisticsCss.TabItemBtn}
+              >
+                <tab.icon className='h-6 w-6 mb-1'/>
+                <span className={TripLogisticsCss.TabItemBtnTxt}>
+                  {tab.title}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

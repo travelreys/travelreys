@@ -21,6 +21,21 @@ const MapsAPI = {
 };
 
 export default MapsAPI;
-
+export const placeFields = [
+  "address_component",
+  "adr_address",
+  "business_status",
+  "formatted_address",
+  "geometry",
+  "name",
+  "photos",
+  "place_id",
+  "types",
+  "utc_offset",
+  "opening_hours",
+  "formatted_phone_number",
+  "international_phone_number",
+  "website",
+];
 export const EMBED_MAPS_APIKEY = "AIzaSyBaqenQ0nQVtkhnXBn-oWBtlPDL5uHmvNU";
 export const PLACE_IMAGE_APIKEY = "AIzaSyBgNwirAT6TSS208emcC0Lbgex6i3EwhR0";

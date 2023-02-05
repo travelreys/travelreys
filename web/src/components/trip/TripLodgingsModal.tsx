@@ -4,21 +4,21 @@ import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import { useDebounce } from 'usehooks-ts';
 import { v4 as uuidv4 } from 'uuid';
+import { DateRange } from 'react-day-picker';
 
 import {
   MagnifyingGlassIcon,
   MapPinIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
-import { LodgingsModalCss, ModalCss } from '../../styles/global';
 
 import Alert from '../Alert';
-import Spinner from '../Spinner';
-
-import MapsAPI, { EMBED_MAPS_APIKEY } from '../../apis/maps';
-import { DateRange } from 'react-day-picker';
 import InputDatesPicker from '../InputDatesPicker';
+import Modal from '../Modal';
 
+import MapsAPI, { EMBED_MAPS_APIKEY, placeFields } from '../../apis/maps';
+import { LodgingsModalCss, ModalCss } from '../../styles/global';
+import { Trips } from '../../apis/types';
 
 // TripLodgingsModal
 
@@ -51,15 +51,10 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
     .then((res) => {
       setPredictions(_get(res, "data.predictions", []))
     });
-    // setPredictions(preds.predictions);
   }
 
   const getPlaceDetails = (placeID: string) => {
-    const fields = [
-      "address_component", "adr_address", "business_status", "formatted_address", "geometry",  "name", "photos", "place_id", "types", "utc_offset",
-      "opening_hours", "formatted_phone_number", "international_phone_number", "website",
-    ];
-    MapsAPI.placeDetails(placeID, fields, sessionToken)
+    MapsAPI.placeDetails(placeID, placeFields, sessionToken)
     .then((res) => {
       setPredictions([]);
       setSelectedPlaceID(placeID);
@@ -83,10 +78,14 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
   }
 
   const addLodgingBtnOnClick = () => {
-    const tripLodging = {
+    const tripLodging: Trips.Lodging = {
+      id: uuidv4(),
       checkinTime: checkinDates?.from,
       checkoutTime: checkinDates?.to,
       place: selectedPlace,
+      priceMetadata: {} as any,
+      tags: new Map<string,string>(),
+      labels: new Map<string,string>(),
     };
     props.onLodgingSelect(tripLodging);
   }
@@ -117,18 +116,18 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
       <div className='p-1'>
         {predictions.map((pre: any) => (
           <div
-            className='flex items-center mb-4 cursor-pointer group'
+            className={LodgingsModalCss.PredictionsCtn}
             key={pre.place_id}
             onClick={() => {predictionOnSelect(pre.place_id)}}
           >
-            <div className='p-1 group-hover:text-indigo-500'>
+            <div className={LodgingsModalCss.PredictionIconCtn}>
               <MapPinIcon className='h-6 w-6' />
             </div>
             <div className='ml-1'>
-              <p className='text-slate-900 group-hover:text-indigo-500 text-sm font-medium'>
+              <p className={LodgingsModalCss.PredictionMain}>
                 {_get(pre, "structured_formatting.main_text", "")}
               </p>
-              <p className="text-slate-400 group-hover:text-indigo-500 text-xs">
+              <p className={LodgingsModalCss.PredictionSecondary}>
                 {_get(pre, "structured_formatting.secondary_text", "")}
               </p>
             </div>
@@ -166,40 +165,29 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
     );
   }
 
-  if (!props.isOpen) {
-    return (<></>);
-  }
-
   return (
-    <div className={ModalCss.Container}>
-      <div className={ModalCss.Inset}></div>
-      <div className={ModalCss.Content}>
-        <div className={ModalCss.ContentContainer}>
-          <div className={ModalCss.ContentCard}>
-            <div className="px-4 pt-5 sm:p-8 sm:pb-2 rounded-t-lg mb-4">
-              <div className='flex justify-between mb-6'>
-                <h2 className="text-xl sm:text-2xl font-bold text-center text-slate-900">
-                  Search hotels or lodgings
-                </h2>
-                <button type="button" onClick={props.onClose}>
-                  <XMarkIcon className='h-6 w-6 text-slate-700' />
-                </button>
-              </div>
-              {!_isEmpty(alertMsg) ? <Alert title={""} message={alertMsg} /> : null}
-              <InputDatesPicker
-                onSelect={(range: DateRange) => { setCheckinDates(range); }}
-                dates={checkinDates}
-                WrapperCss={"mb-2"}
-                CtnCss={"flex w-full border border-slate-200 rounded"}
-              />
-              {renderSearchInput()}
-              {renderAutocomplete()}
-              {renderMapForSelectedPlace()}
-            </div>
-          </div>
+    <Modal isOpen={props.isOpen}>
+      <div className={LodgingsModalCss.Ctn}>
+        <div className={LodgingsModalCss.Wrapper}>
+          <h2 className={LodgingsModalCss.Header}>
+            Search hotels or lodgings
+          </h2>
+          <button type="button" onClick={props.onClose}>
+            <XMarkIcon className={LodgingsModalCss.CloseIcon} />
+          </button>
         </div>
+        {!_isEmpty(alertMsg) ? <Alert title={""} message={alertMsg} /> : null}
+        <InputDatesPicker
+          onSelect={(range: DateRange) => { setCheckinDates(range); }}
+          dates={checkinDates}
+          WrapperCss={"mb-2"}
+          CtnCss={LodgingsModalCss.InputDatesCtn}
+        />
+        {renderSearchInput()}
+        {renderAutocomplete()}
+        {renderMapForSelectedPlace()}
       </div>
-    </div>
+    </Modal>
   );
 }
 

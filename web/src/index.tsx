@@ -4,6 +4,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 
 import './styles/index.css';
+import 'react-day-picker/dist/style.css';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement

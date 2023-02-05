@@ -19,7 +19,6 @@ type TripPlan struct {
 	CoverImage images.ImageMetadata `json:"coverImage" bson:"coverImage"`
 	StartDate  time.Time            `json:"startDate" bson:"startDate"`
 	EndDate    time.Time            `json:"endDate" bson:"endDate"`
-	IsArchived bool                 `json:"isArchived" bson:"isArchived"`
 
 	// Members
 	Creator TripMember            `json:"creator" bson:"creator"`
@@ -33,10 +32,12 @@ type TripPlan struct {
 	// Contents
 	Contents map[string]TripContentList `json:"contents" bson:"contents"` // Map of trip contents
 
-	UpdatedAt time.Time     `json:"updatedAt" bson:"updatedAt"`
-	CreatedAt time.Time     `json:"createdAt" bson:"createdAt"`
-	Labels    common.Labels `json:"labels" bson:"labels"`
-	Tags      common.Tags   `json:"tags" bson:"tags"`
+	UpdatedAt  time.Time `json:"updatedAt" bson:"updatedAt"`
+	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`
+	IsArchived bool      `json:"isArchived" bson:"isArchived"`
+
+	Labels common.Labels `json:"labels" bson:"labels"`
+	Tags   common.Tags   `json:"tags" bson:"tags"`
 }
 
 type TripPlansList []TripPlan
@@ -93,14 +94,6 @@ const (
 	TransitTypeFlight = "flight"
 )
 
-type TransitCenter struct {
-	ID                string             `json:"id" bson:"id"`
-	TransitCenterType string             `json:"transitCenterType" bson:"transitCenterType"`
-	Name              string             `json:"name" bson:"name"`
-	Positioning       common.Positioning `json:"positioning" bson:"positioning"`
-	Labels            common.Labels      `json:"labels" bson:"labels"`
-}
-
 type BaseTransit struct {
 	ID   string `json:"id" bson:"id"`
 	Type string `json:"type"`
@@ -144,32 +137,20 @@ type Lodging struct {
 // Trip Content
 
 type TripContent struct {
-	ID          string           `json:"id" bson:"id"`
-	ContentType string           `json:"contentType" bson:"contentType"`
-	Location    LocationContent  `json:"locationContent" bson:"locationContent"`
-	Notes       NoteContent      `json:"noteContent" bson:"noteContent"`
-	Checklist   ChecklistContent `json:"checklistContent" bson:"checklistContent"`
+	ID    string `json:"id" bson:"id"`
+	Title string `json:"title" bson:"title"`
+
+	Place maps.Place `json:"place" bson:"place"`
+	Notes string     `json:"notes" bson:"notes"`
 
 	Comments []TripContentComment `json:"comments" bson:"comments"`
 	Labels   common.Labels        `json:"labels" bson:"labels"`
 }
 
-type TripContentList []TripContent
-
-type LocationContent struct {
-	Name        string             `json:"name" bson:"name"`
-	Description string             `json:"description" bson:"description"`
-	Positioning common.Positioning `json:"positioning" bson:"positioning"`
-}
-
-type NoteContent struct {
-	ImageURL string `json:"imageURL" bson:"imageURL"`
-	Note     string `json:"note" bson:"note"`
-}
-
-type ChecklistContent struct {
-	ImageURL string   `json:"imageURL" bson:"imageURL"`
-	Items    []string `json:"items" bson:"items"`
+type TripContentList struct {
+	ID       string        `json:"id" bson:"id"`
+	Name     string        `json:"name" bson:"name"`
+	Contents []TripContent `json:"contents" bson:"contents"`
 }
 
 type TripContentComment struct {
