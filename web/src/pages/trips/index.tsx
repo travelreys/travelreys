@@ -215,13 +215,10 @@ const TripPage: FC = () => {
           tripStateOnUpdate={tripStateOnUpdate}
         />
         <div className='flex-1' ref={measuredRef}>
-          <div className="fixed w-screen h-screen"
-            style={{width: mapDivWidth}}>
-            <TripMap
-              trip={tripRef.current}
-              width={mapDivWidth}
-            />
-          </div>
+          <TripMap
+            trip={tripRef.current}
+            width={mapDivWidth}
+          />
         </div>
       </div>
     </MapsProvider>

@@ -2,13 +2,20 @@ import React, { FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
-import { SelectRangeEventHandler, DateRange } from 'react-day-picker';
+import {
+  SelectRangeEventHandler,
+  DateRange
+} from 'react-day-picker';
 import {
   CalendarDaysIcon,
   PhoneIcon,
   TrashIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/solid';
-import { CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import {
+  CurrencyDollarIcon,
+  GlobeAltIcon
+} from '@heroicons/react/24/outline';
 
 import InputDatesPicker from '../InputDatesPicker';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
@@ -21,7 +28,7 @@ import {
   parseTripDate
 } from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
-
+import { useMap } from '../../context/maps-context';
 
 // TripLodgingCard
 
@@ -33,6 +40,8 @@ interface TripLodgingCardProps {
 
 const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) => {
   const place = _get(props.lodging, "place");
+  const {dispatch} = useMap();
+
 
   // UI State
   const [isShowEdit, setIsShowEdit] = useState<Boolean>(false);
@@ -88,6 +97,15 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     props.onDelete(props.lodging)
   }
 
+  const placeOnClick = () => {
+    // dispatch({type:"setSelectedPlace", value: props.lodging.place})
+    // const event = new CustomEvent('marker_click', {
+    //   bubbles: false,
+    //   cancelable: false,
+    //   detail: props.lodging.place,
+    // });
+    // document.getElementById("map")!.dispatchEvent(event)
+  }
 
   // Renderers
   const renderPriceMetadata = () => {
@@ -105,9 +123,22 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     const dateFmt = "eee, MMM dd"
     return (
       <div>
-        <p className={LodgingCardCss.AddrTxt}>
+        <button type='button'
+          className={LodgingCardCss.AddrTxt}
+          onClick={placeOnClick}
+        >
+          <MapPinIcon className='h-4 w-4 mr-1'/>
           {place.formatted_address}
-        </p>
+        </button>
+        { _isEmpty(place.website) ? null
+          : <a
+              className='flex items-center'
+              href={place.website}
+              target="_blank">
+                <GlobeAltIcon className='h-4 w-4' />&nbsp;
+                <span className={LodgingCardCss.WebsiteTxt}>Website</span>
+              </a>
+        }
         <p className={LodgingCardCss.PhoneTxt}>
           <PhoneIcon className='h-4 w-4' />&nbsp;
           {place.international_phone_number}

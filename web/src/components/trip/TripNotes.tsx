@@ -9,7 +9,6 @@ import {
   FolderArrowDownIcon
 } from '@heroicons/react/24/outline'
 
-import { Trips } from '../../apis/types';
 import TripsSyncAPI from '../../apis/tripsSync';
 import { TripNodesCss } from '../../styles/global';
 import NotesEditor from '../NotesEditor';
@@ -25,7 +24,6 @@ const TripNotesSection: FC<TripNotesSectionProps> = (props: TripNotesSectionProp
 
   // Event Handlers
   const notesOnChange = (content: string) => {
-    console.log(content);
     const ops = [];
     ops.push(TripsSyncAPI.makeReplaceOp(`/notes`, content));
     props.tripStateOnUpdate(ops);
@@ -53,10 +51,12 @@ const TripNotesSection: FC<TripNotesSectionProps> = (props: TripNotesSectionProp
           <span>Notes </span>
         </div>
       </div>
-      <NotesEditor
-        base64Notes={props.trip.notes}
-        notesOnChange={notesOnChange}
-      />
+      {isHidden ? null :
+        <NotesEditor
+          base64Notes={props.trip.notes}
+          notesOnChange={notesOnChange}
+        />
+      }
     </div>
   );
 

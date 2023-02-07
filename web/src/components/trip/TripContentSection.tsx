@@ -11,17 +11,23 @@ import { useDebounce } from 'usehooks-ts';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
+  GlobeAltIcon,
   MapPinIcon,
-  PlusIcon
-} from '@heroicons/react/24/outline'
+  PlusIcon,
+} from '@heroicons/react/24/solid'
 
 import PlacePicturesCarousel from './PlacePicturesCarousel';
+import NotesEditor from '../NotesEditor';
+
 import TripsSyncAPI from '../../apis/tripsSync';
 import MapsAPI, { placeFields } from '../../apis/maps';
 import { Trips } from '../../apis/types';
-
 import { useMap } from '../../context/maps-context';
-import { TripContentSectionCss, TripContentListCss, TripContentCss } from '../../styles/global';
+import {
+  TripContentSectionCss,
+  TripContentListCss,
+  TripContentCss
+} from '../../styles/global';
 
 
 // TripContent
@@ -41,7 +47,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 
   const debouncedValue = useDebounce<string>(searchPlaceQuery, 500);
 
-  const {dispatch} = useMap();
+  const { dispatch } = useMap();
 
   useEffect(() => {
     setTitle(props.content.title);
@@ -96,9 +102,25 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     });
   }
 
-  const placeOnClick = () => {
-    dispatch({type:"setSelectedPlace", value: props.content.place})
+  const placeOnClick = (e: React.MouseEvent) => {
+    if (e.detail == 1) {
+      dispatch({type:"setSelectedPlace", value: props.content.place})
+      const event = new CustomEvent('marker_click', {
+        bubbles: false,
+        cancelable: false,
+        detail: props.content.place,
+      });
+      document.getElementById("map")!.dispatchEvent(event)
+      return;
+    }
+    if (e.detail == 2) {
+      setIsAddingPlace(true);
+      return;
+    }
   }
+
+  // Event Handlers - Notes
+  const notesOnChange = () => {}
 
   // Renderers
   const renderTitleInput = () => {
@@ -149,7 +171,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     }
 
     return (
-      <p className='text-slate-600 text-sm flex items-center mb-2'>
+      <p className='text-slate-600 text-sm flex items-center mb-1'>
         <MapPinIcon className='h-4 w-4 mr-1'/>
         {placeNode}
       </p>
@@ -193,15 +215,27 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     return <PlacePicturesCarousel photos={photos}/>
   }
 
-  const renderNotes = () => {
-    return (null);
-  }
 
   return (
     <div className={TripContentCss.Ctn}>
       {renderTitleInput()}
       {renderPlace()}
       {renderPlacesAutocomplete()}
+      { _isEmpty(_get(props.content, "place.website", "")) ? null
+        : <a
+            className='flex items-center mb-1'
+            href={_get(props.content, "place.website")}
+            target="_blank">
+              <GlobeAltIcon className='h-4 w-4' />&nbsp;
+              <span className={TripContentCss.WebsiteTxt}>Website</span>
+            </a>
+      }
+      <NotesEditor
+        ctnCss='p-0 mb-2'
+        base64Notes={props.content.notes}
+        notesOnChange={notesOnChange}
+        placeholder={"Notes..."}
+      />
       {renderPlacePicturesCarousel()}
     </div>
   );

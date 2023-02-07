@@ -156,7 +156,8 @@ export const LodgingsModalCss = {
 export const LodgingCardCss = {
   Ctn: "p-4 bg-slate-50 rounded-lg shadow-md mb-4 cursor-pointer",
   Header: "font-bold text-sm mb-1",
-  AddrTxt: "text-slate-600 text-sm flex items-center mb-1",
+  AddrTxt: "text-slate-600 text-sm text-left flex items-center mb-1 hover:text-indigo-500",
+  WebsiteTxt: "text-slate-600 text-sm flex items-center underline",
   PhoneTxt: "text-slate-600 text-sm flex items-center mb-1",
   DatesTxt: "text-slate-600 text-sm flex items-center mb-2",
   PricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full mb-2 w-fit",
@@ -184,7 +185,8 @@ export const TripContentListCss = {
 export const TripContentCss = {
   Ctn: "bg-slate-50 rounded-lg shadow-xs mb-4 p-4 relative",
   TitleInput: "p-0 mb-1 font-bold text-gray-800 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
-  AutocompleteCtn: "p-1 bg-white absolute left-0 w-full border border-slate-200 rounded-lg",
+  AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
   PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
+  WebsiteTxt: "text-slate-600 text-sm flex items-center underline"
 }
 

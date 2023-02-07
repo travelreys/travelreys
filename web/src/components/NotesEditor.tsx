@@ -52,6 +52,8 @@ const defaultEditorValues = [
 
 interface NotesEditorProps {
   base64Notes: string
+  ctnCss?: string
+  placeholder?: string
   notesOnChange: any
 }
 
@@ -94,7 +96,7 @@ const NotesEditor: FC<NotesEditorProps> = (props: NotesEditorProps) => {
 
   return (
     <div
-      className='p-4 bg-gray-50'
+      className={props.ctnCss || 'p-4 bg-gray-50'}
       onBlur={editorOnBlur}
     >
       <Slate
@@ -107,6 +109,7 @@ const NotesEditor: FC<NotesEditorProps> = (props: NotesEditorProps) => {
           renderElement={renderElement}
           renderLeaf={renderLeaf}
           spellCheck
+          placeholder={props.placeholder}
         />
       </Slate>
     </div>
@@ -333,7 +336,7 @@ const HoveringToolbar: FC<HoveringToolbarProps> = (props: HoveringToolbarProps) 
     <Portal>
       <div
         ref={ref}
-        className="inline-block p-2 absolute z-50 -mt-3 bg-gray-800 rounded-lg"
+        className="inline-block p-2 absolute z-50 opacity-0 -top-[10000px] -left-[10000px] -mt-3 bg-gray-800 rounded-lg"
         onMouseDown={onMouseDown}
       >
         {renderFormatButtons()}
