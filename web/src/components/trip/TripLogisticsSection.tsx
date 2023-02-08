@@ -7,12 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
-  FolderArrowDownIcon
 } from '@heroicons/react/24/outline'
 
-import BusIcon from '../icons/BusIcon';
-import HotelIcon from '../icons/HotelIcon';
-import PlaneIcon from '../icons/PlaneIcon';
 import TripFlightsModal from './TripFlightsModal';
 
 import { Trips } from '../../apis/types';

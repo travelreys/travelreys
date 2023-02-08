@@ -180,7 +180,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         />
       );
     } else {
-      const addr = _get(props.content, "place.formatted_address", "");
+      const addr = _get(props.content, "place.name", "");
       if (_isEmpty(addr)) {
         placeNode = (
           <button type='button' onClick={() => {setIsAddingPlace(true)}}>

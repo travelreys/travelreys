@@ -167,16 +167,24 @@ type TripContentComment struct {
 // Itinerary
 
 type ItineraryList struct {
-	ID       string               `json:"id" bson:"id"`
-	Name     string               `json:"name" bson:"name"`
-	Date     time.Time            `json:"date" bson:"date"`
-	Contents ItineraryContentList `json:"contents" bson:"contents"`
+	ID          string               `json:"id" bson:"id"`
+	Name        string               `json:"name" bson:"name"`
+	Date        time.Time            `json:"date" bson:"date"`
+	Description string               `json:"desc" bson:"desc"`
+	Contents    ItineraryContentList `json:"contents" bson:"contents"`
+
+	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
 type ItineraryContent struct {
-	TripContent
-	StartTime time.Time `json:"startTime" bson:"startTime"`
-	EndTime   time.Time `json:"endTime" bson:"endTime"`
+	TripContentListID string `json:"tripContentListId" bson:"tripContentListId"`
+	TripContentID     string `json:"tripContentId" bson:"tripContentId"`
+
+	Price     common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
+	StartTime time.Time            `json:"startTime" bson:"startTime"`
+	EndTime   time.Time            `json:"endTime" bson:"endTime"`
+
+	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
 type ItineraryContentList []ItineraryContent
