@@ -39,6 +39,12 @@ export const TripMenuCss = {
   TripMenuCtn: "min-h-screen w-full z-50 sm:w-fit sm:shadow-xl sm:shadow-slate-900",
   TripMenu: "pb-40 sm:max-w-lg md:max-w-xl",
   TripMenuNav: "p-3 font-bold text-indigo-500",
+  TabsCtn: "sticky top-0 z-30 bg-indigo-100 py-8 pb-4 mb-4",
+  TabsWrapper: "bg-white rounded-lg p-5 mx-4 mb-4",
+  TabItemCtn: "flex flex-row justify-around mx-2",
+  TabItemBtn: "mx-4 my-2 flex flex-col items-center",
+  TabItemBtnTxt: "text-slate-400 text-sm",
+
 }
 
 export const TripMenuJumboCss = {
@@ -71,12 +77,6 @@ export const TripNodesCss = {
 }
 
 export const TripLogisticsCss = {
-  TabsCtn: "bg-indigo-100 py-8 pb-4 mb-4",
-  TabsWrapper: "bg-white rounded-lg p-5 mx-4 mb-4",
-  TabsCtnHeader: "mb-4 text-md sm:text-2xl font-bold text-slate-700",
-  TabItemCtn: "flex flex-row justify-around mx-2",
-  TabItemBtn: "mx-4 my-2 flex flex-col items-center",
-  TabItemBtnTxt: "text-slate-400 text-sm",
   FlightDatesCtn: "flex w-full border border-slate-400 rounded-lg",
   FlightDatesIcon: "inline align-bottom h-5 w-5 text-gray-500",
   SearchFlightBtn: "text-slate-500 text-sm mt-1 font-bold",
@@ -154,16 +154,16 @@ export const LodgingsModalCss = {
 }
 
 export const LodgingCardCss = {
-  Ctn: "p-4 bg-slate-50 rounded-lg shadow-md mb-4 cursor-pointer",
+  Ctn: "p-4 bg-slate-50 rounded-lg shadow-md mb-4",
   Header: "font-bold text-sm mb-1",
   AddrTxt: "text-slate-600 text-sm text-left flex items-center mb-1 hover:text-indigo-500",
-  WebsiteTxt: "text-slate-600 text-sm flex items-center underline",
+  WebsiteTxt: "text-indigo-500 text-sm flex items-center",
   PhoneTxt: "text-slate-600 text-sm flex items-center mb-1",
-  DatesTxt: "text-slate-600 text-sm flex items-center mb-2",
-  PricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full mb-2 w-fit",
+  DatesTxt: "text-slate-600 text-sm flex items-center mb-2 cursor-pointer",
+  PricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full mb-2 w-fit cursor-pointer",
   DatesPickerCtn: "flex w-full rounded",
   PriceInputCtn: "flex w-full rounded mb-2",
-  DeleteBtn: "bg-red-500 py-2 px-4 rounded-lg text-white",
+  DeleteBtn: "text-red-500 flex items-center",
 }
 
 export const TripContentSectionCss = {
@@ -187,6 +187,7 @@ export const TripContentCss = {
   TitleInput: "p-0 mb-1 font-bold text-gray-800 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
   AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
   PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
-  WebsiteTxt: "text-slate-600 text-sm flex items-center underline"
+  WebsiteTxt: "text-indigo-500 text-sm flex items-center",
+  DeleteBtn: "text-red-500 flex items-center w-full",
 }
 

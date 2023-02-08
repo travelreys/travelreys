@@ -11,12 +11,18 @@ import { useDebounce } from 'usehooks-ts';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
-  GlobeAltIcon,
   MapPinIcon,
   PlusIcon,
+  TrashIcon
 } from '@heroicons/react/24/solid'
+import {
+  EllipsisHorizontalCircleIcon,
+  GlobeAltIcon,
+} from '@heroicons/react/24/outline'
+
 
 import PlacePicturesCarousel from './PlacePicturesCarousel';
+import Dropdown from '../Dropdown';
 import NotesEditor from '../NotesEditor';
 
 import TripsSyncAPI from '../../apis/tripsSync';
@@ -84,6 +90,16 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     props.tripStateOnUpdate(ops);
   }
 
+  const deleteBtnOnClick = () => {
+    const ops = [];
+    ops.push(
+      TripsSyncAPI.makeRemoveOp(
+        `/contents/${props.contentListID}/contents/${props.contentIdx}`,
+        "")
+    );
+    props.tripStateOnUpdate(ops);
+  }
+
   // Event Handlers - Places
   const predictionOnSelect = (placeID: string) => {
     MapsAPI.placeDetails(placeID, placeFields, sessionToken)
@@ -124,15 +140,28 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 
   // Renderers
   const renderTitleInput = () => {
+    const opts = [
+      <button
+          type='button'
+          className={TripContentCss.DeleteBtn}
+          onClick={deleteBtnOnClick}
+        >
+        <TrashIcon className='h-4 w-4 mr-2' />Delete
+      </button>
+    ];
+    const menu = <EllipsisHorizontalCircleIcon className='h-4 w-4' />;
     return (
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onBlur={titleInputOnBlur}
-        placeholder="Add a name"
-        className={TripContentCss.TitleInput}
-      />
+      <div className='flex justify-between'>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={titleInputOnBlur}
+          placeholder="Add a name"
+          className={TripContentCss.TitleInput}
+        />
+        <Dropdown menu={menu} opts={opts} />
+      </div>
     );
   }
 
@@ -160,10 +189,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         );
       } else {
         placeNode = (
-          <button type='button'
-            className='hover:text-indigo-500'
-            onClick={placeOnClick}
-          >
+          <button type='button' onClick={placeOnClick}>
             {addr}
           </button>
         );
@@ -171,7 +197,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     }
 
     return (
-      <p className='text-slate-600 text-sm flex items-center mb-1'>
+      <p className='text-slate-600 text-sm flex items-center mb-1 hover:text-indigo-500'>
         <MapPinIcon className='h-4 w-4 mr-1'/>
         {placeNode}
       </p>

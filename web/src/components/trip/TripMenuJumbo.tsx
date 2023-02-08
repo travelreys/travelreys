@@ -222,7 +222,7 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
 
   return (
     <>
-      <div className='bg-indigo-100 pb-10'>
+      <div className='bg-indigo-100'>
         <div className="relative">
           <img
             srcSet={ImagesAPI.makeSrcSet(props.trip.coverImage)}

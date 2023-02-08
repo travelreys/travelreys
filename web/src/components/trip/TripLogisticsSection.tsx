@@ -222,41 +222,8 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   // Renderers
 
-  const renderTabs = () => {
-    const tabs = [
-      { title: "Flights", icon: PlaneIcon },
-      { title: "Transits", icon: BusIcon },
-      { title: "Lodging", icon: HotelIcon },
-      { title: "Attachments", icon: FolderArrowDownIcon },
-    ];
-
-    return (
-      <div className={TripLogisticsCss.TabsCtn}>
-        <div className={TripLogisticsCss.TabsWrapper}>
-          <h5 className={TripLogisticsCss.TabsCtnHeader}>
-            Logistics
-          </h5>
-          <div className={TripLogisticsCss.TabItemCtn}>
-            {tabs.map((tab: any, idx: number) => (
-              <button
-                key={idx} type="button"
-                className={TripLogisticsCss.TabItemBtn}
-              >
-                <tab.icon className='h-6 w-6 mb-1'/>
-                <span className={TripLogisticsCss.TabItemBtnTxt}>
-                  {tab.title}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
-      {/* {renderTabs()} */}
       <TripFlightsSection
         trip={props.trip}
         onFlightSelect={flightOnSelect}

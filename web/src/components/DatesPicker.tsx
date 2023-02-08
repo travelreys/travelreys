@@ -1,8 +1,12 @@
-import React, { FC, useState } from 'react';
+import React, { FC } from 'react';
 import { useMediaQuery } from 'usehooks-ts';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
-import { DayPicker, DateRange, SelectRangeEventHandler } from 'react-day-picker';
+import {
+  DayPicker,
+  DateRange,
+  SelectRangeEventHandler
+} from 'react-day-picker';
 
 interface InputDatesPicketProps {
   dates?: DateRange
