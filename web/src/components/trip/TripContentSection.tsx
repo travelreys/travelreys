@@ -189,6 +189,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         ""));
     } else {
       const itinCtn: Trips.ItineraryContent = {
+        id: uuidv4(),
         tripContentId: props.content.id,
         tripContentListId: props.contentListID,
         price: {} as any,
@@ -226,7 +227,6 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 
     const opts = props.itinerary.map((l: Trips.ItineraryList, idx: number) => {
       const isAdded = dates.includes(l.date as string);
-
       return (
         <button
           type='button'
@@ -241,7 +241,10 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 
     const datesBadge = dates
       .map((dt: string) => (
-        <span className="bg-indigo-100 text-indigo-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
+        <span
+          key={dt}
+          className="bg-indigo-100 text-indigo-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
+        >
           {printTime(parseTimeFromZ(dt), "MMM/dd")}
         </span>
       ));

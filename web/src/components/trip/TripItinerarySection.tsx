@@ -1,5 +1,6 @@
 import React, {
   FC,
+  useCallback,
   useEffect,
   useState,
 } from 'react';
@@ -7,21 +8,17 @@ import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import _find from "lodash/find";
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
   MapPinIcon,
-  TrashIcon
 } from '@heroicons/react/24/solid'
-import {
-  EllipsisHorizontalCircleIcon,
-  GlobeAltIcon,
-} from '@heroicons/react/24/outline'
 
-
-import PlacePicturesCarousel from './PlacePicturesCarousel';
-import Dropdown from '../Dropdown';
 import NotesEditor from '../NotesEditor';
+import PlaneIcon from '../icons/PlaneIcon';
+import HotelIcon from '../icons/HotelIcon';
 
 import TripsSyncAPI from '../../apis/tripsSync';
 import { Trips } from '../../apis/types';
@@ -37,8 +34,6 @@ import {
   parseTimeFromZ,
   printTime
 } from '../../utils/dates'
-import PlaneIcon from '../icons/PlaneIcon';
-import HotelIcon from '../icons/HotelIcon';
 
 
 // ItineraryContent
@@ -47,23 +42,48 @@ interface ItineraryContentProps {
   itineraryContentIdx: number
   itineraryContent: Trips.ItineraryContent
   tripStateOnUpdate: any
+
+  moveCard: (id: string, to: number) => void
+  findCard: (id: string) => { index: number }
 }
 
 const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProps) => {
 
   const { dispatch } = useMap();
 
-  // Event Handlers - Title
+  // Event Handles - DnD
 
-  const deleteBtnOnClick = () => {
-    const ops = [] as any;
-    // ops.push(
-    //   TripsSyncAPI.makeRemoveOp(
-    //     `/contents/${props.contentListID}/contents/${props.contentIdx}`,
-    //     "")
-    // );
-    props.tripStateOnUpdate(ops);
-  }
+  const originalIndex = props.findCard(props.itineraryContent.id).index;
+  const [{ isDragging }, drag] = useDrag(
+    () => ({
+      type: "ItineraryContent",
+      item: { id: props.itineraryContent.id, originalIndex },
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
+      end: (item, monitor) => {
+        const { id: droppedId, originalIndex } = item
+        const didDrop = monitor.didDrop()
+        if (!didDrop) {
+          props.moveCard(droppedId, originalIndex)
+        }
+      },
+    }),
+    [props.itineraryContent.id, originalIndex, props.moveCard],
+  )
+
+  const [, drop] = useDrop(
+    () => ({
+      accept: "ItineraryContent",
+      hover({ id: draggedId }: any) {
+        if (draggedId !== props.itineraryContent.id) {
+          const { index: overIndex } = props.findCard(props.itineraryContent.id)
+          props.moveCard(draggedId, overIndex)
+        }
+      },
+    }),
+    [props.findCard, props.moveCard],
+  )
 
   // Event Handlers - Places
 
@@ -110,7 +130,10 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
   }
 
   return (
-    <div className={TripItineraryCss.Ctn}>
+    <div
+      className={TripItineraryCss.Ctn}
+      ref={(node) => drag(drop(node))}
+    >
       {renderTitleInput()}
       {renderPlace()}
       <NotesEditor
@@ -125,10 +148,12 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 }
 
 
+
 // TripItineraryList
 
 interface TripItineraryListProps {
   trip: any
+  itineraryListIdx: number
   itineraryList: Trips.ItineraryList
   tripStateOnUpdate: any
 }
@@ -136,6 +161,43 @@ interface TripItineraryListProps {
 const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListProps) => {
 
   const [isHidden, setIsHidden] = useState<boolean>(false);
+  const [itinContents, setItinContents] = useState(props.itineraryList.contents);
+
+  useEffect(() => {
+    setItinContents(props.itineraryList.contents)
+  }, [props.itineraryList])
+
+
+  // Event Handlers
+  const replaceItineraryContents = (newItinContents: Array<Trips.ItineraryContent>) => {
+    const ops = [
+      TripsSyncAPI.makeReplaceOp(
+        `/itinerary/${props.itineraryListIdx}/contents`,
+        newItinContents
+      ),
+    ];
+    props.tripStateOnUpdate(ops);
+  }
+
+  // Helpers
+
+  const findCard = useCallback((id: string) => {
+    const itinContent = _find(itinContents, (cont: Trips.ItineraryContent) => cont.id === id);
+    // console.log(itinContent)
+    return {itinContent, index: itinContents.indexOf(itinContent!)}
+  }, [itinContents]);
+
+  const moveCard = useCallback((id: string, atIndex: number) => {
+    const { itinContent, index } = findCard(id);
+    itinContents.splice(index, 1);
+    itinContents.splice(atIndex, 0, itinContent!);
+    const newItinContents = itinContents.map((x) => x);
+    setItinContents(newItinContents);
+    replaceItineraryContents(newItinContents);
+  }, [findCard, itinContents, setItinContents])
+
+
+  const [, drop] = useDrop(() => ({ accept: "ItineraryContent" }))
 
   // Renderers
   const renderHeader = () => {
@@ -214,9 +276,9 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     const lodgings = Object.values(_get(props.trip, "lodgings", {}));
     const today = parseTimeFromZ(props.itineraryList.date as string);
 
-    const render = (place: any, checkin: boolean) => {
+    const render = (idx: number, place: any, checkin: boolean) => {
       return (
-        <div className="flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow">
+        <div key={idx} className="flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow">
           <span className='bg-indigo-200 p-2 rounded-full'><HotelIcon className='w-4 h-4' /></span>
           <div className="flex-1 pl-4 text-sm font-normal">{place.name}</div>
           <span className='pl-2 font-semibold text-sm'>{checkin ? "Check in": "Check out"}</span>
@@ -243,49 +305,49 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
     return (
       <div className='w-full mb-2'>
-        {checkouts.map((item: any) => render(item.place, false))}
-        {checkins.map((item: any) => render(item.place, true))}
+        {checkouts.map((item: any, idx: number) => render(idx, item.place, false))}
+        {checkins.map((item: any, idx: number) => render(idx, item.place, true))}
       </div>
     );
   }
 
   const renderContents = () => {
-    const itinConents = _get(props.itineraryList, "contents", []);
-    if (_isEmpty(itinConents)) {
+    if (_isEmpty(itinContents)) {
       return (
         <p className='text-gray-500'>
           No activites added for today.
         </p>
-      )
+      );
     }
+    const listItems = itinContents.map((itinCtn: Trips.ItineraryContent, idx: number) => {
+      const content = _find(
+        _get(props.trip, `contents.${itinCtn.tripContentListId}.contents`, []),
+        (ctn: Trips.Content) => ctn.id === itinCtn.tripContentId);
+      return (
+        <li
+          key={idx}
+          className="mb-8 ml-6"
+        >
+          <span className="absolute flex items-center justify-center w-6 h-6 bg-yellow-200 rounded-full -left-3 ring-8 ring-white font-bold text-gray-500 text-sm">
+            {idx + 1}
+          </span>
+          <ItineraryContent
+            content={content}
+            itineraryContentIdx={idx}
+            itineraryContent={itinCtn}
+            tripStateOnUpdate={props.tripStateOnUpdate}
+            findCard={findCard}
+            moveCard={moveCard}
+          />
+        </li>
+      );
+    })
+
     return (
-      <div className='pl-6 mt-4'>
-        <ol className='relative border-l border-gray-200'>
-          {itinConents.map((itinCtn: Trips.ItineraryContent, idx: number) => {
-            const contentList = _get(props.trip, `contents.${itinCtn.tripContentListId}`);
-            const content = _find(
-              contentList.contents,
-              (ctn: Trips.Content) => ctn.id === itinCtn.tripContentId);
-
-            return (
-              <li
-                key={idx}
-                className="mb-10 ml-6"
-
-              >
-                <span className="absolute flex items-center justify-center w-6 h-6 bg-yellow-200 rounded-full -left-3 ring-8 ring-white font-bold text-gray-500 text-sm">
-                  {idx + 1}
-                </span>
-                <ItineraryContent
-                  content={content}
-                  itineraryContentIdx={idx}
-                  itineraryContent={itinCtn}
-                  tripStateOnUpdate={props.tripStateOnUpdate}
-                />
-              </li>
-            );
-          })}
-        </ol>
+      <div className='pl-6 py-4'>
+        <ol ref={drop} className='relative border-l border-gray-200'>
+          {listItems}
+       </ol>
       </div>
     );
   }
@@ -316,16 +378,16 @@ const TripItinerarySection: FC<TripItinerarySectionProps> = (props: TripItinerar
 
   return (
     <div className='p-5'>
-      {
-        _get(props.trip, "itinerary", []).map((l: any) => (
-        <div key={l.id}>
+      {_get(props.trip, "itinerary", []).map((l: any, idx: number) => (
+        <DndProvider key={l.id} backend={HTML5Backend}>
           <TripItineraryList
             trip={props.trip}
+            itineraryListIdx={idx}
             itineraryList={l}
             tripStateOnUpdate={props.tripStateOnUpdate}
           />
           <hr className={TripItinerarySectionCss.Hr} />
-        </div>
+        </DndProvider>
       ))
     }
     </div>

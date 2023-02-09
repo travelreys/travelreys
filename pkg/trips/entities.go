@@ -178,6 +178,7 @@ type TripContentComment struct {
 // Itinerary
 
 type ItineraryContent struct {
+	ID                string `json:"id" bson:"id"`
 	TripContentListID string `json:"tripContentListId" bson:"tripContentListId"`
 	TripContentID     string `json:"tripContentId" bson:"tripContentId"`
 

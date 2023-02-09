@@ -139,7 +139,8 @@ export namespace Trips {
   }
 
   export interface ItineraryContent {
-   tripContentListId: string
+    id: string
+    tripContentListId: string
     tripContentId: string
     price: Common.PriceMetadata
     startTime?: string | Date

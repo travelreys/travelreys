@@ -210,7 +210,7 @@ export const TripItinerarySectionCss = {
 }
 
 export const TripItineraryListCss = {
-  Ctn: "rounded-lg shadow-xs mb-4",
+  Ctn: "rounded-lg shadow-xs mb-12",
   NameInput: "p-0 w-full text-xl mb-1 sm:text-2xl font-bold text-gray-800 placeholder:text-gray-400 rounded border-0 hover:bg-gray-300 hover:border-0 focus:ring-0 focus:p-1 duration-500",
   NewContentCtn: "flex my-4 w-full",
   NewContentInput: "flex-1 mr-1 text-md sm:text-md font-bold text-gray-800 placeholder:font-normal placeholder:text-gray-300 placeholder:italic rounded border-0 bg-gray-100 hover:border-0 focus:ring-0",
@@ -218,7 +218,7 @@ export const TripItineraryListCss = {
 }
 
 export const TripItineraryCss = {
-  Ctn: "bg-slate-50 rounded-lg shadow-xs mb-4 p-4 relative",
+  Ctn: "bg-slate-50 rounded-lg shadow-xs mb-4 p-4 relative shadow",
   TitleInput: "p-0 mb-1 font-bold text-gray-800 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
   AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
   PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
