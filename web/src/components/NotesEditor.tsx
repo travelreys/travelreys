@@ -55,6 +55,7 @@ interface NotesEditorProps {
   ctnCss?: string
   placeholder?: string
   notesOnChange: any
+  readOnly?: boolean
 }
 
 const NotesEditor: FC<NotesEditorProps> = (props: NotesEditorProps) => {
@@ -109,6 +110,7 @@ const NotesEditor: FC<NotesEditorProps> = (props: NotesEditorProps) => {
           renderElement={renderElement}
           renderLeaf={renderLeaf}
           spellCheck
+          readOnly={props.readOnly}
           placeholder={props.placeholder}
         />
       </Slate>

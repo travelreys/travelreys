@@ -2,10 +2,13 @@ import React, { FC, useState } from 'react';
 import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
+import { ChevronUpIcon } from '@heroicons/react/24/solid';
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
 
 interface DropdownProps {
   menu: any
   opts: any
+  displayChevron?: boolean
   placement?: string
 }
 
@@ -27,10 +30,22 @@ const Dropdown: FC<DropdownProps> = (props: DropdownProps) => {
     </div>
   )
 
+  // Renderers
+
+  const renderChevrons = () => {
+    if (props.displayChevron) {
+      return isActive ?
+      <ChevronUpIcon className={"h-4 w-4 text-slate-700"} />
+      : <ChevronDownIcon className={"h-4 w-4 text-slate-700"} />
+    }
+    return null;
+  }
+
   return (
     <div className='relative'>
       <button
         type="button"
+        className='flex items-center'
         onClick={() => { setIsActive(!isActive) }}
         onBlur={() => {
           setTimeout(() => {
@@ -39,6 +54,8 @@ const Dropdown: FC<DropdownProps> = (props: DropdownProps) => {
         }}
       >
         {props.menu}
+        &nbsp;
+        {renderChevrons()}
       </button>
       {isActive ? opts : null}
     </div>

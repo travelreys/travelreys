@@ -9,6 +9,7 @@ import _isEmpty from "lodash/isEmpty";
 import { v4 as uuidv4 } from 'uuid';
 import { useDebounce } from 'usehooks-ts';
 import {
+  CheckIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   MapPinIcon,
@@ -34,13 +35,15 @@ import {
   TripContentListCss,
   TripContentCss
 } from '../../styles/global';
+import { areYMDEqual, parseTimeFromZ, printTime } from '../../utils/dates';
 
 
 // TripContent
 interface TripContentProps {
+  content: Trips.Content
   contentListID: string
   contentIdx: number
-  content: Trips.Content
+  itinerary: Array<Trips.ItineraryList>
   tripStateOnUpdate: any
 }
 
@@ -77,7 +80,6 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
       setPredictions(_get(res, "data.predictions", []))
     });
   }
-
 
   // Event Handlers - Title
   const titleInputOnBlur = () => {
@@ -136,20 +138,126 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
   }
 
   // Event Handlers - Notes
-  const notesOnChange = () => {}
+  const notesOnChange = (content: string) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeReplaceOp(
+      `/contents/${props.contentListID}/contents/${props.contentIdx}/notes`,
+      content
+    ));
+    props.tripStateOnUpdate(ops);
+  }
+
+  // Event Handlers - Itinerary
+  const itineraryBtnOnClick = (l: Trips.ItineraryList, lIdx: number) => {
+    const ops = [];
+    const _dt = l.date as string;
+
+    // Update content labels
+    let currentDts = _get(props.content, "labels.itinerary|dates", "")
+      .split("|")
+      .filter((dt: string) => !_isEmpty(dt));
+
+    let dts;
+    if (currentDts.includes(_dt)) {
+      dts = currentDts.filter((dt: string) => dt !== _dt)
+    } else {
+      currentDts.push(_dt);
+      dts = _sortBy(currentDts);
+    }
+
+    if (_get(props.content, "labels.itinerary|dates")) {
+      ops.push(TripsSyncAPI.makeReplaceOp(
+        `/contents/${props.contentListID}/contents/${props.contentIdx}/labels/itinerary|dates`,
+        dts.join("|")));
+    } else {
+      ops.push(TripsSyncAPI.makeAddOp(
+        `/contents/${props.contentListID}/contents/${props.contentIdx}/labels/itinerary|dates`,
+        dts.join("|")));
+    }
+
+    // Update itinerary
+    currentDts = _get(props.content, "labels.itinerary|dates", "").split("|");
+    if (currentDts.includes(_dt)) {
+      let itinCtnIdx;
+      l.contents.forEach((ct: Trips.ItineraryContent, idx: number) => {
+        if (ct.tripContentId === props.content.id) {
+          itinCtnIdx = idx;
+        }
+      });
+      ops.push(TripsSyncAPI.makeRemoveOp(
+        `/itinerary/${lIdx}/contents/${itinCtnIdx}`,
+        ""));
+    } else {
+      const itinCtn: Trips.ItineraryContent = {
+        tripContentId: props.content.id,
+        tripContentListId: props.contentListID,
+        price: {} as any,
+        labels: new Map<string,string>(),
+      };
+      ops.push(TripsSyncAPI.makeAddOp(
+        `/itinerary/${lIdx}/contents/-`,
+        itinCtn))
+    }
+    props.tripStateOnUpdate(ops);
+  }
+
+
 
   // Renderers
-  const renderTitleInput = () => {
+  const renderSettingsDropdown = () => {
     const opts = [
       <button
-          type='button'
-          className={TripContentCss.DeleteBtn}
-          onClick={deleteBtnOnClick}
-        >
+        type='button'
+        className={TripContentCss.DeleteBtn}
+        onClick={deleteBtnOnClick}
+      >
         <TrashIcon className='h-4 w-4 mr-2' />Delete
       </button>
     ];
-    const menu = <EllipsisHorizontalCircleIcon className='h-4 w-4' />;
+    const menu = (
+      <EllipsisHorizontalCircleIcon className='h-4 w-4 mt-1' />
+    );
+    return <Dropdown menu={menu} opts={opts} />
+  }
+
+  const renderItineraryDropdown = () => {
+    const dates = _get(props.content, "labels.itinerary|dates", "")
+      .split("|").filter((dt: string) => !_isEmpty(dt));
+
+    const opts = props.itinerary.map((l: Trips.ItineraryList, idx: number) => {
+      const isAdded = dates.includes(l.date as string);
+
+      return (
+        <button
+          type='button'
+          className={TripContentCss.ItineraryDateBtn}
+          onClick={() => {itineraryBtnOnClick(l, idx)}}
+        >
+          {printTime(parseTimeFromZ(l.date as string), "eee, do MMMM") }
+          { isAdded ? <CheckIcon className='w-4 h-4' /> : null}
+        </button>
+      );
+    });
+
+    const datesBadge = dates
+      .map((dt: string) => (
+        <span className="bg-indigo-100 text-indigo-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
+          {printTime(parseTimeFromZ(dt), "MMM/dd")}
+        </span>
+      ));
+
+    const emptyBtn = (
+      <span className='text-xs text-gray-800 font-bold bg-indigo-200 rounded-full px-2 py-1 hover:bg-indigo-400'>
+        Add to Itinerary
+      </span>
+    );
+    const menu = (<div>{dates.length === 0 ? emptyBtn : datesBadge}</div>);
+
+    return <Dropdown menu={menu} opts={opts} />
+  }
+
+
+  const renderTitleInput = () => {
     return (
       <div className='flex justify-between'>
         <input
@@ -160,7 +268,11 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
           placeholder="Add a name"
           className={TripContentCss.TitleInput}
         />
-        <Dropdown menu={menu} opts={opts} />
+        <div className='flex items-center'>
+          {renderItineraryDropdown()}
+          &nbsp;&nbsp;
+          {renderSettingsDropdown()}
+        </div>
       </div>
     );
   }
@@ -233,6 +345,18 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     );
   }
 
+  const renderWebsite = () => {
+    return _isEmpty(_get(props.content, "place.website", "")) ? null
+    : <a
+        className='flex items-center mb-1'
+        href={_get(props.content, "place.website")}
+        target="_blank"
+      >
+        <GlobeAltIcon className='h-4 w-4' />&nbsp;
+        <span className={TripContentCss.WebsiteTxt}>Website</span>
+      </a>
+  }
+
   const renderPlacePicturesCarousel = () => {
     const photos = _get(props.content, "place.photos", []);
     if (_isEmpty(photos)) {
@@ -247,15 +371,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
       {renderTitleInput()}
       {renderPlace()}
       {renderPlacesAutocomplete()}
-      { _isEmpty(_get(props.content, "place.website", "")) ? null
-        : <a
-            className='flex items-center mb-1'
-            href={_get(props.content, "place.website")}
-            target="_blank">
-              <GlobeAltIcon className='h-4 w-4' />&nbsp;
-              <span className={TripContentCss.WebsiteTxt}>Website</span>
-            </a>
-      }
+      {renderWebsite()}
       <NotesEditor
         ctnCss='p-0 mb-2'
         base64Notes={props.content.notes}
@@ -271,6 +387,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 // TripContentList
 
 interface TripContentListProps {
+  itinerary: any
   contentList: Trips.ContentList
   tripStateOnUpdate: any
 }
@@ -336,6 +453,7 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
         {contents.map((content: any, idx: number) => (
           <TripContent
             key={idx}
+            itinerary={props.itinerary}
             content={content}
             contentListID={props.contentList.id}
             contentIdx={idx}
@@ -372,15 +490,17 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
 
   return (
     <div className={TripContentListCss.Ctn}>
-      {renderHiddenToggle()}
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onBlur={nameOnBlur}
-        placeholder={`Add a title (e.g, "Food to try")`}
-        className={TripContentListCss.NameInput}
-      />
+      <div className='flex'>
+        {renderHiddenToggle()}
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={nameOnBlur}
+          placeholder={`Add a title (e.g, "Food to try")`}
+          className={TripContentListCss.NameInput}
+        />
+      </div>
       {renderTripContent()}
       {renderAddNewContent()}
     </div>
@@ -434,6 +554,7 @@ const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSecti
       return (
       <div key={contentList.id}>
         <TripContentList
+          itinerary={props.trip.itinerary}
           contentList={contentList}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />

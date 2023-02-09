@@ -31,6 +31,7 @@ import { TripMenuCss } from '../../styles/global';
 import { MapsProvider } from '../../context/maps-context';
 import { NewSyncMessageHeap } from '../../utils/heap';
 import TripNotesSection from '../../components/trip/TripNotes';
+import TripItinerarySection from '../../components/trip/TripItinerarySection';
 
 
 // TripPlanningMenu
@@ -109,6 +110,17 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
     );
   }
 
+  const renderItinerary = () => {
+    return (
+      <div>
+        <TripItinerarySection
+          trip={props.trip}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+      </div>
+    );
+  }
+
   return (
     <aside className={TripMenuCss.TripMenuCtn}>
       <div className={TripMenuCss.TripMenu}>
@@ -119,6 +131,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
         />
         {renderTabs()}
         { tab === "home" ? renderHome() : null}
+        { tab === "itinerary" ? renderItinerary() : null}
       </div>
     </aside>
   );

@@ -138,6 +138,23 @@ export namespace Trips {
     contents: Array<Content>
   }
 
+  export interface ItineraryContent {
+   tripContentListId: string
+    tripContentId: string
+    price: Common.PriceMetadata
+    startTime?: string | Date
+    endTime?: string | Date
+    labels: Map<string, string>
+  }
+
+  export interface ItineraryList {
+    id: string
+    desc: string
+    date: string | Date
+    contents: Array<ItineraryContent>
+    labels: Map<string, string>
+  }
+
 }
 
 
