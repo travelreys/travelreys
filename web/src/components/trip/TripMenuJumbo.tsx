@@ -1,7 +1,6 @@
 import React, { ChangeEvent, FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
-import { parseJSON, parseISO } from 'date-fns';
 import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
 import {
   CalendarDaysIcon,
@@ -20,9 +19,9 @@ import Spinner from '../../components/Spinner';
 import { TripMenuJumboCss } from '../../styles/global';
 import {
   nullDate,
-  isEmptyDate,
   printFromDateFromRange,
-  printToDateFromRange
+  printToDateFromRange,
+  parseTripDate
 } from '../../utils/dates';
 
 
@@ -140,18 +139,10 @@ interface TripMenuJumboProps {
   tripStateOnUpdate: any
 }
 
-const parseTripDate = (tripDate: string | undefined) => {
-  if (_isEmpty(tripDate)) {
-    return undefined;
-  }
-  const td = tripDate!
-  return isEmptyDate(parseISO(td)) ? undefined : parseISO(td);
-}
-
 const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
 
   // State
-  const [tripName, setTripName] = useState<string>();
+  const [tripName, setTripName] = useState<string>("");
   const [startDt, setStartDt] = useState<Date|undefined>();
   const [endDt, setEndDt] = useState<Date|undefined>();
 

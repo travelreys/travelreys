@@ -10,7 +10,13 @@ import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import { applyPatch,  } from 'json-joy/es6/json-patch';
 import { WebsocketEvents } from 'websocket-ts/lib';
-import { GlobeAmericasIcon } from '@heroicons/react/24/outline'
+import {
+  BanknotesIcon,
+  CalendarDaysIcon,
+  FolderArrowDownIcon,
+  GlobeAmericasIcon,
+  HomeIcon
+} from '@heroicons/react/24/outline'
 
 import TripsAPI from '../../apis/trips';
 import TripsSyncAPI, { JSONPatchOp } from '../../apis/tripsSync';
@@ -24,6 +30,8 @@ import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
 import { TripMenuCss } from '../../styles/global';
 import { MapsProvider } from '../../context/maps-context';
 import { NewSyncMessageHeap } from '../../utils/heap';
+import TripNotesSection from '../../components/trip/TripNotes';
+import TripItinerarySection from '../../components/trip/TripItinerarySection';
 
 
 // TripPlanningMenu
@@ -34,6 +42,9 @@ interface TripPlanningMenuProps {
 }
 
 const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProps) => {
+
+  const [tab, setTab] = useState("home");
+
 
   // Renderers
   const renderNavBar = () => {
@@ -49,11 +60,40 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
     );
   }
 
-  return (
-    <aside className={TripMenuCss.TripMenuCtn}>
-      <div className={TripMenuCss.TripMenu}>
-        {renderNavBar()}
-        <TripMenuJumbo
+  const renderTabs = () => {
+    const tabs = [
+      { title: "Home", icon: HomeIcon },
+      { title: "Itinerary", icon: CalendarDaysIcon },
+      { title: "Budget", icon: BanknotesIcon },
+      { title: "Attachments", icon: FolderArrowDownIcon },
+    ];
+
+    return (
+      <div className={TripMenuCss.TabsCtn}>
+        <div className={TripMenuCss.TabsWrapper}>
+          <div className={TripMenuCss.TabItemCtn}>
+            {tabs.map((tab: any, idx: number) => (
+              <button
+                key={idx} type="button"
+                className={TripMenuCss.TabItemBtn}
+                onClick={() => { setTab(tab.title.toLowerCase())} }
+              >
+                <tab.icon className='h-6 w-6 mb-1'/>
+                <span className={TripMenuCss.TabItemBtnTxt}>
+                  {tab.title}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const renderHome = () => {
+    return (
+      <div>
+        <TripNotesSection
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
@@ -66,6 +106,32 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
+      </div>
+    );
+  }
+
+  const renderItinerary = () => {
+    return (
+      <div>
+        <TripItinerarySection
+          trip={props.trip}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <aside className={TripMenuCss.TripMenuCtn}>
+      <div className={TripMenuCss.TripMenu}>
+        {renderNavBar()}
+        <TripMenuJumbo
+          trip={props.trip}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+        {renderTabs()}
+        { tab === "home" ? renderHome() : null}
+        { tab === "itinerary" ? renderItinerary() : null}
       </div>
     </aside>
   );
@@ -210,13 +276,10 @@ const TripPage: FC = () => {
           tripStateOnUpdate={tripStateOnUpdate}
         />
         <div className='flex-1' ref={measuredRef}>
-          <div className="fixed w-screen h-screen"
-            style={{width: mapDivWidth}}>
-            <TripMap
-              trip={tripRef.current}
-              width={mapDivWidth}
-            />
-          </div>
+          <TripMap
+            trip={tripRef.current}
+            width={mapDivWidth}
+          />
         </div>
       </div>
     </MapsProvider>

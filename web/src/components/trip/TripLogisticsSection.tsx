@@ -7,12 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
-  FolderArrowDownIcon
 } from '@heroicons/react/24/outline'
 
-import BusIcon from '../icons/BusIcon';
-import HotelIcon from '../icons/HotelIcon';
-import PlaneIcon from '../icons/PlaneIcon';
 import TripFlightsModal from './TripFlightsModal';
 
 import { Trips } from '../../apis/types';
@@ -89,6 +85,7 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
       </div>
       {renderItineraries()}
       <TripFlightsModal
+        trip={props.trip}
         isOpen={isTripFlightsModalOpen}
         onFlightSelect={onFlightSelect}
         onClose={() => { setIsTripFlightsModalOpen(false)}}
@@ -164,6 +161,7 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
       </div>
       {renderLodgings()}
       <TripLodgingsModal
+        trip={props.trip}
         isOpen={isLodgingModalOpen}
         onLodgingSelect={onLodgingSelect}
         onClose={() => { setIsLogdingModalOpen(false) }}
@@ -220,41 +218,8 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   // Renderers
 
-  const renderTabs = () => {
-    const tabs = [
-      { title: "Flights", icon: PlaneIcon },
-      { title: "Transits", icon: BusIcon },
-      { title: "Lodging", icon: HotelIcon },
-      { title: "Attachments", icon: FolderArrowDownIcon },
-    ];
-
-    return (
-      <div className={TripLogisticsCss.TabsCtn}>
-        <div className={TripLogisticsCss.TabsWrapper}>
-          <h5 className={TripLogisticsCss.TabsCtnHeader}>
-            Logistics
-          </h5>
-          <div className={TripLogisticsCss.TabItemCtn}>
-            {tabs.map((tab: any, idx: number) => (
-              <button
-                key={idx} type="button"
-                className={TripLogisticsCss.TabItemBtn}
-              >
-                <tab.icon className='h-6 w-6 mb-1'/>
-                <span className={TripLogisticsCss.TabItemBtnTxt}>
-                  {tab.title}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
-      {renderTabs()}
       <TripFlightsSection
         trip={props.trip}
         onFlightSelect={flightOnSelect}

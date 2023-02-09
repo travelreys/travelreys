@@ -7,13 +7,27 @@ import React, {
 import _get from "lodash/get";
 import _flatten from "lodash/flatten";
 import _isEmpty from "lodash/isEmpty";
-
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
-import { PLACE_IMAGE_APIKEY } from '../../apis/maps';
+import {
+  ClockIcon,
+  StarIcon,
+  MapPinIcon,
+  PhoneIcon,
+  GlobeAltIcon,
+} from '@heroicons/react/24/solid'
+import {
+  XMarkIcon
+} from '@heroicons/react/24/outline'
+
+import MapsAPI, {
+  placeAtmosphereFields,
+  PLACE_IMAGE_APIKEY
+} from '../../apis/maps';
 
 import Spinner from '../Spinner';
 import { makeActivityPin, makeHotelPin } from './GMapsPinIcon';
 import { useMap } from '../../context/maps-context';
+import GoogleIcon from '../icons/GoogleIcon';
 
 
 const defaultMapCenter = { lat: 33.3960897, lng: 126.264522 }
@@ -119,10 +133,11 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
     map.current = new window.google.maps.Map(ref.current, defaultMapOpts)
     map.current.addListener("center_changed", () => {
       currentMapCenter.current = map.current.getCenter();
-      if (state.selectedPlace !== null) {
-        dispatch({type:"setSelectedPlace", value: null})
-      }
     });
+    ref.current.addEventListener("marker_click", (e: any) => {
+      const center = _get(e.detail, "geometry.location", defaultMapCenter);
+      map.current.setCenter(center);
+    })
   }, [])
 
   useEffect(() => {
@@ -178,6 +193,21 @@ interface TripMapComponentProps {
 
 const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
 
+  const {state} = useMap();
+  const [placeDetails, setPlaceDetails] = useState(null) as any;
+
+  // API
+  useEffect(() => {
+    if (state.selectedPlace === null) {
+      return;
+    }
+    const placeID = state.selectedPlace.place_id;
+    MapsAPI.placeDetails(placeID, placeAtmosphereFields, "")
+    .then((res) => {
+      setPlaceDetails(_get(res, "data.place", null));
+    })
+  }, [state.selectedPlace]);
+
   // Map Markers
   const lodgingToMapMarkers = () => {
     const lodgings = _get(props.trip, "lodgings", {});
@@ -207,19 +237,127 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
   }
 
   // Renderer
-  const render = (status: Status): React.ReactElement => {
+  const renderMap = (status: Status): React.ReactElement => {
     if (status === Status.FAILURE) return <Spinner />;
     return <Spinner />;
   };
 
+  const renderPlaceDetailsCard = () => {
+    if (placeDetails === null) {
+      return null;
+    }
+
+    const renderHeader = () => {
+      return (
+        <p className='font-bold text-lg flex justify-between items-center'>
+          {placeDetails.name}
+          <button type="button" onClick={() => {setPlaceDetails(null)}}>
+            <XMarkIcon className='h-6 w-6' />
+          </button>
+        </p>
+      );
+    }
+
+    const renderRatings = () => {
+      return (
+        <p className='text-yellow-500 flex items-center mb-1'>
+          <StarIcon className="h-4 w-4" />&nbsp;
+          {placeDetails.rating}&nbsp;&nbsp;
+          <span className='text-gray-600'>
+            ({placeDetails.user_ratings_total})
+          </span>
+          &nbsp;&nbsp;
+          <GoogleIcon className="h-4 w-4 mt-1" />
+        </p>
+      );
+    }
+
+    const renderPhone = () => {
+      return placeDetails.international_phone_number ?
+      <p className='text-gray-600 flex items-center mb-1'>
+        <PhoneIcon className='h-4 w-4' />&nbsp;
+        {placeDetails.international_phone_number}
+      </p>
+      : null
+    }
+
+    const renderWebsite = () => {
+      return placeDetails.website ?
+      <a
+        href={placeDetails.website}
+        target="_blank"
+        className='text-indigo-500 flex items-center mb-1'>
+        <GlobeAltIcon className='h-4 w-4 text-gray-600 mr-2' />
+        Website
+      </a>
+      : null
+    }
+
+    const renderOpeningHours = () => {
+      const weekdayTexts = _get(placeDetails, "opening_hours.weekday_text", []);
+      if (_isEmpty(weekdayTexts)) {
+        return null;
+      }
+      const text = weekdayTexts.map((txt: string, idx: number) =>
+        (<p key={idx} className="text-slate-600 ml-6">{txt}</p>)
+      )
+      return (
+        <div>
+          <p className='flex text-gray-600 items-center truncate'>
+            <ClockIcon className='h-4 w-4 mr-2'/>Opening hours
+          </p>
+          {text}
+        </div>
+      );
+    }
+
+    const renderGmapBtn = () => {
+      return (
+        <a
+          href={placeDetails.url}
+          className='flex w-fit rounded-full py-2 px-6 mt-8 items-center border border-gray-200 font-semibold text-gray-500'>
+          <GoogleIcon className='h-4 w-4 mr-2'/> Google Maps
+        </a>
+      );
+    }
+
+    return (
+      <div className='bg-white p-4 mx-4 h-11/12 w-11/12 max-w-3xl rounded-xl pointer-events-auto'>
+        {renderHeader()}
+        <p className='text-gray-600 mb-1'>
+          {_get(placeDetails, "editorial_summary.overview", "")}
+        </p>
+        <p className='text-gray-600 flex items-center mb-1'>
+          <MapPinIcon className="h-4 w-4" />&nbsp;
+          {placeDetails.formatted_address}
+        </p>
+        {renderRatings()}
+        {renderPhone()}
+        {renderWebsite()}
+        {renderOpeningHours()}
+        {renderGmapBtn()}
+      </div>
+    );
+  }
+
+
+
   return (
-    <Wrapper
-      apiKey={PLACE_IMAGE_APIKEY}
-      render={render}
-      libraries={["marker"]}
-    >
-      <InnerMap markers={makeMarkers()} width={props.width} />
-    </Wrapper>
+    <div className='fixed w-screen h-screen'>
+      <div
+        className='absolute bottom-0 mb-8 z-10 pointer-events-none'
+        style={{width: props.width}}
+      >
+        {renderPlaceDetailsCard()}
+      </div>
+      <Wrapper
+        apiKey={PLACE_IMAGE_APIKEY}
+        render={renderMap}
+        libraries={["marker"]}
+      >
+        <InnerMap markers={makeMarkers()} width={props.width} />
+      </Wrapper>
+    </div>
   );
 }
 

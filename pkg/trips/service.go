@@ -27,6 +27,19 @@ func NewService(store Store, imageSvc images.Service) Service {
 func (svc *service) CreateTripPlan(ctx reqctx.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error) {
 	plan := NewTripPlanWithDates(creator, name, start, end)
 	plan.CoverImage = stockImageList[rand.Intn(len(stockImageList))]
+
+	// bootstrap 1 content list
+	contentList := NewTripContentList("")
+	plan.Contents[contentList.ID] = contentList
+
+	// bootstrap itinerary dates
+	numDays := plan.EndDate.Sub(plan.StartDate).Hours() / 24
+	for i := 0; i <= int(numDays); i++ {
+		dt := plan.StartDate.Add(time.Duration(i*24) * time.Hour)
+		itinList := NewItineraryList(dt)
+		plan.Itinerary = append(plan.Itinerary, itinList)
+	}
+
 	err := svc.store.SaveTripPlan(ctx, plan)
 	return plan, err
 }

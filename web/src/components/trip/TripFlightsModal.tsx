@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
@@ -12,18 +12,20 @@ import {
   PaperAirplaneIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
-import { ModalCss, FlightsModalCss } from '../../styles/global';
+import { FlightsModalCss } from '../../styles/global';
 
 import FlightsAPI from '../../apis/flights';
 import { Trips } from '../../apis/types';
 import Alert from '../Alert';
+import Modal from '../Modal';
 import InputDatesPicker from '../InputDatesPicker';
 import Spinner from '../../components/Spinner';
 import OnewayFlightsContainer from './OnewayFlightsContainer';
 import RoundtripFlightsContainer from './RoundtripFlightsContainer';
 import {
   printFromDateFromRange,
-  printToDateFromRange
+  printToDateFromRange,
+  parseTripDate
 } from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
 
@@ -37,6 +39,7 @@ const cabinClasses = [
 ];
 
 interface TripFlightsSearchFormProps {
+  readonly trip: any
   onSearch: any
 }
 
@@ -54,6 +57,14 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
   const [isDestIATAFocus, setIsDestIATAFocus] = useState(false);
   const [origIATAQuery, setOrigIATAQuery] = useState("");
   const [destIATAQuery, setDestIATAQuery] = useState("");
+
+
+  useEffect(() => {
+    setFlightDates({
+      from: parseTripDate(props.trip.startDate || undefined),
+      to: parseTripDate(props.trip.endDate || undefined),
+    });
+  }, [props.trip])
 
   // Event Handlers
   const searchBtnOnClick = () => {
@@ -129,17 +140,17 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
       <div className={FlightsModalCss.AirportSearchOptCts}>
         <ul className={FlightsModalCss.AirportSearchOptList}>
           {FlightsAPI.airportAutocomplete(query).map((ap: any) => (
-              <li
-                key={ap.iata}
-                className={FlightsModalCss.AirportSearchOpt}
-                onClick={() => {
-                  setIATA(ap.iata);
-                  setQuery(capitaliseWords(ap.airport));
-                  setFocus(false)}
-                }
-              >
-                {capitaliseWords(ap.airport)} ({ap.iata.toUpperCase()})
-              </li>
+            <li
+              key={ap.iata}
+              className={FlightsModalCss.AirportSearchOpt}
+              onClick={() => {
+                setIATA(ap.iata);
+                setQuery(capitaliseWords(ap.airport));
+                setFocus(false)}
+              }
+            >
+              {capitaliseWords(ap.airport)} ({ap.iata.toUpperCase()})
+            </li>
             ))}
         </ul>
       </div>
@@ -199,6 +210,7 @@ const TripFlightsSearchForm: FC<TripFlightsSearchFormProps> = (props: TripFlight
 // TripFlightsModal
 
 interface TripFlightsModalProps {
+  readonly trip: any
   isOpen: boolean
   onClose: any
   onFlightSelect: any
@@ -279,6 +291,10 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
   }
 
   // Renderers
+  const renderAlert = () => {
+    return !_isEmpty(alertMsg) ? <Alert title={""} message={alertMsg} /> : null
+  }
+
   const renderItineraries = () => {
     if (!searchInitiated) {
       return (<></>);
@@ -307,28 +323,21 @@ const TripFlightsModal: FC<TripFlightsModalProps> = (props: TripFlightsModalProp
   }
 
   return (
-    <div className={ModalCss.Container}>
-      <div className={ModalCss.Inset}></div>
-      <div className={ModalCss.Content}>
-        <div className={ModalCss.ContentContainer}>
-          <div className={ModalCss.ContentCard}>
-            <div className="px-4 pt-5 sm:p-8 sm:pb-2 rounded-t-lg mb-4">
-              <div className='flex justify-between mb-6'>
-                <h2 className="text-xl sm:text-2xl font-bold text-center text-slate-900">
-                  Search flights
-                </h2>
-                <button type="button" onClick={props.onClose}>
-                  <XMarkIcon className='h-6 w-6 text-slate-700' />
-                </button>
-              </div>
-              {!_isEmpty(alertMsg) ? <Alert title={""} message={alertMsg} /> : null}
-              <TripFlightsSearchForm onSearch={onSearch} />
-              {renderItineraries()}
-            </div>
-          </div>
+    <Modal isOpen={props.isOpen}>
+      <div className={FlightsModalCss.Ctn}>
+        <div className={FlightsModalCss.Wrapper}>
+          <h2 className={FlightsModalCss.Header}>
+            Search flights
+          </h2>
+          <button type="button" onClick={props.onClose}>
+            <XMarkIcon className={FlightsModalCss.CloseIcon} />
+          </button>
         </div>
+        {renderAlert()}
+        <TripFlightsSearchForm trip={props.trip} onSearch={onSearch} />
+        {renderItineraries()}
       </div>
-    </div>
+    </Modal>
   );
 }
 

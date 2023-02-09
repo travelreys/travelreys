@@ -36,6 +36,15 @@ export const placeFields = [
   "formatted_phone_number",
   "international_phone_number",
   "website",
+  "url",
 ];
+export const placeAtmosphereFields = placeFields.concat([
+  "editorial_summary",
+  "price_level",
+  "rating",
+  "reviews",
+  "user_ratings_total"
+]);
+
 export const EMBED_MAPS_APIKEY = "AIzaSyBaqenQ0nQVtkhnXBn-oWBtlPDL5uHmvNU";
 export const PLACE_IMAGE_APIKEY = "AIzaSyBgNwirAT6TSS208emcC0Lbgex6i3EwhR0";

@@ -3,7 +3,6 @@ package maps
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -87,9 +86,8 @@ func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []s
 		}
 		req.SessionToken = maps.PlaceAutocompleteSessionToken(stuuid)
 	}
-	fmt.Println(req)
+
 	res, err := svc.c.PlaceDetails(ctx, req)
-	fmt.Println(res)
 	return Place{res}, err
 
 }

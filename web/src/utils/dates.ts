@@ -13,7 +13,7 @@ import { DateRange } from 'react-day-picker';
 
 export const nullDate = parseJSON("0001-01-01T00:00:00Z");
 export const isEmptyDate = (date: Date | string | undefined) => {
-  if (date === undefined) {
+  if (date === undefined || date === "") {
     return true;
   }
   if (typeof date === "object") {
@@ -39,9 +39,18 @@ export const printToDateFromRange = (range: DateRange | undefined, fmt: string) 
 }
 
 export const parseTimeFromZ = (date: string) => {
-  const d = date.substring(0, date.length - 1);
-  return parseISO(d);
+  // const d = date.substring(0, date.length - 1);
+  return parseISO(date);
 }
+
+export const parseTripDate = (tripDate: string | undefined) => {
+  if (_isEmpty(tripDate)) {
+    return undefined;
+  }
+  const td = tripDate!
+  return isEmptyDate(parseISO(td)) ? undefined : parseISO(td);
+}
+
 
 export const printTime = (date: Date, fmt: string) => {
   return format(date, fmt);
@@ -55,4 +64,9 @@ export const prettyPrintMins = (mins: number) => {
   return formatDuration(duration);
 }
 
-
+export const areYMDEqual = (date1: Date, date2: Date) => {
+  return isEqual(
+    new Date(date1.getFullYear(), date1.getMonth(), date1.getDate()),
+    new Date(date2.getFullYear(), date2.getMonth(), date2.getDate()),
+  )
+}

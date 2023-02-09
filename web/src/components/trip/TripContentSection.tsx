@@ -8,22 +8,42 @@ import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import { v4 as uuidv4 } from 'uuid';
 import { useDebounce } from 'usehooks-ts';
-import { MapPinIcon, PlusIcon } from '@heroicons/react/24/outline'
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  MapPinIcon,
+  PlusIcon,
+  TrashIcon
+} from '@heroicons/react/24/solid'
+import {
+  EllipsisHorizontalCircleIcon,
+  GlobeAltIcon,
+} from '@heroicons/react/24/outline'
+
 
 import PlacePicturesCarousel from './PlacePicturesCarousel';
+import Dropdown from '../Dropdown';
+import NotesEditor from '../NotesEditor';
+
 import TripsSyncAPI from '../../apis/tripsSync';
 import MapsAPI, { placeFields } from '../../apis/maps';
 import { Trips } from '../../apis/types';
-
 import { useMap } from '../../context/maps-context';
-import { TripContentSectionCss, TripContentListCss, TripContentCss } from '../../styles/global';
+import {
+  TripContentSectionCss,
+  TripContentListCss,
+  TripContentCss
+} from '../../styles/global';
+import { areYMDEqual, parseTimeFromZ, printTime } from '../../utils/dates';
 
 
 // TripContent
 interface TripContentProps {
+  content: Trips.Content
   contentListID: string
   contentIdx: number
-  content: Trips.Content
+  itinerary: Array<Trips.ItineraryList>
   tripStateOnUpdate: any
 }
 
@@ -36,7 +56,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 
   const debouncedValue = useDebounce<string>(searchPlaceQuery, 500);
 
-  const {dispatch} = useMap();
+  const { dispatch } = useMap();
 
   useEffect(() => {
     setTitle(props.content.title);
@@ -61,7 +81,6 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     });
   }
 
-
   // Event Handlers - Title
   const titleInputOnBlur = () => {
     const ops = [
@@ -70,6 +89,16 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         title
       ),
     ];
+    props.tripStateOnUpdate(ops);
+  }
+
+  const deleteBtnOnClick = () => {
+    const ops = [];
+    ops.push(
+      TripsSyncAPI.makeRemoveOp(
+        `/contents/${props.contentListID}/contents/${props.contentIdx}`,
+        "")
+    );
     props.tripStateOnUpdate(ops);
   }
 
@@ -91,21 +120,163 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     });
   }
 
-  const placeOnClick = () => {
-    dispatch({type:"setSelectedPlace", value: props.content.place})
+  const placeOnClick = (e: React.MouseEvent) => {
+    if (e.detail == 1) {
+      dispatch({type:"setSelectedPlace", value: props.content.place})
+      const event = new CustomEvent('marker_click', {
+        bubbles: false,
+        cancelable: false,
+        detail: props.content.place,
+      });
+      document.getElementById("map")!.dispatchEvent(event)
+      return;
+    }
+    if (e.detail == 2) {
+      setIsAddingPlace(true);
+      return;
+    }
   }
 
+  // Event Handlers - Notes
+  const notesOnChange = (content: string) => {
+    const ops = [];
+    ops.push(TripsSyncAPI.makeReplaceOp(
+      `/contents/${props.contentListID}/contents/${props.contentIdx}/notes`,
+      content
+    ));
+    props.tripStateOnUpdate(ops);
+  }
+
+  // Event Handlers - Itinerary
+  const itineraryBtnOnClick = (l: Trips.ItineraryList, lIdx: number) => {
+    const ops = [];
+    const _dt = l.date as string;
+
+    // Update content labels
+    let currentDts = _get(props.content, "labels.itinerary|dates", "")
+      .split("|")
+      .filter((dt: string) => !_isEmpty(dt));
+
+    let dts;
+    if (currentDts.includes(_dt)) {
+      dts = currentDts.filter((dt: string) => dt !== _dt)
+    } else {
+      currentDts.push(_dt);
+      dts = _sortBy(currentDts);
+    }
+
+    if (_get(props.content, "labels.itinerary|dates")) {
+      ops.push(TripsSyncAPI.makeReplaceOp(
+        `/contents/${props.contentListID}/contents/${props.contentIdx}/labels/itinerary|dates`,
+        dts.join("|")));
+    } else {
+      ops.push(TripsSyncAPI.makeAddOp(
+        `/contents/${props.contentListID}/contents/${props.contentIdx}/labels/itinerary|dates`,
+        dts.join("|")));
+    }
+
+    // Update itinerary
+    currentDts = _get(props.content, "labels.itinerary|dates", "").split("|");
+    if (currentDts.includes(_dt)) {
+      let itinCtnIdx;
+      l.contents.forEach((ct: Trips.ItineraryContent, idx: number) => {
+        if (ct.tripContentId === props.content.id) {
+          itinCtnIdx = idx;
+        }
+      });
+      ops.push(TripsSyncAPI.makeRemoveOp(
+        `/itinerary/${lIdx}/contents/${itinCtnIdx}`,
+        ""));
+    } else {
+      const itinCtn: Trips.ItineraryContent = {
+        id: uuidv4(),
+        tripContentId: props.content.id,
+        tripContentListId: props.contentListID,
+        price: {} as any,
+        labels: new Map<string,string>(),
+      };
+      ops.push(TripsSyncAPI.makeAddOp(
+        `/itinerary/${lIdx}/contents/-`,
+        itinCtn))
+    }
+    props.tripStateOnUpdate(ops);
+  }
+
+
+
   // Renderers
+  const renderSettingsDropdown = () => {
+    const opts = [
+      <button
+        type='button'
+        className={TripContentCss.DeleteBtn}
+        onClick={deleteBtnOnClick}
+      >
+        <TrashIcon className='h-4 w-4 mr-2' />Delete
+      </button>
+    ];
+    const menu = (
+      <EllipsisHorizontalCircleIcon className='h-4 w-4 mt-1' />
+    );
+    return <Dropdown menu={menu} opts={opts} />
+  }
+
+  const renderItineraryDropdown = () => {
+    const dates = _get(props.content, "labels.itinerary|dates", "")
+      .split("|").filter((dt: string) => !_isEmpty(dt));
+
+    const opts = props.itinerary.map((l: Trips.ItineraryList, idx: number) => {
+      const isAdded = dates.includes(l.date as string);
+      return (
+        <button
+          type='button'
+          className={TripContentCss.ItineraryDateBtn}
+          onClick={() => {itineraryBtnOnClick(l, idx)}}
+        >
+          {printTime(parseTimeFromZ(l.date as string), "eee, do MMMM") }
+          { isAdded ? <CheckIcon className='w-4 h-4' /> : null}
+        </button>
+      );
+    });
+
+    const datesBadge = dates
+      .map((dt: string) => (
+        <span
+          key={dt}
+          className="bg-indigo-100 text-indigo-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
+        >
+          {printTime(parseTimeFromZ(dt), "MMM/dd")}
+        </span>
+      ));
+
+    const emptyBtn = (
+      <span className='text-xs text-gray-800 font-bold bg-indigo-200 rounded-full px-2 py-1 hover:bg-indigo-400'>
+        Add to Itinerary
+      </span>
+    );
+    const menu = (<div>{dates.length === 0 ? emptyBtn : datesBadge}</div>);
+
+    return <Dropdown menu={menu} opts={opts} />
+  }
+
+
   const renderTitleInput = () => {
     return (
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onBlur={titleInputOnBlur}
-        placeholder="Add a name"
-        className={TripContentCss.TitleInput}
-      />
+      <div className='flex justify-between'>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={titleInputOnBlur}
+          placeholder="Add a name"
+          className={TripContentCss.TitleInput}
+        />
+        <div className='flex items-center'>
+          {renderItineraryDropdown()}
+          &nbsp;&nbsp;
+          {renderSettingsDropdown()}
+        </div>
+      </div>
     );
   }
 
@@ -124,7 +295,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         />
       );
     } else {
-      const addr = _get(props.content, "place.formatted_address", "");
+      const addr = _get(props.content, "place.name", "");
       if (_isEmpty(addr)) {
         placeNode = (
           <button type='button' onClick={() => {setIsAddingPlace(true)}}>
@@ -133,10 +304,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         );
       } else {
         placeNode = (
-          <button type='button'
-            className='hover:text-indigo-500'
-            onClick={placeOnClick}
-          >
+          <button type='button' onClick={placeOnClick}>
             {addr}
           </button>
         );
@@ -144,7 +312,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     }
 
     return (
-      <p className='text-slate-600 text-sm flex items-center mb-2'>
+      <p className='text-slate-600 text-sm flex items-center mb-1 hover:text-indigo-500'>
         <MapPinIcon className='h-4 w-4 mr-1'/>
         {placeNode}
       </p>
@@ -180,6 +348,18 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     );
   }
 
+  const renderWebsite = () => {
+    return _isEmpty(_get(props.content, "place.website", "")) ? null
+    : <a
+        className='flex items-center mb-1'
+        href={_get(props.content, "place.website")}
+        target="_blank"
+      >
+        <GlobeAltIcon className='h-4 w-4' />&nbsp;
+        <span className={TripContentCss.WebsiteTxt}>Website</span>
+      </a>
+  }
+
   const renderPlacePicturesCarousel = () => {
     const photos = _get(props.content, "place.photos", []);
     if (_isEmpty(photos)) {
@@ -188,15 +368,19 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     return <PlacePicturesCarousel photos={photos}/>
   }
 
-  const renderNotes = () => {
-    return (null);
-  }
 
   return (
     <div className={TripContentCss.Ctn}>
       {renderTitleInput()}
       {renderPlace()}
       {renderPlacesAutocomplete()}
+      {renderWebsite()}
+      <NotesEditor
+        ctnCss='p-0 mb-2'
+        base64Notes={props.content.notes}
+        notesOnChange={notesOnChange}
+        placeholder={"Notes..."}
+      />
       {renderPlacePicturesCarousel()}
     </div>
   );
@@ -206,6 +390,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 // TripContentList
 
 interface TripContentListProps {
+  itinerary: any
   contentList: Trips.ContentList
   tripStateOnUpdate: any
 }
@@ -214,6 +399,7 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
 
   const [name, setName] = useState<string>();
   const [newContentTitle, setNewContentTitle] = useState("");
+  const [isHidden, setIsHidden] = useState<boolean>(false);
 
   useEffect(() => {
     setName(props.contentList.name);
@@ -247,14 +433,30 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
   }
 
   // Renderers
+  const renderHiddenToggle = () => {
+    return (
+      <button
+        type="button"
+        className={TripContentSectionCss.ToggleBtn}
+        onClick={() => {setIsHidden(!isHidden)}}
+      >
+      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
+        : <ChevronDownIcon className='h-4 w-4'/>}
+      </button>
+    );
+  }
 
   const renderTripContent = () => {
+    if (isHidden) {
+      return null;
+    }
     const contents = _get(props.contentList, "contents", []);
     return (
       <div>
         {contents.map((content: any, idx: number) => (
           <TripContent
             key={idx}
+            itinerary={props.itinerary}
             content={content}
             contentListID={props.contentList.id}
             contentIdx={idx}
@@ -266,6 +468,10 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
   }
 
   const renderAddNewContent = () => {
+    if (isHidden) {
+      return null;
+    }
+
     return (
       <div className={TripContentListCss.NewContentCtn}>
         <input
@@ -287,14 +493,17 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
 
   return (
     <div className={TripContentListCss.Ctn}>
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onBlur={nameOnBlur}
-        placeholder={`Add a title (e.g, "Food to try")`}
-        className={TripContentListCss.NameInput}
-      />
+      <div className='flex'>
+        {renderHiddenToggle()}
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={nameOnBlur}
+          placeholder={`Add a title (e.g, "Food to try")`}
+          className={TripContentListCss.NameInput}
+        />
+      </div>
       {renderTripContent()}
       {renderAddNewContent()}
     </div>
@@ -311,6 +520,8 @@ interface TripContentSectionProps {
 
 const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSectionProps) => {
 
+  const [isHidden, setIsHidden] = useState(false);
+
   // Event Handlers
   const addBtnOnClick = () => {
     let list: Trips.ContentList = {
@@ -324,12 +535,29 @@ const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSecti
 
   // Renderers
 
+  const renderHiddenToggle = () => {
+    return (
+      <button
+        type="button"
+        className={TripContentSectionCss.ToggleBtn}
+        onClick={() => {setIsHidden(!isHidden)}}
+      >
+      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
+        : <ChevronDownIcon className='h-4 w-4'/>}
+      </button>
+    );
+  }
+
   const renderContentLists = () => {
+    if (isHidden) {
+      return null;
+    }
     const contentLists = Object.values(_get(props.trip, "contents", {}));
     return contentLists.map((contentList: any) => {
       return (
       <div key={contentList.id}>
         <TripContentList
+          itinerary={props.trip.itinerary}
           contentList={contentList}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
@@ -342,9 +570,12 @@ const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSecti
   return (
     <div className='p-5'>
       <div className={TripContentSectionCss.HeaderCtn}>
-        <h3 className={TripContentSectionCss.Header}>
-          Activities
-        </h3>
+        <div>
+          {renderHiddenToggle()}
+          <span className={TripContentSectionCss.Header}>
+            Activities
+          </span>
+        </div>
         <button
           className={TripContentSectionCss.AddBtn}
           onClick={() => {addBtnOnClick()}}
