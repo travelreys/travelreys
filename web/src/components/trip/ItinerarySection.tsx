@@ -22,7 +22,7 @@ import PlaneIcon from '../icons/PlaneIcon';
 import HotelIcon from '../icons/HotelIcon';
 
 import TripsSyncAPI from '../../apis/tripsSync';
-import { Trips } from '../../apis/types';
+import { Trips } from '../../apis/trips';
 import { useMap } from '../../context/maps-context';
 import {
   InputDatesPickerCss,
@@ -33,8 +33,8 @@ import {
 import {
   areYMDEqual,
   isEmptyDate,
-  parseTimeFromZ,
-  printTime
+  parseISO,
+  printFmt
 } from '../../utils/dates'
 
 
@@ -126,7 +126,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 
   const priceOnBlur = () => {
     const ops = [
-      TripsSyncAPI.makeReplaceOp(
+      TripsSyncAPI.newReplaceOp(
         `/itinerary/${props.itineraryListIdx}/contents/${props.itineraryContentIdx}/priceMetadata/amount`,
         priceAmount,
       )
@@ -236,7 +236,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   // Event Handlers
   const replaceItineraryContents = (newItinContents: Array<Trips.ItineraryContent>) => {
     const ops = [
-      TripsSyncAPI.makeReplaceOp(
+      TripsSyncAPI.newReplaceOp(
         `/itinerary/${props.itineraryListIdx}/contents`,
         newItinContents
       ),
@@ -279,7 +279,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
           : <ChevronDownIcon className='h-4 w-4'/>}
         </button>
         <p className='text-xl font-bold'>
-          {printTime(parseTimeFromZ(props.itineraryList.date as string), "eeee, do MMMM") }
+          {printFmt(parseISO(props.itineraryList.date as string), "eeee, do MMMM") }
         </p>
       </div>
 
@@ -288,7 +288,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   const renderFlights = () => {
     const flights = Object.values(_get(props.trip, "flights", {}));
-    const today = parseTimeFromZ(props.itineraryList.date as string);
+    const today = parseISO(props.itineraryList.date as string);
 
     const render = (place: any, depart: boolean) => {
       return (
@@ -341,7 +341,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   const renderLodgings = () => {
     const lodgings = Object.values(_get(props.trip, "lodgings", {}));
-    const today = parseTimeFromZ(props.itineraryList.date as string);
+    const today = parseISO(props.itineraryList.date as string);
 
     const render = (idx: number, place: any, checkin: boolean) => {
       return (
@@ -359,11 +359,11 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     lodgings.forEach((item: any) => {
       let lod = item as Trips.Lodging;
       if (!_isEmpty(lod.checkinTime)) {
-        const checkinTime = parseTimeFromZ(lod.checkinTime as string);
+        const checkinTime = parseISO(lod.checkinTime as string);
         if(areYMDEqual(today, checkinTime)) {
           checkins.push(item);
         }
-        const checkoutTime = parseTimeFromZ(lod.checkoutTime as string);
+        const checkoutTime = parseISO(lod.checkoutTime as string);
         if(areYMDEqual(today, checkoutTime)) {
           checkouts.push(item);
         }
@@ -438,30 +438,31 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 // TripItinerarySection
 
 
-interface TripItinerarySectionProps {
+interface ItinerarySectionProps {
   trip: any
   tripStateOnUpdate: any
 }
 
-const TripItinerarySection: FC<TripItinerarySectionProps> = (props: TripItinerarySectionProps) => {
+const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProps) => {
 
   return (
     <div className='p-5'>
-      {_get(props.trip, "itinerary", []).map((l: any, idx: number) => (
-        <DndProvider key={l.id} backend={HTML5Backend}>
-          <TripItineraryList
-            trip={props.trip}
-            itineraryListIdx={idx}
-            itineraryList={l}
-            tripStateOnUpdate={props.tripStateOnUpdate}
-          />
-          <hr className={TripItinerarySectionCss.Hr} />
-        </DndProvider>
-      ))
+      {
+        _get(props.trip, "itinerary", [])
+          .map((l: any, idx: number) => (
+            <DndProvider key={l.id} backend={HTML5Backend}>
+              <TripItineraryList
+                trip={props.trip}
+                itineraryListIdx={idx}
+                itineraryList={l}
+                tripStateOnUpdate={props.tripStateOnUpdate}
+              />
+              <hr className={TripItinerarySectionCss.Hr} />
+            </DndProvider>
+          ))
     }
     </div>
   );
-
 }
 
-export default TripItinerarySection;
+export default ItinerarySection;

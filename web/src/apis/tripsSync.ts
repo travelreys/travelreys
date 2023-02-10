@@ -44,7 +44,7 @@ const TripsSyncAPI = {
     return {op, path, value}
   },
 
-  makeReplaceOp: (path: string, value: any): JSONPatchOp => {
+  newReplaceOp: (path: string, value: any): JSONPatchOp => {
     return {op: "replace", path, value}
   },
 

@@ -3,6 +3,10 @@ import _get from 'lodash/get';
 
 import { BASE_URL } from './common';
 
+export namespace Maps {
+  export type Place = any
+}
+
 const MapsAPI = {
   placeAutocomplete: (query: string, types: Array<string>, sessiontoken: string) => {
     const url = `${BASE_URL}/api/v1/maps/place/autocomplete`;
@@ -21,6 +25,7 @@ const MapsAPI = {
 };
 
 export default MapsAPI;
+
 export const placeFields = [
   "address_component",
   "adr_address",

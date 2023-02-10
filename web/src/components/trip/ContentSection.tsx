@@ -6,39 +6,49 @@ import React, {
 import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
+import _findIndex from "lodash/findIndex";
 import { v4 as uuidv4 } from 'uuid';
 import { useDebounce } from 'usehooks-ts';
 import {
   CheckIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   MapPinIcon,
   PlusIcon,
   TrashIcon
-} from '@heroicons/react/24/solid'
+} from '@heroicons/react/24/solid';
 import {
   EllipsisHorizontalCircleIcon,
   GlobeAltIcon,
-} from '@heroicons/react/24/outline'
+} from '@heroicons/react/24/outline';
 
-
-import PlacePicturesCarousel from './PlacePicturesCarousel';
 import Dropdown from '../Dropdown';
 import NotesEditor from '../NotesEditor';
+import PlacePicturesCarousel from './PlacePicturesCarousel';
+import ToggleChevron from '../ToggleChevron';
 
 import TripsSyncAPI from '../../apis/tripsSync';
 import MapsAPI, { placeFields } from '../../apis/maps';
-import { Trips } from '../../apis/types';
-import { useMap } from '../../context/maps-context';
 import {
-  TripContentSectionCss,
+  Trips,
+  LabelContentItineraryDates,
+  LabelContentItineraryDatesJSONPath,
+  LabelContentItineraryDatesDelimeter,
+} from '../../apis/trips';
+import { ActionNameSetSelectedPlace, useMap } from '../../context/maps-context';
+import {
+  CommonCss,
+  TripContentCss,
   TripContentListCss,
-  TripContentCss
+  TripContentSectionCss,
 } from '../../styles/global';
-import { areYMDEqual, parseTimeFromZ, printTime } from '../../utils/dates';
+import { parseISO, printFmt } from '../../utils/dates';
+import PlaceAutocomplete from '../maps/PlaceAutocomplete';
+import { EventMarkerClickName, newEventMarkerClick } from '../maps/common';
 
 
-// TripContent
+/////////////
+// Content //
+/////////////
+
 interface TripContentProps {
   content: Trips.Content
   contentListID: string
@@ -46,6 +56,10 @@ interface TripContentProps {
   itinerary: Array<Trips.ItineraryList>
   tripStateOnUpdate: any
 }
+
+const ItineraryDateFmt = "eee, do MMMM";
+const ItineraryBadgeDateFmt = "MMM/dd";
+
 
 const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
   const [title, setTitle] = useState<string>();
@@ -81,10 +95,10 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     });
   }
 
-  // Event Handlers - Title
+  // Event Handlers - Header
   const titleInputOnBlur = () => {
     const ops = [
-      TripsSyncAPI.makeReplaceOp(
+      TripsSyncAPI.newReplaceOp(
         `/contents/${props.contentListID}/contents/${props.contentIdx}/title`,
         title
       ),
@@ -109,7 +123,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
       setPredictions([]);
       const place = _get(res, "data.place", {});
       const ops = [
-        TripsSyncAPI.makeReplaceOp(
+        TripsSyncAPI.newReplaceOp(
           `/contents/${props.contentListID}/contents/${props.contentIdx}/place`,
           place),
       ];
@@ -122,15 +136,15 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 
   const placeOnClick = (e: React.MouseEvent) => {
     if (e.detail == 1) {
-      dispatch({type:"setSelectedPlace", value: props.content.place})
-      const event = new CustomEvent('marker_click', {
-        bubbles: false,
-        cancelable: false,
-        detail: props.content.place,
+      dispatch({
+        type: ActionNameSetSelectedPlace,
+        value: props.content.place
       });
-      document.getElementById("map")!.dispatchEvent(event)
+      const event = newEventMarkerClick(props.content.place);
+      document.getElementById("map")?.dispatchEvent(event)
       return;
     }
+
     if (e.detail == 2) {
       setIsAddingPlace(true);
       return;
@@ -140,7 +154,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
   // Event Handlers - Notes
   const notesOnChange = (content: string) => {
     const ops = [];
-    ops.push(TripsSyncAPI.makeReplaceOp(
+    ops.push(TripsSyncAPI.newReplaceOp(
       `/contents/${props.contentListID}/contents/${props.contentIdx}/notes`,
       content
     ));
@@ -148,46 +162,35 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
   }
 
   // Event Handlers - Itinerary
-  const itineraryBtnOnClick = (l: Trips.ItineraryList, lIdx: number) => {
+  const itineraryBtnOnClick = (l: Trips.ItineraryList, itinListIdx: number) => {
     const ops = [];
-    const _dt = l.date as string;
+    const listDt = l.date as string;
 
-    // Update content labels
-    let currentDts = _get(props.content, "labels.itinerary|dates", "")
-      .split("|")
+    // Update content labels, Format of itinerary dates label:
+    // content.labels[LabelContentItineraryDates] = "d1|d2|d3"
+
+    let currentItinDts = _get(props.content, LabelContentItineraryDatesJSONPath, "")
+      .split(LabelContentItineraryDatesDelimeter)
       .filter((dt: string) => !_isEmpty(dt));
 
     let dts;
-    if (currentDts.includes(_dt)) {
-      dts = currentDts.filter((dt: string) => dt !== _dt)
-    } else {
-      currentDts.push(_dt);
-      dts = _sortBy(currentDts);
-    }
+    if (currentItinDts.includes(listDt)) {
+      // Remove if already exists
+      dts = currentItinDts.filter((dt: string) => dt !== listDt)
 
-    if (_get(props.content, "labels.itinerary|dates")) {
-      ops.push(TripsSyncAPI.makeReplaceOp(
-        `/contents/${props.contentListID}/contents/${props.contentIdx}/labels/itinerary|dates`,
-        dts.join("|")));
-    } else {
-      ops.push(TripsSyncAPI.makeAddOp(
-        `/contents/${props.contentListID}/contents/${props.contentIdx}/labels/itinerary|dates`,
-        dts.join("|")));
-    }
-
-    // Update itinerary
-    currentDts = _get(props.content, "labels.itinerary|dates", "").split("|");
-    if (currentDts.includes(_dt)) {
-      let itinCtnIdx;
-      l.contents.forEach((ct: Trips.ItineraryContent, idx: number) => {
-        if (ct.tripContentId === props.content.id) {
-          itinCtnIdx = idx;
-        }
-      });
+      let itinCtnIdx = _findIndex(
+        l.contents,
+        (ct) => ct.tripContentId === props.content.id,
+      );
       ops.push(TripsSyncAPI.makeRemoveOp(
-        `/itinerary/${lIdx}/contents/${itinCtnIdx}`,
-        ""));
+        `/itinerary/${itinListIdx}/contents/${itinCtnIdx}`,
+        "",
+      ));
+
     } else {
+      // Add if not exists
+      dts = _sortBy(currentItinDts.concat([listDt]));
+
       const itinCtn: Trips.ItineraryContent = {
         id: uuidv4(),
         tripContentId: props.content.id,
@@ -196,15 +199,25 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         labels: new Map<string,string>(),
       };
       ops.push(TripsSyncAPI.makeAddOp(
-        `/itinerary/${lIdx}/contents/-`,
+        `/itinerary/${itinListIdx}/contents/-`,
         itinCtn))
     }
+
+    if (currentItinDts) {
+      ops.push(TripsSyncAPI.newReplaceOp(
+        `/contents/${props.contentListID}/contents/${props.contentIdx}/labels/${LabelContentItineraryDates}`,
+        dts.join(LabelContentItineraryDatesDelimeter)));
+    } else {
+      ops.push(TripsSyncAPI.makeAddOp(
+        `/contents/${props.contentListID}/contents/${props.contentIdx}/labels/${LabelContentItineraryDates}`,
+        dts.join(LabelContentItineraryDatesDelimeter)));
+    }
+
     props.tripStateOnUpdate(ops);
   }
 
-
-
   // Renderers
+
   const renderSettingsDropdown = () => {
     const opts = [
       <button
@@ -212,55 +225,54 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         className={TripContentCss.DeleteBtn}
         onClick={deleteBtnOnClick}
       >
-        <TrashIcon className='h-4 w-4 mr-2' />Delete
+        <TrashIcon className={CommonCss.LeftIcon}/>
+        Delete
       </button>
     ];
     const menu = (
-      <EllipsisHorizontalCircleIcon className='h-4 w-4 mt-1' />
+      <EllipsisHorizontalCircleIcon
+        className={CommonCss.DropdownIcon} />
     );
     return <Dropdown menu={menu} opts={opts} />
   }
 
   const renderItineraryDropdown = () => {
-    const dates = _get(props.content, "labels.itinerary|dates", "")
-      .split("|").filter((dt: string) => !_isEmpty(dt));
+    // Format of itinerary dates label:
+    // content.labels[LabelContentItineraryDatesJSONPath] = "d1|d2|d3"
 
-    const opts = props.itinerary.map((l: Trips.ItineraryList, idx: number) => {
-      const isAdded = dates.includes(l.date as string);
-      return (
-        <button
-          type='button'
-          className={TripContentCss.ItineraryDateBtn}
-          onClick={() => {itineraryBtnOnClick(l, idx)}}
-        >
-          {printTime(parseTimeFromZ(l.date as string), "eee, do MMMM") }
-          { isAdded ? <CheckIcon className='w-4 h-4' /> : null}
-        </button>
-      );
-    });
+    const dates = _get(props.content, LabelContentItineraryDatesJSONPath, "")
+      .split(LabelContentItineraryDatesDelimeter)
+      .filter((dt: string) => !_isEmpty(dt));
 
-    const datesBadge = dates
+    const opts = props.itinerary.map((l: Trips.ItineraryList, idx: number) => (
+      <button
+        type='button'
+        className={TripContentCss.ItineraryDateBtn}
+        onClick={() => {itineraryBtnOnClick(l, idx)}}
+      >
+        {printFmt(parseISO(l.date as string), ItineraryDateFmt) }
+        { dates.includes(l.date as string) ?
+          <CheckIcon className={CommonCss.Icon} /> : null}
+      </button>
+    ));
+
+    const datesBadges = dates
       .map((dt: string) => (
-        <span
-          key={dt}
-          className="bg-indigo-100 text-indigo-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
-        >
-          {printTime(parseTimeFromZ(dt), "MMM/dd")}
+        <span key={dt} className={TripContentCss.ItineraryBadge}>
+          {printFmt(parseISO(dt), ItineraryBadgeDateFmt)}
         </span>
       ));
 
     const emptyBtn = (
-      <span className='text-xs text-gray-800 font-bold bg-indigo-200 rounded-full px-2 py-1 hover:bg-indigo-400'>
+      <span className={TripContentCss.AddItineraryBtn}>
         Add to Itinerary
       </span>
     );
-    const menu = (<div>{dates.length === 0 ? emptyBtn : datesBadge}</div>);
-
+    const menu = dates.length === 0 ? emptyBtn : datesBadges;
     return <Dropdown menu={menu} opts={opts} />
   }
 
-
-  const renderTitleInput = () => {
+  const renderHeader = () => {
     return (
       <div className='flex justify-between'>
         <input
@@ -290,74 +302,51 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
           value={searchPlaceQuery}
           onChange={(e) => setSearchPlaceQuery(e.target.value)}
           onBlur={() => { setIsAddingPlace(false); }}
-          placeholder={`name, address...`}
-          className="p-0 mb-1 text-sm text-gray-600 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400"
+          placeholder="name, address..."
+          className={TripContentCss.PlaceInput}
         />
       );
     } else {
       const addr = _get(props.content, "place.name", "");
-      if (_isEmpty(addr)) {
-        placeNode = (
-          <button type='button' onClick={() => {setIsAddingPlace(true)}}>
-            Click here to add a location...
-          </button>
-        );
-      } else {
-        placeNode = (
-          <button type='button' onClick={placeOnClick}>
-            {addr}
-          </button>
-        );
-      }
+      placeNode = (
+        <button
+          type='button'
+          onClick={
+            _isEmpty(addr) ?
+            (e) => {setIsAddingPlace(true)} :
+            (e) => { placeOnClick(e) }
+          }
+        >
+          {_isEmpty(addr) ?
+            "Click here to add a location..." : addr
+          }
+        </button>
+      );
     }
 
     return (
-      <p className='text-slate-600 text-sm flex items-center mb-1 hover:text-indigo-500'>
+      <div className={TripContentCss.PlaceCtn}>
         <MapPinIcon className='h-4 w-4 mr-1'/>
         {placeNode}
-      </p>
-    );
-  }
-
-  const renderPlacesAutocomplete = () => {
-    if (_isEmpty(predictions)) {
-      return (<></>);
-    }
-    return (
-      <div className={TripContentCss.AutocompleteCtn}>
-        {predictions.map((pre: any) => (
-          <div
-            className={TripContentCss.PredictionWrapper}
-            key={pre.place_id}
-            onClick={() => {predictionOnSelect(pre.place_id)}}
-          >
-            <div className='p-1 group-hover:text-indigo-500'>
-              <MapPinIcon className='h-6 w-6' />
-            </div>
-            <div className='ml-1'>
-              <p className='text-slate-900 group-hover:text-indigo-500 text-sm font-medium'>
-                {_get(pre, "structured_formatting.main_text", "")}
-              </p>
-              <p className="text-slate-400 group-hover:text-indigo-500 text-xs">
-                {_get(pre, "structured_formatting.secondary_text", "")}
-              </p>
-            </div>
-          </div>
-        ))}
       </div>
     );
   }
 
   const renderWebsite = () => {
-    return _isEmpty(_get(props.content, "place.website", "")) ? null
-    : <a
-        className='flex items-center mb-1'
-        href={_get(props.content, "place.website")}
+    const website = _get(props.content, "place.website", "")
+    if (_isEmpty(website)) {
+      return null
+    }
+    return (
+      <a
+        className={TripContentCss.WebsiteLink}
+        href={website}
         target="_blank"
       >
-        <GlobeAltIcon className='h-4 w-4' />&nbsp;
+        <GlobeAltIcon className={CommonCss.LeftIcon}/>
         <span className={TripContentCss.WebsiteTxt}>Website</span>
       </a>
+    );
   }
 
   const renderPlacePicturesCarousel = () => {
@@ -368,12 +357,14 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     return <PlacePicturesCarousel photos={photos}/>
   }
 
-
   return (
     <div className={TripContentCss.Ctn}>
-      {renderTitleInput()}
+      {renderHeader()}
       {renderPlace()}
-      {renderPlacesAutocomplete()}
+      <PlaceAutocomplete
+        predictions={predictions}
+        onSelect={predictionOnSelect}
+      />
       {renderWebsite()}
       <NotesEditor
         ctnCss='p-0 mb-2'
@@ -387,15 +378,18 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 }
 
 
-// TripContentList
+////////////////////
+// ContentSection //
+////////////////////
 
-interface TripContentListProps {
+
+interface ContentListProps {
   itinerary: any
   contentList: Trips.ContentList
   tripStateOnUpdate: any
 }
 
-const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) => {
+const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
 
   const [name, setName] = useState<string>();
   const [newContentTitle, setNewContentTitle] = useState("");
@@ -409,7 +403,7 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
 
   const nameOnBlur = () => {
     const ops = [];
-    ops.push(TripsSyncAPI.makeReplaceOp(`/contents/${props.contentList.id}/name`, name))
+    ops.push(TripsSyncAPI.newReplaceOp(`/contents/${props.contentList.id}/name`, name))
     props.tripStateOnUpdate(ops);
   }
 
@@ -433,45 +427,22 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
   }
 
   // Renderers
-  const renderHiddenToggle = () => {
-    return (
-      <button
-        type="button"
-        className={TripContentSectionCss.ToggleBtn}
-        onClick={() => {setIsHidden(!isHidden)}}
-      >
-      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
-        : <ChevronDownIcon className='h-4 w-4'/>}
-      </button>
-    );
-  }
 
   const renderTripContent = () => {
-    if (isHidden) {
-      return null;
-    }
-    const contents = _get(props.contentList, "contents", []);
-    return (
-      <div>
-        {contents.map((content: any, idx: number) => (
-          <TripContent
-            key={idx}
-            itinerary={props.itinerary}
-            content={content}
-            contentListID={props.contentList.id}
-            contentIdx={idx}
-            tripStateOnUpdate={props.tripStateOnUpdate}
-          />
-        ))}
-      </div>
-    );
+    return _get(props.contentList, "contents", [])
+      .map((content: any, idx: number) => (
+        <TripContent
+          key={idx}
+          itinerary={props.itinerary}
+          content={content}
+          contentListID={props.contentList.id}
+          contentIdx={idx}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+      ));
   }
 
   const renderAddNewContent = () => {
-    if (isHidden) {
-      return null;
-    }
-
     return (
       <div className={TripContentListCss.NewContentCtn}>
         <input
@@ -494,7 +465,10 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
   return (
     <div className={TripContentListCss.Ctn}>
       <div className='flex'>
-        {renderHiddenToggle()}
+        <ToggleChevron
+          onClick={() => setIsHidden(!isHidden)}
+          isHidden={isHidden}
+        />
         <input
           type="text"
           value={name}
@@ -504,21 +478,27 @@ const TripContentList: FC<TripContentListProps> = (props: TripContentListProps) 
           className={TripContentListCss.NameInput}
         />
       </div>
-      {renderTripContent()}
-      {renderAddNewContent()}
+      { isHidden ? null :
+        <>
+          {renderTripContent()}
+          {renderAddNewContent()}
+        </>
+      }
     </div>
   );
 }
 
-// TripContentSection
 
+////////////////////
+// ContentSection //
+////////////////////
 
-interface TripContentSectionProps {
+interface ContentSectionProps {
   trip: any
   tripStateOnUpdate: any
 }
 
-const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSectionProps) => {
+const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => {
 
   const [isHidden, setIsHidden] = useState(false);
 
@@ -535,43 +515,14 @@ const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSecti
 
   // Renderers
 
-  const renderHiddenToggle = () => {
+  const renderHeader = () => {
     return (
-      <button
-        type="button"
-        className={TripContentSectionCss.ToggleBtn}
-        onClick={() => {setIsHidden(!isHidden)}}
-      >
-      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
-        : <ChevronDownIcon className='h-4 w-4'/>}
-      </button>
-    );
-  }
-
-  const renderContentLists = () => {
-    if (isHidden) {
-      return null;
-    }
-    const contentLists = Object.values(_get(props.trip, "contents", {}));
-    return contentLists.map((contentList: any) => {
-      return (
-      <div key={contentList.id}>
-        <TripContentList
-          itinerary={props.trip.itinerary}
-          contentList={contentList}
-          tripStateOnUpdate={props.tripStateOnUpdate}
-        />
-        <hr className={TripContentSectionCss.Hr} />
-      </div>
-      );
-    });
-  }
-
-  return (
-    <div className='p-5'>
       <div className={TripContentSectionCss.HeaderCtn}>
         <div>
-          {renderHiddenToggle()}
+          <ToggleChevron
+            isHidden={isHidden}
+            onClick={() => {setIsHidden(!isHidden)}}
+          />
           <span className={TripContentSectionCss.Header}>
             Activities
           </span>
@@ -583,10 +534,30 @@ const TripContentSection: FC<TripContentSectionProps> = (props: TripContentSecti
           +&nbsp;&nbsp;New List&nbsp;
         </button>
       </div>
+    );
+  }
+
+  const renderContentLists = () => {
+    const contentLists = Object.values(_get(props.trip, "contents", {}));
+    return contentLists.map((contentList: any) => (
+      <div key={contentList.id}>
+        <ContentList
+          itinerary={props.trip.itinerary}
+          contentList={contentList}
+          tripStateOnUpdate={props.tripStateOnUpdate}
+        />
+        <hr className={TripContentSectionCss.Hr} />
+      </div>
+    ));
+  }
+
+  return (
+    <div className='p-5'>
+      {renderHeader()}
       {renderContentLists()}
     </div>
   );
 
 }
 
-export default TripContentSection;
+export default ContentSection;

@@ -5,7 +5,7 @@ import {
   formatDuration,
   intervalToDuration,
   isEqual,
-  parseISO,
+  parseISO as _parseISO,
   parseJSON,
 } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -38,9 +38,8 @@ export const printToDateFromRange = (range: DateRange | undefined, fmt: string) 
   return undefined;
 }
 
-export const parseTimeFromZ = (date: string) => {
-  // const d = date.substring(0, date.length - 1);
-  return parseISO(date);
+export const parseISO = (date: string) => {
+  return _parseISO(date);
 }
 
 export const parseTripDate = (tripDate: string | undefined) => {
@@ -52,7 +51,7 @@ export const parseTripDate = (tripDate: string | undefined) => {
 }
 
 
-export const printTime = (date: Date, fmt: string) => {
+export const printFmt = (date: Date, fmt: string) => {
   return format(date, fmt);
 }
 

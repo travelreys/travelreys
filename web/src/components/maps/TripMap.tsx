@@ -28,6 +28,8 @@ import Spinner from '../Spinner';
 import { makeActivityPin, makeHotelPin } from './GMapsPinIcon';
 import { useMap } from '../../context/maps-context';
 import GoogleIcon from '../icons/GoogleIcon';
+import { EventMarkerClickName } from './common';
+import { CommonCss, TripMapCss } from '../../styles/global';
 
 
 const defaultMapCenter = { lat: 33.3960897, lng: 126.264522 }
@@ -134,7 +136,7 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
     map.current.addListener("center_changed", () => {
       currentMapCenter.current = map.current.getCenter();
     });
-    ref.current.addEventListener("marker_click", (e: any) => {
+    ref.current.addEventListener(EventMarkerClickName, (e: any) => {
       const center = _get(e.detail, "geometry.location", defaultMapCenter);
       map.current.setCenter(center);
     })
@@ -236,11 +238,7 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
     return markers;
   }
 
-  // Renderer
-  const renderMap = (status: Status): React.ReactElement => {
-    if (status === Status.FAILURE) return <Spinner />;
-    return <Spinner />;
-  };
+  // Renderers
 
   const renderPlaceDetailsCard = () => {
     if (placeDetails === null) {
@@ -258,16 +256,33 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
       );
     }
 
+    const renderSummary = () => {
+      return (
+        <p className={TripMapCss.SummaryTxt}>
+          {_get(placeDetails, "editorial_summary.overview", "")}
+        </p>
+      );
+    }
+
+    const renderAddr = () => {
+      return (
+        <p className={TripMapCss.AddrTxt}>
+          <MapPinIcon className={CommonCss.LeftIcon}/>
+          {placeDetails.formatted_address}
+        </p>
+      );
+    }
+
     const renderRatings = () => {
       return (
-        <p className='text-yellow-500 flex items-center mb-1'>
-          <StarIcon className="h-4 w-4" />&nbsp;
+        <p className={TripMapCss.RatingsStar}>
+          <StarIcon className={CommonCss.LeftIcon} />
           {placeDetails.rating}&nbsp;&nbsp;
-          <span className='text-gray-600'>
+          <span className={TripMapCss.RatingsTxt}>
             ({placeDetails.user_ratings_total})
           </span>
           &nbsp;&nbsp;
-          <GoogleIcon className="h-4 w-4 mt-1" />
+          <GoogleIcon className={CommonCss.DropdownIcon} />
         </p>
       );
     }
@@ -277,41 +292,43 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
       if (_isEmpty(weekdayTexts)) {
         return null;
       }
-      const text = weekdayTexts.map((txt: string, idx: number) =>
-        (<p key={idx} className="text-slate-600 ml-6">{txt}</p>)
-      )
       return (
         <div>
-          <p className='flex text-gray-600 items-center truncate'>
-            <ClockIcon className='h-4 w-4 mr-2'/>Opening hours
+          <p className={TripMapCss.OpeningHrsTxt}>
+            <ClockIcon className={CommonCss.LeftIcon} />Opening hours
           </p>
-          {text}
+          {weekdayTexts.map((txt: string, idx: number) =>
+            (<p key={idx} className={TripMapCss.WeekdayTxt}>{txt}</p>)
+          )}
         </div>
       );
     }
 
-
     const renderPhone = () => {
-      return placeDetails.international_phone_number ?
-      <a
-        href={`tel:${placeDetails.international_phone_number.replace(/\s/, "-")}`}
-        target="_blank"
-        className='flex w-fit rounded-full py-2 px-6 mr-2 items-center border border-gray-200 font-semibold text-gray-500'>
-        <PhoneIcon className='h-4 w-4 text-indigo-500' />&nbsp;
-        Call
-      </a>
+      return placeDetails.international_phone_number
+      ?
+        <a
+          href={`tel:${placeDetails.international_phone_number.replace(/\s/, "-")}`}
+          target="_blank"
+          className={TripMapCss.PhoneBtn}
+        >
+          <PhoneIcon className={TripMapCss.PhoneIcon} />
+          Call
+        </a>
       : null
     }
 
     const renderWebsite = () => {
-      return placeDetails.website ?
-      <a
-        href={placeDetails.website}
-        target="_blank"
-        className='flex w-fit rounded-full py-2 px-6 mr-2 items-center border border-gray-200 font-semibold text-gray-500'>
-        <GlobeAltIcon className='h-4 w-4 mr-2 text-indigo-500' />
-        Web
-      </a>
+      return placeDetails.website
+      ?
+        <a
+          href={placeDetails.website}
+          target="_blank"
+          className={TripMapCss.PhoneBtn}
+        >
+          <GlobeAltIcon className={TripMapCss.PhoneIcon} />
+          Web
+        </a>
       : null
     }
 
@@ -319,44 +336,42 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
       return (
         <a
           href={placeDetails.url}
-          className='flex w-fit rounded-full py-2 px-6 items-center border border-gray-200 font-semibold text-gray-500'>
-          <GoogleIcon className='h-4 w-4 mr-2'/> Google Maps
+          className={TripMapCss.GmapBtn}
+        >
+          <GoogleIcon className={CommonCss.LeftIcon} /> Google Maps
         </a>
       );
     }
 
     return (
-      <div className='bg-white p-4 mx-4 h-11/12 w-11/12 max-w-3xl rounded-xl pointer-events-auto'>
-        {renderHeader()}
-        <p className='text-gray-600 mb-1'>
-          {_get(placeDetails, "editorial_summary.overview", "")}
-        </p>
-        <p className='text-gray-600 flex items-center mb-1'>
-          <MapPinIcon className="h-4 w-4" />&nbsp;
-          {placeDetails.formatted_address}
-        </p>
-        {renderRatings()}
-        {renderOpeningHours()}
-        <div className='flex items-center mt-6'>
-          {renderPhone()}
-          {renderWebsite()}
-          {renderGmapBtn()}
-
+      <div
+        className={TripMapCss.DetailsWrapper}
+        style={{width: props.width}}
+      >
+        <div className={TripMapCss.DetailsCard}>
+          {renderHeader()}
+          {renderSummary()}
+          {renderAddr()}
+          {renderRatings()}
+          {renderOpeningHours()}
+          <div className={TripMapCss.BtnCtn}>
+            {renderPhone()}
+            {renderWebsite()}
+            {renderGmapBtn()}
+          </div>
         </div>
       </div>
     );
   }
 
-
+  const renderMap = (status: Status): React.ReactElement => {
+    if (status === Status.FAILURE) return <Spinner />;
+    return <Spinner />;
+  };
 
   return (
-    <div className='fixed w-screen h-screen'>
-      <div
-        className='absolute bottom-0 mb-8 z-10 pointer-events-none'
-        style={{width: props.width}}
-      >
-        {renderPlaceDetailsCard()}
-      </div>
+    <div className={TripMapCss.Ctn}>
+      {renderPlaceDetailsCard()}
       <Wrapper
         apiKey={PLACE_IMAGE_APIKEY}
         render={renderMap}

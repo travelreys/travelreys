@@ -14,7 +14,7 @@ import ImagesAPI from '../../apis/images';
 
 import Modal from '../Modal';
 import DatesPicker from '../DatesPicker';
-import Spinner from '../../components/Spinner';
+import Spinner from '../Spinner';
 
 import { TripMenuJumboCss } from '../../styles/global';
 import {
@@ -132,14 +132,14 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
 }
 
 
-// TripMenuJumboProps
+// MenuJumboProps
 
-interface TripMenuJumboProps {
+interface MenuJumboProps {
   trip: any
   tripStateOnUpdate: any
 }
 
-const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
+const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
 
   // State
   const [tripName, setTripName] = useState<string>("");
@@ -161,14 +161,14 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
   // Event Handlers - Trip Name
   const tripNameOnBlur = () => {
     const ops = [];
-    ops.push(TripsSyncAPI.makeReplaceOp("/name", tripName));
+    ops.push(TripsSyncAPI.newReplaceOp("/name", tripName));
     props.tripStateOnUpdate(ops)
   }
 
   // Event Handlers - Cover Image
   const coverImageOnSelect = (image: any) => {
     const ops = [];
-    ops.push(TripsSyncAPI.makeReplaceOp("/coverImage", image))
+    ops.push(TripsSyncAPI.newReplaceOp("/coverImage", image))
     props.tripStateOnUpdate(ops);
   }
 
@@ -184,8 +184,8 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
       const ops = [];
       const from = range.from || nullDate;
       const to = range.to || nullDate;
-      ops.push(TripsSyncAPI.makeReplaceOp("/startDate", from));
-      ops.push(TripsSyncAPI.makeReplaceOp("/endDate", to));
+      ops.push(TripsSyncAPI.newReplaceOp("/startDate", from));
+      ops.push(TripsSyncAPI.newReplaceOp("/endDate", to));
       props.tripStateOnUpdate(ops);
       setIsCalendarOpen(false);
       return;
@@ -259,4 +259,4 @@ const TripMenuJumbo: FC<TripMenuJumboProps> = (props: TripMenuJumboProps) => {
   );
 }
 
-export default TripMenuJumbo;
+export default MenuJumbo;

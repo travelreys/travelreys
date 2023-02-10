@@ -21,12 +21,12 @@ import {
 import Dropdown from '../Dropdown';
 import InputDatesPicker from '../InputDatesPicker';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
-import { Trips } from '../../apis/types';
+import { Trips } from '../../apis/trips';
 import { InputDatesPickerCss, LodgingCardCss } from '../../styles/global';
 import {
-  printTime,
+  printFmt,
   isEmptyDate,
-  parseTimeFromZ,
+  parseISO,
   parseTripDate
 } from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
@@ -202,9 +202,9 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
       >
         <CalendarDaysIcon className='h-4 w-4' />&nbsp;
         {isEmptyDate(props.lodging.checkinTime) ? null
-          : printTime(parseTimeFromZ(props.lodging.checkinTime as string), dateFmt)}
+          : printFmt(parseISO(props.lodging.checkinTime as string), dateFmt)}
         {isEmptyDate(props.lodging.checkoutTime) ? null :
-          " - " + printTime(parseTimeFromZ(props.lodging.checkoutTime as string), dateFmt)}
+          " - " + printFmt(parseISO(props.lodging.checkoutTime as string), dateFmt)}
       </p>
     );
   }

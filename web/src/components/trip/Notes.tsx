@@ -10,45 +10,37 @@ import {
 } from '@heroicons/react/24/outline'
 
 import TripsSyncAPI from '../../apis/tripsSync';
-import { TripNodesCss } from '../../styles/global';
+import { TripNotesCss } from '../../styles/global';
 import NotesEditor from '../NotesEditor';
+import ToggleChevron from '../ToggleChevron';
 
-interface TripNotesSectionProps {
+interface NotesSectionProps {
   trip: any
   tripStateOnUpdate: any
 }
 
-const TripNotesSection: FC<TripNotesSectionProps> = (props: TripNotesSectionProps) => {
+const NotesSection: FC<NotesSectionProps> = (props: NotesSectionProps) => {
 
   const [isHidden, setIsHidden] = useState(false);
 
   // Event Handlers
   const notesOnChange = (content: string) => {
     const ops = [];
-    ops.push(TripsSyncAPI.makeReplaceOp(`/notes`, content));
+    ops.push(TripsSyncAPI.newReplaceOp(`/notes`, content));
     props.tripStateOnUpdate(ops);
   }
 
   // Renderers
-  const renderHiddenToggle = () => {
-    return (
-      <button
-        type="button"
-        className={TripNodesCss.ToggleBtn}
-        onClick={() => {setIsHidden(!isHidden)}}
-      >
-      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
-        : <ChevronDownIcon className='h-4 w-4'/> }
-      </button>
-    );
-  }
 
   return (
     <div className='p-5'>
-      <div className={TripNodesCss.TitleCtn}>
-        <div className={TripNodesCss.HeaderCtn}>
-          {renderHiddenToggle()}
-          <span>Notes </span>
+      <div className={TripNotesCss.TitleCtn}>
+        <div className={TripNotesCss.HeaderCtn}>
+          <ToggleChevron
+            isHidden={isHidden}
+            onClick={() => setIsHidden(!isHidden)}
+          />
+          <span>Notes</span>
         </div>
       </div>
       {isHidden ? null :
@@ -62,4 +54,4 @@ const TripNotesSection: FC<TripNotesSectionProps> = (props: TripNotesSectionProp
 
 }
 
-export default TripNotesSection;
+export default NotesSection;

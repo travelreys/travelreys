@@ -6,7 +6,7 @@ import _isEmpty from "lodash/isEmpty";
 
 import { ModalCss, FlightsModalCss } from '../../styles/global';
 
-import TripFlightCard from './TripFlightCard';
+import TripFlightCard from './FlightCard';
 
 // RoundtripFlightsContainer
 
