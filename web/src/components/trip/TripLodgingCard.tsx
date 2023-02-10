@@ -48,7 +48,6 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
   // UI State
   const [isUpdatingDates, setIsUpdatingDates] = useState<Boolean>(false);
   const [isUpdatingPrice, setIsUpdatingPrice] = useState<Boolean>(false);
-  const [isDropdownActive, setIsDropdownActive] = useState<Boolean>(false);
   const [checkinDates, setCheckinDates] = useState<DateRange>();
   const [priceAmount, setPriceAmount] = useState<Number>();
 
@@ -176,7 +175,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     }
     return (
       <p className={LodgingCardCss.PricePill} onClick={priceOnClick}>
-        $ {priceAmount ? String(priceAmount): "-"}
+        $ {priceAmount ? String(priceAmount): "Add cost"}
       </p>
     );
   }

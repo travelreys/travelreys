@@ -142,7 +142,7 @@ export namespace Trips {
     id: string
     tripContentListId: string
     tripContentId: string
-    price: Common.PriceMetadata
+    priceMetadata: Common.PriceMetadata
     startTime?: string | Date
     endTime?: string | Date
     labels: Map<string, string>

@@ -40,9 +40,14 @@ func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
 	placeAutocompleteHandler := kithttp.NewServer(NewPlacesAutocompleteEndpoint(svc), decodePlaceAutocompleteRequest, encodeResponse, opts...)
 	placeDetailsHandler := kithttp.NewServer(NewPlaceDetailsEndpoint(svc), decodePlaceDetailsRequest, encodeResponse, opts...)
+	directionsHandler := kithttp.NewServer(NewDirectionsEndpoint(svc), decodeDirectionsRequest, encodeResponse, opts...)
+	optimizeRouteHandler := kithttp.NewServer(NewOptimizeRouteEndpoint(svc), decodeOptimizeRouteRequest, encodeResponse, opts...)
 
 	r.Handle("/api/v1/maps/place/autocomplete", placeAutocompleteHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/maps/place/details", placeDetailsHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/maps/place/directions", directionsHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/maps/place/optimize-route", optimizeRouteHandler).Methods(http.MethodGet)
+
 	return r
 }
 
@@ -62,5 +67,24 @@ func decodePlaceDetailsRequest(_ context.Context, r *http.Request) (interface{},
 		PlaceID:      q.Get("placeID"),
 		Sessiontoken: q.Get("sessiontoken"),
 		Fields:       strings.Split(q.Get("fields"), ","),
+	}, nil
+}
+
+func decodeDirectionsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	q := r.URL.Query()
+	return DirectionsRequest{
+		OriginPlaceID: q.Get("originPlaceID"),
+		DestPlaceID:   q.Get("destPlaceID"),
+		Mode:          q.Get("mode"),
+	}, nil
+
+}
+
+func decodeOptimizeRouteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	q := r.URL.Query()
+	return OptimizeRouteRequest{
+		OriginPlaceID:    q.Get("originPlaceID"),
+		DestPlaceID:      q.Get("destPlaceID"),
+		WaypointsPlaceID: strings.Split(q.Get("waypointsPlaceID"), ","),
 	}, nil
 }

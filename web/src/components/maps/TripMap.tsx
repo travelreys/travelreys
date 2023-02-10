@@ -272,27 +272,6 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
       );
     }
 
-    const renderPhone = () => {
-      return placeDetails.international_phone_number ?
-      <p className='text-gray-600 flex items-center mb-1'>
-        <PhoneIcon className='h-4 w-4' />&nbsp;
-        {placeDetails.international_phone_number}
-      </p>
-      : null
-    }
-
-    const renderWebsite = () => {
-      return placeDetails.website ?
-      <a
-        href={placeDetails.website}
-        target="_blank"
-        className='text-indigo-500 flex items-center mb-1'>
-        <GlobeAltIcon className='h-4 w-4 text-gray-600 mr-2' />
-        Website
-      </a>
-      : null
-    }
-
     const renderOpeningHours = () => {
       const weekdayTexts = _get(placeDetails, "opening_hours.weekday_text", []);
       if (_isEmpty(weekdayTexts)) {
@@ -311,11 +290,36 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
       );
     }
 
+
+    const renderPhone = () => {
+      return placeDetails.international_phone_number ?
+      <a
+        href={`tel:${placeDetails.international_phone_number.replace(/\s/, "-")}`}
+        target="_blank"
+        className='flex w-fit rounded-full py-2 px-6 mr-2 items-center border border-gray-200 font-semibold text-gray-500'>
+        <PhoneIcon className='h-4 w-4 text-indigo-500' />&nbsp;
+        Call
+      </a>
+      : null
+    }
+
+    const renderWebsite = () => {
+      return placeDetails.website ?
+      <a
+        href={placeDetails.website}
+        target="_blank"
+        className='flex w-fit rounded-full py-2 px-6 mr-2 items-center border border-gray-200 font-semibold text-gray-500'>
+        <GlobeAltIcon className='h-4 w-4 mr-2 text-indigo-500' />
+        Web
+      </a>
+      : null
+    }
+
     const renderGmapBtn = () => {
       return (
         <a
           href={placeDetails.url}
-          className='flex w-fit rounded-full py-2 px-6 mt-8 items-center border border-gray-200 font-semibold text-gray-500'>
+          className='flex w-fit rounded-full py-2 px-6 items-center border border-gray-200 font-semibold text-gray-500'>
           <GoogleIcon className='h-4 w-4 mr-2'/> Google Maps
         </a>
       );
@@ -332,10 +336,13 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
           {placeDetails.formatted_address}
         </p>
         {renderRatings()}
-        {renderPhone()}
-        {renderWebsite()}
         {renderOpeningHours()}
-        {renderGmapBtn()}
+        <div className='flex items-center mt-6'>
+          {renderPhone()}
+          {renderWebsite()}
+          {renderGmapBtn()}
+
+        </div>
       </div>
     );
   }

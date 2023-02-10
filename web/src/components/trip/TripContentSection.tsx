@@ -192,7 +192,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         id: uuidv4(),
         tripContentId: props.content.id,
         tripContentListId: props.contentListID,
-        price: {} as any,
+        priceMetadata: {} as any,
         labels: new Map<string,string>(),
       };
       ops.push(TripsSyncAPI.makeAddOp(

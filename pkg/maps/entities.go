@@ -11,3 +11,9 @@ type AutocompletePrediction struct {
 }
 
 type AutocompletePredictionList []AutocompletePrediction
+
+type Route struct {
+	maps.Route
+}
+
+type RouteList []Route

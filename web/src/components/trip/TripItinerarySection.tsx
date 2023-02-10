@@ -13,6 +13,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
+  CurrencyDollarIcon,
   MapPinIcon,
 } from '@heroicons/react/24/solid'
 
@@ -24,9 +25,10 @@ import TripsSyncAPI from '../../apis/tripsSync';
 import { Trips } from '../../apis/types';
 import { useMap } from '../../context/maps-context';
 import {
+  InputDatesPickerCss,
   TripItinerarySectionCss,
   TripItineraryListCss,
-  TripItineraryCss
+  TripItineraryCss,
 } from '../../styles/global';
 import {
   areYMDEqual,
@@ -39,21 +41,31 @@ import {
 // ItineraryContent
 interface ItineraryContentProps {
   content: Trips.Content
+  itineraryListIdx: number
   itineraryContentIdx: number
   itineraryContent: Trips.ItineraryContent
   tripStateOnUpdate: any
 
   moveCard: (id: string, to: number) => void
   findCard: (id: string) => { index: number }
+  dropCard: (id: string) => void
 }
 
 const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProps) => {
 
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState<Boolean>(false);
+  const [priceAmount, setPriceAmount] = useState<Number>();
+
   const { dispatch } = useMap();
+  const originalIndex = props.findCard(props.itineraryContent.id).index;
+
+
+  useEffect(() => {
+    setPriceAmount(props.itineraryContent.priceMetadata.amount);
+  }, [props.itineraryContent])
 
   // Event Handles - DnD
 
-  const originalIndex = props.findCard(props.itineraryContent.id).index;
   const [{ isDragging }, drag] = useDrag(
     () => ({
       type: "ItineraryContent",
@@ -66,6 +78,8 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
         const didDrop = monitor.didDrop()
         if (!didDrop) {
           props.moveCard(droppedId, originalIndex)
+        } else {
+          props.dropCard(droppedId);
         }
       },
     }),
@@ -96,6 +110,29 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     });
     document.getElementById("map")!.dispatchEvent(event)
     return;
+  }
+
+  // Event Handlers - Price
+  const priceOnClick = (e:  any) => {
+    if (e.detail <= 1) {
+      return;
+    }
+    setIsUpdatingPrice(true)
+  }
+
+  const priceOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPriceAmount(e.target.value ? Number(e.target.value) : undefined);
+  }
+
+  const priceOnBlur = () => {
+    const ops = [
+      TripsSyncAPI.makeReplaceOp(
+        `/itinerary/${props.itineraryListIdx}/contents/${props.itineraryContentIdx}/priceMetadata/amount`,
+        priceAmount,
+      )
+    ]
+    props.tripStateOnUpdate(ops);
+    setIsUpdatingPrice(false);
   }
 
   // Renderers
@@ -129,25 +166,53 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     );
   }
 
+  const renderPricePill = () => {
+    if (isUpdatingPrice) {
+      return (
+        <div className={TripItineraryCss.PriceInputCtn}>
+          <span className={InputDatesPickerCss.Label}>
+            <CurrencyDollarIcon className={InputDatesPickerCss.Icon} />
+            &nbsp;Amount
+          </span>
+          <input
+            type="number"
+            autoFocus
+            value={priceAmount as any}
+            onChange={priceOnChange}
+            onBlur={priceOnBlur}
+            className={InputDatesPickerCss.Input}
+          />
+        </div>
+      );
+    }
+    return (
+      <p className={TripItineraryCss.PricePill} onClick={priceOnClick}>
+        $ {priceAmount ? String(priceAmount): "Add cost"}
+      </p>
+    );
+  }
+
   return (
-    <div
-      className={TripItineraryCss.Ctn}
-      ref={(node) => drag(drop(node))}
-    >
-      {renderTitleInput()}
-      {renderPlace()}
-      <NotesEditor
-        ctnCss='p-0 mb-2'
-        base64Notes={props.content.notes}
-        notesOnChange={() => {}}
-        placeholder={"Notes..."}
-        readOnly
-      />
+    <div>
+      <div
+        className={TripItineraryCss.Ctn}
+        ref={(node) => drag(drop(node))}
+      >
+        {renderTitleInput()}
+        {renderPlace()}
+        <NotesEditor
+          ctnCss='p-0 mb-2'
+          base64Notes={props.content.notes}
+          notesOnChange={() => {}}
+          placeholder={"Notes..."}
+          readOnly
+        />
+        {renderPricePill()}
+      </div>
+      Directions
     </div>
   );
 }
-
-
 
 // TripItineraryList
 
@@ -183,7 +248,6 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   const findCard = useCallback((id: string) => {
     const itinContent = _find(itinContents, (cont: Trips.ItineraryContent) => cont.id === id);
-    // console.log(itinContent)
     return {itinContent, index: itinContents.indexOf(itinContent!)}
   }, [itinContents]);
 
@@ -193,7 +257,10 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     itinContents.splice(atIndex, 0, itinContent!);
     const newItinContents = itinContents.map((x) => x);
     setItinContents(newItinContents);
-    replaceItineraryContents(newItinContents);
+  }, [findCard, itinContents, setItinContents])
+
+  const dropCard = useCallback((id: string) => {
+    replaceItineraryContents(itinContents);
   }, [findCard, itinContents, setItinContents])
 
 
@@ -333,11 +400,13 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
           </span>
           <ItineraryContent
             content={content}
+            itineraryListIdx={props.itineraryListIdx}
             itineraryContentIdx={idx}
             itineraryContent={itinCtn}
             tripStateOnUpdate={props.tripStateOnUpdate}
             findCard={findCard}
             moveCard={moveCard}
+            dropCard={dropCard}
           />
         </li>
       );
@@ -347,7 +416,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
       <div className='pl-6 py-4'>
         <ol ref={drop} className='relative border-l border-gray-200'>
           {listItems}
-       </ol>
+        </ol>
       </div>
     );
   }
