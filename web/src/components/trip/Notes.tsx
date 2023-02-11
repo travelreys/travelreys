@@ -25,9 +25,7 @@ const NotesSection: FC<NotesSectionProps> = (props: NotesSectionProps) => {
 
   // Event Handlers
   const notesOnChange = (content: string) => {
-    const ops = [];
-    ops.push(TripsSyncAPI.newReplaceOp(`/notes`, content));
-    props.tripStateOnUpdate(ops);
+    props.tripStateOnUpdate([TripsSyncAPI.newReplaceOp(`/notes`, content)]);
   }
 
   // Renderers

@@ -240,13 +240,9 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   // Event Handlers
 
   const updateItinContents = (newItinContents: Array<Trips.ItineraryContent>) => {
-    const ops = [
-      TripsSyncAPI.newReplaceOp(
-        `/itinerary/${props.itineraryListIdx}/contents`,
-        newItinContents
-      ),
-    ];
-    props.tripStateOnUpdate(ops);
+    props.tripStateOnUpdate([
+      TripsSyncAPI.newReplaceOp(`/itinerary/${props.itineraryListIdx}/contents`, newItinContents),
+    ]);
   }
 
   // DnD Helpers

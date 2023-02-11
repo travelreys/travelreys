@@ -44,6 +44,10 @@ const TripsSyncAPI = {
     return {op, path, value}
   },
 
+  /**
+   * Should avoid replacing entire list
+   *
+   */
   newReplaceOp: (path: string, value: any): JSONPatchOp => {
     return {op: "replace", path, value}
   },

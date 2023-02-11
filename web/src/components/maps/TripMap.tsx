@@ -25,6 +25,7 @@ import MapsAPI, {
   PLACE_IMAGE_APIKEY
 } from '../../apis/maps';
 import {
+  DefaultContentColor,
   LabelContentListColor,
   LabelContentListIcon,
   Trips
@@ -38,10 +39,9 @@ import {
   newZoomMarkerClick,
 } from './common';
 import GoogleIcon from '../icons/GoogleIcon';
-import { makeActivityPin, makeHotelPin } from './mapsPinIcons';
+import { makePinWithTooltip } from './mapsPinIcons';
 import { ActionNameSetSelectedPlace, useMap } from '../../context/maps-context';
 import { CommonCss, TripMapCss } from '../../styles/global';
-import isEmpty from 'lodash/isEmpty';
 
 
 const defaultMapCenter = { lat: 1.290969, lng: 103.8560011 }
@@ -274,7 +274,7 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
   const lodgingToMapMarkers = () => {
     const lodgings = _get(props.trip, "lodgings", {});
     return Object.values(lodgings).map((lodge: any) => ({
-      elem: makeHotelPin(lodge.place.name),
+      elem: makePinWithTooltip(lodge.place.name, "black", "hotel"),
       place: lodge.place
     }));
   }
@@ -282,7 +282,7 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
   const contentToMapMarkers = () => {
     const ctntLists = Object.values(_get(props.trip, "contents", {}));
     return _flatten(ctntLists.map((l: any) => {
-      const color = _get(l, `labels.${LabelContentListColor}`, "black")
+      const color = _get(l, `labels.${LabelContentListColor}`, DefaultContentColor)
       const icon = _get(l, `labels.${LabelContentListIcon}`, "")
       return l.contents
       .filter((ct: any) => {
@@ -290,7 +290,7 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
         return latlng !== undefined && !(latlng.lat === 0 && latlng.lng === 0)
       })
       .map((ct: any) => ({
-        elem: makeActivityPin(ct.place.name, color, icon),
+        elem: makePinWithTooltip(ct.place.name, color, icon),
         place: ct.place
       }));
     }));

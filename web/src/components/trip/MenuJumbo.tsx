@@ -160,16 +160,12 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
 
   // Event Handlers - Trip Name
   const tripNameOnBlur = () => {
-    const ops = [];
-    ops.push(TripsSyncAPI.newReplaceOp("/name", tripName));
-    props.tripStateOnUpdate(ops)
+    props.tripStateOnUpdate([TripsSyncAPI.newReplaceOp("/name", tripName)])
   }
 
   // Event Handlers - Cover Image
   const coverImageOnSelect = (image: any) => {
-    const ops = [];
-    ops.push(TripsSyncAPI.newReplaceOp("/coverImage", image))
-    props.tripStateOnUpdate(ops);
+    props.tripStateOnUpdate([TripsSyncAPI.newReplaceOp("/coverImage", image)]);
   }
 
   // Event Handlers - Trip Dates

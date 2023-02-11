@@ -43,6 +43,7 @@ import {
   LabelContentListColorJSONPath,
   LabelContentListIconJSONPath,
   LabelContentListIcon,
+  DefaultContentColor,
 } from '../../apis/trips';
 import {
   ActionNameSetSelectedPlace,
@@ -57,7 +58,6 @@ import {
 import { parseISO, printFmt } from '../../utils/dates';
 import { MapElementID, newEventMarkerClick } from '../maps/common';
 import isEmpty from 'lodash/isEmpty';
-
 
 /////////////
 // Content //
@@ -324,6 +324,34 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 }
 
 
+////////////////////
+// ContentListPin //
+////////////////////
+
+
+interface ContentListPinProps {
+  icon?: any
+  color: string
+}
+
+const ContentListPin: FC<ContentListPinProps> = (props: ContentListPinProps) => {
+  return (
+    <div className='relative -ml-2'>
+      <span className='absolute right-2.5 top-2 text-base font-bold pointer-events-none'>
+        {props.icon ? <props.icon className="fill-white stroke-2 w-3 h-3" /> : null}
+      </span>
+      <svg
+        className="h-8 w-8 stroke-white stroke-2"
+        style={{fill: props.color}}
+        viewBox="0 0 24 24"
+      >
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      </svg>
+    </div>
+  );
+}
+
+
 /////////////////
 // ContentList //
 /////////////////
@@ -425,6 +453,8 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
   }
 
   const renderHeader = () => {
+    const color = _get(props.contentList, `labels.${LabelContentListColor}`, DefaultContentColor)
+    const icon = _get(props.contentList, `labels.${LabelContentListIcon}`, "")
     return (
       <div className='flex mb-2 w-full justify-between'>
         <div className='flex flex-1'>
@@ -432,6 +462,7 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
             onClick={() => setIsHidden(!isHidden)}
             isHidden={isHidden}
           />
+          <ContentListPin color={color} icon={ContentIconOpts[icon]} />
           <input
             type="text"
             value={name}
@@ -549,9 +580,20 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   }
 
   const deleteContentList = (contentListID: string) => {
-    props.tripStateOnUpdate([
+    const ops = [
       TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}`, "")
-    ]);
+    ]
+    _get(props.trip, "itinerary", [])
+      .forEach((itinList: Trips.ItineraryList, itinListIdx: number) => {
+        itinList.contents
+          .filter((itinCtnt: Trips.ItineraryContent) => itinCtnt.tripContentListId === contentListID)
+          .forEach((_: any, itinCtntIdx: number) => {
+            ops.unshift(
+              TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/contents/${itinCtntIdx}`, "")
+            );
+          });
+      });
+    props.tripStateOnUpdate(ops);
   }
 
   const updateContentListColorIcon = (color: string | undefined, icon: string | undefined, contentListID: string) => {
@@ -595,9 +637,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   }
 
   const onDeleteContent = (idx: number, contentListID: string) => {
-    props.tripStateOnUpdate([
-      TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/contents/${idx}`, "")
-    ]);
+    props.tripStateOnUpdate([TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/contents/${idx}`, "")]);
   }
 
   const onUpdateContentPlace = (idx: number, place: any, contentListID: string) => {
@@ -636,7 +676,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/contents/${itinCtnIdx}`, "",));
 
       // 3. Remove ItineraryContentRoute from ItineraryList
-      ops.push(TripsSyncAPI.newReplaceOp(`/itinerary/${itinListIdx}/routes`, []));
+      // ops.push(TripsSyncAPI.newReplaceOp(`/itinerary/${itinListIdx}/routes`, []));
       // if (itinCtnIdx === 0) {
       //   const routeIdx = itinCtnIdx + 1;
       //   if (routeIdx < itinList.routes.length) {
