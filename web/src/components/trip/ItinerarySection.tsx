@@ -11,8 +11,6 @@ import _find from "lodash/find";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
-  ChevronDownIcon,
-  ChevronUpIcon,
   CurrencyDollarIcon,
   MapPinIcon,
 } from '@heroicons/react/24/solid'
@@ -22,13 +20,14 @@ import PlaneIcon from '../icons/PlaneIcon';
 import HotelIcon from '../icons/HotelIcon';
 
 import TripsSyncAPI from '../../apis/tripsSync';
-import { Trips } from '../../apis/trips';
-import { useMap } from '../../context/maps-context';
+import { PriceMetadataAmountJSONPath, Trips } from '../../apis/trips';
+import { ActionNameSetSelectedPlace, useMap } from '../../context/maps-context';
 import {
   InputDatesPickerCss,
   TripItinerarySectionCss,
   TripItineraryListCss,
   TripItineraryCss,
+  CommonCss,
 } from '../../styles/global';
 import {
   areYMDEqual,
@@ -36,12 +35,19 @@ import {
   parseISO,
   printFmt
 } from '../../utils/dates'
+import { MapElementID, newEventMarkerClick } from '../maps/common';
+import ToggleChevron from '../ToggleChevron';
+
+
+const ItineraryDateFmt = "eeee, do MMMM"
+const ItineraryContentCard = "ItineraryContentCard";
 
 
 // ItineraryContent
 interface ItineraryContentProps {
   content: Trips.Content
   itineraryListIdx: number
+  itineraryList: Trips.ItineraryList
   itineraryContentIdx: number
   itineraryContent: Trips.ItineraryContent
   tripStateOnUpdate: any
@@ -55,10 +61,9 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 
   const [isUpdatingPrice, setIsUpdatingPrice] = useState<Boolean>(false);
   const [priceAmount, setPriceAmount] = useState<Number>();
+  const origCardIdx = props.findCard(props.itineraryContent.id).index;
 
   const { dispatch } = useMap();
-  const originalIndex = props.findCard(props.itineraryContent.id).index;
-
 
   useEffect(() => {
     setPriceAmount(props.itineraryContent.priceMetadata.amount);
@@ -66,29 +71,28 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 
   // Event Handles - DnD
 
-  const [{ isDragging }, drag] = useDrag(
+  const [{}, drag] = useDrag(
     () => ({
-      type: "ItineraryContent",
-      item: { id: props.itineraryContent.id, originalIndex },
+      type: ItineraryContentCard,
+      item: { id: props.itineraryContent.id, origCardIdx },
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
       }),
       end: (item, monitor) => {
-        const { id: droppedId, originalIndex } = item
-        const didDrop = monitor.didDrop()
-        if (!didDrop) {
-          props.moveCard(droppedId, originalIndex)
-        } else {
+        const { id: droppedId, origCardIdx } = item
+        if (monitor.didDrop()) {
           props.dropCard(droppedId);
+        } else {
+          props.moveCard(droppedId, origCardIdx)
         }
       },
     }),
-    [props.itineraryContent.id, originalIndex, props.moveCard],
+    [props.itineraryContent.id, origCardIdx, props.moveCard],
   )
 
   const [, drop] = useDrop(
     () => ({
-      accept: "ItineraryContent",
+      accept: ItineraryContentCard,
       hover({ id: draggedId }: any) {
         if (draggedId !== props.itineraryContent.id) {
           const { index: overIndex } = props.findCard(props.itineraryContent.id)
@@ -102,13 +106,9 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
   // Event Handlers - Places
 
   const placeOnClick = (e: React.MouseEvent) => {
-    dispatch({type:"setSelectedPlace", value: props.content.place})
-    const event = new CustomEvent('marker_click', {
-      bubbles: false,
-      cancelable: false,
-      detail: props.content.place,
-    });
-    document.getElementById("map")!.dispatchEvent(event)
+    dispatch({type: ActionNameSetSelectedPlace, value: props.content.place})
+    const event = newEventMarkerClick(props.content.place);
+    document.getElementById(MapElementID)?.dispatchEvent(event)
     return;
   }
 
@@ -125,13 +125,13 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
   }
 
   const priceOnBlur = () => {
-    const ops = [
+    const { itineraryListIdx , itineraryContentIdx } = props;
+    props.tripStateOnUpdate([
       TripsSyncAPI.newReplaceOp(
-        `/itinerary/${props.itineraryListIdx}/contents/${props.itineraryContentIdx}/priceMetadata/amount`,
+        `/itinerary/${itineraryListIdx}/contents/${itineraryContentIdx}/${PriceMetadataAmountJSONPath}`,
         priceAmount,
       )
-    ]
-    props.tripStateOnUpdate(ops);
+    ]);
     setIsUpdatingPrice(false);
   }
 
@@ -192,6 +192,10 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     );
   }
 
+  const renderDirectionsDropdown = () => {
+    return null;
+  }
+
   return (
     <div>
       <div
@@ -209,7 +213,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
         />
         {renderPricePill()}
       </div>
-      Directions
+      {renderDirectionsDropdown()}
     </div>
   );
 }
@@ -234,7 +238,8 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
 
   // Event Handlers
-  const replaceItineraryContents = (newItinContents: Array<Trips.ItineraryContent>) => {
+
+  const updateItinContents = (newItinContents: Array<Trips.ItineraryContent>) => {
     const ops = [
       TripsSyncAPI.newReplaceOp(
         `/itinerary/${props.itineraryListIdx}/contents`,
@@ -244,7 +249,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     props.tripStateOnUpdate(ops);
   }
 
-  // Helpers
+  // DnD Helpers
 
   const findCard = useCallback((id: string) => {
     const itinContent = _find(itinContents, (cont: Trips.ItineraryContent) => cont.id === id);
@@ -260,26 +265,22 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   }, [findCard, itinContents, setItinContents])
 
   const dropCard = useCallback((id: string) => {
-    replaceItineraryContents(itinContents);
+    updateItinContents(itinContents);
   }, [findCard, itinContents, setItinContents])
 
-
-  const [, drop] = useDrop(() => ({ accept: "ItineraryContent" }))
+  const [, drop] = useDrop(() => ({ accept: ItineraryContentCard }))
 
   // Renderers
+
   const renderHeader = () => {
     return (
       <div className='flex mb-2'>
-        <button
-          type="button"
-          className={TripItinerarySectionCss.ToggleBtn}
+        <ToggleChevron
+          isHidden={isHidden}
           onClick={() => {setIsHidden(!isHidden)}}
-        >
-        {isHidden ? <ChevronUpIcon className='h-4 w-4' />
-          : <ChevronDownIcon className='h-4 w-4'/>}
-        </button>
+        />
         <p className='text-xl font-bold'>
-          {printFmt(parseISO(props.itineraryList.date as string), "eeee, do MMMM") }
+          {printFmt(parseISO(props.itineraryList.date as string), ItineraryDateFmt) }
         </p>
       </div>
 
@@ -345,10 +346,14 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
     const render = (idx: number, place: any, checkin: boolean) => {
       return (
-        <div key={idx} className="flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow">
-          <span className='bg-indigo-200 p-2 rounded-full'><HotelIcon className='w-4 h-4' /></span>
-          <div className="flex-1 pl-4 text-sm font-normal">{place.name}</div>
-          <span className='pl-2 font-semibold text-sm'>{checkin ? "Check in": "Check out"}</span>
+        <div key={idx} className={TripItineraryListCss.LodgingWrapper}>
+          <span className={TripItineraryListCss.LodgingIconWrapper}>
+            <HotelIcon className={CommonCss.Icon} />
+          </span>
+          <div className={TripItineraryListCss.LodgingName}>{place.name}</div>
+          <span className={TripItineraryListCss.LodgingStatus}>
+            {checkin ? "Check in": "Check out"}
+          </span>
         </div>
       );
     }
@@ -371,7 +376,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     });
 
     return (
-      <div className='w-full mb-2'>
+      <div className={TripItineraryListCss.LodgingCtn}>
         {checkouts.map((item: any, idx: number) => render(idx, item.place, false))}
         {checkins.map((item: any, idx: number) => render(idx, item.place, true))}
       </div>
@@ -391,16 +396,14 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
         _get(props.trip, `contents.${itinCtn.tripContentListId}.contents`, []),
         (ctn: Trips.Content) => ctn.id === itinCtn.tripContentId);
       return (
-        <li
-          key={idx}
-          className="mb-8 ml-6"
-        >
-          <span className="absolute flex items-center justify-center w-6 h-6 bg-yellow-200 rounded-full -left-3 ring-8 ring-white font-bold text-gray-500 text-sm">
+        <li key={idx} className={TripItineraryListCss.ItinItem}>
+          <span className={TripItineraryListCss.ItinContentIcon}>
             {idx + 1}
           </span>
           <ItineraryContent
             content={content}
             itineraryListIdx={props.itineraryListIdx}
+            itineraryList={props.itineraryList}
             itineraryContentIdx={idx}
             itineraryContent={itinCtn}
             tripStateOnUpdate={props.tripStateOnUpdate}
@@ -413,8 +416,11 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     })
 
     return (
-      <div className='pl-6 py-4'>
-        <ol ref={drop} className='relative border-l border-gray-200'>
+      <div className={TripItineraryListCss.ContentsCtn}>
+        <ol
+          ref={drop}
+          className={TripItineraryListCss.ContentsWrapper}
+        >
           {listItems}
         </ol>
       </div>
@@ -435,8 +441,9 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   );
 }
 
-// TripItinerarySection
-
+//////////////////////////
+// TripItinerarySection //
+//////////////////////////
 
 interface ItinerarySectionProps {
   trip: any

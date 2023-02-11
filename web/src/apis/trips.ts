@@ -65,10 +65,12 @@ export namespace Trips {
     desc: string
     date: string | Date
     contents: Array<ItineraryContent>
+    routes: Array<any>,
     labels: Map<string, string>
   }
 }
 
+export const PriceMetadataAmountJSONPath = "priceMetadata/amount"
 export const LabelContentItineraryDates = "itinerary|dates";
 export const LabelContentItineraryDatesJSONPath = "labels.itinerary|dates";
 export const LabelContentItineraryDatesDelimeter = "|";

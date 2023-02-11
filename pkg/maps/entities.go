@@ -14,6 +14,7 @@ type AutocompletePredictionList []AutocompletePrediction
 
 type Route struct {
 	maps.Route
+	TravelMode string `json:"travelMode" bson:"travelMode"`
 }
 
 type RouteList []Route

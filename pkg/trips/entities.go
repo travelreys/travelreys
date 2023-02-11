@@ -196,6 +196,7 @@ type ItineraryList struct {
 	Date        time.Time            `json:"date" bson:"date"`
 	Description string               `json:"desc" bson:"desc"`
 	Contents    ItineraryContentList `json:"contents" bson:"contents"`
+	Route       maps.RouteList       `json:"routes" bson:"routes"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
@@ -206,6 +207,7 @@ func NewItineraryList(date time.Time) ItineraryList {
 		Date:        date,
 		Description: "",
 		Contents:    ItineraryContentList{},
+		Route:       maps.RouteList{},
 		Labels:      common.Labels{},
 	}
 }

@@ -99,16 +99,16 @@ func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, 
 	req := &maps.DirectionsRequest{
 		Origin:      fmt.Sprintf("place_id:%s", originPlaceID),
 		Destination: fmt.Sprintf("place_id:%s", destPlaceID),
-		Mode:        maps.Mode(mode),
 	}
 
 	groutes, _, err := svc.c.Directions(ctx, req)
 	if err != nil {
 		return RouteList{}, err
 	}
+
 	routes := RouteList{}
 	for _, r := range groutes {
-		routes = append(routes, Route{r})
+		routes = append(routes, Route{Route: r, TravelMode: mode})
 	}
 	return routes, err
 }
@@ -127,6 +127,8 @@ func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceI
 		Optimize:    true,
 	}
 
+	// maps.DecodePolyline()
+
 	groutes, _, err := svc.c.Directions(ctx, req)
 	if err != nil {
 		return RouteList{}, err
@@ -134,7 +136,8 @@ func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceI
 
 	routes := RouteList{}
 	for _, r := range groutes {
-		routes = append(routes, Route{r})
+		routes = append(routes, Route{Route: r, TravelMode: ""})
 	}
+
 	return routes, err
 }

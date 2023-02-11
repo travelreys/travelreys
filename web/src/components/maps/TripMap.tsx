@@ -16,6 +16,7 @@ import {
   GlobeAltIcon,
 } from '@heroicons/react/24/solid'
 import {
+  MagnifyingGlassCircleIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
 
@@ -25,11 +26,17 @@ import MapsAPI, {
 } from '../../apis/maps';
 
 import Spinner from '../Spinner';
-import { makeActivityPin, makeHotelPin } from './GMapsPinIcon';
-import { useMap } from '../../context/maps-context';
+import {
+  EventMarkerClickName,
+  EventZoomMarkerClick,
+  MapElementID,
+  newZoomMarkerClick,
+} from './common';
 import GoogleIcon from '../icons/GoogleIcon';
-import { EventMarkerClickName } from './common';
+import { makeActivityPin, makeHotelPin } from './mapsPinIcons';
+import { ActionNameSetSelectedPlace, useMap } from '../../context/maps-context';
 import { CommonCss, TripMapCss } from '../../styles/global';
+import { Trips } from '../../apis/trips';
 
 
 const defaultMapCenter = { lat: 33.3960897, lng: 126.264522 }
@@ -41,7 +48,7 @@ const defaultMapOpts = {
   fullscreenControl: false,
   rotateControl: false,
   keyboardShortcuts: true,
-  gestureHandling: "greedy"
+  gestureHandling: "greedy",
 }
 
 interface PlaceMarker {
@@ -52,17 +59,20 @@ interface PlaceMarker {
 
 interface InnerMapProps {
   markers: Array<PlaceMarker>
+  itineraryPolylines: Array<Array<string>>
   width: any
 }
 
 const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
   const ref = useRef() as any;
   const map = useRef() as any;
-  const {state, dispatch} = useMap();
+  const { state, dispatch } = useMap();
 
   const currentPopups = useRef([]) as any;
+  const currentPolylines = useRef([]) as any;
   const currentMapCenter = useRef(null) as any;
 
+  // Popup
   class Popup extends google.maps.OverlayView {
     position: google.maps.LatLng;
     containerDiv: HTMLDivElement;
@@ -96,7 +106,7 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
 
       // Add a listener - we'll accept clicks anywhere on this div, but you may want
       // to validate the click i.e. verify it occurred in some portion of your overlay.
-      this.containerDiv.addEventListener('click', function() {
+      this.containerDiv.addEventListener('click', function () {
         google.maps.event.trigger(me, 'click');
       });
     }
@@ -131,21 +141,45 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
     }
   }
 
+  // useEffects
+
   useEffect(() => {
     map.current = new window.google.maps.Map(ref.current, defaultMapOpts)
     map.current.addListener("center_changed", () => {
       currentMapCenter.current = map.current.getCenter();
     });
+    map.current.addListener("click", (e: any) => {
+      if (e.placeId) {
+        // Call event.stop() on the event to prevent the default info window from showing.
+        e.stop();
+        // do any other stuff you want to do
+        dispatch({
+          type: ActionNameSetSelectedPlace,
+          value: {
+            place_id: e.placeId,
+            geometry: {
+              location: { lat: e.latLng.lat(), lng: e.latLng.lng() }
+            }
+          }
+        });
+        map.current.panTo({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      }
+    })
     ref.current.addEventListener(EventMarkerClickName, (e: any) => {
       const center = _get(e.detail, "geometry.location", defaultMapCenter);
       map.current.setCenter(center);
-    })
+    });
+    ref.current.addEventListener(EventZoomMarkerClick, (e: any) => {
+      const center = _get(e.detail, "geometry.location", defaultMapCenter);
+      map.current.setCenter(center);
+      map.current.setZoom(17);
+    });
   }, [])
 
   useEffect(() => {
     if (!_isEmpty(state.selectedPlace)) {
-      const center = _get(state.selectedPlace, "geometry.location", {});
-      map.current.setCenter(center);
+      const center = _get(state.selectedPlace, "geometry.location");
+      map.current.panTo(center);
     }
   }, [state.selectedPlace])
 
@@ -156,6 +190,12 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
     })
     currentPopups.current = [];
 
+    currentPolylines.current.forEach((pl: any) => {
+      pl.setMap(null);
+    })
+    currentPolylines.current = [];
+
+
     // Make new markers
     const bounds = new google.maps.LatLngBounds();
     props.markers.forEach((marker: PlaceMarker) => {
@@ -165,9 +205,8 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
       popup.addListener("click", () => {
         map.current.setCenter(popup.position);
         currentMapCenter.current = popup.position;
-        dispatch({type: "setSelectedPlace", value: marker.place})
+        dispatch({ type: ActionNameSetSelectedPlace, value: marker.place })
       })
-
       currentPopups.current.push(popup);
       bounds.extend(popup.position);
     });
@@ -176,14 +215,29 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
       map.current.setCenter(bounds.getCenter());
       currentMapCenter.current = bounds.getCenter();
     }
-    // map.current.fitBounds(bounds);
+
+    props.itineraryPolylines.forEach((polylines: Array<string>) => {
+      const latlng = _flatten(polylines.map((pl) => google.maps.geometry.encoding.decodePath(pl)));
+      const path = new google.maps.Polyline({
+        path: latlng,
+        geodesic: true,
+        strokeColor: "#FF0000",
+        strokeOpacity: 0.6,
+        strokeWeight: 8,
+      });
+      path.setMap(map.current);
+      currentPolylines.current.push(path);
+    })
   }, [props.markers])
+
+
+  // Renderers
 
   return (
     <div ref={ref}
-      id="map"
+      id={MapElementID}
       className='h-full'
-      style={{width: props.width}}
+      style={{ width: props.width }}
     />
   );
 }
@@ -195,7 +249,7 @@ interface TripMapComponentProps {
 
 const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
 
-  const {state} = useMap();
+  const { state } = useMap();
   const [placeDetails, setPlaceDetails] = useState(null) as any;
 
   // API
@@ -205,9 +259,9 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
     }
     const placeID = state.selectedPlace.place_id;
     MapsAPI.placeDetails(placeID, placeAtmosphereFields, "")
-    .then((res) => {
-      setPlaceDetails(_get(res, "data.place", null));
-    })
+      .then((res) => {
+        setPlaceDetails(_get(res, "data.place", null));
+      })
   }, [state.selectedPlace]);
 
   // Map Markers
@@ -222,13 +276,13 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
   const contentToMapMarkers = () => {
     return _flatten(
       Object.values(_get(props.trip, "contents", {}))
-      .map((list: any) => list.contents)
+        .map((list: any) => list.contents)
     )
-    .filter((ct: any) => !_isEmpty(ct.place))
-    .map((ct: any) => ({
-      elem: makeActivityPin(ct.place.name),
-      place: ct.place
-    }));
+      .filter((ct: any) => !_isEmpty(ct.place))
+      .map((ct: any) => ({
+        elem: makeActivityPin(ct.place.name),
+        place: ct.place
+      }));
   }
 
   const makeMarkers = () => {
@@ -236,6 +290,13 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
     markers = markers.concat(lodgingToMapMarkers());
     markers = markers.concat(contentToMapMarkers());
     return markers;
+  }
+
+  // Direction polylines
+  const makeItineraryDirectionsPolylines = () => {
+    return _get(props.trip, "itinerary", []).map((itin: Trips.ItineraryList) => {
+      return _flatten(itin.routes.map((r) => r.overview_polyline.points));
+    });
   }
 
   // Renderers
@@ -247,10 +308,18 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
 
     const renderHeader = () => {
       return (
-        <p className='font-bold text-lg flex justify-between items-center'>
-          {placeDetails.name}
-          <button type="button" onClick={() => {setPlaceDetails(null)}}>
-            <XMarkIcon className='h-6 w-6' />
+        <p className={TripMapCss.HeaderCtn}>
+          <span className={TripMapCss.TitleCtn}>
+            <button type="button" onClick={() => {
+              const event = newZoomMarkerClick(placeDetails);
+              document.getElementById(MapElementID)?.dispatchEvent(event)
+            }}>
+              <MagnifyingGlassCircleIcon className={CommonCss.LeftIcon} />
+            </button>
+            {placeDetails.name}
+          </span>
+          <button type="button" onClick={() => { setPlaceDetails(null) }}>
+            <XMarkIcon className={CommonCss.Icon} />
           </button>
         </p>
       );
@@ -267,13 +336,16 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
     const renderAddr = () => {
       return (
         <p className={TripMapCss.AddrTxt}>
-          <MapPinIcon className={CommonCss.LeftIcon}/>
+          <MapPinIcon className={CommonCss.LeftIcon} />
           {placeDetails.formatted_address}
         </p>
       );
     }
 
     const renderRatings = () => {
+      if (placeDetails.user_ratings_total === 0) {
+        return null;
+      }
       return (
         <p className={TripMapCss.RatingsStar}>
           <StarIcon className={CommonCss.LeftIcon} />
@@ -306,7 +378,7 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
 
     const renderPhone = () => {
       return placeDetails.international_phone_number
-      ?
+        ?
         <a
           href={`tel:${placeDetails.international_phone_number.replace(/\s/, "-")}`}
           target="_blank"
@@ -315,12 +387,12 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
           <PhoneIcon className={TripMapCss.PhoneIcon} />
           Call
         </a>
-      : null
+        : null
     }
 
     const renderWebsite = () => {
       return placeDetails.website
-      ?
+        ?
         <a
           href={placeDetails.website}
           target="_blank"
@@ -329,7 +401,7 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
           <GlobeAltIcon className={TripMapCss.PhoneIcon} />
           Web
         </a>
-      : null
+        : null
     }
 
     const renderGmapBtn = () => {
@@ -346,9 +418,10 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
     return (
       <div
         className={TripMapCss.DetailsWrapper}
-        style={{width: props.width}}
+        style={{ width: props.width }}
       >
         <div className={TripMapCss.DetailsCard}>
+          {placeDetails.place_id}
           {renderHeader()}
           {renderSummary()}
           {renderAddr()}
@@ -375,9 +448,13 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
       <Wrapper
         apiKey={PLACE_IMAGE_APIKEY}
         render={renderMap}
-        libraries={["marker"]}
+        libraries={["marker", "geometry"]}
       >
-        <InnerMap markers={makeMarkers()} width={props.width} />
+        <InnerMap
+          markers={makeMarkers()}
+          itineraryPolylines={makeItineraryDirectionsPolylines()}
+          width={props.width}
+        />
       </Wrapper>
     </div>
   );
