@@ -155,6 +155,7 @@ type TripContentList struct {
 	ID       string        `json:"id" bson:"id"`
 	Name     string        `json:"name" bson:"name"`
 	Contents []TripContent `json:"contents" bson:"contents"`
+	Labels   common.Labels `json:"labels" bson:"labels"`
 }
 
 func NewTripContentList(name string) TripContentList {
@@ -162,6 +163,7 @@ func NewTripContentList(name string) TripContentList {
 		ID:       uuid.New().String(),
 		Name:     name,
 		Contents: []TripContent{},
+		Labels:   common.Labels{},
 	}
 }
 

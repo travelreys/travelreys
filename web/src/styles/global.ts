@@ -231,6 +231,8 @@ export const TripContentSectionCss = {
 
 export const TripContentListCss = {
   Ctn: "rounded-lg shadow-xs mb-4",
+  ChooseColorBtn: "flex items-center w-full text-left",
+  DeleteBtn: "text-red-500 flex items-center w-full text-left",
   NameInput: "p-0 w-full text-xl mb-1 sm:text-2xl font-bold text-gray-800 placeholder:text-gray-400 rounded border-0 hover:bg-gray-300 hover:border-0 focus:ring-0 focus:p-1 duration-500",
   NewContentCtn: "flex my-4 w-full",
   NewContentInput: "flex-1 mr-1 text-md sm:text-md font-bold text-gray-800 placeholder:font-normal placeholder:text-gray-300 placeholder:italic rounded border-0 bg-gray-100 hover:border-0 focus:ring-0",

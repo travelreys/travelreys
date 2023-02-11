@@ -24,6 +24,11 @@ import MapsAPI, {
   placeAtmosphereFields,
   PLACE_IMAGE_APIKEY
 } from '../../apis/maps';
+import {
+  LabelContentListColor,
+  LabelContentListIcon,
+  Trips
+} from '../../apis/trips';
 
 import Spinner from '../Spinner';
 import {
@@ -36,13 +41,12 @@ import GoogleIcon from '../icons/GoogleIcon';
 import { makeActivityPin, makeHotelPin } from './mapsPinIcons';
 import { ActionNameSetSelectedPlace, useMap } from '../../context/maps-context';
 import { CommonCss, TripMapCss } from '../../styles/global';
-import { Trips } from '../../apis/trips';
 
 
-const defaultMapCenter = { lat: 33.3960897, lng: 126.264522 }
+const defaultMapCenter = { lat: 1.290969, lng: 103.8560011 }
 const defaultMapOpts = {
   center: defaultMapCenter,
-  zoom: 10,
+  zoom: 14,
   mapTypeControl: false,
   streetViewControl: false,
   fullscreenControl: false,
@@ -211,9 +215,10 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
       bounds.extend(popup.position);
     });
 
+    // map.current.setCenter(currentMapCenter.current);
     if (_isEmpty(currentMapCenter.current)) {
-      map.current.setCenter(bounds.getCenter());
-      currentMapCenter.current = bounds.getCenter();
+        map.current.fitBounds(bounds);
+      // map.current.setCenter(bounds.getCenter());
     }
 
     props.itineraryPolylines.forEach((polylines: Array<string>) => {
@@ -274,15 +279,15 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
   }
 
   const contentToMapMarkers = () => {
-    return _flatten(
-      Object.values(_get(props.trip, "contents", {}))
-        .map((list: any) => list.contents)
-    )
-      .filter((ct: any) => !_isEmpty(ct.place))
-      .map((ct: any) => ({
-        elem: makeActivityPin(ct.place.name),
+    const ctntLists = Object.values(_get(props.trip, "contents", {}));
+    return _flatten(ctntLists.map((l: any) => {
+      const color = _get(l, `labels.${LabelContentListColor}`, "black")
+      const icon = _get(l, `labels.${LabelContentListIcon}`, "")
+      return l.contents.map((ct: any) => ({
+        elem: makeActivityPin(ct.place.name, color, icon),
         place: ct.place
       }));
+    }));
   }
 
   const makeMarkers = () => {
@@ -421,7 +426,6 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
         style={{ width: props.width }}
       >
         <div className={TripMapCss.DetailsCard}>
-          {placeDetails.place_id}
           {renderHeader()}
           {renderSummary()}
           {renderAddr()}

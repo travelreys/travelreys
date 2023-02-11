@@ -15,6 +15,7 @@ import {
   CheckIcon,
   MapPinIcon,
   PlusIcon,
+  SwatchIcon,
   TrashIcon
 } from '@heroicons/react/24/solid';
 import {
@@ -27,6 +28,7 @@ import NotesEditor from '../NotesEditor';
 import PlaceAutocomplete from '../maps/PlaceAutocomplete';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
 import ToggleChevron from '../ToggleChevron';
+import ColorIconModal from './ColorIconModal';
 
 import TripsSyncAPI from '../../apis/tripsSync';
 import MapsAPI, { ModeDriving, placeFields } from '../../apis/maps';
@@ -35,6 +37,12 @@ import {
   LabelContentItineraryDates,
   LabelContentItineraryDatesJSONPath,
   LabelContentItineraryDatesDelimeter,
+  ContentColorOpts,
+  ContentIconOpts,
+  LabelContentListColor,
+  LabelContentListColorJSONPath,
+  LabelContentListIconJSONPath,
+  LabelContentListIcon,
 } from '../../apis/trips';
 import {
   ActionNameSetSelectedPlace,
@@ -48,6 +56,7 @@ import {
 } from '../../styles/global';
 import { parseISO, printFmt } from '../../utils/dates';
 import { MapElementID, newEventMarkerClick } from '../maps/common';
+import isEmpty from 'lodash/isEmpty';
 
 
 /////////////
@@ -324,9 +333,10 @@ interface ContentListProps {
   itinerary: any
   contentList: Trips.ContentList
 
+  onDeleteList: (contentListID: string) => void
   onUpdateName: (name: string, contentListID: string) => void
   onAddContent: (title: string, contentListID: string) => void
-
+  onUpdateColorIcon: (color: string|undefined, icon: string|undefined, contentListID: string) => void
   onUpdateContentName: (title: string, idx: number, contentListID: string) => void
   onDeleteContent: (idx: number, contentListID: string) => void
   onUpdateContentPlace: (idx: number, place: any, contentListID: string) => void
@@ -339,22 +349,29 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
   const [name, setName] = useState<string>("");
   const [newContentTitle, setNewContentTitle] = useState("");
   const [isHidden, setIsHidden] = useState<boolean>(false);
+  const [isColorIconModalOpen, setIsColorIconModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setName(_get(props.contentList, "name", ""));
   }, [props.contentList])
 
-  // Event Handlers - Content List Name
+  // Event Handlers - Content List
 
   const nameOnBlur = () => {
     props.onUpdateName(name, props.contentList.id);
   }
 
-  // Event Handlers  - New Content
+  const deleteBtnOnClick = () => {
+    props.onDeleteList(props.contentList.id)
+  }
 
   const newContentBtnOnClick = () => {
     props.onAddContent(newContentTitle, props.contentList.id)
     setNewContentTitle("");
+  }
+
+  const colorIconOnSubmit = (color: string | undefined, icon: string | undefined) => {
+    props.onUpdateColorIcon(color, icon, props.contentList.id)
   }
 
   // Event Handlers - Content
@@ -381,6 +398,53 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
 
 
   // Renderers
+  const renderSettingsDropdown = () => {
+    const opts = [
+      (<button
+        type='button'
+        className={TripContentListCss.ChooseColorBtn}
+        onClick={() => setIsColorIconModalOpen(true)}
+      >
+        <SwatchIcon className={CommonCss.LeftIcon} />
+        Change Color & Icon
+      </button>),
+      (<button
+        type='button'
+        className={TripContentListCss.DeleteBtn}
+        onClick={deleteBtnOnClick}
+      >
+        <TrashIcon className={CommonCss.LeftIcon} />
+        Delete
+      </button>)
+    ];
+    const menu = (
+      <EllipsisHorizontalCircleIcon
+        className={CommonCss.DropdownIcon} />
+    );
+    return <Dropdown menu={menu} opts={opts} />
+  }
+
+  const renderHeader = () => {
+    return (
+      <div className='flex mb-2 w-full justify-between'>
+        <div className='flex flex-1'>
+          <ToggleChevron
+            onClick={() => setIsHidden(!isHidden)}
+            isHidden={isHidden}
+          />
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={nameOnBlur}
+            placeholder={`Add a title (e.g, "Food to try")`}
+            className={TripContentListCss.NameInput}
+          />
+        </div>
+        {renderSettingsDropdown()}
+      </div>
+    );
+  }
 
   const renderTripContent = () => {
     return _get(props.contentList, "contents", [])
@@ -421,26 +485,20 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
 
   return (
     <div className={TripContentListCss.Ctn}>
-      <div className='flex'>
-        <ToggleChevron
-          onClick={() => setIsHidden(!isHidden)}
-          isHidden={isHidden}
-        />
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={nameOnBlur}
-          placeholder={`Add a title (e.g, "Food to try")`}
-          className={TripContentListCss.NameInput}
-        />
-      </div>
+      {renderHeader()}
       {isHidden ? null :
         <>
           {renderTripContent()}
           {renderAddNewContent()}
         </>
       }
+      <ColorIconModal
+        isOpen={isColorIconModalOpen}
+        colors={ContentColorOpts}
+        icons={Object.keys(ContentIconOpts)}
+        onClose={() => setIsColorIconModalOpen(false)}
+        onSubmit={colorIconOnSubmit}
+      />
     </div>
   );
 }
@@ -464,16 +522,15 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
     let list: Trips.ContentList = {
       id: uuidv4(),
       contents: new Array<Trips.Content>(),
+      labels: new Map<string, string>(),
     }
-    const ops = [];
-    ops.push(TripsSyncAPI.makeAddOp(`/contents/${list.id}`, list))
-    props.tripStateOnUpdate(ops);
+    props.tripStateOnUpdate([TripsSyncAPI.makeAddOp(`/contents/${list.id}`, list)]);
   }
 
   const contentListUpdateName = (name: string, contentListID: string) => {
-    const ops = [];
-    ops.push(TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/name`, name))
-    props.tripStateOnUpdate(ops);
+    props.tripStateOnUpdate([
+      TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/name`, name)
+    ]);
   }
 
   const contentListAddContent = (title: string, contentListID: string) => {
@@ -485,11 +542,45 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       labels: new Map<string, string>(),
       comments: [],
     }
-    const ops = [
-      TripsSyncAPI.makeJSONPatchOp(
-        "add", `/contents/${contentListID}/contents/-`, content),
-    ]
-    props.tripStateOnUpdate(ops)
+    props.tripStateOnUpdate([
+      TripsSyncAPI.makeAddOp(`/contents/${contentListID}/contents/-`, content),
+    ])
+  }
+
+  const deleteContentList = (contentListID: string) => {
+    props.tripStateOnUpdate([
+      TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}`, "")
+    ]);
+  }
+
+  const updateContentListColorIcon = (color: string | undefined, icon: string | undefined, contentListID: string) => {
+    const ctntList = _get(props.trip, `contents.${contentListID}`);
+    const colorLabel = _get(ctntList, `labels.${LabelContentListColor}`);
+    const iconLabel = _get(ctntList, `labels.${LabelContentListIcon}`);
+
+    const ops = [];
+    if (_isEmpty(color) && !_isEmpty(colorLabel)) {
+      ops.push(TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, ""));
+    }
+    if (!_isEmpty(color)) {
+      if (isEmpty(colorLabel)) {
+        ops.push(TripsSyncAPI.makeAddOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
+      } else {
+        ops.push(TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
+      }
+    }
+
+    if (_isEmpty(icon) && !_isEmpty(iconLabel)) {
+      ops.push(TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, ""));
+    }
+    if (!_isEmpty(icon)) {
+      if (isEmpty(colorLabel)) {
+        ops.push(TripsSyncAPI.makeAddOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
+      } else {
+        ops.push(TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
+      }
+    }
+    props.tripStateOnUpdate(ops);
   }
 
   // Event Handlers -- Content
@@ -521,7 +612,6 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   }
 
   const onUpdateContentItineraryDate = async (idx: number, itinListIdx: number, contentListID: string) => {
-
     const content = _get(props.trip, `contents.${contentListID}.contents[${idx}]`, {}) as Trips.Content;
     const itinList = _get(props.trip, `itinerary[${itinListIdx}]`, {}) as Trips.ItineraryList;
     const itinListCtnt = itinList.contents;
@@ -638,8 +728,10 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
         <ContentList
           itinerary={props.trip.itinerary}
           contentList={contentList}
+          onDeleteList={deleteContentList}
           onUpdateName={contentListUpdateName}
           onAddContent={contentListAddContent}
+          onUpdateColorIcon={updateContentListColorIcon}
           onUpdateContentName={onUpdateContentName}
           onDeleteContent={onDeleteContent}
           onUpdateContentPlace={onUpdateContentPlace}
