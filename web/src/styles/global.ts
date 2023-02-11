@@ -69,7 +69,7 @@ export const CreateTripModalCss = {
 ///////////////
 
 export const TripMenuCss = {
-  TripMenuCtn: "min-h-screen w-full z-50 sm:w-1/2 sm:max-w-xl sm:shadow-xl sm:shadow-slate-900",
+  TripMenuCtn: "min-h-screen w-full z-50 sm:w-1/2  sm:max-w-lg sm:shadow-xl sm:shadow-slate-900",
   TripMenu: "pb-40 w-full",
   TripMenuNav: "p-3 font-bold text-indigo-500",
   TabsCtn: "sticky top-0 z-10 bg-indigo-100 py-8 pb-4 mb-4",

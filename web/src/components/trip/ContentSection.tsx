@@ -521,6 +521,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   const addContentListBtnOnClick = () => {
     let list: Trips.ContentList = {
       id: uuidv4(),
+      name: "",
       contents: new Array<Trips.Content>(),
       labels: new Map<string, string>(),
     }

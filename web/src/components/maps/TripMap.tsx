@@ -41,6 +41,7 @@ import GoogleIcon from '../icons/GoogleIcon';
 import { makeActivityPin, makeHotelPin } from './mapsPinIcons';
 import { ActionNameSetSelectedPlace, useMap } from '../../context/maps-context';
 import { CommonCss, TripMapCss } from '../../styles/global';
+import isEmpty from 'lodash/isEmpty';
 
 
 const defaultMapCenter = { lat: 1.290969, lng: 103.8560011 }
@@ -283,7 +284,12 @@ const TripMap: FC<TripMapComponentProps> = (props: TripMapComponentProps) => {
     return _flatten(ctntLists.map((l: any) => {
       const color = _get(l, `labels.${LabelContentListColor}`, "black")
       const icon = _get(l, `labels.${LabelContentListIcon}`, "")
-      return l.contents.map((ct: any) => ({
+      return l.contents
+      .filter((ct: any) => {
+        const latlng = _get(ct, "place.geometry.location")
+        return latlng !== undefined && !(latlng.lat === 0 && latlng.lng === 0)
+      })
+      .map((ct: any) => ({
         elem: makeActivityPin(ct.place.name, color, icon),
         place: ct.place
       }));
