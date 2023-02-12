@@ -7,7 +7,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
-import Modal from '../Modal';
+import Modal from '../common/Modal';
 import { ContentIconOpts } from '../../apis/trips';
 import { CommonCss } from '../../styles/global';
 

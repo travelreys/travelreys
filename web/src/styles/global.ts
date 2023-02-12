@@ -24,7 +24,7 @@ export const InputDatesPickerCss = {
 ///////////
 
 export const ModalCss = {
-  Container: "relative z-10",
+  Container: "relative z-20",
   Inset: "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity",
   Content: "fixed inset-0 z-10 overflow-y-auto",
   ContentContainer: "flex min-h-full flex-col p-4 text-center sm:items-center sm:p-0",
@@ -91,7 +91,7 @@ export const TripMenuJumboCss = {
   TripImageEditIcon: "h-6 w-6 text-white",
   TripNameInputCtn: "h-16 relative -top-24",
   TripNameInputWrapper: "bg-white rounded-lg shadow p-5 mx-4 mb-4",
-  TripNameInput: "mb-12 text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0",
+  TripNameInput: "text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0",
   Figure: "relative max-w-sm transition-all rounded-lg duration-300 mb-2 group",
   FigureImg: "block rounded-lg max-w-full group-hover:grayscale",
   FigureBtn: "text-white m-2 py-2 px-3 rounded-full bg-green-500 hover:bg-green-700",
@@ -103,6 +103,7 @@ export const TripMenuJumboCss = {
   SearchImageInput: "bg-gray-50 block border-gray-300 border focus:border-blue-500 focus:ring-blue-500 min-w-0 p-2.5 rounded-lg text-gray-900 text-sm w-5/6 mr-2",
   SearchImageBtn: "flex-1 inline-flex text-white bg-indigo-500 hover:bg-indigo-800 rounded-2xl p-2.5 text-center items-center justify-around",
   SearchImageIcon: "h-5 w-5 stroke-2 stroke-white",
+  SettingsBtn: "flex items-center w-full text-left hover:text-indigo-500",
 }
 
 ///////////

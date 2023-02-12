@@ -11,8 +11,8 @@ import {
 
 import TripsSyncAPI from '../../apis/tripsSync';
 import { TripNotesCss } from '../../styles/global';
-import NotesEditor from '../NotesEditor';
-import ToggleChevron from '../ToggleChevron';
+import NotesEditor from '../common/NotesEditor';
+import ToggleChevron from '../common/ToggleChevron';
 
 interface NotesSectionProps {
   trip: any

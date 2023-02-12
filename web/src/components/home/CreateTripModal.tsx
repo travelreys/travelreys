@@ -1,11 +1,9 @@
-import React, { useState, FC } from 'react';
+import React, { FC } from 'react';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 
 import { CreateTripModalCss, ModalCss } from '../../styles/global';
-import InputDatesPicker from '../InputDatesPicker';
-
-
+import InputDatesPicker from '../common/InputDatesPicker';
 
 
 interface CreateTripModalProps {

@@ -4,7 +4,7 @@ import _sortBy from "lodash/sortBy";
 import _minBy from "lodash/minBy";
 import _isEmpty from "lodash/isEmpty";
 
-import { ModalCss, FlightsModalCss } from '../../styles/global';
+import { FlightsModalCss } from '../../styles/global';
 
 import TripFlightCard from './FlightCard';
 

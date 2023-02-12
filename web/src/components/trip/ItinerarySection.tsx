@@ -24,11 +24,11 @@ import {
   newEventMarkerClick
 } from '../maps/common';
 import ContentListPin from '../maps/ContentListPin';
-import Dropdown from '../Dropdown';
+import Dropdown from '../common/Dropdown';
 import HotelIcon from '../icons/HotelIcon';
-import NotesEditor from '../NotesEditor';
+import NotesEditor from '../common/NotesEditor';
 import PlaneIcon from '../icons/PlaneIcon';
-import ToggleChevron from '../ToggleChevron';
+import ToggleChevron from '../common/ToggleChevron';
 
 import TripsSyncAPI from '../../apis/tripsSync';
 import {

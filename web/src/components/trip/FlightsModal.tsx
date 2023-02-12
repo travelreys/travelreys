@@ -16,10 +16,10 @@ import { FlightsModalCss } from '../../styles/global';
 
 import FlightsAPI from '../../apis/flights';
 import { Trips } from '../../apis/trips';
-import Alert from '../Alert';
-import Modal from '../Modal';
-import InputDatesPicker from '../InputDatesPicker';
-import Spinner from '../Spinner';
+import Alert from '../common/Alert';
+import Modal from '../common/Modal';
+import InputDatesPicker from '../common/InputDatesPicker';
+import Spinner from '../common/Spinner';
 import OnewayFlightsContainer from './OnewayFlightsContainer';
 import RoundtripFlightsContainer from './RoundtripFlightsContainer';
 import {

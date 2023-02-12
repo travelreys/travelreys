@@ -23,11 +23,11 @@ import {
   GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 
-import Dropdown from '../Dropdown';
-import NotesEditor from '../NotesEditor';
+import Dropdown from '../common/Dropdown';
+import NotesEditor from '../common/NotesEditor';
 import PlaceAutocomplete from '../maps/PlaceAutocomplete';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
-import ToggleChevron from '../ToggleChevron';
+import ToggleChevron from '../common/ToggleChevron';
 import ColorIconModal from './ColorIconModal';
 import ContentListPin from '../maps/ContentListPin';
 

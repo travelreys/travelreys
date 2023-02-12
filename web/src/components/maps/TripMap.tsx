@@ -34,7 +34,7 @@ import {
   Trips
 } from '../../apis/trips';
 
-import Spinner from '../Spinner';
+import Spinner from '../common/Spinner';
 import ContentListPin from './ContentListPin';
 
 import {

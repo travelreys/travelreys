@@ -33,14 +33,14 @@ import { encode, decode } from 'js-base64';
 
 import {  ListBulletIcon } from '@heroicons/react/24/outline';
 
-import BoldIcon from './icons/BoldIcon';
-import ItalicIcon from './icons/ItalicIcon';
-import UnderlineIcon from './icons/UnderlineIcon';
-import HeaderOneIcon from './icons/HeaderOneIcon';
-import NumberlistIcon from './icons/NumberlistIcon';
-import HeaderTwoIcon from './icons/HeaderTwoIcon';
-import StrikethroughIcon from './icons/StrikethroughIcon';
-import ChecklistIcon from './icons/ChecklistIcon';
+import BoldIcon from '../icons/BoldIcon';
+import ItalicIcon from '../icons/ItalicIcon';
+import UnderlineIcon from '../icons/UnderlineIcon';
+import HeaderOneIcon from '../icons/HeaderOneIcon';
+import NumberlistIcon from '../icons/NumberlistIcon';
+import HeaderTwoIcon from '../icons/HeaderTwoIcon';
+import StrikethroughIcon from '../icons/StrikethroughIcon';
+import ChecklistIcon from '../icons/ChecklistIcon';
 
 
 const LIST_TYPES = ['numbered-list', 'bulleted-list']

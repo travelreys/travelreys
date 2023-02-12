@@ -18,8 +18,8 @@ import {
   GlobeAltIcon
 } from '@heroicons/react/24/outline';
 
-import Dropdown from '../Dropdown';
-import InputDatesPicker from '../InputDatesPicker';
+import Dropdown from '../common/Dropdown';
+import InputDatesPicker from '../common/InputDatesPicker';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
 import { Trips } from '../../apis/trips';
 import { InputDatesPickerCss, LodgingCardCss } from '../../styles/global';

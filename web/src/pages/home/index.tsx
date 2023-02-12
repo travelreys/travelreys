@@ -9,7 +9,7 @@ import {
 
 import TripsAPI from '../../apis/trips';
 
-import Alert from '../../components/Alert';
+import Alert from '../../components/common/Alert';
 import CreateTripModal from '../../components/home/CreateTripModal';
 import Spinner from '../../components/Spinner';
 import TripsContainer from '../../components/home/TripsContainer';

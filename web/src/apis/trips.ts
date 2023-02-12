@@ -79,14 +79,16 @@ export namespace Trips {
   }
 }
 
-export const PriceMetadataAmountJSONPath = "priceMetadata/amount"
+export const LabelTransportationPreference = "transportationPreference";
+export const DefaultTransportationPreference = "walk+drive";
+export const PriceMetadataAmountJSONPath = "priceMetadata/amount";
 export const LabelContentItineraryDates = "itinerary|dates";
 export const LabelContentItineraryDatesJSONPath = "labels.itinerary|dates";
 export const LabelContentItineraryDatesDelimeter = "|";
-export const LabelContentListColor = "color"
-export const LabelContentListColorJSONPath = "labels/color"
-export const LabelContentListIcon = "icon"
-export const LabelContentListIconJSONPath = "labels/icon"
+export const LabelContentListColor = "color";
+export const LabelContentListColorJSONPath = "labels/color";
+export const LabelContentListIcon = "icon";
+export const LabelContentListIconJSONPath = "labels/icon";
 export const DefaultContentColor = "rgb(203 213 225)";
 export const ContentColorOpts = ["rgb(74 222 128)", "rgb(34 211 238)",  "rgb(96 165 250)","rgb(129 140 248)",  "rgb(232 121 249)","rgb(244 114 182)", "rgb(248 113 113)", "rgb(251 146 60)", "rgb(253 224 71)", "rgb(161 98 7)"];
 export const ContentIconOpts = {

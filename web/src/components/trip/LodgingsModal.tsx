@@ -8,16 +8,15 @@ import { DateRange } from 'react-day-picker';
 
 import {
   MagnifyingGlassIcon,
-  MapPinIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
 
-import Alert from '../Alert';
-import InputDatesPicker from '../InputDatesPicker';
-import Modal from '../Modal';
+import Alert from '../common/Alert';
+import InputDatesPicker from '../common/InputDatesPicker';
+import Modal from '../common/Modal';
 
 import MapsAPI, { EMBED_MAPS_APIKEY, placeFields } from '../../apis/maps';
-import { LodgingsModalCss, ModalCss } from '../../styles/global';
+import { LodgingsModalCss } from '../../styles/global';
 import { Trips } from '../../apis/trips';
 import { parseTripDate } from '../../utils/dates';
 import PlaceAutocomplete from '../maps/PlaceAutocomplete';
