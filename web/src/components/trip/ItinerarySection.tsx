@@ -13,15 +13,39 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
   CurrencyDollarIcon,
   MapPinIcon,
-} from '@heroicons/react/24/solid'
+  SwatchIcon,
+} from '@heroicons/react/24/solid';
+import {
+  EllipsisHorizontalCircleIcon,
+} from '@heroicons/react/24/outline'
 
+import {
+  MapElementID,
+  newEventMarkerClick
+} from '../maps/common';
+import ContentListPin from '../maps/ContentListPin';
+import Dropdown from '../Dropdown';
+import HotelIcon from '../icons/HotelIcon';
 import NotesEditor from '../NotesEditor';
 import PlaneIcon from '../icons/PlaneIcon';
-import HotelIcon from '../icons/HotelIcon';
+import ToggleChevron from '../ToggleChevron';
 
 import TripsSyncAPI from '../../apis/tripsSync';
-import { PriceMetadataAmountJSONPath, Trips } from '../../apis/trips';
-import { ActionNameSetSelectedPlace, useMap } from '../../context/maps-context';
+import {
+  ContentColorOpts,
+  ContentIconOpts,
+  DefaultContentColor,
+  LabelContentListColor,
+  LabelContentListIcon,
+  PriceMetadataAmountJSONPath,
+  LabelContentListColorJSONPath,
+  LabelContentListIconJSONPath,
+  Trips
+} from '../../apis/trips';
+import {
+  ActionNameSetSelectedPlace,
+  useMap
+} from '../../context/maps-context';
 import {
   InputDatesPickerCss,
   TripItinerarySectionCss,
@@ -35,8 +59,8 @@ import {
   parseISO,
   printFmt
 } from '../../utils/dates'
-import { MapElementID, newEventMarkerClick } from '../maps/common';
-import ToggleChevron from '../ToggleChevron';
+import ColorIconModal from './ColorIconModal';
+
 
 
 const ItineraryDateFmt = "eeee, do MMMM"
@@ -71,7 +95,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 
   // Event Handles - DnD
 
-  const [{}, drag] = useDrag(
+  const [{ }, drag] = useDrag(
     () => ({
       type: ItineraryContentCard,
       item: { id: props.itineraryContent.id, origCardIdx },
@@ -106,14 +130,14 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
   // Event Handlers - Places
 
   const placeOnClick = (e: React.MouseEvent) => {
-    dispatch({type: ActionNameSetSelectedPlace, value: props.content.place})
+    dispatch({ type: ActionNameSetSelectedPlace, value: props.content.place })
     const event = newEventMarkerClick(props.content.place);
     document.getElementById(MapElementID)?.dispatchEvent(event)
     return;
   }
 
   // Event Handlers - Price
-  const priceOnClick = (e:  any) => {
+  const priceOnClick = (e: any) => {
     if (e.detail <= 1) {
       return;
     }
@@ -125,10 +149,10 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
   }
 
   const priceOnBlur = () => {
-    const { itineraryListIdx , itineraryContentIdx } = props;
+    const { itineraryListIdx, itineraryContentIdx } = props;
     props.tripStateOnUpdate([
       TripsSyncAPI.newReplaceOp(
-        `/itinerary/${itineraryListIdx}/contents/${itineraryContentIdx}/${PriceMetadataAmountJSONPath}`,
+        `/itinerary/${itineraryListIdx}/itinerary/${itineraryContentIdx}/${PriceMetadataAmountJSONPath}`,
         priceAmount,
       )
     ]);
@@ -160,7 +184,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     }
     return (
       <p className='text-slate-600 text-sm flex items-center mb-1 hover:text-indigo-500'>
-        <MapPinIcon className='h-4 w-4 mr-1'/>
+        <MapPinIcon className='h-4 w-4 mr-1' />
         {placeNode}
       </p>
     );
@@ -187,7 +211,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     }
     return (
       <p className={TripItineraryCss.PricePill} onClick={priceOnClick}>
-        $ {priceAmount ? String(priceAmount): "Add cost"}
+        $ {priceAmount ? String(priceAmount) : "Add cost"}
       </p>
     );
   }
@@ -207,7 +231,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
         <NotesEditor
           ctnCss='p-0 mb-2'
           base64Notes={props.content.notes}
-          notesOnChange={() => {}}
+          notesOnChange={() => { }}
           placeholder={"Notes..."}
           readOnly
         />
@@ -225,12 +249,15 @@ interface TripItineraryListProps {
   itineraryListIdx: number
   itineraryList: Trips.ItineraryList
   tripStateOnUpdate: any
+
+  onUpdateColorIcon: (color: string|undefined, icon: string|undefined, itinListIdx: number) => void
 }
 
 const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListProps) => {
 
   const [isHidden, setIsHidden] = useState<boolean>(false);
   const [itinContents, setItinContents] = useState(props.itineraryList.contents);
+  const [isColorIconModalOpen, setIsColorIconModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setItinContents(props.itineraryList.contents)
@@ -238,6 +265,10 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
 
   // Event Handlers
+
+  const colorIconOnSubmit = (color: string | undefined, icon: string | undefined) => {
+    props.onUpdateColorIcon(color, icon, props.itineraryListIdx)
+  }
 
   const updateItinContents = (newItinContents: Array<Trips.ItineraryContent>) => {
     props.tripStateOnUpdate([
@@ -249,7 +280,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   const findCard = useCallback((id: string) => {
     const itinContent = _find(itinContents, (cont: Trips.ItineraryContent) => cont.id === id);
-    return {itinContent, index: itinContents.indexOf(itinContent!)}
+    return { itinContent, index: itinContents.indexOf(itinContent!) }
   }, [itinContents]);
 
   const moveCard = useCallback((id: string, atIndex: number) => {
@@ -267,17 +298,37 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   const [, drop] = useDrop(() => ({ accept: ItineraryContentCard }))
 
   // Renderers
+  const renderSettingsDropdown = () => {
+    const opts = [
+      <button
+        type='button'
+        className={TripItineraryListCss.ChooseColorBtn}
+        onClick={() => setIsColorIconModalOpen(true)}
+      >
+        <SwatchIcon className={CommonCss.LeftIcon} />
+        Change Color & Icon
+      </button>,
+    ];
+    const menu = (
+      <EllipsisHorizontalCircleIcon
+        className={CommonCss.DropdownIcon} />
+    );
+    return <Dropdown menu={menu} opts={opts} />
+  }
 
   const renderHeader = () => {
     return (
-      <div className='flex mb-2'>
-        <ToggleChevron
-          isHidden={isHidden}
-          onClick={() => {setIsHidden(!isHidden)}}
-        />
-        <p className='text-xl font-bold'>
-          {printFmt(parseISO(props.itineraryList.date as string), ItineraryDateFmt) }
-        </p>
+      <div className='flex mb-2 justify-between'>
+        <div className='flex flex-1'>
+          <ToggleChevron
+            isHidden={isHidden}
+            onClick={() => { setIsHidden(!isHidden) }}
+          />
+          <p className='text-xl font-bold'>
+            {printFmt(parseISO(props.itineraryList.date as string), ItineraryDateFmt)}
+          </p>
+        </div>
+        {renderSettingsDropdown()}
       </div>
 
     );
@@ -292,7 +343,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
         <div className="flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow">
           <span className='bg-green-200 p-2 rounded-full'><PlaneIcon className='w-4 h-4' /></span>
           <div className="flex-1 pl-4 text-sm font-normal">{place.name}</div>
-          <span className='pl-2 font-semibold text-sm'>{depart ? "Depar": "Arrival"}</span>
+          <span className='pl-2 font-semibold text-sm'>{depart ? "Depar" : "Arrival"}</span>
         </div>
       );
     }
@@ -348,7 +399,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
           </span>
           <div className={TripItineraryListCss.LodgingName}>{place.name}</div>
           <span className={TripItineraryListCss.LodgingStatus}>
-            {checkin ? "Check in": "Check out"}
+            {checkin ? "Check in" : "Check out"}
           </span>
         </div>
       );
@@ -361,11 +412,11 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
       let lod = item as Trips.Lodging;
       if (!_isEmpty(lod.checkinTime)) {
         const checkinTime = parseISO(lod.checkinTime as string);
-        if(areYMDEqual(today, checkinTime)) {
+        if (areYMDEqual(today, checkinTime)) {
           checkins.push(item);
         }
         const checkoutTime = parseISO(lod.checkoutTime as string);
-        if(areYMDEqual(today, checkoutTime)) {
+        if (areYMDEqual(today, checkoutTime)) {
           checkouts.push(item);
         }
       }
@@ -390,10 +441,15 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     const listItems = itinContents.map((itinCtn: Trips.ItineraryContent, idx: number) => {
       const content = _find(
         _get(props.trip, `contents.${itinCtn.tripContentListId}.contents`, []),
-        (ctn: Trips.Content) => ctn.id === itinCtn.tripContentId);
+        (ctn: Trips.Content) => ctn.id === itinCtn.tripContentId
+      );
+      const color = _get(props.itineraryList, `labels.${LabelContentListColor}`, DefaultContentColor);
       return (
         <li key={idx} className={TripItineraryListCss.ItinItem}>
-          <span className={TripItineraryListCss.ItinContentIcon}>
+          <span
+            style={{backgroundColor: color}}
+            className={TripItineraryListCss.ItinContentIcon}
+          >
             {idx + 1}
           </span>
           <ItineraryContent
@@ -433,6 +489,13 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
           {renderContents()}
         </>
       }
+      <ColorIconModal
+        isOpen={isColorIconModalOpen}
+        colors={ContentColorOpts}
+        icons={Object.keys(ContentIconOpts)}
+        onClose={() => setIsColorIconModalOpen(false)}
+        onSubmit={colorIconOnSubmit}
+      />
     </div>
   );
 }
@@ -448,6 +511,36 @@ interface ItinerarySectionProps {
 
 const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProps) => {
 
+  const updateItineraryListColorIcon = (color: string | undefined, icon: string | undefined, itinListIdx: number) => {
+    const ctntList = _get(props.trip, `itinerary.${itinListIdx}`);
+    const colorLabel = _get(ctntList, `labels.${LabelContentListColor}`);
+    const iconLabel = _get(ctntList, `labels.${LabelContentListIcon}`);
+
+    const ops = [];
+    if (_isEmpty(color) && !_isEmpty(colorLabel)) {
+      ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, ""));
+    }
+    if (!_isEmpty(color)) {
+      if (_isEmpty(colorLabel)) {
+        ops.push(TripsSyncAPI.makeAddOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, color));
+      } else {
+        ops.push(TripsSyncAPI.newReplaceOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, color));
+      }
+    }
+
+    if (_isEmpty(icon) && !_isEmpty(iconLabel)) {
+      ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, ""));
+    }
+    if (!_isEmpty(icon)) {
+      if (_isEmpty(colorLabel)) {
+        ops.push(TripsSyncAPI.makeAddOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, icon));
+      } else {
+        ops.push(TripsSyncAPI.newReplaceOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, icon));
+      }
+    }
+    props.tripStateOnUpdate(ops);
+  }
+
   return (
     <div className='p-5'>
       {
@@ -459,11 +552,13 @@ const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProp
                 itineraryListIdx={idx}
                 itineraryList={l}
                 tripStateOnUpdate={props.tripStateOnUpdate}
+
+                onUpdateColorIcon={updateItineraryListColorIcon}
               />
               <hr className={TripItinerarySectionCss.Hr} />
             </DndProvider>
           ))
-    }
+      }
     </div>
   );
 }

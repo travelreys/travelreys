@@ -27,7 +27,7 @@ const makePinTooltip = (name: string) => {
   `
 }
 
-const makePin = (icon: string) => {
+const makeIcon = (icon: string) => {
   const iconStyle = `"fill:white;stroke-width:2;height:1.25rem;width:1.25rem;"`;
   let iconSvg = "";
   const svgFn = _get(iconSvgMap, icon);
@@ -41,13 +41,12 @@ const makePin = (icon: string) => {
   return iconSvg;
 }
 
-
 export const makePinWithTooltip = (name: string, color: string, icon: string) => {
   const pinStyle =`"fill:${color}"`;
   const pin = document.createElement("template");
   const template = `
     <div class="absolute cursor-pointer max-h-12 top-0 left-0 -translate-y-full -translate-x-1/2 group hover:z-50">
-      ${makePin(icon)}
+      ${makeIcon(icon)}
       <svg
         class="h-12 w-12 stroke-white stroke-2"
         style=${pinStyle}
@@ -62,3 +61,38 @@ export const makePinWithTooltip = (name: string, color: string, icon: string) =>
   return pin.content.firstChild;
 }
 
+const makeNumber = (num: string) => {
+  let right = "right-5 text-base"
+  if (num.length === 2) {
+    right = "right-4 text-base"
+  }
+  if (num.length === 3) {
+    right = "right-2 text-sm"
+  }
+
+  return `
+    <span class="absolute ${right} text-sm top-2.5  font-bold text-white pointer-events-none">
+      ${num}
+    </span>
+  `
+}
+
+export const makeNumberPin = (name: string, color: string, number: string) => {
+  const pinStyle =`"fill:${color}"`;
+  const pin = document.createElement("template");
+  const template = `
+    <div class="absolute cursor-pointer max-h-12 top-0 left-0 -translate-y-full -translate-x-1/2 group hover:z-50">
+      ${makeNumber(number)}
+      <svg
+        class="h-12 w-12 stroke-white stroke-2"
+        style=${pinStyle}
+        viewBox="0 0 24 24"
+      >
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      </svg>
+      ${makePinTooltip(name)}
+    </div>
+  `.trim();
+  pin.innerHTML = template;
+  return pin.content.firstChild;
+}

@@ -273,7 +273,8 @@ export const TripItineraryListCss = {
   LodgingName: "flex-1 pl-4 text-sm font-normal",
   LodgingStatus: "pl-2 font-semibold text-sm",
   ItinItem: "mb-8 ml-6",
-  ItinContentIcon: "absolute flex items-center justify-center w-6 h-6 bg-yellow-200 rounded-full -left-3 ring-8 ring-white font-bold text-gray-500 text-sm",
+  ItinContentIcon: "absolute flex items-center justify-center w-6 h-6 rounded-full -left-3 ring-8 ring-white font-bold text-white text-sm",
+  ChooseColorBtn: "flex items-center w-full text-left",
 
 }
 
@@ -295,7 +296,7 @@ export const TripItineraryCss = {
 export const TripMapCss = {
   AddrTxt: "text-gray-600 flex items-center mb-1",
   BtnCtn: "flex items-center mt-6",
-  Ctn: "fixed w-screen h-screen",
+  Ctn: "fixed h-screen",
   DetailsCard: "bg-white p-4 mx-4 h-11/12 w-11/12 max-w-3xl rounded-xl pointer-events-auto",
   DetailsWrapper: "absolute bottom-0 mb-8 z-10 pointer-events-none",
   GmapBtn: "flex w-fit rounded-full py-2 px-6 items-center border border-gray-200 font-semibold text-gray-500",

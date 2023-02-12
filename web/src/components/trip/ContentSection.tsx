@@ -29,6 +29,7 @@ import PlaceAutocomplete from '../maps/PlaceAutocomplete';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
 import ToggleChevron from '../ToggleChevron';
 import ColorIconModal from './ColorIconModal';
+import ContentListPin from '../maps/ContentListPin';
 
 import TripsSyncAPI from '../../apis/tripsSync';
 import MapsAPI, { ModeDriving, placeFields } from '../../apis/maps';
@@ -57,7 +58,7 @@ import {
 } from '../../styles/global';
 import { parseISO, printFmt } from '../../utils/dates';
 import { MapElementID, newEventMarkerClick } from '../maps/common';
-import isEmpty from 'lodash/isEmpty';
+
 
 /////////////
 // Content //
@@ -324,34 +325,6 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 }
 
 
-////////////////////
-// ContentListPin //
-////////////////////
-
-
-interface ContentListPinProps {
-  icon?: any
-  color: string
-}
-
-const ContentListPin: FC<ContentListPinProps> = (props: ContentListPinProps) => {
-  return (
-    <div className='relative -ml-2'>
-      <span className='absolute right-2.5 top-2 text-base font-bold pointer-events-none'>
-        {props.icon ? <props.icon className="fill-white stroke-2 w-3 h-3" /> : null}
-      </span>
-      <svg
-        className="h-8 w-8 stroke-white stroke-2"
-        style={{fill: props.color}}
-        viewBox="0 0 24 24"
-      >
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      </svg>
-    </div>
-  );
-}
-
-
 /////////////////
 // ContentList //
 /////////////////
@@ -606,7 +579,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       ops.push(TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, ""));
     }
     if (!_isEmpty(color)) {
-      if (isEmpty(colorLabel)) {
+      if (_isEmpty(colorLabel)) {
         ops.push(TripsSyncAPI.makeAddOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
       } else {
         ops.push(TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
@@ -617,7 +590,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       ops.push(TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, ""));
     }
     if (!_isEmpty(icon)) {
-      if (isEmpty(colorLabel)) {
+      if (_isEmpty(colorLabel)) {
         ops.push(TripsSyncAPI.makeAddOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
       } else {
         ops.push(TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
