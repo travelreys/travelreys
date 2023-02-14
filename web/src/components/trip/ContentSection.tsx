@@ -169,7 +169,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     const opts = [
       <button
         type='button'
-        className={TripContentCss.DeleteBtn}
+        className={CommonCss.DeleteBtn}
         onClick={deleteBtnOnClick}
       >
         <TrashIcon className={CommonCss.LeftIcon} />
@@ -403,7 +403,7 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
     const opts = [
       (<button
         type='button'
-        className={TripContentListCss.ChooseColorBtn}
+        className={CommonCss.DropdownBtn}
         onClick={() => setIsColorIconModalOpen(true)}
       >
         <SwatchIcon className={CommonCss.LeftIcon} />
@@ -411,7 +411,7 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
       </button>),
       (<button
         type='button'
-        className={TripContentListCss.DeleteBtn}
+        className={CommonCss.DeleteBtn}
         onClick={deleteBtnOnClick}
       >
         <TrashIcon className={CommonCss.LeftIcon} />
@@ -760,7 +760,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   return (
     <div className='p-5'>
       {renderHeader()}
-      {renderContentLists()}
+      { isHidden ? null : renderContentLists() }
     </div>
   );
 

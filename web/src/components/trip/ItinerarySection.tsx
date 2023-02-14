@@ -152,7 +152,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     const { itineraryListIdx, itineraryContentIdx } = props;
     props.tripStateOnUpdate([
       TripsSyncAPI.newReplaceOp(
-        `/itinerary/${itineraryListIdx}/itinerary/${itineraryContentIdx}/${PriceMetadataAmountJSONPath}`,
+        `/itinerary/${itineraryListIdx}/contents/${itineraryContentIdx}/${PriceMetadataAmountJSONPath}`,
         priceAmount,
       )
     ]);
@@ -302,7 +302,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     const opts = [
       <button
         type='button'
-        className={TripItineraryListCss.ChooseColorBtn}
+        className={CommonCss.DropdownBtn}
         onClick={() => setIsColorIconModalOpen(true)}
       >
         <SwatchIcon className={CommonCss.LeftIcon} />

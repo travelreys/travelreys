@@ -11,7 +11,7 @@ import TripsAPI from '../../apis/trips';
 
 import Alert from '../../components/common/Alert';
 import CreateTripModal from '../../components/home/CreateTripModal';
-import Spinner from '../../components/Spinner';
+import Spinner from '../../components/common/Spinner';
 import TripsContainer from '../../components/home/TripsContainer';
 import TripsJumbo from '../../components/home/TripsJumbo';
 

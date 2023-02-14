@@ -5,7 +5,9 @@
 export const CommonCss = {
   Icon: "h-4 w-4",
   LeftIcon: "h-4 w-4 mr-2",
-  DropdownIcon: "h-4 w-4 mt-1",
+  DropdownIcon: "h-4 w-4",
+  DropdownBtn: "flex items-center w-full text-left hover:text-indigo-500",
+  DeleteBtn: "text-red-500 flex items-center w-full text-left hover:text-red-700",
 }
 
 //////////////////////
@@ -215,7 +217,6 @@ export const LodgingCardCss = {
   PricePill: "bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2 w-fit cursor-pointer",
   DatesPickerCtn: "flex w-full rounded",
   PriceInputCtn: "flex w-full rounded mb-2",
-  DeleteBtn: "text-red-500 flex items-center",
 }
 
 //////////////////
@@ -232,8 +233,6 @@ export const TripContentSectionCss = {
 
 export const TripContentListCss = {
   Ctn: "rounded-lg shadow-xs mb-4",
-  ChooseColorBtn: "flex items-center w-full text-left",
-  DeleteBtn: "text-red-500 flex items-center w-full text-left",
   NameInput: "p-0 w-full text-xl mb-1 sm:text-2xl font-bold text-gray-800 placeholder:text-gray-400 rounded border-0 hover:bg-gray-300 hover:border-0 focus:ring-0 focus:p-1 duration-500",
   NewContentCtn: "flex my-4 w-full",
   NewContentInput: "flex-1 mr-1 text-md sm:text-md font-bold text-gray-800 placeholder:font-normal placeholder:text-gray-300 placeholder:italic rounded border-0 bg-gray-100 hover:border-0 focus:ring-0",
@@ -243,7 +242,6 @@ export const TripContentListCss = {
 export const TripContentCss = {
   AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
   Ctn: "bg-slate-50 rounded-lg shadow-xs mb-4 p-4 relative",
-  DeleteBtn: "text-red-500 flex items-center w-full text-left",
   ItineraryDateBtn: "flex items-center w-full justify-between hover:text-indigo-500 text-align-right",
   TitleInput: "p-0 mb-1 font-bold text-gray-800 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
   WebsiteLink: "flex items-center mb-1",
@@ -275,8 +273,6 @@ export const TripItineraryListCss = {
   LodgingStatus: "pl-2 font-semibold text-sm",
   ItinItem: "mb-8 ml-6",
   ItinContentIcon: "absolute flex items-center justify-center w-6 h-6 rounded-full -left-3 ring-8 ring-white font-bold text-white text-sm",
-  ChooseColorBtn: "flex items-center w-full text-left",
-
 }
 
 export const TripItineraryCss = {
@@ -285,10 +281,40 @@ export const TripItineraryCss = {
   AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
   PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
   WebsiteTxt: "text-indigo-500 text-sm flex items-center",
-  DeleteBtn: "text-red-500 flex items-center w-full",
   PriceInputCtn: "flex w-full rounded mb-2",
   PricePill: "bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2 w-fit cursor-pointer",
 }
+
+
+/////////////////
+// Trip Budget //
+/////////////////
+
+export const TripBudgetCss = {
+  ProgressBarCtn: "w-full py-4 pr-2",
+  ProgressBarWrapper: "bg-gray-200 rounded-full h-1.5",
+  ProgressBar: "bg-indigo-600 h-1.5 rounded-full",
+  SummaryCtn: "bg-gray-100 shadow rounded-lg flex p-2 divide-x-2 mb-4",
+  SpendingCtn: "flex-1 p-2",
+  SpendingTitle: "text-sm font-bold mb-1",
+  SpendingAmount: "text-4xl",
+  OptsCtn: "flex flex-col p-2",
+  AddExpenseBtn: "text-indigo-500 font-bold inline-flex items-center p-2 text-sm",
+  EditBudgetBtn: 'text-indigo-500 font-bold inline-flex items-center p-2 text-sm',
+  SubsectionTxt: "text-lg font-bold",
+  ItemCtn: "flex justify-between items-center border-b py-4 border-gray-200",
+  ItemDescCtn: "flex flex-1 items-center",
+  LodgingItemIcon: "bg-indigo-100 p-2 rounded-full mr-2",
+  LodgingDatesTxt: "text-slate-600 text-sm flex items-center cursor-pointer",
+  ItinItemIcon: "flex items-center justify-center w-8 h-8 p-2 rounded-full mr-2 text-white font-bold",
+  ItemNameTxt: "font-bold",
+  ItemDescTxt: "text-sm text-gray-500",
+  ItemPriceTxt: "font-bold",
+  PriceInputCtn: "flex w-full rounded-lg mb-3 border border-gray-200",
+  PriceInputLabel: "inline-flex bg-gray-200 font-bold items-center px-3 text-sm text-slate-500 rounded-l-md w-1/5",
+  BudgetItemIcon: "flex items-center justify-center w-8 h-8 p-2 rounded-full mr-2 text-white font-bold bg-indigo-500"
+}
+
 
 /////////////
 // TripMap //

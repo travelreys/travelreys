@@ -22,7 +22,7 @@ import Dropdown from '../common/Dropdown';
 import InputDatesPicker from '../common/InputDatesPicker';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
 import { Trips } from '../../apis/trips';
-import { InputDatesPickerCss, LodgingCardCss } from '../../styles/global';
+import { CommonCss, InputDatesPickerCss, LodgingCardCss } from '../../styles/global';
 import {
   printFmt,
   isEmptyDate,
@@ -125,7 +125,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     const opts = [
       <button
           type='button'
-          className={LodgingCardCss.DeleteBtn}
+          className={CommonCss.DeleteBtn}
           onClick={deleteBtnOnClick}
         >
         <TrashIcon className='h-4 w-4 mr-2' />Delete
@@ -200,7 +200,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
         className={LodgingCardCss.DatesTxt}
         onClick={datesOnClick}
       >
-        <CalendarDaysIcon className='h-4 w-4' />&nbsp;
+        <CalendarDaysIcon className={CommonCss.Icon} />&nbsp;
         {isEmptyDate(props.lodging.checkinTime) ? null
           : printFmt(parseISO(props.lodging.checkinTime as string), dateFmt)}
         {isEmptyDate(props.lodging.checkoutTime) ? null :
