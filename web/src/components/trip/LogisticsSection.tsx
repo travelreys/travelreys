@@ -9,27 +9,27 @@ import {
   ChevronUpIcon,
 } from '@heroicons/react/24/outline'
 
-import TripFlightsModal from './TripFlightsModal';
+import FlightsModal from './FlightsModal';
+import LodgingsModal from './LodgingsModal';
+import LodgingCard from './LodgingCard';
 
-import { Trips } from '../../apis/types';
+import { Trips } from '../../apis/trips';
 import TripsSyncAPI from '../../apis/tripsSync';
 import TransitFlightCard from './TransitFlightCard';
 
 import { TripLogisticsCss } from '../../styles/global';
-import TripLodgingsModal from './TripLodgingsModal';
-import TripLodgingCard from './TripLodgingCard';
 
 
 
-// TripFlightsSection
+// FlightsSection
 
-interface TripFlightsSectionProps {
+interface FlightsSectionProps {
   trip: any
   onFlightSelect: any
   onFlightDelete: any
 }
 
-const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSectionProps) => {
+const FlightsSection: FC<FlightsSectionProps> = (props: FlightsSectionProps) => {
 
   const [isTripFlightsModalOpen, setIsTripFlightsModalOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
@@ -84,7 +84,7 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
         </button>
       </div>
       {renderItineraries()}
-      <TripFlightsModal
+      <FlightsModal
         trip={props.trip}
         isOpen={isTripFlightsModalOpen}
         onFlightSelect={onFlightSelect}
@@ -95,16 +95,16 @@ const TripFlightsSection: FC<TripFlightsSectionProps> = (props: TripFlightsSecti
 }
 
 
-// TripLodgingSection
+// LodgingSection
 
-interface TripLodgingSectionProps {
+interface LodgingSectionProps {
   trip: any
   onLodgingSelect: any
   onLodgingUpdate: any
   onLodgingDelete: any
 }
 
-const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSectionProps) => {
+const LodgingSection: FC<LodgingSectionProps> = (props: LodgingSectionProps) => {
 
   const [isLodgingModalOpen, setIsLogdingModalOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
@@ -135,7 +135,7 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
     }
     const lodgings = Object.values(props.trip.lodgings);
     return lodgings.map((lodge: any) => (
-      <TripLodgingCard
+      <LodgingCard
         key={lodge.id}
         lodging={lodge}
         onDelete={props.onLodgingDelete}
@@ -160,7 +160,7 @@ const TripLodgingSection: FC<TripLodgingSectionProps> = (props: TripLodgingSecti
         </button>
       </div>
       {renderLodgings()}
-      <TripLodgingsModal
+      <LodgingsModal
         trip={props.trip}
         isOpen={isLodgingModalOpen}
         onLodgingSelect={onLodgingSelect}
@@ -205,7 +205,7 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
     const ops = [] as any;
     Object.entries(updates).forEach(([key, value]) => {
       const fullpath = `/lodgings/${lodging.id}/${key}`;
-      ops.push(TripsSyncAPI.makeReplaceOp(fullpath, value));
+      ops.push(TripsSyncAPI.newReplaceOp(fullpath, value));
     });
     props.tripStateOnUpdate(ops);
   }
@@ -220,12 +220,12 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   return (
     <div>
-      <TripFlightsSection
+      <FlightsSection
         trip={props.trip}
         onFlightSelect={flightOnSelect}
         onFlightDelete={flightOnDelete}
       />
-      <TripLodgingSection
+      <LodgingSection
         trip={props.trip}
         onLodgingSelect={lodgingOnSelect}
         onLodgingUpdate={lodgingOnUpdate}

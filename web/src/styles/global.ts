@@ -1,4 +1,18 @@
-// InputDatesPicker
+////////////
+// Common //
+////////////
+
+export const CommonCss = {
+  Icon: "h-4 w-4",
+  LeftIcon: "h-4 w-4 mr-2",
+  DropdownIcon: "h-4 w-4",
+  DropdownBtn: "flex items-center w-full text-left hover:text-indigo-500",
+  DeleteBtn: "text-red-500 flex items-center w-full text-left hover:text-red-700",
+}
+
+//////////////////////
+// InputDatesPicker //
+//////////////////////
 
 export const InputDatesPickerCss = {
   Ctn: "flex w-full border border-slate-200 rounded-lg mr-2",
@@ -7,17 +21,35 @@ export const InputDatesPickerCss = {
   Input: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
 }
 
-// Modal
+///////////
+// Modal //
+///////////
 
 export const ModalCss = {
-  Container: "relative z-10",
+  Container: "relative z-20",
   Inset: "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity",
   Content: "fixed inset-0 z-10 overflow-y-auto",
   ContentContainer: "flex min-h-full flex-col p-4 text-center sm:items-center sm:p-0",
   ContentCard: "bg-white relative transform rounded-lg text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl",
 }
 
-// Trips
+////////////////////////
+// Place Autocomplete //
+////////////////////////
+
+export const PlaceAutocompleteCss = {
+  AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
+  PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
+  Icon: "h-6 w-6",
+  IconCtn: "p-1 group-hover:text-indigo-500",
+  PrimaryTxt : "text-slate-900 group-hover:text-indigo-500 text-sm font-medium",
+  SecondaryTxt: "text-slate-400 group-hover:text-indigo-500 text-xs",
+}
+
+
+///////////
+// Trips //
+///////////
 
 export const CreateTripModalCss = {
   CreateModalCard: "bg-white rounded-lg px-4 pt-5 pb-4 sm:p-8 sm:pb-4",
@@ -34,11 +66,12 @@ export const CreateTripModalCss = {
   CreateTripCancelBtn: "mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm",
 }
 
-
-// Trip Page
+///////////////
+// Trip Page //
+///////////////
 
 export const TripMenuCss = {
-  TripMenuCtn: "min-h-screen w-full z-50 sm:w-1/2 sm:max-w-xl sm:shadow-xl sm:shadow-slate-900",
+  TripMenuCtn: "min-h-screen w-full z-50 sm:w-1/2  sm:max-w-lg sm:shadow-xl sm:shadow-slate-900",
   TripMenu: "pb-40 w-full",
   TripMenuNav: "p-3 font-bold text-indigo-500",
   TabsCtn: "sticky top-0 z-10 bg-indigo-100 py-8 pb-4 mb-4",
@@ -48,7 +81,9 @@ export const TripMenuCss = {
   TabItemBtnTxt: "text-slate-400 text-sm",
 }
 
-// Jumbo
+///////////
+// Jumbo //
+///////////
 
 export const TripMenuJumboCss = {
   TripDatesBtn: "font-medium text-md text-slate-500",
@@ -57,8 +92,8 @@ export const TripMenuJumboCss = {
   TripImageEditIconCtn: "absolute top-4 right-4 h-10 w-10 bg-gray-800/70 p-2 text-center rounded-full",
   TripImageEditIcon: "h-6 w-6 text-white",
   TripNameInputCtn: "h-16 relative -top-24",
-  TripNameInputWrapper: "bg-white rounded-lg shadow-xl p-5 mx-4 mb-4",
-  TripNameInput: "mb-12 text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0",
+  TripNameInputWrapper: "bg-white rounded-lg shadow p-5 mx-4 mb-4",
+  TripNameInput: "text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0",
   Figure: "relative max-w-sm transition-all rounded-lg duration-300 mb-2 group",
   FigureImg: "block rounded-lg max-w-full group-hover:grayscale",
   FigureBtn: "text-white m-2 py-2 px-3 rounded-full bg-green-500 hover:bg-green-700",
@@ -70,15 +105,22 @@ export const TripMenuJumboCss = {
   SearchImageInput: "bg-gray-50 block border-gray-300 border focus:border-blue-500 focus:ring-blue-500 min-w-0 p-2.5 rounded-lg text-gray-900 text-sm w-5/6 mr-2",
   SearchImageBtn: "flex-1 inline-flex text-white bg-indigo-500 hover:bg-indigo-800 rounded-2xl p-2.5 text-center items-center justify-around",
   SearchImageIcon: "h-5 w-5 stroke-2 stroke-white",
+  SettingsBtn: "flex items-center w-full text-left hover:text-indigo-500",
 }
 
-export const TripNodesCss = {
+///////////
+// Notes //
+///////////
+
+export const TripNotesCss = {
   TitleCtn: "flex justify-between mb-4",
   HeaderCtn: "text-2xl sm:text-3xl font-bold text-slate-700",
   ToggleBtn: "mr-2"
 }
 
-// Logistics
+///////////////
+// Logistics //
+///////////////
 
 export const TripLogisticsCss = {
   FlightDatesCtn: "flex w-full border border-slate-400 rounded-lg",
@@ -102,7 +144,9 @@ export const TripLogisticsCss = {
   FlightTransitIcon: "h-6 w-6 text-red-500 cursor-pointer",
 };
 
-// Flights
+/////////////
+// Flights //
+/////////////
 
 export const FlightsModalCss = {
   Ctn: "px-4 pt-5 sm:p-8 sm:pb-2 rounded-t-lg mb-4",
@@ -143,7 +187,9 @@ export const FlightsModalCss = {
   FlightsStopHR: "w-48 h-1 mx-auto my-4 bg-gray-100 border-0 rounded md:my-10",
 }
 
-// Lodging
+/////////////
+// Lodging //
+/////////////
 
 export const LodgingsModalCss = {
   Ctn: "px-4 pt-5 sm:p-8 sm:pb-2 rounded-t-lg mb-4",
@@ -168,13 +214,14 @@ export const LodgingCardCss = {
   WebsiteTxt: "text-indigo-500 text-sm flex items-center",
   PhoneTxt: "text-slate-600 text-sm flex items-center mb-1",
   DatesTxt: "text-slate-600 text-sm flex items-center mb-2 cursor-pointer",
-  PricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full mb-2 w-fit cursor-pointer",
+  PricePill: "bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2 w-fit cursor-pointer",
   DatesPickerCtn: "flex w-full rounded",
   PriceInputCtn: "flex w-full rounded mb-2",
-  DeleteBtn: "text-red-500 flex items-center",
 }
 
-// Trip Content
+//////////////////
+// Trip Content //
+//////////////////
 
 export const TripContentSectionCss = {
   HeaderCtn: "flex justify-between mb-4",
@@ -193,16 +240,21 @@ export const TripContentListCss = {
 }
 
 export const TripContentCss = {
-  Ctn: "bg-slate-50 rounded-lg shadow-xs mb-4 p-4 relative",
-  TitleInput: "p-0 mb-1 font-bold text-gray-800 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
   AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
-  PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
+  Ctn: "bg-slate-50 rounded-lg shadow-xs mb-4 p-4 relative",
+  ItineraryDateBtn: "flex items-center w-full justify-between hover:text-indigo-500 text-align-right",
+  TitleInput: "p-0 mb-1 font-bold text-gray-800 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
+  WebsiteLink: "flex items-center mb-1",
   WebsiteTxt: "text-indigo-500 text-sm flex items-center",
-  ItineraryDateBtn: "flex items-center w-full justify-between hover:text-indigo-500",
-  DeleteBtn: "text-red-500 flex items-center w-full text-left",
+  AddItineraryBtn: "text-xs text-gray-800 font-bold bg-indigo-200 rounded-full px-2 py-1 hover:bg-indigo-400",
+  ItineraryBadge: "bg-indigo-100 text-indigo-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded",
+  PlaceCtn: "text-slate-600 text-sm flex items-center mb-1 hover:text-indigo-500",
+  PlaceInput: "p-0 mb-1 text-sm text-gray-600 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
 }
 
-// Trip Itinerary
+////////////////////
+// Trip Itinerary //
+////////////////////
 
 export const TripItinerarySectionCss = {
   Hr: "w-48 h-1 m-5 mb-8 mx-auto bg-gray-300 border-0 rounded",
@@ -210,18 +262,80 @@ export const TripItinerarySectionCss = {
 }
 
 export const TripItineraryListCss = {
-  Ctn: "rounded-lg shadow-xs mb-12",
+  Ctn: "rounded-lg shadow-xs",
   NameInput: "p-0 w-full text-xl mb-1 sm:text-2xl font-bold text-gray-800 placeholder:text-gray-400 rounded border-0 hover:bg-gray-300 hover:border-0 focus:ring-0 focus:p-1 duration-500",
-  NewContentCtn: "flex my-4 w-full",
-  NewContentInput: "flex-1 mr-1 text-md sm:text-md font-bold text-gray-800 placeholder:font-normal placeholder:text-gray-300 placeholder:italic rounded border-0 bg-gray-100 hover:border-0 focus:ring-0",
-  NewContentBtn: "text-green-600 w-1/12 hover:bg-green-50 rounded-lg text-sm font-bold inline-flex justify-around items-center",
+  ContentsCtn: "pl-6 py-4",
+  ContentsWrapper: "relative border-l border-gray-200",
+  LodgingCtn: "w-full mb-2",
+  LodgingWrapper: "flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow",
+  LodgingIconWrapper: "bg-indigo-200 p-2 rounded-full",
+  LodgingName: "flex-1 pl-4 text-sm font-normal",
+  LodgingStatus: "pl-2 font-semibold text-sm",
+  ItinItem: "mb-8 ml-6",
+  ItinContentIcon: "absolute flex items-center justify-center w-6 h-6 rounded-full -left-3 ring-8 ring-white font-bold text-white text-sm",
 }
 
 export const TripItineraryCss = {
-  Ctn: "bg-slate-50 rounded-lg shadow-xs mb-4 p-4 relative shadow",
+  Ctn: "bg-slate-50 rounded-lg shadow-xs px-4 py-2 relative shadow",
   TitleInput: "p-0 mb-1 font-bold text-gray-800 bg-transparent placeholder:text-gray-400 rounded border-0 hover:border-0 focus:ring-0 duration-400",
   AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
   PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
   WebsiteTxt: "text-indigo-500 text-sm flex items-center",
-  DeleteBtn: "text-red-500 flex items-center w-full",
+  PriceInputCtn: "flex w-full rounded mb-2",
+  PricePill: "bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2 w-fit cursor-pointer",
 }
+
+
+/////////////////
+// Trip Budget //
+/////////////////
+
+export const TripBudgetCss = {
+  ProgressBarCtn: "w-full py-4 pr-2",
+  ProgressBarWrapper: "bg-gray-200 rounded-full h-1.5",
+  ProgressBar: "bg-indigo-600 h-1.5 rounded-full",
+  SummaryCtn: "bg-gray-100 shadow rounded-lg flex p-2 divide-x-2 mb-4",
+  SpendingCtn: "flex-1 p-2",
+  SpendingTitle: "text-sm font-bold mb-1",
+  SpendingAmount: "text-4xl",
+  OptsCtn: "flex flex-col p-2",
+  AddExpenseBtn: "text-indigo-500 font-bold inline-flex items-center p-2 text-sm",
+  EditBudgetBtn: 'text-indigo-500 font-bold inline-flex items-center p-2 text-sm',
+  SubsectionTxt: "text-lg font-bold",
+  ItemCtn: "flex justify-between items-center border-b py-4 border-gray-200",
+  ItemDescCtn: "flex flex-1 items-center",
+  LodgingItemIcon: "bg-indigo-100 p-2 rounded-full mr-2",
+  LodgingDatesTxt: "text-slate-600 text-sm flex items-center cursor-pointer",
+  ItinItemIcon: "flex items-center justify-center w-8 h-8 p-2 rounded-full mr-2 text-white font-bold",
+  ItemNameTxt: "font-bold",
+  ItemDescTxt: "text-sm text-gray-500",
+  ItemPriceTxt: "font-bold",
+  PriceInputCtn: "flex w-full rounded-lg mb-3 border border-gray-200",
+  PriceInputLabel: "inline-flex bg-gray-200 font-bold items-center px-3 text-sm text-slate-500 rounded-l-md w-1/5",
+  BudgetItemIcon: "flex items-center justify-center w-8 h-8 p-2 rounded-full mr-2 text-white font-bold bg-indigo-500"
+}
+
+
+/////////////
+// TripMap //
+/////////////
+
+export const TripMapCss = {
+  AddrTxt: "text-gray-600 flex items-center mb-1",
+  BtnCtn: "flex items-center mt-6",
+  Ctn: "fixed h-screen",
+  DetailsCard: "bg-white p-4 mx-4 h-11/12 w-11/12 max-w-3xl rounded-xl pointer-events-auto",
+  DetailsWrapper: "absolute bottom-0 mb-8 z-10 pointer-events-none",
+  GmapBtn: "flex w-fit rounded-full py-2 px-6 items-center border border-gray-200 font-semibold text-gray-500",
+  HeaderCtn: "flex justify-between items-center",
+  OpeningHrsTxt: "flex text-gray-600 items-center truncate",
+  PhoneBtn: "flex w-fit rounded-full py-2 px-6 mr-2 items-center border border-gray-200 font-semibold text-gray-500",
+  PhoneIcon: "h-4 w-4 text-indigo-500 mr-2",
+  RatingsStar: "text-yellow-500 flex items-center mb-1",
+  RatingsTxt: "text-gray-600",
+  SummaryTxt: "text-gray-600 mb-1",
+  TitleCtn: "font-bold text-lg flex items-center",
+  WeekdayTxt: "text-slate-600 ml-6",
+}
+
+

@@ -21,17 +21,18 @@ import {
 import TripsAPI from '../../apis/trips';
 import TripsSyncAPI, { JSONPatchOp } from '../../apis/tripsSync';
 
-import Spinner from '../../components/Spinner';
-import TripContentSection from '../../components/trip/TripContentSection';
-import TripLogisticsSection from '../../components/trip/TripLogisticsSection';
+import ItinerarySection from '../../components/trip/ItinerarySection';
+import NotesSection from '../../components/trip/Notes';
+import Spinner from '../../components/common/Spinner';
+import TripContentSection from '../../components/trip/ContentSection';
+import TripLogisticsSection from '../../components/trip/LogisticsSection';
 import TripMap from '../../components/maps/TripMap';
-import TripMenuJumbo from '../../components/trip/TripMenuJumbo';
+import TripMenuJumbo from '../../components/trip/MenuJumbo';
 
 import { TripMenuCss } from '../../styles/global';
 import { MapsProvider } from '../../context/maps-context';
 import { NewSyncMessageHeap } from '../../utils/heap';
-import TripNotesSection from '../../components/trip/TripNotes';
-import TripItinerarySection from '../../components/trip/TripItinerarySection';
+import BudgetSection from '../../components/trip/BudgetSection';
 
 
 // TripPlanningMenu
@@ -93,7 +94,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
   const renderHome = () => {
     return (
       <div>
-        <TripNotesSection
+        <NotesSection
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
@@ -110,16 +111,6 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
     );
   }
 
-  const renderItinerary = () => {
-    return (
-      <div>
-        <TripItinerarySection
-          trip={props.trip}
-          tripStateOnUpdate={props.tripStateOnUpdate}
-        />
-      </div>
-    );
-  }
 
   return (
     <aside className={TripMenuCss.TripMenuCtn}>
@@ -131,7 +122,20 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
         />
         {renderTabs()}
         { tab === "home" ? renderHome() : null}
-        { tab === "itinerary" ? renderItinerary() : null}
+        { tab === "itinerary"
+          ?
+          <ItinerarySection
+            trip={props.trip}
+            tripStateOnUpdate={props.tripStateOnUpdate}
+          />
+          : null}
+        { tab === "budget"
+          ?
+            <BudgetSection
+              trip={props.trip}
+              tripStateOnUpdate={props.tripStateOnUpdate}
+            />
+          : null}
       </div>
     </aside>
   );

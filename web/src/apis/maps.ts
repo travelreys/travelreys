@@ -3,6 +3,10 @@ import _get from 'lodash/get';
 
 import { BASE_URL } from './common';
 
+export namespace Maps {
+  export type Place = any
+}
+
 const MapsAPI = {
   placeAutocomplete: (query: string, types: Array<string>, sessiontoken: string) => {
     const url = `${BASE_URL}/api/v1/maps/place/autocomplete`;
@@ -17,10 +21,24 @@ const MapsAPI = {
     return axios.get(url, {
       params: { placeID, fields: fieldsParam, sessiontoken }
     });
-  }
+  },
+  directions: (originPlaceID: string, destPlaceID: string, mode: string) => {
+    const url = `${BASE_URL}/api/v1/maps/place/directions`;
+    return axios.get(url, {
+      params: { originPlaceID, destPlaceID, mode }
+    });
+  },
+  optimizeRoute: (originPlaceID: string, destPlaceID: string, waypointsPlaceID: string) => {
+    const url = `${BASE_URL}/api/v1/maps/place/optimize-route`;
+    return axios.get(url, {
+      params: { originPlaceID, destPlaceID, waypointsPlaceID }
+    });
+  },
+
 };
 
 export default MapsAPI;
+
 export const placeFields = [
   "address_component",
   "adr_address",
@@ -45,6 +63,7 @@ export const placeAtmosphereFields = placeFields.concat([
   "reviews",
   "user_ratings_total"
 ]);
+export const ModeDriving = "driving";
 
 export const EMBED_MAPS_APIKEY = "AIzaSyBaqenQ0nQVtkhnXBn-oWBtlPDL5uHmvNU";
 export const PLACE_IMAGE_APIKEY = "AIzaSyBgNwirAT6TSS208emcC0Lbgex6i3EwhR0";

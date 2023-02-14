@@ -3,6 +3,7 @@ package maps
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -17,6 +18,8 @@ var (
 type Service interface {
 	PlacesAutocomplete(context.Context, string, string, string) (AutocompletePredictionList, error)
 	PlaceDetails(context.Context, string, []string, string) (Place, error)
+	Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error)
+	OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error)
 }
 
 type service struct {
@@ -90,4 +93,51 @@ func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []s
 	res, err := svc.c.PlaceDetails(ctx, req)
 	return Place{res}, err
 
+}
+
+func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error) {
+	req := &maps.DirectionsRequest{
+		Origin:      fmt.Sprintf("place_id:%s", originPlaceID),
+		Destination: fmt.Sprintf("place_id:%s", destPlaceID),
+	}
+
+	groutes, _, err := svc.c.Directions(ctx, req)
+	if err != nil {
+		return RouteList{}, err
+	}
+
+	routes := RouteList{}
+	for _, r := range groutes {
+		routes = append(routes, Route{Route: r, TravelMode: mode})
+	}
+	return routes, err
+}
+
+func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error) {
+	wpWithLabel := []string{}
+	for _, wp := range waypointsPlaceID {
+		wpWithLabel = append(wpWithLabel, fmt.Sprintf("place_id:%s", wp))
+	}
+
+	req := &maps.DirectionsRequest{
+		Origin:      fmt.Sprintf("place_id:%s", originPlaceID),
+		Destination: fmt.Sprintf("place_id:%s", destPlaceID),
+		Mode:        maps.TravelModeWalking,
+		Waypoints:   wpWithLabel,
+		Optimize:    true,
+	}
+
+	// maps.DecodePolyline()
+
+	groutes, _, err := svc.c.Directions(ctx, req)
+	if err != nil {
+		return RouteList{}, err
+	}
+
+	routes := RouteList{}
+	for _, r := range groutes {
+		routes = append(routes, Route{Route: r, TravelMode: ""})
+	}
+
+	return routes, err
 }

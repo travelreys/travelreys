@@ -13,8 +13,8 @@ import {
 import { TripLogisticsCss } from '../../styles/global';
 
 import {
-  parseTimeFromZ,
-  printTime,
+  parseISO,
+  printFmt,
   prettyPrintMins,
 } from '../../utils/dates';
 import {capitaliseWords} from '../../utils/strings';
@@ -53,8 +53,8 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
       let layoverDuration = null;
       if (idx !== flight.legs.length - 1) {
         layoverDuration = intervalToDuration({
-          start: parseTimeFromZ(flight.legs[idx + 1].departure.datetime),
-          end: parseTimeFromZ(leg.arrival.datetime),
+          start: parseISO(flight.legs[idx + 1].departure.datetime),
+          end: parseISO(leg.arrival.datetime),
         });
       }
 
@@ -65,7 +65,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
             <li className="mb-4 ml-6">
               <div className={TripLogisticsCss.FlightStopTimelineIcon} />
               <h3 className={TripLogisticsCss.FlightStopTimelineTime}>
-                {printTime(parseTimeFromZ(leg.departure.datetime), "hh:mm aa")}
+                {printFmt(parseISO(leg.departure.datetime), "hh:mm aa")}
               </h3>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.departure.airport.code} ({leg.departure.airport.name})
@@ -80,7 +80,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
             <li className="mb-4 ml-6">
               <div className={TripLogisticsCss.FlightStopTimelineIcon} />
               <h3 className={TripLogisticsCss.FlightStopTimelineTime}>
-                {printTime(parseTimeFromZ(leg.arrival.datetime), "hh:mm aa")}
+                {printFmt(parseISO(leg.arrival.datetime), "hh:mm aa")}
               </h3>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.arrival.airport.code} ({leg.arrival.airport.name})
@@ -126,19 +126,19 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
         <div className='flex-1'>
           <p className='text-sm text-slate-800'>
             {capitaliseWords(direction)} Flight&nbsp;&#x2022;&nbsp;
-            {printTime(parseTimeFromZ(flight.departure.datetime), "eee, MMM d")}
+            {printFmt(parseISO(flight.departure.datetime), "eee, MMM d")}
           </p>
           <div className="flex">
             <span className=''>
               <p className='font-medium'>
-                {printTime(parseTimeFromZ(flight.departure.datetime), "hh:mm aa")}
+                {printFmt(parseISO(flight.departure.datetime), "hh:mm aa")}
               </p>
               <p className="text-xs text-slate-800">{flight.departure.airport.code}</p>
             </span>
             <ArrowLongRightIcon className='h-6 w-8' />
             <span className='mb-1'>
               <p className='font-medium'>
-                {printTime(parseTimeFromZ(flight.arrival.datetime), "hh:mm aa")}
+                {printFmt(parseISO(flight.arrival.datetime), "hh:mm aa")}
               </p>
               <p className="text-xs text-slate-800">{flight.arrival.airport.code}</p>
             </span>

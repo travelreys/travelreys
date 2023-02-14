@@ -18,15 +18,15 @@ import {
   GlobeAltIcon
 } from '@heroicons/react/24/outline';
 
-import Dropdown from '../Dropdown';
-import InputDatesPicker from '../InputDatesPicker';
+import Dropdown from '../common/Dropdown';
+import InputDatesPicker from '../common/InputDatesPicker';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
-import { Trips } from '../../apis/types';
-import { InputDatesPickerCss, LodgingCardCss } from '../../styles/global';
+import { Trips } from '../../apis/trips';
+import { CommonCss, InputDatesPickerCss, LodgingCardCss } from '../../styles/global';
 import {
-  printTime,
+  printFmt,
   isEmptyDate,
-  parseTimeFromZ,
+  parseISO,
   parseTripDate
 } from '../../utils/dates';
 import { capitaliseWords } from '../../utils/strings';
@@ -48,7 +48,6 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
   // UI State
   const [isUpdatingDates, setIsUpdatingDates] = useState<Boolean>(false);
   const [isUpdatingPrice, setIsUpdatingPrice] = useState<Boolean>(false);
-  const [isDropdownActive, setIsDropdownActive] = useState<Boolean>(false);
   const [checkinDates, setCheckinDates] = useState<DateRange>();
   const [priceAmount, setPriceAmount] = useState<Number>();
 
@@ -126,7 +125,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     const opts = [
       <button
           type='button'
-          className={LodgingCardCss.DeleteBtn}
+          className={CommonCss.DeleteBtn}
           onClick={deleteBtnOnClick}
         >
         <TrashIcon className='h-4 w-4 mr-2' />Delete
@@ -176,7 +175,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     }
     return (
       <p className={LodgingCardCss.PricePill} onClick={priceOnClick}>
-        $ {priceAmount ? String(priceAmount): "-"}
+        $ {priceAmount ? String(priceAmount): "Add cost"}
       </p>
     );
   }
@@ -201,11 +200,11 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
         className={LodgingCardCss.DatesTxt}
         onClick={datesOnClick}
       >
-        <CalendarDaysIcon className='h-4 w-4' />&nbsp;
+        <CalendarDaysIcon className={CommonCss.Icon} />&nbsp;
         {isEmptyDate(props.lodging.checkinTime) ? null
-          : printTime(parseTimeFromZ(props.lodging.checkinTime as string), dateFmt)}
+          : printFmt(parseISO(props.lodging.checkinTime as string), dateFmt)}
         {isEmptyDate(props.lodging.checkoutTime) ? null :
-          " - " + printTime(parseTimeFromZ(props.lodging.checkoutTime as string), dateFmt)}
+          " - " + printFmt(parseISO(props.lodging.checkoutTime as string), dateFmt)}
       </p>
     );
   }

@@ -13,8 +13,8 @@ import {
 import { FlightsModalCss } from '../../styles/global';
 
 import {
-  parseTimeFromZ,
-  printTime,
+  parseISO,
+  printFmt,
   prettyPrintMins,
 } from '../../utils/dates';
 
@@ -53,8 +53,8 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
       let layoverDuration = null;
       if (idx !== props.flight.legs.length - 1) {
         layoverDuration = intervalToDuration({
-          start: parseTimeFromZ(props.flight.legs[idx + 1].departure.datetime),
-          end: parseTimeFromZ(leg.arrival.datetime),
+          start: parseISO(props.flight.legs[idx + 1].departure.datetime),
+          end: parseISO(leg.arrival.datetime),
         });
       }
 
@@ -66,7 +66,7 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
             <li className="mb-4 ml-6">
               <div className={FlightsModalCss.FlightStopTimelineIcon} />
               <h3 className={FlightsModalCss.FlightStopTimelineTime}>
-                {printTime(parseTimeFromZ(leg.departure.datetime), "hh:mm aa")}
+                {printFmt(parseISO(leg.departure.datetime), "hh:mm aa")}
               </h3>
               <p className={FlightsModalCss.FlightsStopTimelineText}>
                 {leg.departure.airport.code} ({leg.departure.airport.name})
@@ -81,7 +81,7 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
             <li className="mb-4 ml-6">
               <div className={FlightsModalCss.FlightStopTimelineIcon} />
               <h3 className={FlightsModalCss.FlightStopTimelineTime}>
-                {printTime(parseTimeFromZ(leg.arrival.datetime), "hh:mm aa")}
+                {printFmt(parseISO(leg.arrival.datetime), "hh:mm aa")}
               </h3>
               <p className={FlightsModalCss.FlightsStopTimelineText}>
                 {leg.arrival.airport.code} ({leg.arrival.airport.name})
@@ -132,14 +132,14 @@ const TripFlightCard: FC<TripFlightCardProps> = (props: TripFlightCardProps) => 
         <div className="flex">
           <span className=''>
             <p className='font-medium'>
-              {printTime(parseTimeFromZ(props.flight.departure.datetime), "hh:mm aa")}
+              {printFmt(parseISO(props.flight.departure.datetime), "hh:mm aa")}
             </p>
             <p className="text-xs text-slate-400">{props.flight.departure.airport.code}</p>
           </span>
           <ArrowLongRightIcon className='h-6 w-8' />
           <span className='mb-1'>
             <p className='font-medium'>
-              {printTime(parseTimeFromZ(props.flight.arrival.datetime), "hh:mm aa")}
+              {printFmt(parseISO(props.flight.arrival.datetime), "hh:mm aa")}
             </p>
             <p className="text-xs text-slate-400">{props.flight.arrival.airport.code}</p>
           </span>

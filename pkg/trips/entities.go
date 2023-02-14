@@ -34,6 +34,9 @@ type TripPlan struct {
 	Contents  map[string]TripContentList `json:"contents" bson:"contents"`
 	Itinerary []ItineraryList            `json:"itinerary" bson:"itinerary"`
 
+	// Budget
+	Budget Budget `json:"budget" bson:"budget"`
+
 	UpdatedAt  time.Time `json:"updatedAt" bson:"updatedAt"`
 	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`
 	IsArchived bool      `json:"isArchived" bson:"isArchived"`
@@ -61,6 +64,7 @@ func NewTripPlan(creator TripMember, name string) TripPlan {
 
 		Contents:  map[string]TripContentList{},
 		Itinerary: []ItineraryList{},
+		Budget:    NewBudget(),
 
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
@@ -155,6 +159,7 @@ type TripContentList struct {
 	ID       string        `json:"id" bson:"id"`
 	Name     string        `json:"name" bson:"name"`
 	Contents []TripContent `json:"contents" bson:"contents"`
+	Labels   common.Labels `json:"labels" bson:"labels"`
 }
 
 func NewTripContentList(name string) TripContentList {
@@ -162,6 +167,7 @@ func NewTripContentList(name string) TripContentList {
 		ID:       uuid.New().String(),
 		Name:     name,
 		Contents: []TripContent{},
+		Labels:   common.Labels{},
 	}
 }
 
@@ -196,6 +202,7 @@ type ItineraryList struct {
 	Date        time.Time            `json:"date" bson:"date"`
 	Description string               `json:"desc" bson:"desc"`
 	Contents    ItineraryContentList `json:"contents" bson:"contents"`
+	Route       maps.RouteList       `json:"routes" bson:"routes"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
@@ -206,6 +213,38 @@ func NewItineraryList(date time.Time) ItineraryList {
 		Date:        date,
 		Description: "",
 		Contents:    ItineraryContentList{},
+		Route:       maps.RouteList{},
 		Labels:      common.Labels{},
 	}
 }
+
+// Budget
+
+type Budget struct {
+	ID     string               `json:"id" bson:"id"`
+	Amount common.PriceMetadata `json:"amount" bson:"amount"`
+	Items  BudgetItemsList      `json:"items" bson:"items"`
+
+	Labels common.Labels `json:"labels" bson:"labels"`
+	Tags   common.Tags   `json:"tags" bson:"tags"`
+}
+
+func NewBudget() Budget {
+	return Budget{
+		Amount: common.PriceMetadata{},
+		Items:  BudgetItemsList{},
+		Labels: common.Labels{},
+		Tags:   common.Tags{},
+	}
+}
+
+type BudgetItem struct {
+	Title         string               `json:"title" bson:"title"`
+	Desc          string               `json:"desc" bson:"desc"`
+	PriceMetadata common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
+
+	Labels common.Labels `json:"labels" bson:"labels"`
+	Tag    common.Tags   `json:"tags" bson:"tags"`
+}
+
+type BudgetItemsList []BudgetItem

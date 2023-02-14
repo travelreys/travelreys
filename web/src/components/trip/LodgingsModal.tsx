@@ -8,18 +8,18 @@ import { DateRange } from 'react-day-picker';
 
 import {
   MagnifyingGlassIcon,
-  MapPinIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
 
-import Alert from '../Alert';
-import InputDatesPicker from '../InputDatesPicker';
-import Modal from '../Modal';
+import Alert from '../common/Alert';
+import InputDatesPicker from '../common/InputDatesPicker';
+import Modal from '../common/Modal';
 
 import MapsAPI, { EMBED_MAPS_APIKEY, placeFields } from '../../apis/maps';
-import { LodgingsModalCss, ModalCss } from '../../styles/global';
-import { Trips } from '../../apis/types';
+import { LodgingsModalCss } from '../../styles/global';
+import { Trips } from '../../apis/trips';
 import { parseTripDate } from '../../utils/dates';
+import PlaceAutocomplete from '../maps/PlaceAutocomplete';
 
 // TripLodgingsModal
 
@@ -122,35 +122,6 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
     );
   }
 
-  const renderAutocomplete = () => {
-    if (_isEmpty(predictions)) {
-      return (<></>);
-    }
-    return (
-      <div className='p-1'>
-        {predictions.map((pre: any) => (
-          <div
-            className={LodgingsModalCss.PredictionsCtn}
-            key={pre.place_id}
-            onClick={() => {predictionOnSelect(pre.place_id)}}
-          >
-            <div className={LodgingsModalCss.PredictionIconCtn}>
-              <MapPinIcon className='h-6 w-6' />
-            </div>
-            <div className='ml-1'>
-              <p className={LodgingsModalCss.PredictionMain}>
-                {_get(pre, "structured_formatting.main_text", "")}
-              </p>
-              <p className={LodgingsModalCss.PredictionSecondary}>
-                {_get(pre, "structured_formatting.secondary_text", "")}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   const renderMapForSelectedPlace = () => {
     if (_isEmpty(selectedPlaceID)) {
       return (<></>);
@@ -198,8 +169,10 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
           WrapperCss={"mb-2"}
           CtnCss={LodgingsModalCss.InputDatesCtn}
         />
-
-        {renderAutocomplete()}
+        <PlaceAutocomplete
+          predictions={predictions}
+          onSelect={predictionOnSelect}
+        />
         {renderMapForSelectedPlace()}
       </div>
     </Modal>

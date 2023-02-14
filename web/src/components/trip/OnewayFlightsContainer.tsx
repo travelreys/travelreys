@@ -1,11 +1,11 @@
-import React, { FC, useState } from 'react';
+import React, { FC } from 'react';
 import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 
-import { ModalCss, FlightsModalCss } from '../../styles/global';
+import { FlightsModalCss } from '../../styles/global';
 
-import TripFlightCard from './TripFlightCard';
+import TripFlightCard from './FlightCard';
 
 // OnewayFlightsContainer
 

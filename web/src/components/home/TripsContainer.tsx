@@ -5,7 +5,7 @@ import _get from 'lodash/get';
 import { parseJSON, isEqual } from 'date-fns';
 
 import ImagesAPI from '../../apis/images';
-import Avatar from '../Avatar';
+import Avatar from '../common/Avatar';
 import { printFromDateFromRange, printToDateFromRange } from '../../utils/dates';
 
 
