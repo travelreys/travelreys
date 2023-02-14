@@ -24,6 +24,8 @@ import { Tooltip } from 'react-tooltip'
 
 import Modal from '../common/Modal';
 import {
+  BudgetAmountJSONPath,
+  budgetAmt,
   budgetItemPriceAmt,
   ContentIconOpts,
   itineraryContentPriceAmt,
@@ -34,7 +36,11 @@ import {
   tripContentForItineraryContent,
   Trips
 } from '../../apis/trips';
-import { CommonCss, InputDatesPickerCss, LodgingCardCss, TripBudgetCss, TripContentListCss, TripItineraryListCss } from '../../styles/global';
+import {
+  CommonCss,
+  InputDatesPickerCss,
+  TripBudgetCss
+} from '../../styles/global';
 import { isEmptyDate, parseISO, printFmt } from '../../utils/dates';
 import TripsSyncAPI from '../../apis/tripsSync';
 import { Common } from '../../apis/common';
@@ -44,9 +50,9 @@ import Dropdown from '../common/Dropdown';
 
 const ProgressBarId = "budget-progress-bar"
 
-////////////////////////
+/////////////////////
 // BudgetItemModal //
-////////////////////////
+/////////////////////
 
 interface BudgetItemModalProps {
   header?: string
@@ -139,10 +145,73 @@ const BudgetItemModal: FC<BudgetItemModalProps> = (props: BudgetItemModalProps) 
         </div>
       </div>
     </Modal>
-
   );
 }
 
+
+
+/////////////////////
+// EditBudgetModal //
+/////////////////////
+
+
+interface EditBudgetModalProps {
+  budgetAmount: number
+  isOpen: boolean
+  onClose: () => void
+  onSubmit: (newAmount: number) => void
+}
+
+const EditBudgetModal: FC<EditBudgetModalProps> = (props: EditBudgetModalProps) => {
+
+  const [amount, setAmount] = useState(props.budgetAmount);
+
+  // Renderers
+  const renderHeader = () => {
+    return (
+      <div className='flex justify-between items-center mb-4'>
+        <div className='text-gray-800 font-bold text-xl'>
+          Set Budget
+        </div>
+        <button type="button" onClick={() => {props.onClose()}}>
+          <XMarkIcon className={CommonCss.Icon} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <Modal isOpen={props.isOpen}>
+      <div className='p-5'>
+        {renderHeader()}
+        <div className={TripBudgetCss.PriceInputCtn}>
+          <span className={TripBudgetCss.PriceInputLabel}>
+            <CurrencyDollarIcon className={CommonCss.LeftIcon} />
+            Amount
+          </span>
+          <input
+            type="number"
+            value={amount as any}
+            onChange={(e) => setAmount(Number(e.target.value))}
+            className={InputDatesPickerCss.Input}
+          />
+        </div>
+        <div className='flex justify-around'>
+          <button
+            type='button'
+            onClick={() => {
+              props.onSubmit(amount)
+              props.onClose()
+            }}
+            className='py-2 px-4 bg-indigo-500 text-white font-bold rounded-full'
+          >
+            Submit
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 ///////////////////
 // BudgetSection //
@@ -156,6 +225,7 @@ interface BudgetSectionProps {
 const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
 
   const [isAddBudgetModalOpen, setIsAddBudgetModalOpen] = useState(false);
+  const [isEditBudgetItemModalOpen, setIsEditBudgetItemModalOpen] = useState(false);
   const [isEditBudgetModalOpen, setIsEditBudgetModalOpen] = useState(false);
   const [totalAmount, setTotalAmount] = useState(0);
   const [selectedBudgetItemIdx, setSelectedBudgetItemIdx] = useState<number|undefined>();
@@ -173,6 +243,12 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
           total += itineraryContentPriceAmt(ctnt)
         })
       })
+
+    _get(props.trip, "budget.items", [])
+      .forEach((i: Trips.BudgetItem) => {
+        total += budgetItemPriceAmt(i);
+      })
+
     return total;
   }
 
@@ -210,7 +286,13 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   const editBudgetItemOnClick = (bi: Trips.BudgetItem, idx: number) => {
     setSelectedBudgetItem(bi);
     setSelectedBudgetItemIdx(idx);
-    setIsEditBudgetModalOpen(true);
+    setIsEditBudgetItemModalOpen(true);
+  }
+
+  const updateBudgetAmount = (amount: number) => {
+    props.tripStateOnUpdate([
+      TripsSyncAPI.newReplaceOp(`/budget/${BudgetAmountJSONPath}`, amount),
+    ]);
   }
 
   // Renderers
@@ -219,9 +301,9 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
     // Progress Bar
     const renderProgressBar = () => {
       let pbstyle = { width: "100%" }
-      const budgetAmount = _get(props.trip, "budget.amount.amount", 0);
+      const budgetAmount = budgetAmt(props.trip.budget);
       if (budgetAmount !== 0) {
-        const width = Math.floor(totalAmount / budgetAmount);
+        const width = Math.floor((totalAmount / budgetAmount) * 100);
         pbstyle.width = `${width}%`
       }
       return (
@@ -256,7 +338,11 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
             <PlusIcon className={CommonCss.LeftIcon} />
             Add expense
           </button>
-          <button type="button" className={TripBudgetCss.EditBudgetBtn}>
+          <button
+            type="button"
+            className={TripBudgetCss.EditBudgetBtn}
+            onClick={() => setIsEditBudgetModalOpen(true)}
+          >
             <PencilIcon className={CommonCss.LeftIcon} />
             Edit Budget
           </button>
@@ -426,12 +512,18 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
       />
       <BudgetItemModal
         header='Edit expense'
-        isOpen={isEditBudgetModalOpen}
+        isOpen={isEditBudgetItemModalOpen}
         defaultAmount={_get(selectedBudgetItem, PriceMetadataAmountPath)}
         defaultTitle={_get(selectedBudgetItem, "title")}
         defaultDesc={_get(selectedBudgetItem, "desc")}
         onSubmit={updateBudgetItem}
-        onClose={() => {setIsEditBudgetModalOpen(false)}}
+        onClose={() => {setIsEditBudgetItemModalOpen(false)}}
+      />
+      <EditBudgetModal
+        budgetAmount={budgetAmt(props.trip.budget)}
+        isOpen={isEditBudgetModalOpen}
+        onClose={() => setIsEditBudgetModalOpen(false)}
+        onSubmit={updateBudgetAmount}
       />
     </div>
   );

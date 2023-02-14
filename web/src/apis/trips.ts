@@ -100,6 +100,7 @@ export namespace Trips {
 export const LabelTransportationPreference = "transportationPreference";
 export const DefaultTransportationPreference = "walk+drive";
 export const PriceMetadataAmountPath = "priceMetadata.amount";
+export const BudgetAmountJSONPath = "amount/amount";
 export const PriceMetadataAmountJSONPath = "priceMetadata/amount";
 export const LabelContentItineraryDates = "itinerary|dates";
 export const LabelContentItineraryDatesJSONPath = "labels/itinerary|dates";
@@ -141,14 +142,23 @@ const TripsAPI = {
 
 export default TripsAPI;
 
+// Lodging Helpers
+
 export const lodgingPriceAmt = (l: Trips.Lodging) => {
   return _get(l, PriceMetadataAmountPath, 0)
 }
 
+// Trip Content Helpers
+
+export const tripContentColor = (l: Trips.ContentList| Trips.ItineraryList) => {
+  return _get(l, LabelContentListIconJSONPath, DefaultContentColor);
+}
+
+
+// Itinerary Content Helpers
 export const itineraryContentPriceAmt = (ctnt: Trips.ItineraryContent) => {
   return _get(ctnt, PriceMetadataAmountPath, 0);
 }
-
 
 export const tripContentForItineraryContent = (trip: any, contentListID: string, contentID: string) => {
   return _find(
@@ -156,8 +166,10 @@ export const tripContentForItineraryContent = (trip: any, contentListID: string,
     (c: any) => c.id === contentID);
 }
 
-export const tripContentColor = (l: Trips.ContentList| Trips.ItineraryList) => {
-  return _get(l, LabelContentListIconJSONPath, DefaultContentColor);
+// Budget Helpers
+
+export const budgetAmt = (budget: Trips.Budget) => {
+  return _get(budget, "amount.amount", 0)
 }
 
 export const budgetItemPriceAmt = (bi: Trips.BudgetItem) => {
