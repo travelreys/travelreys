@@ -182,23 +182,24 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
   // Event Handlers - Flights
 
   const flightOnSelect = (flight: Trips.Flight) => {
-    const ops = [];
-    ops.push(TripsSyncAPI.makeAddOp(`/flights/${flight.id}`, flight));
-    props.tripStateOnUpdate(ops);
+    console.log(flight)
+    props.tripStateOnUpdate([
+      TripsSyncAPI.makeAddOp(`/flights/${flight.id}`, flight)
+    ]);
   }
 
   const flightOnDelete = (flight: Trips.Flight) => {
-    const ops = [];
-    ops.push(TripsSyncAPI.makeRemoveOp(`/flights/${flight.id}`, flight))
-    props.tripStateOnUpdate(ops);
+    props.tripStateOnUpdate([
+      TripsSyncAPI.makeRemoveOp(`/flights/${flight.id}`, flight)
+    ]);
   }
 
   // Event Handlers - Lodging
 
   const lodgingOnSelect = (lodging: Trips.Lodging) => {
-    const ops = [];
-    ops.push(TripsSyncAPI.makeAddOp(`/lodgings/${lodging.id}`, lodging))
-    props.tripStateOnUpdate(ops);
+    props.tripStateOnUpdate([
+      TripsSyncAPI.makeAddOp(`/lodgings/${lodging.id}`, lodging)
+    ]);
   }
 
   const lodgingOnUpdate = (lodging: any, updates: any) => {
@@ -211,9 +212,9 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
   }
 
   const lodgingOnDelete = (lodging: Trips.Lodging) => {
-    const ops = [];
-    ops.push(TripsSyncAPI.makeRemoveOp(`/lodgings/${lodging.id}`, lodging))
-    props.tripStateOnUpdate(ops);
+    props.tripStateOnUpdate([
+      TripsSyncAPI.makeRemoveOp(`/lodgings/${lodging.id}`, lodging)
+    ]);
   }
 
   // Renderers

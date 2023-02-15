@@ -8,6 +8,7 @@ import _flatten from "lodash/flatten";
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import {
+  ArrowLongRightIcon,
   ChatBubbleLeftEllipsisIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
@@ -28,6 +29,7 @@ import {
   budgetAmt,
   budgetItemPriceAmt,
   ContentIconOpts,
+  flilghtPriceAmt,
   itineraryContentPriceAmt,
   lodgingPriceAmt,
   PriceMetadataAmountJSONPath,
@@ -39,7 +41,8 @@ import {
 import {
   CommonCss,
   InputDatesPickerCss,
-  TripBudgetCss
+  TripBudgetCss,
+  TripLogisticsCss
 } from '../../styles/global';
 import { isEmptyDate, parseISO, printFmt } from '../../utils/dates';
 import TripsSyncAPI from '../../apis/tripsSync';
@@ -234,6 +237,9 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   const calculateTotalAmount = () => {
     let total = 0;
 
+    Object.values(_get(props.trip, "flights", {}))
+      .forEach((lod: any) => { total += flilghtPriceAmt(lod)});
+
     Object.values(_get(props.trip, "lodgings", {}))
       .forEach((lod: any) => { total += lodgingPriceAmt(lod)});
 
@@ -349,6 +355,45 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
         </div>
       </div>
     )
+  }
+
+  const renderFlights = () => {
+    return (
+      <div className='mb-4'>
+        <h4 className={TripBudgetCss.SubsectionTxt}>
+          Flights
+        </h4>
+        {
+          Object.values(_get(props.trip, "flights", {}))
+          .map((flight: any) => {
+            const Icon = ContentIconOpts["flight"];
+            return (
+              <div key={flight.id} className={TripBudgetCss.ItemCtn}>
+                <div className={TripBudgetCss.ItemDescCtn}>
+                  <span className={TripBudgetCss.FlightItemIcon}>
+                    <Icon className={CommonCss.Icon} />
+                  </span>
+                  <div className="flex">
+                    <p className={TripBudgetCss.ItemNameTxt}>
+                      {flight.depart.departure.airport.code}
+                    </p>
+                    <ArrowLongRightIcon
+                      className={TripLogisticsCss.FlightTransitLongArrow}
+                    />
+                    <p className={TripBudgetCss.ItemNameTxt}>
+                      {flight.depart.arrival.airport.code}
+                    </p>
+                  </div>
+                </div>
+                <span className={TripBudgetCss.ItemPriceTxt}>
+                  ${flilghtPriceAmt(flight)}
+                </span>
+              </div>
+            );
+          })
+        }
+      </div>
+    );
   }
 
   const renderLodgings = () => {
@@ -501,6 +546,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   return (
     <div className='p-5'>
       {renderSummarySection()}
+      {renderFlights()}
       {renderLodgings()}
       {renderItinerary()}
       {renderBudgetItems()}

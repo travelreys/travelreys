@@ -505,7 +505,7 @@ const MapLayersMenu: FC<MapLayersMenuProps> = (props: MapLayersMenuProps) => {
       {
         id: "lodgings",
         name: "Hotels and Lodgings",
-        labels: { color: "black", icon: "hotel"}
+        labels: { "ui|color": "rgb(249 115 22)", "ui|icon": "hotel"}
       }
     ].concat(Object.values(_get(props.trip, "contents", [])))
 
@@ -646,7 +646,7 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
     // Lodging
     const lodgings = _get(props.trip, "lodgings", {});
     const markers = Object.values(lodgings).map((lodge: any) => ({
-      elem: makePinWithTooltip(lodge.place.name, "black", "hotel"),
+      elem: makePinWithTooltip(lodge.place.name, "rgb(249 115 22)", "hotel"),
       place: lodge.place
     }));
     let drawings = [{

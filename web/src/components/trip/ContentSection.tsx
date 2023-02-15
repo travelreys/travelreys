@@ -429,7 +429,7 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
     const color = _get(props.contentList, `labels.${LabelContentListColor}`, DefaultContentColor)
     const icon = _get(props.contentList, `labels.${LabelContentListIcon}`, "")
     return (
-      <div className='flex mb-2 w-full justify-between'>
+      <div className='flex mb-2 w-full justify-between items-center'>
         <div className='flex flex-1'>
           <ToggleChevron
             onClick={() => setIsHidden(!isHidden)}

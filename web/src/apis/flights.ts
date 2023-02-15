@@ -5,6 +5,7 @@ import _filter from 'lodash/filter';
 import { Common, BASE_URL } from './common';
 
 import airports from '../assets/airports.json';
+import { Trips } from './trips';
 
 export namespace Flights {
   export interface Airline {
@@ -16,6 +17,7 @@ export namespace Flights {
   export interface Airport extends Common.Positioning {
     code: string
   }
+
 
   export type ItineraryType = "roundtrip" | "oneway"
   export type CabinClass = "economy" | "premiumeconomy" | "business" | "first"
@@ -93,9 +95,43 @@ const FlightsAPI = {
        }
     });
   },
+
   airportAutocomplete: (q: string) => {
     return _filter(airports, (a) => a.airport.includes(q.toLowerCase())).slice(0, 10);
   }
 };
 
 export default FlightsAPI;
+
+export const logoFallbackImg = "https://cdn-icons-png.flaticon.com/512/4353/4353032.png";
+
+export const FlightDirectionDepart = "depart";
+export const FlightDirectionReturn = "return";
+export const FlightItineraryTypeOneway = "oneway";
+export const FlightItineraryTypeRoundtrip = "roundtrip";
+
+export const flightLogoUrl = (iata: string) => {
+  return `https://www.gstatic.com/flights/airline_logos/70px/${iata}.png`;
+}
+
+export const flightDepartureTime = (flight: Flights.Flight) => {
+  return _get(flight, "departure.datetime", "");
+}
+
+export const flightArrivalTime = (flight: Flights.Flight) => {
+  return _get(flight, "arrival.datetime", "");
+}
+
+export const flightLegs = (flight: Flights.Flight) => {
+  return _get(flight, "legs", []);
+}
+
+export const flightLegOpAirline = (leg: Flights.Leg) => {
+  return _get(leg, "operatingAirline", {});
+}
+
+
+
+
+
+

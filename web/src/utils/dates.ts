@@ -38,6 +38,10 @@ export const printToDateFromRange = (range: DateRange | undefined, fmt: string) 
   return undefined;
 }
 
+export const parseFlightDateZ = (date: string) => {
+  return _parseISO(date.substring(0, date.length - 1))
+}
+
 export const parseISO = (date: string) => {
   return _parseISO(date);
 }

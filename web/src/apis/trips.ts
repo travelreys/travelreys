@@ -13,6 +13,7 @@ import ShoppingIconFill from '../components/icons/ShoppingIconFill';
 import CameraIconFill from '../components/icons/CameraIconFill';
 import MapPinIconFill from '../components/icons/MapPinIconFill';
 import HotelIcon from '../components/icons/HotelIcon';
+import FlightIconFill from '../components/icons/FlightIconFill';
 
 export namespace Trips {
   interface BaseTransit {
@@ -21,7 +22,7 @@ export namespace Trips {
 
     confirmationID?: string
     notes?: string
-    price?: Common.PriceMetadata
+    priceMetadata?: Common.PriceMetadata
     tags: Map<string, string>
     labels: Map<string, string>
   }
@@ -112,6 +113,7 @@ export const LabelContentListIconJSONPath = "labels/ui|icon";
 export const DefaultContentColor = "rgb(203 213 225)";
 export const ContentColorOpts = ["rgb(74 222 128)", "rgb(34 211 238)",  "rgb(96 165 250)","rgb(129 140 248)",  "rgb(232 121 249)","rgb(244 114 182)", "rgb(248 113 113)", "rgb(251 146 60)", "rgb(253 224 71)", "rgb(161 98 7)"];
 export const ContentIconOpts = {
+  "flight": FlightIconFill,
   "hotel": HotelIcon,
   "camera": CameraIconFill,
   "coffee": CupIconFill,
@@ -141,6 +143,16 @@ const TripsAPI = {
 };
 
 export default TripsAPI;
+
+// Flights Helper
+
+export const flightItineraryType = (flight: Trips.Flight) => {
+  return flight.itineraryType;
+}
+
+export const flilghtPriceAmt = (l: Trips.Flight) => {
+  return _get(l, PriceMetadataAmountPath, 0)
+}
 
 // Lodging Helpers
 
@@ -175,7 +187,3 @@ export const budgetAmt = (budget: Trips.Budget) => {
 export const budgetItemPriceAmt = (bi: Trips.BudgetItem) => {
   return _get(bi, PriceMetadataAmountPath, 0)
 }
-
-
-
-

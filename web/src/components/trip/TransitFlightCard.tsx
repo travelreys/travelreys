@@ -8,9 +8,25 @@ import {
   ArrowLongRightIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  XCircleIcon,
+  EllipsisHorizontalCircleIcon,
 } from '@heroicons/react/24/outline'
-import { TripLogisticsCss } from '../../styles/global';
+import { TrashIcon } from '@heroicons/react/24/solid';
+
+import Dropdown from '../common/Dropdown';
+import { CommonCss, TripLogisticsCss } from '../../styles/global';
+
+import {
+  flightArrivalTime,
+  flightDepartureTime,
+  FlightDirectionDepart,
+  FlightItineraryTypeRoundtrip,
+  flightLegOpAirline,
+  flightLegs,
+  flightLogoUrl,
+  Flights,
+  logoFallbackImg
+} from '../../apis/flights';
+import { flightItineraryType } from '../../apis/trips';
 
 import {
   parseISO,
@@ -18,6 +34,7 @@ import {
   prettyPrintMins,
 } from '../../utils/dates';
 import {capitaliseWords} from '../../utils/strings';
+
 
 
 interface TransitFlightCardProps {
@@ -28,16 +45,16 @@ interface TransitFlightCardProps {
 const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const departFlight = _get(props.flight, "depart", {});
-  const returnFlight = _get(props.flight, "return");
-  const numStops = _get(departFlight, "legs", []).length === 1
-    ? "Non-stop" : `${_get(departFlight, "legs", []).length - 1} stops`;
 
   // Renderers
   const renderNumStops = () => {
+    const departFlight = _get(props.flight, FlightDirectionDepart, {});
+    const numStops =  flightLegs(departFlight).length === 1
+    ? "Non-stop" : `${flightLegs(departFlight).length - 1} stops`;
+
     return (
       <span
-        className='cursor-pointer border-b border-slate-400'
+        className={TripLogisticsCss.FlightTransitNumStop}
         onClick={() => { setIsExpanded(!isExpanded) }}
       >
         {numStops}&nbsp;
@@ -49,6 +66,8 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
   }
 
   const renderStopsInfo = (flight: any) => {
+    const timeFmt = "hh:mm aa";
+
     return flight.legs.map((leg: any, idx: number) => {
       let layoverDuration = null;
       if (idx !== flight.legs.length - 1) {
@@ -58,14 +77,13 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
         });
       }
 
-
       return (
         <div key={idx}>
           <ol className={TripLogisticsCss.FlightStopTimelineCtn}>
             <li className="mb-4 ml-6">
               <div className={TripLogisticsCss.FlightStopTimelineIcon} />
               <h3 className={TripLogisticsCss.FlightStopTimelineTime}>
-                {printFmt(parseISO(leg.departure.datetime), "hh:mm aa")}
+                {printFmt(parseISO(leg.departure.datetime), timeFmt)}
               </h3>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.departure.airport.code} ({leg.departure.airport.name})
@@ -80,7 +98,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
             <li className="mb-4 ml-6">
               <div className={TripLogisticsCss.FlightStopTimelineIcon} />
               <h3 className={TripLogisticsCss.FlightStopTimelineTime}>
-                {printFmt(parseISO(leg.arrival.datetime), "hh:mm aa")}
+                {printFmt(parseISO(leg.arrival.datetime), timeFmt)}
               </h3>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.arrival.airport.code} ({leg.arrival.airport.name})
@@ -98,13 +116,19 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
   }
 
   const renderAirlineLogo = (flight: any) => {
-    const airline = _get(flight.legs, "0.operatingAirline", {});
-    const imgUrl = `https://www.gstatic.com/flights/airline_logos/70px/${airline.code}.png`;
-    const fallbackUrl = "https://cdn-icons-png.flaticon.com/512/4353/4353032.png";
+    const airline: any = flightLegOpAirline(_get(flight.legs, "0", {}));
     return (
-      <div className="h-8 w-8 mr-4">
-        <object className="h-8 w-8" data={imgUrl} type="image/png">
-          <img className="h-8 w-8" src={fallbackUrl} alt={airline.name} />
+      <div className={TripLogisticsCss.FlightTransitLogoImgWrapper}>
+        <object
+          className={TripLogisticsCss.FlightTransitLogoImg}
+          data={flightLogoUrl(airline.code)}
+          type="image/png"
+        >
+          <img
+            className={TripLogisticsCss.FlightTransitLogoImg}
+            src={logoFallbackImg}
+            alt={airline.name}
+          />
         </object>
       </div>
     );
@@ -118,47 +142,76 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
     );
   }
 
-  const renderFlight = (flight: any, direction: string) => {
-    const airline = _get(flight.legs, "0.operatingAirline", {});
+  const renderSettingsDropdown = () => {
+    const opts = [
+      <button
+        type='button'
+        className={CommonCss.DeleteBtn}
+        onClick={() => props.onDelete(props.flight)}
+      >
+        <TrashIcon className={CommonCss.LeftIcon} />
+        Delete
+      </button>
+    ];
+    const menu = (
+      <EllipsisHorizontalCircleIcon
+        className={CommonCss.DropdownIcon} />
+    );
+    return (
+      <div className="flex flex-row-reverse">
+        <Dropdown menu={menu} opts={opts} />
+      </div>
+    )
+  }
+
+  const renderFlight = (flight: Flights.Flight, direction: string) => {
+    const airline: any = flightLegOpAirline(flight.legs[0]);
+    const timeFmt = "hh:mm aa";
+    const dateFmt = "eee, MMM d";
+
+    const departTime = flightDepartureTime(flight) as string;
+    const arrTime = flightArrivalTime(flight) as string;
+
     return (
       <div className={TripLogisticsCss.FlightTransit}>
         {renderAirlineLogo(flight)}
         <div className='flex-1'>
-          <p className='text-sm text-slate-800'>
+          <p className={TripLogisticsCss.FlightTransitDatetime}>
             {capitaliseWords(direction)} Flight&nbsp;&#x2022;&nbsp;
-            {printFmt(parseISO(flight.departure.datetime), "eee, MMM d")}
+            {printFmt(parseISO(departTime), dateFmt)}
           </p>
           <div className="flex">
-            <span className=''>
-              <p className='font-medium'>
-                {printFmt(parseISO(flight.departure.datetime), "hh:mm aa")}
+            <span>
+              <p className={TripLogisticsCss.FlightTransitTime}>
+                {printFmt(parseISO(departTime), timeFmt)}
               </p>
-              <p className="text-xs text-slate-800">{flight.departure.airport.code}</p>
+              <p className={TripLogisticsCss.FlightTransitAirportCode}>
+                {flight.departure.airport.code}
+              </p>
             </span>
-            <ArrowLongRightIcon className='h-6 w-8' />
+            <ArrowLongRightIcon
+              className={TripLogisticsCss.FlightTransitLongArrow}
+            />
             <span className='mb-1'>
-              <p className='font-medium'>
-                {printFmt(parseISO(flight.arrival.datetime), "hh:mm aa")}
+              <p className={TripLogisticsCss.FlightTransitTime}>
+                {printFmt(parseISO(arrTime), timeFmt)}
               </p>
-              <p className="text-xs text-slate-800">{flight.arrival.airport.code}</p>
+              <p className={TripLogisticsCss.FlightTransitAirportCode}>
+                {flight.arrival.airport.code}
+              </p>
             </span>
           </div>
-          <span className="text-xs text-slate-800 block mb-1">
+          <span className={TripLogisticsCss.FlightTransitDuration}>
             {prettyPrintMins(flight.duration)}
           </span>
-          <span className="text-xs text-slate-800 block mb-1">
+          <span className={TripLogisticsCss.FlightTransitDuration}>
             {airline.name} | {renderNumStops()}
           </span>
           {isExpanded ? renderStopsInfo(flight) : null}
         </div>
         { direction !== "departing" ? null :
-          <div className='flex flex-col text-right justify-between'>
-            <div className='flex flex-row-reverse'>
-              <XCircleIcon
-                onClick={() => {props.onDelete(props.flight)}}
-                className={TripLogisticsCss.FlightTransitIcon}
-              />
-            </div>
+          <div className='flex flex-col justify-between'>
+            {renderSettingsDropdown()}
             {renderPricePill()}
           </div>
         }
@@ -166,11 +219,22 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
     );
   }
 
+
+  const renderDepartFlight = () => {
+    return renderFlight(_get(props.flight, "depart", {}), "departing");
+  }
+
+  const renderReturnFlight = () => {
+    if (flightItineraryType(props.flight) !== FlightItineraryTypeRoundtrip) {
+      return null;
+    }
+    return renderFlight(_get(props.flight, "return", {}), "returning");
+  }
+
   return (
     <div className={TripLogisticsCss.FlightTransitCard}>
-      {renderFlight(_get(props.flight, "depart", {}), "departing")}
-      { props.flight.itineraryType === "roundtrip"
-        ? renderFlight(_get(props.flight, "return", {}), "returning") : null }
+      {renderDepartFlight()}
+      {renderReturnFlight()}
     </div>
   );
 }
