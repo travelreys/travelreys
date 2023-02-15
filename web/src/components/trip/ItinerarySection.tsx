@@ -11,6 +11,7 @@ import _find from "lodash/find";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
+  ArrowLongRightIcon,
   CurrencyDollarIcon,
   MapPinIcon,
   SwatchIcon,
@@ -52,14 +53,17 @@ import {
   TripItineraryListCss,
   TripItineraryCss,
   CommonCss,
+  TripLogisticsCss,
 } from '../../styles/global';
 import {
   areYMDEqual,
   isEmptyDate,
+  parseFlightDateZ,
   parseISO,
   printFmt
 } from '../../utils/dates'
 import ColorIconModal from './ColorIconModal';
+import { flightArrivalTime, flightDepartureTime, FlightItineraryTypeRoundtrip, Flights } from '../../apis/flights';
 
 
 
@@ -338,51 +342,66 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     const flights = Object.values(_get(props.trip, "flights", {}));
     const today = parseISO(props.itineraryList.date as string);
 
-    const render = (place: any, depart: boolean) => {
+    const render = (flight: Flights.Flight) => {
+      const departTime = flightDepartureTime(flight) as string;
+      const arrTime = flightArrivalTime(flight) as string;
+      const timeFmt = "hh:mm aa";
+
       return (
         <div className="flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow">
-          <span className='bg-green-200 p-2 rounded-full'><PlaneIcon className='w-4 h-4' /></span>
-          <div className="flex-1 pl-4 text-sm font-normal">{place.name}</div>
-          <span className='pl-2 font-semibold text-sm'>{depart ? "Depar" : "Arrival"}</span>
+          <span className='bg-green-200 p-2 rounded-full'>
+            <PlaneIcon className='w-4 h-4' />
+          </span>
+          <div className="flex pl-4">
+            <span>
+              <p className={TripLogisticsCss.FlightTransitTime}>
+                {printFmt(parseFlightDateZ(departTime), timeFmt)}
+              </p>
+              <p className={TripLogisticsCss.FlightTransitAirportCode}>
+                {flight.departure.airport.code}
+              </p>
+            </span>
+            <ArrowLongRightIcon
+              className={TripLogisticsCss.FlightTransitLongArrow}
+            />
+            <span className='mb-1'>
+              <p className={TripLogisticsCss.FlightTransitTime}>
+                {printFmt(parseFlightDateZ(arrTime), timeFmt)}
+              </p>
+              <p className={TripLogisticsCss.FlightTransitAirportCode}>
+                {flight.arrival.airport.code}
+              </p>
+            </span>
+          </div>
         </div>
       );
     }
 
-    const departs = [] as Array<Trips.Flight>;
-    const arrivals = [] as Array<Trips.Flight>;
+    const departs = [] as Array<Flights.Flight>;
 
     flights.forEach((item: any) => {
       let flight = item as Trips.Flight;
 
-      const onewayDepartFlightDt = flight.depart.departure.datetime;
+      const onewayDepartFlightDt = parseFlightDateZ(
+        flightDepartureTime(flight.depart) as any);
       if (!isEmptyDate(onewayDepartFlightDt)
         && areYMDEqual(today, onewayDepartFlightDt)) {
-        departs.push(item);
+        departs.push(flight.depart);
       }
 
-      const onewayArrFlightDt = flight.depart.arrival.datetime;
-      if (!isEmptyDate(onewayArrFlightDt)
-        && areYMDEqual(today, onewayArrFlightDt)) {
-        arrivals.push(item);
-      }
-
-      const returnDepartFlightDt = flight.return.departure.datetime;
-      if (!isEmptyDate(returnDepartFlightDt)
-        && areYMDEqual(today, returnDepartFlightDt)) {
-        departs.push(item);
-      }
-
-      const returnArrFlightDt = flight.return.arrival.datetime
-      if (!isEmptyDate(returnArrFlightDt)
-        && areYMDEqual(today, returnArrFlightDt)) {
-        arrivals.push(item);
+      if (flight.itineraryType === FlightItineraryTypeRoundtrip) {
+        const returnDepartFlightDt = parseFlightDateZ(
+          flightDepartureTime(flight.return) as any);
+        if (!isEmptyDate(returnDepartFlightDt)
+          && areYMDEqual(today, returnDepartFlightDt)) {
+          departs.push(flight.return);
+        }
       }
     });
 
     return (
       <div className='w-full mb-2'>
-        {departs.map((item: any) => render(item.place, false))}
-        {arrivals.map((item: any) => render(item.place, true))}
+        {departs.map((flight: Flights.Flight) => render(flight))}
       </div>
     );
   }
