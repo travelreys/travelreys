@@ -8,6 +8,7 @@ import _get from "lodash/get";
 import _flatten from "lodash/flatten";
 import _isEmpty from "lodash/isEmpty";
 import _find from "lodash/find";
+import { i18n } from 'i18next';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 import {
   ClockIcon,
@@ -475,6 +476,10 @@ interface MapLayersMenuProps {
 }
 
 const MapLayersMenu: FC<MapLayersMenuProps> = (props: MapLayersMenuProps) => {
+
+
+
+  // Event Handlers
 
   const selectAllOnClick = () => {
     const newLayersViz = Object.assign({}, props.layersViz);

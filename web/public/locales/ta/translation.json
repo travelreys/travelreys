@@ -1,0 +1,23 @@
+{
+  "navbar": {
+    "loginModal": {
+      "title": "tiinyplanet இல் உள்நுழைக",
+      "googleSignIn": "Google உடன் உள்நுழைக"
+    },
+    "currencySelector": {
+      "title": "உங்கள் நாணயத்தைத் தேர்ந்தெடுக்கவும்"
+    },
+    "localeSelector": {
+      "title": "உங்கள் மொழியை தேர்ந்தெடு"
+    },
+    "landingPageActions": {
+      "உள்நுழை": "உள்நுழை"
+    },
+    "appPageActions": {
+      "வெளியேறு": "வெளியேறு"
+    }
+  },
+  "title": {
+    "வரவிருக்கும் பயணங்கள்": "வரவிருக்கும் பயணங்கள்"
+  }
+}

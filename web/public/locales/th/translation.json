@@ -1,0 +1,23 @@
+{
+  "navbar": {
+    "loginModal": {
+      "title": "เข้าสู่ระบบ tiinyplanet",
+      "googleSignIn": "ลงชื่อเข้าใช้ด้วย Google"
+    },
+    "currencySelector": {
+      "title": "เลือกสกุลเงินของคุณ"
+    },
+    "localeSelector": {
+      "title": "เลือกภาษาของคุณ"
+    },
+    "landingPageActions": {
+      "login": "เข้าสู่ระบบ"
+    },
+    "appPageActions": {
+      "logout": "ออกจากระบบ"
+    }
+  },
+  "title": {
+    "upcomingTrips": "การเดินทางที่กำลังจะมาถึง"
+  }
+}

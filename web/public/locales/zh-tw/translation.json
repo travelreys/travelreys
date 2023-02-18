@@ -1,0 +1,23 @@
+{
+  "navbar": {
+    "loginModal": {
+      "title": "登錄tiinyplanet",
+      "googleSignIn": "使用谷歌登錄"
+    },
+    "currencySelector": {
+      "title": "選擇您的貨幣"
+    },
+    "localeSelector": {
+      "title": "選擇您的語言"
+    },
+    "landingPageActions": {
+      "login": "登錄"
+    },
+    "appPageActions": {
+      "logout": "註銷"
+    }
+  },
+  "title": {
+    "upcomingTrips": "即將到來的旅行"
+  }
+}

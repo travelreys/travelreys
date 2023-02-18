@@ -1,3 +1,5 @@
+import i18n from 'i18next';
+import * as Locales from 'date-fns/locale';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import {
@@ -9,6 +11,7 @@ import {
   parseJSON,
 } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { readUserLocale } from './auth';
 
 
 export const nullDate = parseJSON("0001-01-01T00:00:00Z");
@@ -56,7 +59,13 @@ export const parseTripDate = (tripDate: string | undefined) => {
 
 
 export const printFmt = (date: Date, fmt: string) => {
-  return format(date, fmt);
+  const lngTkns = readUserLocale().split("-");
+  if (lngTkns.length > 1) {
+    lngTkns[1] = lngTkns[1].toUpperCase()
+  }
+  //@ts-ignore
+  const loc = Locales[lngTkns.join("")] as any
+  return format(date, fmt, { locale: loc });
 }
 
 export const prettyPrintMins = (mins: number) => {

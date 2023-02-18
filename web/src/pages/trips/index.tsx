@@ -51,7 +51,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
   const renderNavBar = () => {
     return (
       <nav className={CommonCss.Navbar}>
-        <Link to="/" className='block align-middle'>
+        <Link to="/home" className='block align-middle'>
           <GlobeAmericasIcon className='inline h-10 w-10' />
           <span className='inline-block text-2xl align-middle'>
             tiinyplanet

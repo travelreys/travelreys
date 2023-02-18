@@ -1,0 +1,23 @@
+{
+  "navbar": {
+    "loginModal": {
+      "title": "Đăng nhập vào tiinyplanet",
+      "googleSignIn": "Đăng nhập bằng Google"
+    },
+    "currencySelector": {
+      "title": "Chọn đơn vị tiền tệ của bạn"
+    },
+    "localeSelector": {
+      "title": "Chọn ngôn ngữ của bạn"
+    },
+    "landingPageActions": {
+      "login": "đăng nhập"
+    },
+    "appPageActions": {
+      "logout": "Đăng xuất"
+    }
+  },
+  "title": {
+    "upcomingTrips": "Chuyến đi sắp tới"
+  }
+}

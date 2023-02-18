@@ -3,6 +3,7 @@ import classNames from 'classnames';
 import { Link } from 'react-router-dom';
 import _get from 'lodash/get';
 import { parseJSON, isEqual } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 import ImagesAPI from '../../apis/images';
 import Avatar from '../../components/common/Avatar';
@@ -76,7 +77,7 @@ interface TripsContainerProps {
 
 const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => {
 
-  // Event Handlers
+  const { t } = useTranslation();
 
   // Renderers
   const renderTripsTable = () => {
@@ -92,7 +93,9 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
   return (
     <>
       <div className='flex justify-between flex-col sm:flex-row items-center mb-8'>
-        <span className='text-3xl sm:text-5x font-bold text-slate-800'>Upcoming trips</span>
+        <span className='text-3xl sm:text-5x font-bold text-slate-800'>
+          {t('title.upcomingTrips')}
+        </span>
         <button type="button"
           className={classNames(
             "bg-indigo-400",
@@ -118,4 +121,3 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
 }
 
 export default TripsContainer;
-

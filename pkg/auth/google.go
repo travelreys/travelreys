@@ -76,7 +76,6 @@ func (gp *GoogleProvider) TokenToUserInfo(ctx context.Context, token *oauth2.Tok
 	userInfoURLPrefix := "https://www.googleapis.com/oauth2/v2/userinfo?access_token=%s"
 	resp, err := client.Get(fmt.Sprintf(userInfoURLPrefix, url.QueryEscape(token.AccessToken)))
 	if err != nil {
-		fmt.Println(err.Error())
 		return gusr, err
 	}
 	defer resp.Body.Close()

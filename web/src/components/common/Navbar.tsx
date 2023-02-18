@@ -5,8 +5,16 @@ import {
   useLocation
 } from 'react-router-dom';
 import _get from 'lodash/get';
+import _find from 'lodash/find';
 import { useGoogleLogin } from '@react-oauth/google';
-import { ArrowLeftOnRectangleIcon, ChevronDownIcon, GlobeAmericasIcon, XMarkIcon } from '@heroicons/react/24/solid'
+import { useTranslation } from 'react-i18next';
+import {
+  ArrowLeftOnRectangleIcon,
+  ChevronDownIcon,
+  GlobeAmericasIcon,
+  XMarkIcon
+} from '@heroicons/react/24/solid';
+
 
 import Modal from './Modal';
 import Dropdown from './Dropdown';
@@ -23,7 +31,8 @@ import {
   LabelUserGoogleImage,
   persistAuthToken,
   readAuthMetadata,
-  LabelCurrency
+  LabelCurrency,
+  LabelLocale
 } from '../../lib/auth';
 import {
   NavbarCss,
@@ -33,6 +42,7 @@ import {
 import { makeSetUserAction, useUser } from '../../context/user-context';
 import useOutsideAlerter from '../../hooks/useOutsideAlerter';
 import currencies from '../../data/currency.json';
+import locales from '../../data/locales.json';
 
 ////////////////
 // LoginModal //
@@ -46,7 +56,8 @@ interface LoginModalProps {
 
 const LoginModal: FC<LoginModalProps> = (props: LoginModalProps) => {
   const history = useNavigate();
-  const { state, dispatch } = useUser();
+  const { dispatch } = useUser();
+  const { t } = useTranslation();
 
   // Event Handlers
   const googleLoginOnClick = useGoogleLogin({
@@ -83,7 +94,7 @@ const LoginModal: FC<LoginModalProps> = (props: LoginModalProps) => {
         onClick={googleLoginOnClick}
       >
         <GoogleIcon className={CommonCss.LeftIcon} />
-        Sign in with Google
+        {t('navbar.loginModal.googleSignIn')}
       </button>
     );
   }
@@ -101,7 +112,7 @@ const LoginModal: FC<LoginModalProps> = (props: LoginModalProps) => {
           </button>
         </div>
         <h1 className='font-bold text-2xl text-center mb-8'>
-          Log in to tiinyplanet
+          {t('navbar.loginModal.title')}
         </h1>
         <div className='flex justify-around mb-4'>
           {renderGoogleLoginBtn()}
@@ -122,21 +133,24 @@ interface CurrencySelectorProps {
 }
 
 const CurrencySelector: FC<CurrencySelectorProps> = (props: CurrencySelectorProps) => {
+
   const [isActive, setIsActive] = useState(false);
   const wrapperRef = useRef(null);
   useOutsideAlerter(wrapperRef, () => {setIsActive(false)});
+  const { t } = useTranslation();
+
 
   // Renderers
   const renderSelection = () => {
-    const opts = currencies.map((cur: any) => (
+    const opts = currencies.map((loc: any) => (
       <button
-        key={cur.code}
+        key={loc.code}
         type="button"
         className='flex rounded-lg p-1 text-sm hover:bg-indigo-100'
-        onClick={() => {props.onSelect(cur.code)}}
+        onClick={() => {props.onSelect(loc.code)}}
       >
-        <div className='text-gray-400 mr-2'>{cur.code}</div>
-        <div className='text-gray-700 text-left '>{cur.name}</div>
+        <div className='text-gray-400 mr-2'>{loc.code}</div>
+        <div className='text-gray-700 text-left '>{loc.name}</div>
       </button>
     ))
 
@@ -146,7 +160,9 @@ const CurrencySelector: FC<CurrencySelectorProps> = (props: CurrencySelectorProp
         className={CurrencyDropdownCss.Ctn}
       >
         <div className={CurrencyDropdownCss.Wrapper}>
-          <h3 className='font-bold mb-2'>Currencies</h3>
+          <h3 className='font-bold mb-2'>
+            {t("navbar.currencySelector.title")}
+          </h3>
           <div className='columns-2 sm:columns-4 smgap-4'>
             {opts}
           </div>
@@ -170,6 +186,77 @@ const CurrencySelector: FC<CurrencySelectorProps> = (props: CurrencySelectorProp
   );
 }
 
+////////////////////
+// LocaleSelector //
+////////////////////
+
+interface LocaleSelctorProps {
+  locale?: string
+  onSelect: (locale: string) => void
+}
+
+const LocaleSelector: FC<LocaleSelctorProps> = (props: LocaleSelctorProps) => {
+  const [isActive, setIsActive] = useState(false);
+  const wrapperRef = useRef(null);
+  const { t } = useTranslation();
+
+  useOutsideAlerter(wrapperRef, () => {setIsActive(false)});
+
+  // Renderers
+  const renderSelection = () => {
+    const opts = locales.map((loc: any) => (
+      <button
+        key={loc.locale}
+        type="button"
+        className='flex rounded-lg p-2 text-sm hover:bg-indigo-100'
+        onClick={() => {props.onSelect(loc.locale)}}
+      >
+        <div className='text-gray-700 text-left '>{loc.name}</div>
+      </button>
+    ))
+
+    return (
+      <div
+        ref={wrapperRef}
+        className={CurrencyDropdownCss.Ctn}
+      >
+        <div className={CurrencyDropdownCss.Wrapper}>
+          <h3 className='font-bold mb-2'>
+            {t('navbar.localeSelector.title')}
+          </h3>
+          <div className='columns-3 sm:columns-4 smgap-4'>
+            {opts}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const renderSelectedLocale = () => {
+    return _get(
+      _find(locales, (loc) => loc.locale === props.locale),
+      "name",
+      props.locale
+    );
+  }
+
+  return (
+    <div className='relative'>
+      <button
+        type="button"
+        className='flex items-center p-2 rounded-lg gap-1 hover:bg-gray-200'
+        onClick={() => { setIsActive(!isActive) }}
+      >
+        <span className='font-semibold text-sm'>
+          {renderSelectedLocale()}
+        </span>
+        <ChevronDownIcon className={CommonCss.Icon} />
+      </button>
+      {isActive ? renderSelection() : null}
+    </div>
+  );
+}
+
 
 ////////////
 // Navbar //
@@ -181,6 +268,7 @@ interface LandingPageActionsProps {
 }
 
 const LandingPageActions: FC<LandingPageActionsProps> = (props: LandingPageActionsProps) => {
+  const {t} = useTranslation();
   return (
     <div>
       <button
@@ -188,7 +276,7 @@ const LandingPageActions: FC<LandingPageActionsProps> = (props: LandingPageActio
         className='font-bold py-2 px-6 rounded-full hover:text-indigo-500'
         onClick={props.onLoginClick}
       >
-        Log in
+        {t('navbar.landingPageActions.login')}
       </button>
     </div>
   );
@@ -200,6 +288,7 @@ interface AppPageActionProps { }
 const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
   const history = useNavigate();
   const { state, dispatch } = useUser();
+  const { t, i18n } = useTranslation();
 
   // Event Handlers
   const logoutOnClick = () => {
@@ -209,12 +298,24 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
   }
 
   const currencyOnSelect = (cur: string) => {
-
     const newUser = Object.assign({}, state.user);
     newUser.labels[LabelCurrency] = cur;
     dispatch(makeSetUserAction(newUser));
 
-    AuthAPI.updateUser(state.user?.id || "", makeUpdateUserFilter(newUser.labels));
+    AuthAPI.updateUser(
+      state.user?.id || "", makeUpdateUserFilter(newUser.labels));
+  }
+
+  const localeOnSelect = (loc: string) => {
+    const newUser = Object.assign({}, state.user);
+    newUser.labels[LabelLocale] = loc;
+    dispatch(makeSetUserAction(newUser));
+
+    AuthAPI.updateUser(
+      state.user?.id || "", makeUpdateUserFilter(newUser.labels))
+    .then(() => {
+      i18n.changeLanguage(loc);
+    })
   }
 
   // Renderers
@@ -237,7 +338,7 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
         onClick={logoutOnClick}
       >
         <ArrowLeftOnRectangleIcon className={CommonCss.LeftIcon} />
-        Log out
+        {t('navbar.appPageActions.logout')}
       </button>,
     ];
     const menu = renderProfileImage();
@@ -245,9 +346,14 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
   }
 
   const currency = _get(state.user, `labels.${LabelCurrency}`, "USD");
+  const locale = _get(state.user, `labels.${LabelLocale}`, "en");
 
   return (
     <div className='flex items-center gap-2'>
+      <LocaleSelector
+        locale={locale}
+        onSelect={localeOnSelect}
+      />
       <CurrencySelector
         currency={currency}
         onSelect={currencyOnSelect}

@@ -1,0 +1,23 @@
+{
+  "navbar": {
+    "loginModal": {
+      "title": "Bei tiinyplanet anmelden",
+      "googleSignIn": "Mit Google anmelden"
+    },
+    "currencySelector": {
+      "title": "Währung auswählen"
+    },
+    "localeSelector": {
+      "title": "Wählen Sie Ihre Sprache"
+    },
+    "landingPageActions": {
+      "login": "Einloggen"
+    },
+    "appPageActions": {
+      "logout": "Abmelden"
+    }
+  },
+  "title": {
+    "upcomingTrips": "Bevorstehende Reisen"
+  }
+}

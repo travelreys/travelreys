@@ -20,6 +20,7 @@ export namespace Auth {
 }
 
 export const LabelCurrency = "currency";
+export const LabelLocale = "locale";
 export const LabelUserGoogleImage = "google|picture";
 
 const AuthTokenKey = "tiinyplanet.com:auth:token"
@@ -59,4 +60,8 @@ export const readAuthUser = (): Auth.User|null => {
     return JSON.parse(json);
   }
   return null;
+}
+
+export const readUserLocale = (): string => {
+  return localStorage.getItem("i18nextLng") || "en";
 }

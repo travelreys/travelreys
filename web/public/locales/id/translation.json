@@ -1,0 +1,23 @@
+{
+  "navbar": {
+    "loginModal": {
+      "title": "Masuk ke tiinyplanet",
+      "googleSignIn": "Masuk dengan Google"
+    },
+    "currencySelector": {
+      "title": "Pilih mata uang Anda"
+    },
+    "localeSelector": {
+      "title": "Pilih bahasa Anda"
+    },
+    "landingPageActions": {
+      "masuk": "Masuk"
+    },
+    "appPageActions": {
+      "keluar": "keluar"
+    }
+  },
+  "title": {
+    "upcomingTrips": "Perjalanan Mendatang"
+  }
+}

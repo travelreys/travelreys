@@ -33,7 +33,6 @@ func NewService(gp GoogleProvider, store Store) Service {
 
 func (svc service) Login(ctx context.Context, authCode, provider string) (string, error) {
 	var usr User
-
 	if provider == OIDCProviderGoogle {
 		tkn, err := svc.google.AuthCodeToToken(ctx, authCode)
 		if err != nil {
@@ -48,9 +47,17 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (string
 		return "", errors.New("not-supported")
 	}
 
-	if err := svc.createUser(ctx, usr); err != nil {
+	existUsr, err := svc.store.ReadUserByEmail(ctx, usr.Email)
+	if err == ErrUserNotFound {
+		if err := svc.createUser(ctx, usr); err != nil {
+			return "", err
+		}
+	} else if err != nil {
 		return "", err
+	} else {
+		usr = existUsr
 	}
+
 	jwtTkn, err := svc.issueJWTToken(usr)
 	if err != nil {
 		return "", err
@@ -59,7 +66,7 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (string
 }
 
 func (svc service) ReadUser(ctx context.Context, ID string) (User, error) {
-	return svc.store.ReadUser(ctx, ID)
+	return svc.store.ReadUserByID(ctx, ID)
 }
 
 func (svc service) UpdateUser(ctx context.Context, ID string, ff UpdateUserFilter) error {

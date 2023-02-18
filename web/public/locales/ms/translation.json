@@ -1,0 +1,23 @@
+{
+  "navbar": {
+    "loginModal": {
+      "title": "Log masuk ke tiinyplanet",
+      "googleSignIn": "Log masuk dengan Google"
+    },
+    "currencySelector": {
+      "title": "Pilih mata wang anda"
+    },
+    "localeSelector": {
+      "title": "Pilih bahasa anda"
+    },
+    "landingPageActions": {
+      "log masuk": "Log masuk"
+    },
+    "appPageActions": {
+      "log keluar": "Log keluar"
+    }
+  },
+  "title": {
+    "upcomingTrips": "Perjalanan Akan Datang"
+  }
+}

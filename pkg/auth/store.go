@@ -11,7 +11,9 @@ import (
 )
 
 const (
-	BsonKeyID = "id"
+	CollectionUsers = "users"
+	BsonKeyID       = "id"
+	BsonKeyEmail    = "email"
 )
 
 var (
@@ -20,11 +22,12 @@ var (
 )
 
 type UpdateUserFilter struct {
-	Labels map[string]string `json:"ff" bson:"ff"`
+	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
 type Store interface {
-	ReadUser(context.Context, string) (User, error)
+	ReadUserByID(context.Context, string) (User, error)
+	ReadUserByEmail(ctx context.Context, Email string) (User, error)
 	UpdateUser(context.Context, string, UpdateUserFilter) error
 	SaveUser(context.Context, User) error
 }
@@ -38,7 +41,7 @@ func NewStore(db *mongo.Database) Store {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	usrsColl := db.Collection("users")
+	usrsColl := db.Collection(CollectionUsers)
 
 	idIdx := mongo.IndexModel{Keys: bson.M{BsonKeyID: 1}}
 	usrsColl.Indexes().CreateOne(ctx, idIdx)
@@ -46,10 +49,18 @@ func NewStore(db *mongo.Database) Store {
 	return &store{db, usrsColl}
 }
 
-func (str store) ReadUser(ctx context.Context, ID string) (User, error) {
+func (str store) ReadUserByID(ctx context.Context, ID string) (User, error) {
+	return str.readUserByFilter(ctx, bson.M{BsonKeyID: ID})
+}
+
+func (str store) ReadUserByEmail(ctx context.Context, Email string) (User, error) {
+	return str.readUserByFilter(ctx, bson.M{BsonKeyEmail: Email})
+}
+
+func (str store) readUserByFilter(ctx context.Context, ff bson.M) (User, error) {
 	var usr User
 
-	err := str.usrsColl.FindOne(ctx, bson.M{BsonKeyID: ID}).Decode(&usr)
+	err := str.usrsColl.FindOne(ctx, ff).Decode(&usr)
 	if err == mongo.ErrNoDocuments {
 		return usr, ErrUserNotFound
 	}
@@ -60,7 +71,7 @@ func (str store) ReadUser(ctx context.Context, ID string) (User, error) {
 }
 
 func (store store) UpdateUser(ctx context.Context, ID string, ff UpdateUserFilter) error {
-	update := bson.D{{"$set", ff}}
+	update := bson.M{"$set": ff}
 	_, err := store.usrsColl.UpdateOne(ctx, bson.M{BsonKeyID: ID}, update)
 	if err == mongo.ErrNoDocuments {
 		return ErrUserNotFound

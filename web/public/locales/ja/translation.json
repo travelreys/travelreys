@@ -1,0 +1,23 @@
+{
+  "navbar": {
+    "loginModal": {
+      "title": "tiinyplanet にログイン",
+      "googleSignIn": "Google でサインイン"
+    },
+    "currencySelector": {
+      "title": "通貨を選択してください"
+    },
+    "localeSelector": {
+      "title": "言語を選択してください"
+    },
+    "landingPageActions": {
+      "login": "ログイン"
+    },
+    "appPageActions": {
+      "logout": "ログアウト"
+    }
+  },
+  "title": {
+    "upcomingTrips": "今後の旅行"
+  }
+}

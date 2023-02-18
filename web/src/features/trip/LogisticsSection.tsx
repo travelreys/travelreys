@@ -182,7 +182,6 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
   // Event Handlers - Flights
 
   const flightOnSelect = (flight: Trips.Flight) => {
-    console.log(flight)
     props.tripStateOnUpdate([
       TripsSyncAPI.makeAddOp(`/flights/${flight.id}`, flight)
     ]);
