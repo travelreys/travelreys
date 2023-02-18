@@ -40,7 +40,7 @@ func EncodeErrorFactory(errToCode func(error) int) func(context.Context, error, 
 	}
 }
 
-func ErrorToHTTPCodeFactory(notFoundErrors, appErrors, unauthorisedErrors []error) func(err error) int {
+func ErrorToHTTPCodeFactory(notFoundErrors, appErrors, authErrors []error) func(err error) int {
 	return func(err error) int {
 		if ErrorContains(notFoundErrors, err) {
 			return http.StatusNotFound
@@ -48,7 +48,7 @@ func ErrorToHTTPCodeFactory(notFoundErrors, appErrors, unauthorisedErrors []erro
 		if ErrorContains(appErrors, err) {
 			return http.StatusUnprocessableEntity
 		}
-		if ErrorContains(unauthorisedErrors, err) {
+		if ErrorContains(authErrors, err) {
 			return http.StatusUnauthorized
 		}
 		return http.StatusInternalServerError

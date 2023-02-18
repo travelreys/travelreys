@@ -8,7 +8,7 @@ import React, {
 import { Link, useParams } from "react-router-dom";
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
-import { applyPatch,  } from 'json-joy/es6/json-patch';
+import { applyPatch, } from 'json-joy/es6/json-patch';
 import { WebsocketEvents } from 'websocket-ts/lib';
 import {
   BanknotesIcon,
@@ -18,21 +18,21 @@ import {
   HomeIcon
 } from '@heroicons/react/24/outline'
 
-import TripsAPI from '../../apis/trips';
-import TripsSyncAPI, { JSONPatchOp } from '../../apis/tripsSync';
-
-import ItinerarySection from '../../components/trip/ItinerarySection';
-import NotesSection from '../../components/trip/Notes';
+import BudgetSection from '../../features/trip/BudgetSection';
+import ItinerarySection from '../../features/trip/ItinerarySection';
+import NotesSection from '../../features/trip/Notes';
 import Spinner from '../../components/common/Spinner';
-import TripContentSection from '../../components/trip/ContentSection';
-import TripLogisticsSection from '../../components/trip/LogisticsSection';
-import TripMap from '../../components/maps/TripMap';
-import TripMenuJumbo from '../../components/trip/MenuJumbo';
+import TripContentSection from '../../features/trip/ContentSection';
+import TripLogisticsSection from '../../features/trip/LogisticsSection';
+import TripMap from '../../features/maps/TripMap';
+import TripMenuJumbo from '../../features/trip/MenuJumbo';
 
-import { TripMenuCss } from '../../styles/global';
+import TripsAPI from '../../apis/trips';
+import TripsSyncAPI from '../../apis/tripsSync';
+import { NewSyncMessageHeap } from '../../lib/heap';
+import { JSONPatchOp } from '../../lib/tripsSync';
+import { CommonCss, TripMenuCss } from '../../assets/styles/global';
 import { MapsProvider } from '../../context/maps-context';
-import { NewSyncMessageHeap } from '../../utils/heap';
-import BudgetSection from '../../components/trip/BudgetSection';
 
 
 // TripPlanningMenu
@@ -50,9 +50,9 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
   // Renderers
   const renderNavBar = () => {
     return (
-      <nav className={TripMenuCss.TripMenuNav}>
+      <nav className={CommonCss.Navbar}>
         <Link to="/" className='block align-middle'>
-          <GlobeAmericasIcon className='inline h-10 w-10'/>
+          <GlobeAmericasIcon className='inline h-10 w-10' />
           <span className='inline-block text-2xl align-middle'>
             tiinyplanet
           </span>
@@ -77,9 +77,9 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
               <button
                 key={idx} type="button"
                 className={TripMenuCss.TabItemBtn}
-                onClick={() => { setTab(tab.title.toLowerCase())} }
+                onClick={() => { setTab(tab.title.toLowerCase()) }}
               >
-                <tab.icon className='h-6 w-6 mb-1'/>
+                <tab.icon className='h-6 w-6 mb-1' />
                 <span className={TripMenuCss.TabItemBtnTxt}>
                   {tab.title}
                 </span>
@@ -102,7 +102,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
-        <hr className='w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded'/>
+        <hr className='w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded' />
         <TripContentSection
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
@@ -121,20 +121,20 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
         {renderTabs()}
-        { tab === "home" ? renderHome() : null}
-        { tab === "itinerary"
+        {tab === "home" ? renderHome() : null}
+        {tab === "itinerary"
           ?
           <ItinerarySection
             trip={props.trip}
             tripStateOnUpdate={props.tripStateOnUpdate}
           />
           : null}
-        { tab === "budget"
+        {tab === "budget"
           ?
-            <BudgetSection
-              trip={props.trip}
-              tripStateOnUpdate={props.tripStateOnUpdate}
-            />
+          <BudgetSection
+            trip={props.trip}
+            tripStateOnUpdate={props.tripStateOnUpdate}
+          />
           : null}
       </div>
     </aside>
@@ -217,7 +217,7 @@ const TripPage: FC = () => {
           default:
             nextTobCounter.current += 1
             return;
-          }
+        }
 
         // Add message to min-heap
         pq.push(msg);
@@ -240,7 +240,7 @@ const TripPage: FC = () => {
           // Process this message
           minMsg = pq.pop()!;
           const patch = minMsg.syncDataUpdateTrip!.ops as any;
-          const patchOpts = {mutate: false} as any;
+          const patchOpts = { mutate: false } as any;
           const newTrip = applyPatch(tripRef.current, patch, patchOpts);
 
           nxtCtr += 1
@@ -254,7 +254,7 @@ const TripPage: FC = () => {
 
   useEffect(() => {
     window.addEventListener("resize", () => {
-      if(mapNode) {
+      if (mapNode) {
         setMapDivWidth(mapNode.getBoundingClientRect().width);
       }
     })
@@ -274,18 +274,20 @@ const TripPage: FC = () => {
 
   return (
     <MapsProvider>
-      <div className="flex">
-        <TripPlanningMenu
-          trip={tripRef.current}
-          tripStateOnUpdate={tripStateOnUpdate}
-        />
-        <div className='flex-1' ref={measuredRef}>
-          <TripMap
+      <main className='min-h-screen'>
+        <div className="flex">
+          <TripPlanningMenu
             trip={tripRef.current}
-            width={mapDivWidth}
+            tripStateOnUpdate={tripStateOnUpdate}
           />
+          <div className='flex-1' ref={measuredRef}>
+            <TripMap
+              trip={tripRef.current}
+              width={mapDivWidth}
+            />
+          </div>
         </div>
-      </div>
+      </main>
     </MapsProvider>
   );
 }

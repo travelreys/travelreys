@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/google/uuid"
 	"googlemaps.github.io/maps"
@@ -27,9 +26,7 @@ type service struct {
 	c        *maps.Client
 }
 
-func NewService() (Service, error) {
-	apiToken := os.Getenv("TIINYPLANET_GMAPS_APIKEY")
-
+func NewService(apiToken string) (Service, error) {
 	c, err := maps.NewClient(maps.WithAPIKey(apiToken))
 	if err != nil {
 		return nil, err

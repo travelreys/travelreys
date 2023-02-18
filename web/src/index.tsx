@@ -3,13 +3,14 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
-import './styles/index.css';
+import './assets/styles/index.css';
 import 'react-day-picker/dist/style.css';
 import 'react-tooltip/dist/react-tooltip.css';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
+
 root.render(
   <React.StrictMode>
     <App />

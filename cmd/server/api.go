@@ -2,9 +2,11 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
 	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
 	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
@@ -30,19 +32,34 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		return nil, err
 	}
 
-	// Images
-	unsplash := images.NewWebImageAPI()
-	imageSvc := images.NewService(unsplash)
-
-	// Maps
-	mapsSvc, err := maps.NewService()
+	// Auth
+	gp, err := auth.NewGoogleProvider(os.Getenv("TIINYPLANET_OAUTH_GOOGLE_SECRET_FILE"))
 	if err != nil {
 		return nil, err
 	}
+	authStore := auth.NewStore(db)
+	authSvc := auth.NewService(gp, authStore)
 
 	// Flights
-	skyscanner := flights.NewSkyscannerAPI()
+	skyscanner := flights.NewSkyscannerAPI(
+		os.Getenv("TIINYPLANET_SKYSCANNER_APIKEY"),
+		os.Getenv("TIINYPLANET_SKYSCANNER_APIHOST"),
+	)
 	flightsSvc := flights.NewService(skyscanner)
+
+	// Images
+	unsplash := images.NewWebImageAPI(
+		os.Getenv("TIINYPLANET_UNSPLASH_ACCESSKEY"),
+	)
+	imageSvc := images.NewService(unsplash)
+
+	// Maps
+	mapsSvc, err := maps.NewService(
+		os.Getenv("TIINYPLANET_GOOGLE_MAPS_APIKEY"),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	// Trips
 	tripStore := trips.NewStore(db)
@@ -55,7 +72,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	loggingMW := utils.NewMuxLoggingMiddleware(logger)
 	metricsMW := utils.NewMetricsMiddleware()
 
-	// Collab
+	// TripSync
 	sesnStore := tripssync.NewSessionStore(rdb)
 	smStore := tripssync.NewSyncMessageStore(nc, rdb)
 	tobStore := tripssync.NewTOBMessageStore(nc, rdb)
@@ -75,9 +92,10 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.HandleFunc("/healthz", utils.HealthzHandler)
 	r.HandleFunc("/ws", proxyServer.HandleFunc)
 
+	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvc))
+	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
-	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 
 	return &http.Server{

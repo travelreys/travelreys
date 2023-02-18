@@ -26,7 +26,7 @@ func NewService(store Store, imageSvc images.Service) Service {
 
 func (svc *service) CreateTripPlan(ctx reqctx.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error) {
 	plan := NewTripPlanWithDates(creator, name, start, end)
-	plan.CoverImage = stockImageList[rand.Intn(len(stockImageList))]
+	plan.CoverImage = images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))]
 
 	// bootstrap 1 content list
 	contentList := NewTripContentList("")

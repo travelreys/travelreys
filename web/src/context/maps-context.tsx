@@ -2,20 +2,22 @@ import * as React from 'react'
 
 type Action = {type: 'setSelectedPlace', value: any}
 
-export const ActionNameSetSelectedPlace = "setSelectedPlace";
+export const ActionSetSelectedPlace = "setSelectedPlace";
 
 type Dispatch = (action: Action) => void
 type State = {center: any, selectedPlace: any}
 type MapsProviderProps = {children: React.ReactNode}
 
+interface _MapsContext {
+  state: State
+  dispatch: Dispatch
+}
 
-const MapsContext = React.createContext<
-  {state: State; dispatch: Dispatch} | undefined
->(undefined);
+const MapsContext = React.createContext<_MapsContext | undefined>(undefined);
 
-const mapsReducer = (state: any, action: any) => {
+const reducer = (state: any, action: any) => {
   switch (action.type) {
-    case 'setSelectedPlace': {
+    case ActionSetSelectedPlace: {
       return {
         center: state.center,
         selectedPlace: action.value
@@ -29,8 +31,7 @@ const mapsReducer = (state: any, action: any) => {
 
 export const MapsProvider = ({children}: MapsProviderProps) => {
   const [state, dispatch] = React.useReducer(
-    mapsReducer,
-    {center: null, selectedPlace: null}
+    reducer, {center: null, selectedPlace: null}
   );
 
   const value = {state, dispatch}
@@ -46,5 +47,5 @@ export const useMap = () => {
   if (context === undefined) {
     throw new Error('useMap must be used within a MapsProvider')
   }
-  return context
+  return context;
 }

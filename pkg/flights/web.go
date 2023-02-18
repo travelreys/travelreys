@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
@@ -257,10 +256,8 @@ type skyscanner struct {
 	apiHost string
 }
 
-func NewSkyscannerAPI() WebFlightsAPI {
-	apiKey := os.Getenv("TIINYPLANET_SKYSCANNER_APIKEY")
-	apiHost := os.Getenv("TIINYPLANET_SKYSCANNER_APIHOST")
-	return &skyscanner{apiKey, apiHost}
+func NewSkyscannerAPI(key, host string) WebFlightsAPI {
+	return &skyscanner{key, host}
 }
 
 func (api skyscanner) urlpath() string {

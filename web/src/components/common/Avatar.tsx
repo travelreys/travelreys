@@ -2,7 +2,7 @@ import React, { FC } from 'react';
 import _get from 'lodash/get';
 import { usePopperTooltip } from 'react-popper-tooltip';
 
-import { stringToColor } from '../../utils/strings';
+import { stringToColor } from '../../lib/strings';
 
 interface AvatarProps {
   name: string

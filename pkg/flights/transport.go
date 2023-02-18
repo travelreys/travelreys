@@ -15,13 +15,13 @@ import (
 )
 
 var (
-	notFoundErrors     = []error{}
-	appErrors          = []error{ErrInvalidSearchRequest}
-	unauthorisedErrors = []error{}
+	notFoundErrors = []error{}
+	appErrors      = []error{ErrInvalidSearchRequest}
+	authErrors     = []error{}
 )
 
 var (
-	encodeErrFn = utils.EncodeErrorFactory(utils.ErrorToHTTPCodeFactory(notFoundErrors, appErrors, unauthorisedErrors))
+	encodeErrFn = utils.EncodeErrorFactory(utils.ErrorToHTTPCodeFactory(notFoundErrors, appErrors, authErrors))
 
 	opts = []kithttp.ServerOption{
 		// kithttp.ServerBefore(reqctx.MakeContextFromHTTPRequest),

@@ -10,10 +10,10 @@ import {
 import TripsAPI from '../../apis/trips';
 
 import Alert from '../../components/common/Alert';
-import CreateTripModal from '../../components/home/CreateTripModal';
+import CreateTripModal from '../../features/home/CreateTripModal';
 import Spinner from '../../components/common/Spinner';
-import TripsContainer from '../../components/home/TripsContainer';
-import TripsJumbo from '../../components/home/TripsJumbo';
+import TripsContainer from '../../features/home/TripsContainer';
+import TripsJumbo from '../../features/home/TripsJumbo';
 
 
 const HomePage: FC = () => {

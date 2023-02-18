@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 )
 
 const (
@@ -29,8 +28,7 @@ type unsplash struct {
 	accesskey string
 }
 
-func NewWebImageAPI() WebImageAPI {
-	accesskey := os.Getenv("TIINYPLANET_UNSPLASH_ACCESSKEY")
+func NewWebImageAPI(accesskey string) WebImageAPI {
 	return unsplash{accesskey}
 }
 

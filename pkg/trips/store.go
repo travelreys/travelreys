@@ -10,6 +10,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+const (
+	BsonKeyID = "id"
+)
+
+var (
+	ErrPlanNotFound         = errors.New("not-found")
+	ErrUnexpectedStoreError = errors.New("store-error")
+)
+
 type ListTripPlansFilter struct {
 	ID *string `json:"string"`
 }
@@ -29,43 +38,34 @@ type Store interface {
 	DeleteTripPlan(ctx context.Context, ID string) error
 }
 
-const (
-	BsonKeyID = "id"
-)
-
-var (
-	ErrPlanNotFound         = errors.New("not-found")
-	ErrUnexpectedStoreError = errors.New("store-error")
-)
-
 type store struct {
-	db              *mongo.Database
-	tripsCollection *mongo.Collection
+	db        *mongo.Database
+	tripsColl *mongo.Collection
 }
 
 func NewStore(db *mongo.Database) Store {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tripsCollection := db.Collection("trips")
+	tripsColl := db.Collection("trips")
 
 	idIdx := mongo.IndexModel{Keys: bson.M{BsonKeyID: 1}}
-	tripsCollection.Indexes().CreateOne(ctx, idIdx)
+	tripsColl.Indexes().CreateOne(ctx, idIdx)
 
-	return &store{db, tripsCollection}
+	return &store{db, tripsColl}
 }
 
 func (store *store) SaveTripPlan(ctx context.Context, plan TripPlan) error {
 	saveFF := bson.M{BsonKeyID: plan.ID}
 	opts := options.Replace().SetUpsert(true)
-	_, err := store.tripsCollection.ReplaceOne(ctx, saveFF, plan, opts)
+	_, err := store.tripsColl.ReplaceOne(ctx, saveFF, plan, opts)
 	return err
 }
 
 func (store *store) ReadTripPlan(ctx context.Context, ID string) (TripPlan, error) {
 	var plan TripPlan
 
-	err := store.tripsCollection.FindOne(ctx, bson.M{"id": ID}).Decode(&plan)
+	err := store.tripsColl.FindOne(ctx, bson.M{BsonKeyID: ID}).Decode(&plan)
 	if err == mongo.ErrNoDocuments {
 		return plan, ErrPlanNotFound
 	}
@@ -78,7 +78,7 @@ func (store *store) ReadTripPlan(ctx context.Context, ID string) (TripPlan, erro
 func (store *store) ListTripPlans(ctx context.Context, ff ListTripPlansFilter) (TripPlansList, error) {
 	list := TripPlansList{}
 	bsonM := ff.toBSON()
-	cursor, err := store.tripsCollection.Find(ctx, bsonM)
+	cursor, err := store.tripsColl.Find(ctx, bsonM)
 	if err != nil {
 		return list, err
 	}
@@ -88,6 +88,6 @@ func (store *store) ListTripPlans(ctx context.Context, ff ListTripPlansFilter) (
 
 func (store *store) DeleteTripPlan(ctx context.Context, ID string) error {
 	ff := bson.M{ID: ID}
-	_, err := store.tripsCollection.DeleteOne(ctx, ff)
+	_, err := store.tripsColl.DeleteOne(ctx, ff)
 	return err
 }
