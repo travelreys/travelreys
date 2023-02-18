@@ -1,4 +1,7 @@
 {
+  "errors": {
+    "unexpectedError": "Unerwarteter Fehler"
+  },
   "navbar": {
     "loginModal": {
       "title": "Bei tiinyplanet anmelden",
@@ -17,7 +20,12 @@
       "logout": "Abmelden"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "Plane dein nächstes Abenteuer!",
+      "createBtn": "Neue Reise erstellen"
+    },
     "upcomingTrips": "Bevorstehende Reisen"
   }
+
 }

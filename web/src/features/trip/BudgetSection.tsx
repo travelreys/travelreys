@@ -35,8 +35,8 @@ import {
   flilghtPriceAmt,
   itineraryContentPriceAmt,
   lodgingPriceAmt,
-  PriceMetadataAmountJSONPath,
-  PriceMetadataAmountPath,
+  PriceAmountJSONPath,
+  PriceAmountPath,
   tripContentColor,
   tripContentForItineraryContent,
   Trips
@@ -273,7 +273,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
       TripsSyncAPI.makeAddOp("/budget/items/-", {
         title: title,
         desc: desc,
-        priceMetadata: { amount, currency: ""} as Common.PriceMetadata,
+        price: { amount, currency: ""} as Common.Price,
         labels: new Map<string, string>(),
         tags: new Map<string, string>(),
       } as Trips.BudgetItem)
@@ -288,7 +288,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
     props.tripStateOnUpdate([
       TripsSyncAPI.newReplaceOp(`/budget/items/${selectedBudgetItemIdx}/title`, title),
       TripsSyncAPI.newReplaceOp(`/budget/items/${selectedBudgetItemIdx}/desc`, desc),
-      TripsSyncAPI.newReplaceOp(`/budget/items/${selectedBudgetItemIdx}/${PriceMetadataAmountJSONPath}`, amount),
+      TripsSyncAPI.newReplaceOp(`/budget/items/${selectedBudgetItemIdx}/${PriceAmountJSONPath}`, amount),
     ]);
   }
 
@@ -562,7 +562,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
       <BudgetItemModal
         header='Edit expense'
         isOpen={isEditBudgetItemModalOpen}
-        defaultAmount={_get(selectedBudgetItem, PriceMetadataAmountPath)}
+        defaultAmount={_get(selectedBudgetItem, PriceAmountPath)}
         defaultTitle={_get(selectedBudgetItem, "title")}
         defaultDesc={_get(selectedBudgetItem, "desc")}
         onSubmit={updateBudgetItem}

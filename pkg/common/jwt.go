@@ -1,9 +1,21 @@
-package reqctx
+package common
 
 import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
+)
+
+const (
+	JWTIssuer     = "tiinyplanet"
+	JWTClaimIss   = "iss"
+	JWTClaimSub   = "sub"
+	JWTClaimEmail = "email"
+	JWTClaimIat   = "iat"
+)
+
+var (
+	JWTDefaultSigningMethod = jwt.SigningMethodHS512
 )
 
 func ParseBearerAndToken(header string) (string, error) {
@@ -32,5 +44,4 @@ func ParseJWT(jwtToken, secret string) (jwt.MapClaims, error) {
 		return nil, ErrMissingJWTClaims
 	}
 	return claims, nil
-
 }

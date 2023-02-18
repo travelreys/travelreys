@@ -9,6 +9,6 @@ export const makeCommonAxios = () => {
     baseURL: BASE_URL,
   });
 
-  ax.defaults.headers.common['Authorization'] = readAuthToken();
+  ax.defaults.headers.common['Authorization'] = `Bearer ${readAuthToken()}`;
   return ax;
 }

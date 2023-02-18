@@ -136,7 +136,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
   const renderPricePill = () => {
     return (
       <span className={TripLogisticsCss.FlightPricePill}>
-        {props.flight.priceMetadata.currency} {props.flight.priceMetadata.amount}
+        {props.flight.price.currency} {props.flight.price.amount}
       </span>
     );
   }

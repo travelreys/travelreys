@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 )
 
 // Trips Endpoints
@@ -31,13 +30,12 @@ func NewCreateTripPlanEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return CreateTripPlanResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
 		}
-		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
 		creator := TripMember{
 			MemberID:    "1",
 			MemberEmail: "awhdes@gmail.com",
 		}
 
-		plan, err := svc.CreateTripPlan(rctx, creator, req.Name, req.StartDate, req.EndDate)
+		plan, err := svc.CreateTripPlan(ctx, creator, req.Name, req.StartDate, req.EndDate)
 		return CreateTripPlanResponse{Plan: plan, Err: err}, nil
 	}
 }
@@ -61,8 +59,7 @@ func NewReadTripPlanEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ReadTripPlanResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
 		}
-		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
-		plan, err := svc.ReadTripPlan(rctx, req.ID)
+		plan, err := svc.ReadTripPlan(ctx, req.ID)
 		return ReadTripPlanResponse{Plan: plan, Err: err}, nil
 	}
 }
@@ -85,8 +82,7 @@ func NewListTripPlansEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ListTripPlansResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
 		}
-		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
-		plans, err := svc.ListTripPlans(rctx, req.FF)
+		plans, err := svc.ListTripPlans(ctx, req.FF)
 		return ListTripPlansResponse{Plans: plans, Err: err}, nil
 	}
 }
@@ -109,8 +105,7 @@ func NewDeleteTripPlanEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return DeleteTripPlanResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
 		}
-		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
-		err := svc.DeleteTripPlan(rctx, req.ID)
+		err := svc.DeleteTripPlan(ctx, req.ID)
 		return DeleteTripPlanResponse{Err: err}, nil
 	}
 }

@@ -7,10 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-)
-
-const (
-	JWTIssuer = "tiinyplanet"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 )
 
 type Service interface {
@@ -78,11 +75,11 @@ func (svc service) createUser(ctx context.Context, usr User) error {
 }
 
 func (svc service) issueJWTToken(usr User) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
-		"iss":   JWTIssuer,
-		"sub":   usr.ID,
-		"email": usr.Email,
-		"iat":   time.Now().Unix(),
+	token := jwt.NewWithClaims(common.JWTDefaultSigningMethod, jwt.MapClaims{
+		common.JWTClaimIss:   common.JWTIssuer,
+		common.JWTClaimSub:   usr.ID,
+		common.JWTClaimEmail: usr.Email,
+		common.JWTClaimIat:   time.Now().Unix(),
 	})
 
 	jwtSecret := os.Getenv("TIINYPLANET_JWT_SECRET")

@@ -36,7 +36,7 @@ export namespace Flights {
   export type RoundTripMap = Map<string, RoundTrip>
   export interface BookingMetadata {
     score: number
-    price: Common.PriceMetadata
+    price: Common.Price
     bookingURL: string
     bookingDeeplinkURL: string
   }

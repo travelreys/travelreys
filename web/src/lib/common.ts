@@ -1,5 +1,5 @@
 export namespace Common {
-  export interface PriceMetadata {
+  export interface Price {
     amount?: number
     currency: string
   }

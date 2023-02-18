@@ -195,7 +195,7 @@ func (res SkyscannerResponse) ToOnewayItineraries(currency string) Itineraries {
 			DepartFlight: departFlight,
 			BookingMetadata: BookingMetadata{
 				BookingURL: pricing.URL,
-				Price: common.PriceMetadata{
+				Price: common.Price{
 					Amount:   pricing.Price.Amount,
 					Currency: currency,
 				},
@@ -223,7 +223,7 @@ func (res SkyscannerResponse) ToRoundtripItineraries(currency string) Itinerarie
 
 		bookingMetadata := BookingMetadata{
 			BookingURL: pricing.URL,
-			Price: common.PriceMetadata{
+			Price: common.Price{
 				Amount:   pricing.Price.Amount,
 				Currency: currency,
 			},

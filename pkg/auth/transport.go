@@ -9,28 +9,30 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 )
 
-var (
-	notFoundErrors = []error{}
-	appErrors      = []error{}
-	authErrors     = []error{}
-)
+func errToHttpCode() func(err error) int {
+	notFoundErrors := []error{}
+	appErrors := []error{}
+	authErrors := []error{}
 
-var (
-	encodeErrFn = utils.EncodeErrorFactory(
-		utils.ErrorToHTTPCodeFactory(notFoundErrors, appErrors, authErrors),
-	)
-	opts = []kithttp.ServerOption{
-		// kithttp.ServerBefore(reqctx.MakeContextFromHTTPRequest),
-		kithttp.ServerErrorEncoder(encodeErrFn),
+	return func(err error) int {
+		if common.ErrorContains(notFoundErrors, err) {
+			return http.StatusNotFound
+		}
+		if common.ErrorContains(appErrors, err) {
+			return http.StatusUnprocessableEntity
+		}
+		if common.ErrorContains(authErrors, err) {
+			return http.StatusUnauthorized
+		}
+		return http.StatusInternalServerError
 	}
-)
+}
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, resp interface{}) error {
 	if e, ok := resp.(common.Errorer); ok && e.Error() != nil {
-		encodeErrFn(ctx, e.Error(), w)
+		common.EncodeErrorFactory(errToHttpCode())(ctx, e.Error(), w)
 		return nil
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -39,6 +41,11 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, resp interface{}
 
 func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
+
+	opts := []kithttp.ServerOption{
+		kithttp.ServerBefore(common.MakeContextFromHTTPRequest),
+		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode())),
+	}
 
 	loginHandler := kithttp.NewServer(NewLoginEndpoint(svc), decodeLoginRequest, encodeResponse, opts...)
 	readUserHandler := kithttp.NewServer(NewReadUserEndpoint(svc), decodeReadUserRequest, encodeResponse)
@@ -56,7 +63,7 @@ func MakeHandler(svc Service) http.Handler {
 func decodeLoginRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	req := LoginRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, utils.ErrInvalidJSONBody
+		return nil, common.ErrInvalidJSONBody
 	}
 	return req, nil
 }
@@ -75,7 +82,7 @@ func decodeUpdateUserRequest(_ context.Context, r *http.Request) (interface{}, e
 		ID: vars["id"],
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, utils.ErrInvalidJSONBody
+		return nil, common.ErrInvalidJSONBody
 	}
 	return req, nil
 }

@@ -671,7 +671,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
         id: uuidv4(),
         tripContentId: content.id,
         tripContentListId: contentListID,
-        priceMetadata: {} as any,
+        price: {} as any,
         labels: new Map<string, string>(),
       };
       ops.push(TripsSyncAPI.makeAddOp(`/itinerary/${itinListIdx}/contents/-`, itinCtn))

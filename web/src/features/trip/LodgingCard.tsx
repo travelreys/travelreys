@@ -57,7 +57,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
       from: parseTripDate(props.lodging.checkinTime as (string|undefined)),
       to: parseTripDate(props.lodging.checkoutTime as (string|undefined)),
     });
-    setPriceAmount(props.lodging.priceMetadata.amount);
+    setPriceAmount(props.lodging.price.amount);
   }, [props.lodging])
 
   // Event Handlers - Dates
@@ -97,7 +97,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
 
   const priceOnBlur = () => {
     props.onUpdate(props.lodging, {
-      "priceMetadata/amount": priceAmount,
+      "price/amount": priceAmount,
     });
     setIsUpdatingPrice(false);
   }
@@ -154,7 +154,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
       </a>
   }
 
-  const renderPriceMetadata = () => {
+  const renderPrice = () => {
     if (isUpdatingPrice) {
       return (
         <div className={LodgingCardCss.PriceInputCtn}>
@@ -225,7 +225,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
         {place.international_phone_number}
       </p>
       {renderDates()}
-      {renderPriceMetadata()}
+      {renderPrice()}
       <PlacePicturesCarousel photos={props.lodging.place.photos} />
     </div>
   );

@@ -1,18 +1,18 @@
 package trips
 
 import (
+	context "context"
 	"math/rand"
 	"time"
 
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
-	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 )
 
 type Service interface {
-	CreateTripPlan(ctx reqctx.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error)
-	ReadTripPlan(ctx reqctx.Context, ID string) (TripPlan, error)
-	ListTripPlans(ctx reqctx.Context, ff ListTripPlansFilter) ([]TripPlan, error)
-	DeleteTripPlan(ctx reqctx.Context, ID string) error
+	CreateTripPlan(ctx context.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error)
+	ReadTripPlan(ctx context.Context, ID string) (TripPlan, error)
+	ListTripPlans(ctx context.Context, ff ListTripPlansFilter) ([]TripPlan, error)
+	DeleteTripPlan(ctx context.Context, ID string) error
 }
 
 type service struct {
@@ -24,7 +24,7 @@ func NewService(store Store, imageSvc images.Service) Service {
 	return &service{store, imageSvc}
 }
 
-func (svc *service) CreateTripPlan(ctx reqctx.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error) {
+func (svc *service) CreateTripPlan(ctx context.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error) {
 	plan := NewTripPlanWithDates(creator, name, start, end)
 	plan.CoverImage = images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))]
 
@@ -44,14 +44,14 @@ func (svc *service) CreateTripPlan(ctx reqctx.Context, creator TripMember, name 
 	return plan, err
 }
 
-func (svc *service) ReadTripPlan(ctx reqctx.Context, ID string) (TripPlan, error) {
+func (svc *service) ReadTripPlan(ctx context.Context, ID string) (TripPlan, error) {
 	return svc.store.ReadTripPlan(ctx, ID)
 }
 
-func (svc *service) ListTripPlans(ctx reqctx.Context, ff ListTripPlansFilter) ([]TripPlan, error) {
+func (svc *service) ListTripPlans(ctx context.Context, ff ListTripPlansFilter) ([]TripPlan, error) {
 	return svc.store.ListTripPlans(ctx, ff)
 }
 
-func (svc *service) DeleteTripPlan(ctx reqctx.Context, ID string) error {
+func (svc *service) DeleteTripPlan(ctx context.Context, ID string) error {
 	return svc.store.DeleteTripPlan(ctx, ID)
 }

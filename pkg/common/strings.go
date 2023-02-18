@@ -1,4 +1,4 @@
-package utils
+package common
 
 func StringContains(slice []string, target string) bool {
 	for _, s := range slice {

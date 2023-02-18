@@ -39,7 +39,7 @@ import {
   DefaultContentColor,
   LabelContentListColor,
   LabelContentListIcon,
-  PriceMetadataAmountJSONPath,
+  PriceAmountJSONPath,
   LabelContentListColorJSONPath,
   LabelContentListIconJSONPath,
   Trips
@@ -99,7 +99,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
   const { dispatch } = useMap();
 
   useEffect(() => {
-    setPriceAmount(props.itineraryContent.priceMetadata.amount);
+    setPriceAmount(props.itineraryContent.price.amount);
   }, [props.itineraryContent])
 
   // Event Handles - DnD
@@ -161,7 +161,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     const { itineraryListIdx, itineraryContentIdx } = props;
     props.tripStateOnUpdate([
       TripsSyncAPI.newReplaceOp(
-        `/itinerary/${itineraryListIdx}/contents/${itineraryContentIdx}/${PriceMetadataAmountJSONPath}`,
+        `/itinerary/${itineraryListIdx}/contents/${itineraryContentIdx}/${PriceAmountJSONPath}`,
         priceAmount,
       )
     ]);

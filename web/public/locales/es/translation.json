@@ -17,7 +17,11 @@
       "logout": "Cerrar sesión"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "¡Planifica tu próxima aventura!",
+      "createBtn": "Crear nuevo viaje"
+    },
     "upcomingTrips": "Próximos viajes"
   }
 }

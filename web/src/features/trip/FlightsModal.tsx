@@ -269,9 +269,9 @@ const FlightCard: FC<FlightCardProps> = (props: FlightCardProps) => {
     }
     const pill = (
       <span className={FlightsModalCss.FlightPricePill}>
-        {props.bookingMetadata.priceMetadata.currency}
+        {props.bookingMetadata.price.currency}
         &nbsp;
-        {props.bookingMetadata.priceMetadata.amount}
+        {props.bookingMetadata.price.amount}
       </span>
     );
     return (<a href={props.bookingMetadata.bookingURL} target="_blank">{pill}</a>);
@@ -564,7 +564,7 @@ const FlightsModal: FC<FlightsModalProps> = (props: FlightsModalProps) => {
       itineraryType: "oneway",
       depart,
       return: {} as any,
-      priceMetadata: bookingMetadata.priceMetadata,
+      price: bookingMetadata.price,
     };
     props.onFlightSelect(tripFlight);
   }
@@ -578,7 +578,7 @@ const FlightsModal: FC<FlightsModalProps> = (props: FlightsModalProps) => {
       itineraryType: "roundtrip",
       depart: departFlight,
       return: returnFlight,
-      priceMetadata: bookingMetadata.priceMetadata,
+      price: bookingMetadata.price,
     };
     props.onFlightSelect(tripFlight);
   }

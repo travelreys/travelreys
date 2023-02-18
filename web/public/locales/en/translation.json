@@ -1,4 +1,7 @@
 {
+  "errors": {
+    "unexpectedError": "Unexpected Error"
+  },
   "navbar": {
     "loginModal": {
       "title": "Log in to tiinyplanet",
@@ -17,7 +20,11 @@
       "logout": "Log out"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "Plan your next adventure!",
+      "createBtn": "Create new trip"
+    },
     "upcomingTrips": "Upcoming Trips"
   }
 }

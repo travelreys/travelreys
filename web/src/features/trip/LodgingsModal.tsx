@@ -93,7 +93,7 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
       checkinTime: checkinDates?.from,
       checkoutTime: checkinDates?.to,
       place: selectedPlace,
-      priceMetadata: {} as any,
+      price: {} as any,
       tags: new Map<string,string>(),
       labels: new Map<string,string>(),
     };

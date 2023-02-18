@@ -78,6 +78,16 @@ export const NavbarCss = {
   LogoutBtn: "flex items-center w-full hover:text-indigo-500"
 }
 
+//////////
+// Home //
+//////////
+
+export const HomeCss = {
+  TripJumboTitle: "text-4xl font-bold text-slate-700 mb-5",
+  CreateNewTripBtn: "bg-indigo-500 font-bold px-5 py-2.5 rounded-md text-white hover:bg-indigo-70"
+}
+
+
 ///////////
 // Trips //
 ///////////

@@ -56,10 +56,10 @@ type RoundTrip struct {
 type RoundTripMap map[string]*RoundTrip
 
 type BookingMetadata struct {
-	Score              float64              `json:"score"`
-	Price              common.PriceMetadata `json:"priceMetadata"`
-	BookingURL         string               `json:"bookingURL"`         // URL to book the ticket
-	BookingDeeplinkURL string               `json:"bookingDeeplinkURL"` // URL to see other options!
+	Score              float64      `json:"score"`
+	Price              common.Price `json:"price"`
+	BookingURL         string       `json:"bookingURL"`         // URL to book the ticket
+	BookingDeeplinkURL string       `json:"bookingDeeplinkURL"` // URL to see other options!
 }
 
 type BookingMetadataList []BookingMetadata

@@ -1,5 +1,6 @@
 import React, { FC, useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import {
@@ -7,17 +8,43 @@ import {
   SelectRangeEventHandler
 } from 'react-day-picker';
 
-import TripsAPI from '../../apis/trips';
+import TripsAPI, { CreateTripResponse } from '../../apis/trips';
 
 import Alert from '../../components/common/Alert';
 import CreateTripModal from '../../features/home/CreateTripModal';
 import Spinner from '../../components/common/Spinner';
 import TripsContainer from '../../features/home/TripsContainer';
-import TripsJumbo from '../../features/home/TripsJumbo';
+import { HomeCss } from '../../assets/styles/global';
 
+
+
+
+interface TripsJumboProps {
+  onCreateTripBtnClick: any,
+}
+
+const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
+
+  const {t} = useTranslation();
+
+  return (
+    <div>
+      <h1 className={HomeCss.TripJumboTitle}>
+        {t("home.tripJumbo.title")}
+      </h1>
+      <button type="button"
+        className={HomeCss.CreateNewTripBtn}
+        onClick={props.onCreateTripBtnClick}
+      >
+        + {t("home.tripJumbo.createBtn")}
+      </button>
+    </div>
+  );
+}
 
 const HomePage: FC = () => {
   const history = useNavigate();
+  const { t } = useTranslation();
 
   // UI State
   const [isLoading, setIsLoading] = useState(false);
@@ -53,12 +80,15 @@ const HomePage: FC = () => {
 
   const submitNewTripOnClick = () => {
     TripsAPI.createTrip(newTripName, newTripDates?.from, newTripDates?.to)
-    .then((res: any) => {
-      history(`/trips/${_get(res, 'data.tripPlan.id')}`);
+    .then((res: CreateTripResponse) => {
+      history(`/trips/${res.id}`);
     })
-    .catch(error => {
-      const errMsg = _get(error, "message") || _get(error.data, "error");
-      setAlertProps({title: "Unexpected Error", message: errMsg, status: "error"});
+    .catch(res => {
+      setAlertProps({
+        title: t("errors.unexpectedError"),
+        message: res.error,
+        status: "error"
+      });
     })
   }
 

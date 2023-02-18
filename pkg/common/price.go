@@ -1,6 +1,6 @@
 package common
 
-type PriceMetadata struct {
+type Price struct {
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
 }
