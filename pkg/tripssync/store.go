@@ -67,9 +67,9 @@ func (s *sessionStore) Read(ctx context.Context, planID string) (SyncSession, er
 		return SyncSession{}, err
 	}
 
-	members := trips.TripMembersList{}
+	members := trips.MembersList{}
 	for _, str := range strSlice {
-		var mem trips.TripMember
+		var mem trips.Member
 		json.Unmarshal([]byte(str), &mem)
 		members = append(members, mem)
 	}

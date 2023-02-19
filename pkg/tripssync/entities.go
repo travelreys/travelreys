@@ -3,7 +3,6 @@ package tripssync
 import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
-	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 )
 
 // Sync Session State
@@ -11,12 +10,12 @@ import (
 type SyncConnection struct {
 	PlanID       string
 	ConnectionID string
-	Member       trips.TripMember
+	Member       trips.Member
 }
 
 type SyncSession struct {
 	// Members is a list of members in the current session
-	Members trips.TripMembersList `json:"members"`
+	Members trips.MembersList `json:"members"`
 }
 
 // Sync Message
@@ -32,7 +31,7 @@ const (
 )
 
 func isValidSyncMessageType(opType string) bool {
-	return utils.StringContains([]string{
+	return common.StringContains([]string{
 		SyncOpJoinSession,
 		SyncOpLeaveSession,
 		SyncOpPingSession,
@@ -56,14 +55,14 @@ type SyncMessage struct {
 }
 
 type SyncDataJoinSession struct {
-	trips.TripMember
+	trips.Member
 }
 
 type SyncDataJoinSessionBroadcast struct {
-	trips.TripMembersList
+	trips.MembersList
 }
 
-func NewSyncMessageJoinSessionBroadcast(tripPlanID string, members trips.TripMembersList) SyncMessage {
+func NewSyncMessageJoinSessionBroadcast(tripPlanID string, members trips.MembersList) SyncMessage {
 	return SyncMessage{
 		TripPlanID:                   tripPlanID,
 		OpType:                       SyncOpJoinSessionBroadcast,
@@ -72,7 +71,7 @@ func NewSyncMessageJoinSessionBroadcast(tripPlanID string, members trips.TripMem
 }
 
 type SyncDataLeaveSession struct {
-	trips.TripMember
+	trips.Member
 }
 
 func NewSyncMessageLeaveSession(connID, tripPlanID string) SyncMessage {
@@ -84,10 +83,10 @@ func NewSyncMessageLeaveSession(connID, tripPlanID string) SyncMessage {
 }
 
 type SyncDataLeaveSessionBroadcast struct {
-	trips.TripMembersList
+	trips.MembersList
 }
 
-func NewSyncMessageLeaveSessionBroadcast(tripPlanID string, members trips.TripMembersList) SyncMessage {
+func NewSyncMessageLeaveSessionBroadcast(tripPlanID string, members trips.MembersList) SyncMessage {
 	return SyncMessage{
 		TripPlanID:                    tripPlanID,
 		OpType:                        SyncOpLeaveSessionBroadcast,

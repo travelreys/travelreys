@@ -1,4 +1,10 @@
 {
+  "common": {
+    "settings": "Configuración"
+  },
+  "errors": {
+    "unexpectedError": "Error inesperado"
+  },
   "navbar": {
     "loginModal": {
       "title": "Iniciar sesión en tiinyplanet",

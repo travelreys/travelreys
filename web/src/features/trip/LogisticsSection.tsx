@@ -18,6 +18,7 @@ import TripsSyncAPI from '../../apis/tripsSync';
 import TransitFlightCard from './TransitFlightCard';
 
 import { TripLogisticsCss } from '../../assets/styles/global';
+import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
 
 
 
@@ -183,13 +184,13 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   const flightOnSelect = (flight: Trips.Flight) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.makeAddOp(`/flights/${flight.id}`, flight)
+      makeAddOp(`/flights/${flight.id}`, flight)
     ]);
   }
 
   const flightOnDelete = (flight: Trips.Flight) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.makeRemoveOp(`/flights/${flight.id}`, flight)
+      makeRemoveOp(`/flights/${flight.id}`, flight)
     ]);
   }
 
@@ -197,7 +198,7 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
   const lodgingOnSelect = (lodging: Trips.Lodging) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.makeAddOp(`/lodgings/${lodging.id}`, lodging)
+      makeAddOp(`/lodgings/${lodging.id}`, lodging)
     ]);
   }
 
@@ -205,14 +206,14 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
     const ops = [] as any;
     Object.entries(updates).forEach(([key, value]) => {
       const fullpath = `/lodgings/${lodging.id}/${key}`;
-      ops.push(TripsSyncAPI.newReplaceOp(fullpath, value));
+      ops.push(makeReplaceOp(fullpath, value));
     });
     props.tripStateOnUpdate(ops);
   }
 
   const lodgingOnDelete = (lodging: Trips.Lodging) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.makeRemoveOp(`/lodgings/${lodging.id}`, lodging)
+      makeRemoveOp(`/lodgings/${lodging.id}`, lodging)
     ]);
   }
 

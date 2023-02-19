@@ -1,30 +1,32 @@
 package main
 
 import (
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
-	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 	"go.uber.org/zap"
 )
 
 func MakeCoordinatorSpanwer(cfg ServerConfig, logger *zap.Logger) (*tripssync.CoordinatorSpawner, error) {
-
-	db, err := utils.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
+	db, err := common.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
 	if err != nil {
+		logger.Error("MakeCoordinatorSpanwer", zap.Error(err))
 		return nil, err
 	}
 
-	nc, err := utils.MakeNATSConn(cfg.NatsURL)
+	nc, err := common.MakeNATSConn(cfg.NatsURL)
 	if err != nil {
+		logger.Error("MakeCoordinatorSpanwer", zap.Error(err))
 		return nil, err
 	}
 
-	rdb, err := utils.MakeRedisClient(cfg.RedisURL, cfg.RedisClusterMode)
+	rdb, err := common.MakeRedisClient(cfg.RedisURL, cfg.RedisClusterMode)
 	if err != nil {
+		logger.Error("MakeCoordinatorSpanwer", zap.Error(err))
 		return nil, err
 	}
 
-	tripStore := trips.NewStore(db)
+	tripStore := trips.NewStore(db, logger)
 	sesnStore := tripssync.NewSessionStore(rdb)
 	smStore := tripssync.NewSyncMessageStore(nc, rdb)
 	tobStore := tripssync.NewTOBMessageStore(nc, rdb)

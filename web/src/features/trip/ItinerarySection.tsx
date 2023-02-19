@@ -70,6 +70,7 @@ import {
   CommonCss,
   TripLogisticsCss,
 } from '../../assets/styles/global';
+import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
 
 
 const ItineraryDateFmt = "eeee, do MMMM"
@@ -160,7 +161,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
   const priceOnBlur = () => {
     const { itineraryListIdx, itineraryContentIdx } = props;
     props.tripStateOnUpdate([
-      TripsSyncAPI.newReplaceOp(
+      makeReplaceOp(
         `/itinerary/${itineraryListIdx}/contents/${itineraryContentIdx}/${PriceAmountJSONPath}`,
         priceAmount,
       )
@@ -281,7 +282,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   const updateItinContents = (newItinContents: Array<Trips.ItineraryContent>) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.newReplaceOp(`/itinerary/${props.itineraryListIdx}/contents`, newItinContents),
+      makeReplaceOp(`/itinerary/${props.itineraryListIdx}/contents`, newItinContents),
     ]);
   }
 
@@ -542,24 +543,24 @@ const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProp
 
     const ops = [];
     if (_isEmpty(color) && !_isEmpty(colorLabel)) {
-      ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, ""));
+      ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, ""));
     }
     if (!_isEmpty(color)) {
       if (_isEmpty(colorLabel)) {
-        ops.push(TripsSyncAPI.makeAddOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, color));
+        ops.push(makeAddOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, color));
       } else {
-        ops.push(TripsSyncAPI.newReplaceOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, color));
+        ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, color));
       }
     }
 
     if (_isEmpty(icon) && !_isEmpty(iconLabel)) {
-      ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, ""));
+      ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, ""));
     }
     if (!_isEmpty(icon)) {
       if (_isEmpty(colorLabel)) {
-        ops.push(TripsSyncAPI.makeAddOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, icon));
+        ops.push(makeAddOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, icon));
       } else {
-        ops.push(TripsSyncAPI.newReplaceOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, icon));
+        ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, icon));
       }
     }
     props.tripStateOnUpdate(ops);

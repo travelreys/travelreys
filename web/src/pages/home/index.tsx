@@ -8,15 +8,13 @@ import {
   SelectRangeEventHandler
 } from 'react-day-picker';
 
-import TripsAPI, { CreateTripResponse } from '../../apis/trips';
+import TripsAPI, { CreateTripResponse, ReadTripsResponse } from '../../apis/trips';
 
 import Alert from '../../components/common/Alert';
 import CreateTripModal from '../../features/home/CreateTripModal';
 import Spinner from '../../components/common/Spinner';
 import TripsContainer from '../../features/home/TripsContainer';
 import { HomeCss } from '../../assets/styles/global';
-
-
 
 
 interface TripsJumboProps {
@@ -57,11 +55,19 @@ const HomePage: FC = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    TripsAPI.readTrips()
-    .then((res) => {
-      setTrips(_get(res, "tripPlans", []));
-      setIsLoading(false);
-    })
+    TripsAPI.listTrips()
+      .then((res: ReadTripsResponse) => {
+        setTrips(res.tripPlans);
+        setAlertProps({});
+        setIsLoading(false);
+      })
+      .catch(res => {
+        setAlertProps({
+          title: t("errors.unexpectedError"),
+          message: res.error,
+          status: "error"
+        });
+      })
   }, [])
 
   // Event Handlers
@@ -89,7 +95,7 @@ const HomePage: FC = () => {
         message: res.error,
         status: "error"
       });
-    })
+    });
   }
 
   // Renderers

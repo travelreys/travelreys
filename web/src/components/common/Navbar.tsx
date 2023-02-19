@@ -363,7 +363,20 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
   );
 }
 
+interface NavbarLogoProps {
+  href: string
+}
 
+export const NavbarLogo: FC<NavbarLogoProps> = (props:NavbarLogoProps) => {
+  return (
+    <Link to={props.href} className={NavbarCss.Link}>
+      <GlobeAmericasIcon className={NavbarCss.LogoIcon} />
+      <span className={NavbarCss.LogoTxt}>
+        tiinyplanet
+      </span>
+    </Link>
+  );
+}
 
 const NavBar: FC = () => {
   const location = useLocation()
@@ -396,12 +409,7 @@ const NavBar: FC = () => {
 
   return (
     <nav className={NavbarCss.Ctn}>
-      <Link to={logoHref()} className={NavbarCss.Link}>
-        <GlobeAmericasIcon className={NavbarCss.LogoIcon} />
-        <span className={NavbarCss.LogoTxt}>
-          tiinyplanet
-        </span>
-      </Link>
+      <NavbarLogo href={logoHref()} />
       {renderNavbarActions()}
       <LoginModal
         isOpen={isLoginModalOpen}

@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
+	"github.com/tiinyplanet/tiinyplanet/pkg/api"
 	"go.uber.org/zap"
 )
 
@@ -65,7 +65,7 @@ func main() {
 
 	// Logger
 
-	logger, _ := utils.InitZap(viper.GetString(cfgFlagLogLevel))
+	logger, _ := api.InitZap(viper.GetString(cfgFlagLogLevel))
 	defer logger.Sync()
 	stdLog := zap.RedirectStdLog(logger)
 	defer stdLog()

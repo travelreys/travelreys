@@ -25,10 +25,19 @@ export const isEmptyDate = (date: Date | string | undefined) => {
   return false
 }
 
+const dateLocaleFromLng = () => {
+  const lngTkns = readUserLocale().split("-");
+  if (lngTkns.length > 1) {
+    lngTkns[1] = lngTkns[1].toUpperCase()
+  }
+  //@ts-ignore
+  return _get(Locales, lngTkns.join(""), Locales['enUS']);
+}
+
 export const printFromDateFromRange = (range: DateRange | undefined, fmt: string) => {
   const date = _get(range, "from");
   if (date) {
-    return format(date, fmt);
+    return format(date, fmt, { locale: dateLocaleFromLng() });
   }
   return undefined;
 }
@@ -36,7 +45,7 @@ export const printFromDateFromRange = (range: DateRange | undefined, fmt: string
 export const printToDateFromRange = (range: DateRange | undefined, fmt: string) => {
   const date = _get(range, "to");
   if (date) {
-    return format(date, fmt);
+    return format(date, fmt, { locale: dateLocaleFromLng() });
   }
   return undefined;
 }
@@ -59,13 +68,7 @@ export const parseTripDate = (tripDate: string | undefined) => {
 
 
 export const printFmt = (date: Date, fmt: string) => {
-  const lngTkns = readUserLocale().split("-");
-  if (lngTkns.length > 1) {
-    lngTkns[1] = lngTkns[1].toUpperCase()
-  }
-  //@ts-ignore
-  const loc = Locales[lngTkns.join("")] as any
-  return format(date, fmt, { locale: loc });
+  return format(date, fmt, { locale: dateLocaleFromLng() });
 }
 
 export const prettyPrintMins = (mins: number) => {

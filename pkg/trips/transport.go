@@ -15,9 +15,9 @@ const (
 )
 
 func errToHttpCode() func(err error) int {
-	notFoundErrors := []error{}
-	appErrors := []error{}
-	authErrors := []error{}
+	notFoundErrors := []error{ErrPlanNotFound}
+	appErrors := []error{ErrUnexpectedStoreError}
+	authErrors := []error{ErrRBAC, ErrRBACMissing}
 
 	return func(err error) int {
 		if common.ErrorContains(notFoundErrors, err) {
@@ -46,14 +46,14 @@ func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
-		// kithttp.ServerBefore(reqctx.MakeContextFromHTTPRequest),
+		kithttp.ServerBefore(common.AddClientInfoToCtx),
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode())),
 	}
 
-	createTripPlanHandler := kithttp.NewServer(NewCreateTripPlanEndpoint(svc), decodeCreateTripPlanRequest, encodeResponse, opts...)
-	listTripPlansHandler := kithttp.NewServer(NewListTripPlansEndpoint(svc), decodeListTripPlansRequest, encodeResponse, opts...)
-	readTripPlanHandler := kithttp.NewServer(NewReadTripPlanEndpoint(svc), decodeReadTripPlanRequest, encodeResponse, opts...)
-	deleteTripPlanHandler := kithttp.NewServer(NewDeleteTripPlanEndpoint(svc), decodeDeleteTripPlanRequest, encodeResponse, opts...)
+	createTripPlanHandler := kithttp.NewServer(NewCreateTripEndpoint(svc), decodeCreateTripRequest, encodeResponse, opts...)
+	listTripPlansHandler := kithttp.NewServer(NewListTripsEndpoint(svc), decodeListTripsRequest, encodeResponse, opts...)
+	readTripPlanHandler := kithttp.NewServer(NewReadTripEndpoint(svc), decodeReadTripRequest, encodeResponse, opts...)
+	deleteTripPlanHandler := kithttp.NewServer(NewDeleteTripEndpoint(svc), decodeDeleteTripRequest, encodeResponse, opts...)
 
 	r.Handle("/api/v1/trips", createTripPlanHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/trips", listTripPlansHandler).Methods(http.MethodGet)
@@ -63,30 +63,36 @@ func MakeHandler(svc Service) http.Handler {
 	return r
 }
 
-func decodeCreateTripPlanRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	req := CreateTripPlanRequest{}
+func decodeCreateTripRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := CreateTripRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
 	}
 	return req, nil
 }
-func decodeReadTripPlanRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeReadTripRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	return ReadTripPlanRequest{ID}, nil
+
+	req := ReadTripRequest{ID: ID}
+	if r.URL.Query().Get("withUsers") == "true" {
+		req.WithUsers = true
+	}
+
+	return req, nil
 }
-func decodeListTripPlansRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return ListTripPlansRequest{}, nil
+func decodeListTripsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return ListTripsRequest{}, nil
 
 }
-func decodeDeleteTripPlanRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDeleteTripRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	return DeleteTripPlanRequest{ID}, nil
+	return DeleteTripRequest{ID}, nil
 }

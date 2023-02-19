@@ -83,3 +83,26 @@ func NewUpdateUserEndpoint(svc Service) endpoint.Endpoint {
 		return UpdateUserResponse{err}, nil
 	}
 }
+
+type ListUsersRequest struct {
+	FF ListUsersFilter
+}
+type ListUsersResponse struct {
+	Users UsersList `json:"users"`
+	Err   error     `json:"error,omitempty"`
+}
+
+func (r ListUsersResponse) Error() error {
+	return r.Err
+}
+
+func NewListUsersEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ListUsersRequest)
+		if !ok {
+			return ListUsersResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
+		}
+		users, err := svc.ListUsers(ctx, req.FF)
+		return ListUsersResponse{Users: users, Err: err}, nil
+	}
+}

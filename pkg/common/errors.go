@@ -5,13 +5,12 @@ import (
 )
 
 var (
-	ErrorInvalidEndpointRequestType  = errors.New("endpoint-invalid-req-type")
-	ErrInvalidEndpointRequestContext = errors.New("endpoint-invalid-req-context")
+	ErrorInvalidEndpointRequestType = errors.New("endpoint.invalidrequest")
 )
 var (
-	ErrBadPath         = errors.New("http-bad-path")
-	ErrInvalidRequest  = errors.New("http-invalid-request")
-	ErrInvalidJSONBody = errors.New("http-invalid-json-body")
+	ErrBadPath         = errors.New("http.badpath")
+	ErrInvalidRequest  = errors.New("http.invalidrequest")
+	ErrInvalidJSONBody = errors.New("http.invalidjson")
 )
 
 type Errorer interface {

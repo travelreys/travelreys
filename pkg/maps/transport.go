@@ -14,7 +14,7 @@ import (
 func errToHttpCode() func(err error) int {
 	notFoundErrors := []error{}
 	appErrors := []error{ErrInvalidField, ErrInvalidSessionToken}
-	authErrors := []error{}
+	authErrors := []error{ErrRBACMissing, ErrRBAC}
 
 	return func(err error) int {
 		if common.ErrorContains(notFoundErrors, err) {
@@ -43,7 +43,7 @@ func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
-		kithttp.ServerBefore(common.MakeContextFromHTTPRequest),
+		kithttp.ServerBefore(common.AddClientInfoToCtx),
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode())),
 	}
 

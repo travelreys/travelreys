@@ -6,39 +6,45 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tiinyplanet/tiinyplanet/pkg/api"
 	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
 	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
-	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 	"go.uber.org/zap"
 )
 
 func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
-
-	db, err := utils.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
+	// Databases, external services and persistent storage
+	db, err := common.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
 	if err != nil {
+		logger.Error("MakeAPIServer", zap.Error(err))
 		return nil, err
 	}
-
-	nc, err := utils.MakeNATSConn(cfg.NatsURL)
+	nc, err := common.MakeNATSConn(cfg.NatsURL)
 	if err != nil {
+		logger.Error("MakeAPIServer", zap.Error(err))
 		return nil, err
 	}
-	rdb, err := utils.MakeRedisClient(cfg.RedisURL, cfg.RedisClusterMode)
+	rdb, err := common.MakeRedisClient(cfg.RedisURL, cfg.RedisClusterMode)
 	if err != nil {
+		logger.Error("MakeAPIServer", zap.Error(err))
 		return nil, err
 	}
 
 	// Auth
-	gp, err := auth.NewGoogleProvider(os.Getenv("TIINYPLANET_OAUTH_GOOGLE_SECRET_FILE"))
+	gp, err := auth.NewGoogleProvider(
+		os.Getenv("TIINYPLANET_OAUTH_GOOGLE_SECRET_FILE"),
+	)
 	if err != nil {
 		return nil, err
 	}
-	authStore := auth.NewStore(db)
-	authSvc := auth.NewService(gp, authStore)
+	authStore := auth.NewStore(db, logger)
+	authSvc := auth.NewService(gp, authStore, logger)
+	authSvc = auth.ServiceWithRBACMiddleware(authSvc, logger)
 
 	// Flights
 	skyscanner := flights.NewSkyscannerAPI(
@@ -46,31 +52,36 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		os.Getenv("TIINYPLANET_SKYSCANNER_APIHOST"),
 	)
 	flightsSvc := flights.NewService(skyscanner)
+	flightsSvc = flights.ServiceWithRBACMiddleware(flightsSvc, logger)
 
 	// Images
 	unsplash := images.NewWebImageAPI(
 		os.Getenv("TIINYPLANET_UNSPLASH_ACCESSKEY"),
+		logger,
 	)
 	imageSvc := images.NewService(unsplash)
+	imageSvc = images.ServiceWithRBACMiddleware(imageSvc, logger)
 
 	// Maps
 	mapsSvc, err := maps.NewService(
 		os.Getenv("TIINYPLANET_GOOGLE_MAPS_APIKEY"),
+		logger,
 	)
 	if err != nil {
+		logger.Error("MakeAPIServer", zap.Error(err))
 		return nil, err
 	}
 
 	// Trips
-	tripStore := trips.NewStore(db)
-	tripSvc := trips.NewService(tripStore, imageSvc)
-	tripSvc = trips.ServiceWithLoggingMiddleware(tripSvc, logger)
+	tripStore := trips.NewStore(db, logger)
+	tripSvc := trips.NewService(tripStore, authSvc, imageSvc)
+	tripSvc = trips.ServiceWithRBACMiddleware(tripSvc, logger)
 
 	r := mux.NewRouter()
-	securityMW := utils.NewSecureHeadersMiddleware(cfg.CORSOrigin)
-	wrwMW := utils.NewWrappedReponseWriterMiddleware()
-	loggingMW := utils.NewMuxLoggingMiddleware(logger)
-	metricsMW := utils.NewMetricsMiddleware()
+	securityMW := api.NewSecureHeadersMiddleware(cfg.CORSOrigin)
+	wrwMW := api.NewWrappedReponseWriterMiddleware()
+	loggingMW := api.NewMuxLoggingMiddleware(logger)
+	metricsMW := api.NewMetricsMiddleware()
 
 	// TripSync
 	sesnStore := tripssync.NewSessionStore(rdb)
@@ -89,7 +100,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.Use(metricsMW.Handler)
 
 	r.Handle("/metrics", promhttp.Handler())
-	r.HandleFunc("/healthz", utils.HealthzHandler)
+	r.HandleFunc("/healthz", api.HealthzHandler)
 	r.HandleFunc("/ws", proxyServer.HandleFunc)
 
 	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvc))

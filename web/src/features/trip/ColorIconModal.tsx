@@ -123,7 +123,6 @@ const ColorIconModal: FC<ColorIconModalProps> = (props: ColorIconModalProps) => 
         >
           Submit
         </button>
-
       </div>
     </Modal>
   );

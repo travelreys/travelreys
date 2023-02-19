@@ -49,6 +49,7 @@ import {
   TripBudgetCss,
   TripLogisticsCss
 } from '../../assets/styles/global';
+import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
 
 
 
@@ -270,7 +271,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
 
   const addNewBudgetItem = (amount: Number|undefined, title: string, desc: string) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.makeAddOp("/budget/items/-", {
+      makeAddOp("/budget/items/-", {
         title: title,
         desc: desc,
         price: { amount, currency: ""} as Common.Price,
@@ -281,14 +282,14 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   }
 
   const deleteBudgetItem = (idx: number) => {
-    props.tripStateOnUpdate([TripsSyncAPI.makeRemoveOp(`/budget/items/${idx}`, "")]);
+    props.tripStateOnUpdate([makeRemoveOp(`/budget/items/${idx}`, "")]);
   }
 
   const updateBudgetItem = (amount: Number|undefined, title: string, desc: string) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.newReplaceOp(`/budget/items/${selectedBudgetItemIdx}/title`, title),
-      TripsSyncAPI.newReplaceOp(`/budget/items/${selectedBudgetItemIdx}/desc`, desc),
-      TripsSyncAPI.newReplaceOp(`/budget/items/${selectedBudgetItemIdx}/${PriceAmountJSONPath}`, amount),
+      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/title`, title),
+      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/desc`, desc),
+      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/${PriceAmountJSONPath}`, amount),
     ]);
   }
 
@@ -300,7 +301,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
 
   const updateBudgetAmount = (amount: number) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.newReplaceOp(`/budget/${BudgetAmountJSONPath}`, amount),
+      makeReplaceOp(`/budget/${BudgetAmountJSONPath}`, amount),
     ]);
   }
 

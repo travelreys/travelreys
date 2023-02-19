@@ -1,4 +1,7 @@
 {
+  "errors": {
+    "unexpectedError": "Konfigurasi"
+  },
   "navbar": {
     "loginModal": {
       "title": "Masuk ke tiinyplanet",
@@ -17,7 +20,11 @@
       "keluar": "keluar"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "Rencanakan petualangan Anda berikutnya!",
+      "createBtn": "Buat perjalanan baru"
+    },
     "upcomingTrips": "Perjalanan Mendatang"
   }
 }

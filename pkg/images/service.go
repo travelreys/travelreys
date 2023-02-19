@@ -8,7 +8,7 @@ import (
 // Service
 
 var (
-	ErrEmptyQuery = errors.New("empty-image-search-query")
+	ErrEmptySearchQuery = errors.New("images.service.search.emptyquery")
 )
 
 type Service interface {
@@ -25,7 +25,7 @@ func NewService(webAPI WebImageAPI) Service {
 
 func (svc *service) Search(ctx context.Context, query string) (ImageMetadataList, error) {
 	if query == "" {
-		return ImageMetadataList{}, ErrEmptyQuery
+		return ImageMetadataList{}, ErrEmptySearchQuery
 	}
 	return svc.api.Search(ctx, query)
 }

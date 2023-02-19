@@ -274,7 +274,15 @@ const FlightCard: FC<FlightCardProps> = (props: FlightCardProps) => {
         {props.bookingMetadata.price.amount}
       </span>
     );
-    return (<a href={props.bookingMetadata.bookingURL} target="_blank">{pill}</a>);
+    return (
+      <a
+        href={props.bookingMetadata.bookingURL}
+        target="_blank"
+        referrerPolicy="no-referrer"
+      >
+        {pill}
+      </a>
+    );
   }
 
   return (

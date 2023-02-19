@@ -35,6 +35,9 @@ type User struct {
 	Labels map[string]string `json:"labels"`
 }
 
+type UsersList []User
+type UsersMap map[string]User
+
 type GoogleUser struct {
 	ID            string `json:"id"`
 	Email         string `json:"email"`

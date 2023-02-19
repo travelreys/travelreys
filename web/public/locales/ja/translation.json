@@ -1,4 +1,7 @@
 {
+  "errors": {
+    "unexpectedError": "配置"
+  },
   "navbar": {
     "loginModal": {
       "title": "tiinyplanet にログイン",
@@ -17,7 +20,11 @@
       "logout": "ログアウト"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "次の冒険を計画しましょう!",
+      "createBtn": "新しい旅行を作成"
+    },
     "upcomingTrips": "今後の旅行"
   }
 }

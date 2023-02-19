@@ -13,8 +13,15 @@ import CameraIconFill from '../components/icons/CameraIconFill';
 import MapPinIconFill from '../components/icons/MapPinIconFill';
 import HotelIcon from '../components/icons/HotelIcon';
 import FlightIconFill from '../components/icons/FlightIconFill';
+import { Auth } from "./auth";
 
 export namespace Trips {
+  export interface Member {
+    id: string
+    role: string
+    labels: Map<string, string>
+  }
+
   interface BaseTransit {
     id: string
     type: string
@@ -123,8 +130,13 @@ export const ContentIconOpts = {
 } as {[key: string]: any}
 
 
+// Member Helpers
+export const userFromMemberID = (member: Trips.Member, userMap: any): Auth.User | undefined => {
+  const memberID = member.id;
+  return _get(userMap, memberID);
+}
 
-// Flights Helper
+// Flights Helpers
 
 export const flightItineraryType = (flight: Trips.Flight) => {
   return flight.itineraryType;

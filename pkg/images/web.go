@@ -3,15 +3,23 @@ package images
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+
+	"go.uber.org/zap"
 )
 
 const (
 	// https://unsplash.com/documentation
-	UNSPLASH_URL = "https://api.unsplash.com"
+	webapiLoggerName = "images.webapi"
+	unsplashUrl      = "https://api.unsplash.com"
+)
+
+var (
+	ErrProviderUnsplashError = errors.New("images.webapi.unsplash.error")
 )
 
 type ImageSearchResponse struct {
@@ -26,14 +34,15 @@ type WebImageAPI interface {
 
 type unsplash struct {
 	accesskey string
+	logger    *zap.Logger
 }
 
-func NewWebImageAPI(accesskey string) WebImageAPI {
-	return unsplash{accesskey}
+func NewWebImageAPI(accesskey string, logger *zap.Logger) WebImageAPI {
+	return unsplash{accesskey, logger.Named(webapiLoggerName)}
 }
 
-func (api unsplash) fullUrlPath(path string) string {
-	return fmt.Sprintf("%s/%s", UNSPLASH_URL, path)
+func (api unsplash) fullUrl(path string) string {
+	return fmt.Sprintf("%s/%s", unsplashUrl, path)
 }
 
 func (api unsplash) Get(getURL *url.URL) ([]byte, error) {
@@ -54,10 +63,10 @@ func (api unsplash) Get(getURL *url.URL) ([]byte, error) {
 
 func (api unsplash) Search(ctx context.Context, query string) (ImageMetadataList, error) {
 	if query == "" {
-		return ImageMetadataList{}, ErrEmptyQuery
+		return ImageMetadataList{}, ErrEmptySearchQuery
 	}
 
-	queryURL, _ := url.Parse(api.fullUrlPath("/search/photos"))
+	queryURL, _ := url.Parse(api.fullUrl("/search/photos"))
 	queryParams := queryURL.Query()
 	queryParams.Set("query", query)
 	queryParams.Set("per_page", "30")
@@ -67,13 +76,23 @@ func (api unsplash) Search(ctx context.Context, query string) (ImageMetadataList
 
 	body, err := api.Get(queryURL)
 	if err != nil {
-		return ImageMetadataList{}, err
+		api.logger.Error(
+			"Search",
+			zap.String("query", query),
+			zap.Error(err),
+		)
+		return ImageMetadataList{}, ErrProviderUnsplashError
 	}
 
 	var res ImageSearchResponse
 	err = json.Unmarshal(body, &res)
 	if err != nil {
-		return ImageMetadataList{}, err
+		api.logger.Error(
+			"Search",
+			zap.String("query", query),
+			zap.Error(err),
+		)
+		return ImageMetadataList{}, ErrProviderUnsplashError
 	}
 
 	return res.Results, nil

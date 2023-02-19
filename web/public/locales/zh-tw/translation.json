@@ -1,4 +1,10 @@
 {
+  "common": {
+    "settings": "設置"
+  },
+  "errors": {
+    "unexpectedError": "意外錯誤"
+  },
   "navbar": {
     "loginModal": {
       "title": "登錄tiinyplanet",
@@ -17,7 +23,11 @@
       "logout": "註銷"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "計劃你的下一次冒險！",
+      "createBtn": "創建新行程"
+    },
     "upcomingTrips": "即將到來的旅行"
   }
 }

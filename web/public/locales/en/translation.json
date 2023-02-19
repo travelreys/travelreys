@@ -1,4 +1,9 @@
 {
+  "common": {
+    "close": "Close",
+    "settings": "Settings",
+    "submit": "Submit"
+  },
   "errors": {
     "unexpectedError": "Unexpected Error"
   },
@@ -26,5 +31,15 @@
       "createBtn": "Create new trip"
     },
     "upcomingTrips": "Upcoming Trips"
+  },
+  "tripPage": {
+    "settings": {
+      "title": "Trip Settings",
+      "transportationTitle": "Transportation",
+      "transportationModePreferenceLabel": "Transportation mode preference",
+      "transportationModePreferenceWalk+Drive": "Walk short distances + Drive",
+      "transportationModePreferenceWalk+Transit": "Walk short distances + Public Transport",
+      "membersTitle": "Members"
+    }
   }
 }

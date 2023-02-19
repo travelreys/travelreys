@@ -70,7 +70,7 @@ func (crd *Coordinator) Init() error {
 	crd.logger.Info("new coordinator", zap.String("planID", crd.planID))
 
 	// 1. Initialise plan for coordinator
-	plan, err := crd.tripStore.ReadTripPlan(context.Background(), crd.planID)
+	plan, err := crd.tripStore.ReadTrip(context.Background(), crd.planID)
 	if err != nil {
 		return err
 	}

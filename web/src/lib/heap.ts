@@ -1,10 +1,10 @@
 import Heap from 'heap-js';
-import { SyncMessage } from '../lib/tripsSync';
+import { TripSync } from './tripsSync';
 
-const customPriorityComparator = (a: SyncMessage, b: SyncMessage) => {
-  return a.counter - b.counter;
+const customPriorityComparator = (a: TripSync.Message, b: TripSync.Message) => {
+  return a.counter! - b.counter!;
 }
 
-export const NewSyncMessageHeap = (): Heap<SyncMessage> => {
+export const NewSyncMessageHeap = (): Heap<TripSync.Message> => {
   return new Heap(customPriorityComparator);
 }

@@ -1,4 +1,10 @@
 {
+  "common": {
+    "settings": "cài đặt"
+  },
+  "errors": {
+    "unexpectedError": "Lỗi ngoài dự kiến"
+  },
   "navbar": {
     "loginModal": {
       "title": "Đăng nhập vào tiinyplanet",
@@ -17,7 +23,11 @@
       "logout": "Đăng xuất"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "Lập kế hoạch cho cuộc phiêu lưu tiếp theo của bạn!",
+      "createBtn": "Tạo chuyến đi mới"
+    },
     "upcomingTrips": "Chuyến đi sắp tới"
   }
 }

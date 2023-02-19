@@ -13,6 +13,7 @@ import TripsSyncAPI from '../../apis/tripsSync';
 import { TripNotesCss } from '../../assets/styles/global';
 import NotesEditor from '../../components/common/NotesEditor';
 import ToggleChevron from '../../components/common/ToggleChevron';
+import { makeReplaceOp } from '../../lib/tripsSync';
 
 interface NotesSectionProps {
   trip: any
@@ -25,7 +26,7 @@ const NotesSection: FC<NotesSectionProps> = (props: NotesSectionProps) => {
 
   // Event Handlers
   const notesOnChange = (content: string) => {
-    props.tripStateOnUpdate([TripsSyncAPI.newReplaceOp(`/notes`, content)]);
+    props.tripStateOnUpdate([makeReplaceOp(`/notes`, content)]);
   }
 
   // Renderers

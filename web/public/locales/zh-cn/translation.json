@@ -1,4 +1,10 @@
 {
+  "common": {
+    "settings": "设置"
+  },
+  "errors": {
+    "unexpectedError": "意外错误"
+  },
   "navbar": {
     "loginModal": {
       "title": "登陆 tiinyplanet",
@@ -17,7 +23,11 @@
       "logout": "推出"
     }
   },
-  "title": {
-    "upcomingTrips": "旅程"
+  "home": {
+    "tripJumbo": {
+      "title": "计划你的下一次冒险！",
+      "createBtn": "创建新行程"
+    },
+    "upcomingTrips": "即将到来的旅行"
   }
 }

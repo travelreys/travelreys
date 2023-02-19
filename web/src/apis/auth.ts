@@ -15,6 +15,11 @@ export interface ReadUserResponse {
   error?: string
 }
 
+export interface SearchUsersResponse {
+  users?: Array<Auth.User>
+  error?: string
+}
+
 export interface UpdateUserFilter {
   labels: {[key: string]: string}
 }
@@ -27,10 +32,13 @@ export interface UpdateUserResponse {
   error?: string
 }
 
+const authLoginPathPrefix = "/api/v1/auth/login";
+const authUserPathPrefix = "/api/v1/auth/users";
+
 const AuthAPI = {
 
   login: async (authCode: string): Promise<LoginResponse> => {
-    const url = `${BASE_URL}/api/v1/auth/login`;
+    const url = `${BASE_URL}/${authLoginPathPrefix}`;
     return axios.post(url, { code: authCode })
       .then((res) => {
         const token = _get(res, "data.jwtToken", "");
@@ -43,7 +51,7 @@ const AuthAPI = {
 
   readUser: (usrID: string): Promise<ReadUserResponse> => {
     const ax = makeCommonAxios();
-    return ax.get(`/api/v1/auth/user/${usrID}`)
+    return ax.get(`${authUserPathPrefix}/${usrID}`)
       .then((res) => {
         const user = _get(res, "data.user", {}) as Auth.User;
         return {user: user}
@@ -53,9 +61,21 @@ const AuthAPI = {
       })
   },
 
+  searchUsers: (email: string): Promise<SearchUsersResponse> => {
+    const ax = makeCommonAxios();
+    return ax.get(`${authUserPathPrefix}`, {params: {email}})
+      .then((res) => {
+        const users = _get(res, "data.users", []);
+        return {users}
+      })
+      .catch((err) => {
+        return {error: err.message};
+      })
+  },
+
   updateUser: (usrID: string, ff: UpdateUserFilter): Promise<UpdateUserResponse> => {
     const ax = makeCommonAxios();
-    return ax.put(`/api/v1/auth/user/${usrID}`, {ff})
+    return ax.put(`${authUserPathPrefix}/${usrID}`, {ff})
       .then((res) => {
         return {error: undefined}
       })

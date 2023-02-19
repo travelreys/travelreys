@@ -28,6 +28,10 @@ type ClientInfo struct {
 	UserEmail string
 }
 
+func (ci ClientInfo) HasEmptyID() bool {
+	return ci.UserID == ""
+}
+
 func makeClientInfo(r *http.Request) ClientInfo {
 	ci := ClientInfo{}
 
@@ -57,9 +61,17 @@ func makeClientInfo(r *http.Request) ClientInfo {
 	return ci
 }
 
-func MakeContextFromHTTPRequest(ctx context.Context, r *http.Request) context.Context {
+func AddClientInfoToCtx(ctx context.Context, r *http.Request) context.Context {
 	ci := makeClientInfo(r)
 	return context.WithValue(ctx, ContextKeyClientInfo, ci)
+}
+
+func ReadClientInfoFromCtx(ctx context.Context) (ClientInfo, error) {
+	ci, ok := ctx.Value(ContextKeyClientInfo).(ClientInfo)
+	if !ok {
+		return ci, ErrMissingJWTClaims
+	}
+	return ci, nil
 }
 
 // Transport Errors

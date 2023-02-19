@@ -17,7 +17,7 @@ import (
 type Proxy interface {
 	JoinSession(ctx context.Context, planID string, msg SyncMessage) (SyncSession, error)
 	LeaveSession(ctx context.Context, planID string, msg SyncMessage) error
-	ReadTripPlan(ctx context.Context, planID string, msg SyncMessage) (trips.TripPlan, error)
+	ReadTrip(ctx context.Context, planID string, msg SyncMessage) (trips.TripPlan, error)
 	UpdateTripPlan(ctx context.Context, planID string, msg SyncMessage) error
 	SubscribeTOBUpdates(ctx context.Context, planID string) (<-chan SyncMessage, chan<- bool, error)
 }
@@ -44,7 +44,7 @@ func (p *proxy) JoinSession(ctx context.Context, planID string, msg SyncMessage)
 	conn := SyncConnection{
 		PlanID:       planID,
 		ConnectionID: msg.ID,
-		Member:       msg.SyncDataJoinSession.TripMember,
+		Member:       msg.SyncDataJoinSession.Member,
 	}
 	err := p.sesnStore.AddConnToSession(ctx, conn)
 	if err != nil {
@@ -67,8 +67,8 @@ func (p *proxy) LeaveSession(ctx context.Context, planID string, msg SyncMessage
 
 // Plans
 
-func (p *proxy) ReadTripPlan(ctx context.Context, planID string, msg SyncMessage) (trips.TripPlan, error) {
-	return p.tripStore.ReadTripPlan(ctx, planID)
+func (p *proxy) ReadTrip(ctx context.Context, planID string, msg SyncMessage) (trips.TripPlan, error) {
+	return p.tripStore.ReadTrip(ctx, planID)
 }
 
 // Sync Messages

@@ -12,9 +12,9 @@ import (
 )
 
 func errToHttpCode() func(err error) int {
-	notFoundErrors := []error{}
-	appErrors := []error{}
-	authErrors := []error{}
+	notFoundErrors := []error{ErrUserNotFound}
+	appErrors := []error{ErrProviderNotSupported, ErrProviderGoogleError}
+	authErrors := []error{ErrRBAC, ErrRBACMissing}
 
 	return func(err error) int {
 		if common.ErrorContains(notFoundErrors, err) {
@@ -43,17 +43,19 @@ func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
-		kithttp.ServerBefore(common.MakeContextFromHTTPRequest),
+		kithttp.ServerBefore(common.AddClientInfoToCtx),
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode())),
 	}
 
 	loginHandler := kithttp.NewServer(NewLoginEndpoint(svc), decodeLoginRequest, encodeResponse, opts...)
-	readUserHandler := kithttp.NewServer(NewReadUserEndpoint(svc), decodeReadUserRequest, encodeResponse)
-	updateUserHandler := kithttp.NewServer(NewUpdateUserEndpoint(svc), decodeUpdateUserRequest, encodeResponse)
+	readUserHandler := kithttp.NewServer(NewReadUserEndpoint(svc), decodeReadUserRequest, encodeResponse, opts...)
+	listUsersHandler := kithttp.NewServer(NewListUsersEndpoint(svc), decodeListUsersRequest, encodeResponse, opts...)
+	updateUserHandler := kithttp.NewServer(NewUpdateUserEndpoint(svc), decodeUpdateUserRequest, encodeResponse, opts...)
 
 	r.Handle("/api/v1/auth/login", loginHandler).Methods(http.MethodPost)
-	r.Handle("/api/v1/auth/user/{id}", readUserHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/auth/user/{id}", updateUserHandler).Methods(http.MethodPut)
+	r.Handle("/api/v1/auth/users", listUsersHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/auth/users/{id}", readUserHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/auth/users/{id}", updateUserHandler).Methods(http.MethodPut)
 
 	return r
 }
@@ -83,6 +85,15 @@ func decodeUpdateUserRequest(_ context.Context, r *http.Request) (interface{}, e
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
+	}
+	return req, nil
+}
+
+func decodeListUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	ff := ListUsersFilter{}
+	req := ListUsersRequest{ff}
+	if r.URL.Query().Has("emai") {
+		ff.Email = common.StringPtr(r.URL.Query().Get("emai"))
 	}
 	return req, nil
 }

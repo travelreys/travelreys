@@ -58,6 +58,7 @@ import {
 } from '../../assets/styles/global';
 import { parseISO, printFmt } from '../../lib/dates';
 import { MapElementID, newEventMarkerClick } from '../maps/common';
+import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
 
 
 /////////////
@@ -529,12 +530,12 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       contents: new Array<Trips.Content>(),
       labels: new Map<string, string>(),
     }
-    props.tripStateOnUpdate([TripsSyncAPI.makeAddOp(`/contents/${list.id}`, list)]);
+    props.tripStateOnUpdate([makeAddOp(`/contents/${list.id}`, list)]);
   }
 
   const contentListUpdateName = (name: string, contentListID: string) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/name`, name)
+      makeReplaceOp(`/contents/${contentListID}/name`, name)
     ]);
   }
 
@@ -548,13 +549,13 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       comments: [],
     }
     props.tripStateOnUpdate([
-      TripsSyncAPI.makeAddOp(`/contents/${contentListID}/contents/-`, content),
+      makeAddOp(`/contents/${contentListID}/contents/-`, content),
     ])
   }
 
   const deleteContentList = (contentListID: string) => {
     const ops = [
-      TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}`, "")
+      makeRemoveOp(`/contents/${contentListID}`, "")
     ]
     _get(props.trip, "itinerary", [])
       .forEach((itinList: Trips.ItineraryList, itinListIdx: number) => {
@@ -562,7 +563,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
           .filter((itinCtnt: Trips.ItineraryContent) => itinCtnt.tripContentListId === contentListID)
           .forEach((_: any, itinCtntIdx: number) => {
             ops.unshift(
-              TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/contents/${itinCtntIdx}`, "")
+              makeRemoveOp(`/itinerary/${itinListIdx}/contents/${itinCtntIdx}`, "")
             );
           });
       });
@@ -576,24 +577,24 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
 
     const ops = [];
     if (_isEmpty(color) && !_isEmpty(colorLabel)) {
-      ops.push(TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, ""));
+      ops.push(makeRemoveOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, ""));
     }
     if (!_isEmpty(color)) {
       if (_isEmpty(colorLabel)) {
-        ops.push(TripsSyncAPI.makeAddOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
+        ops.push(makeAddOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
       } else {
-        ops.push(TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
+        ops.push(makeReplaceOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
       }
     }
 
     if (_isEmpty(icon) && !_isEmpty(iconLabel)) {
-      ops.push(TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, ""));
+      ops.push(makeRemoveOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, ""));
     }
     if (!_isEmpty(icon)) {
       if (_isEmpty(colorLabel)) {
-        ops.push(TripsSyncAPI.makeAddOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
+        ops.push(makeAddOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
       } else {
-        ops.push(TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
+        ops.push(makeReplaceOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
       }
     }
     props.tripStateOnUpdate(ops);
@@ -602,7 +603,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   // Event Handlers -- Content
   const onUpdateContentName = (title: string, idx: number, contentListID: string) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.newReplaceOp(
+      makeReplaceOp(
         `/contents/${contentListID}/contents/${idx}/title`,
         title
       ),
@@ -610,18 +611,18 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   }
 
   const onDeleteContent = (idx: number, contentListID: string) => {
-    props.tripStateOnUpdate([TripsSyncAPI.makeRemoveOp(`/contents/${contentListID}/contents/${idx}`, "")]);
+    props.tripStateOnUpdate([makeRemoveOp(`/contents/${contentListID}/contents/${idx}`, "")]);
   }
 
   const onUpdateContentPlace = (idx: number, place: any, contentListID: string) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/contents/${idx}/place`, place),
+      makeReplaceOp(`/contents/${contentListID}/contents/${idx}/place`, place),
     ]);
   }
 
   const onUpdateContentNotes = (idx: number, notes: string, contentListID: string) => {
     props.tripStateOnUpdate([
-      TripsSyncAPI.newReplaceOp(`/contents/${contentListID}/contents/${idx}/notes`, notes)
+      makeReplaceOp(`/contents/${contentListID}/contents/${idx}/notes`, notes)
     ]);
   }
 
@@ -646,21 +647,21 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
 
       // 2. Remove ItineraryContent from ItineraryList
       let itinCtnIdx = _findIndex(itinListCtnt, (ct) => ct.tripContentId === content.id);
-      ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/contents/${itinCtnIdx}`, "",));
+      ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/contents/${itinCtnIdx}`, "",));
 
       // 3. Remove ItineraryContentRoute from ItineraryList
-      // ops.push(TripsSyncAPI.newReplaceOp(`/itinerary/${itinListIdx}/routes`, []));
+      // ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/routes`, []));
       // if (itinCtnIdx === 0) {
       //   const routeIdx = itinCtnIdx + 1;
       //   if (routeIdx < itinList.routes.length) {
-      //     ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
+      //     ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
       //   }
       // } else if (itinCtnIdx === itinListCtnt.length - 1) {
       //   const routeIdx = itinCtnIdx - 1;
-      //   ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
+      //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
       // } else {
-      //   ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinCtnIdx}`, ""));
-      //   ops.push(TripsSyncAPI.makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinCtnIdx - 1}`, ""));
+      //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinCtnIdx}`, ""));
+      //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinCtnIdx - 1}`, ""));
       // }
     } else {
       // 1. Add to content label if its a new date
@@ -674,7 +675,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
         price: {} as any,
         labels: new Map<string, string>(),
       };
-      ops.push(TripsSyncAPI.makeAddOp(`/itinerary/${itinListIdx}/contents/-`, itinCtn))
+      ops.push(makeAddOp(`/itinerary/${itinListIdx}/contents/-`, itinCtn))
 
 
       // 3. Add ItineraryContentRoute to ItineraryList
@@ -691,18 +692,18 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
         if (lastCtntPlaceID && ctntPlaceID) {
           const resp = await MapsAPI.directions(lastCtntPlaceID, ctntPlaceID, ModeDriving);
           if (resp.data.routeList.length > 0) {
-            ops.push(TripsSyncAPI.makeAddOp(`/itinerary/${itinListIdx}/routes/-`, resp.data.routeList[0]));
+            ops.push(makeAddOp(`/itinerary/${itinListIdx}/routes/-`, resp.data.routeList[0]));
           }
         }
       }
     }
 
     if (currentItinDts.length !== 0) {
-      ops.unshift(TripsSyncAPI.newReplaceOp(
+      ops.unshift(makeReplaceOp(
         `/contents/${contentListID}/contents/${idx}/labels/${LabelContentItineraryDates}`,
         newItinDts.join(LabelContentItineraryDatesDelimeter)));
     } else {
-      ops.unshift(TripsSyncAPI.makeAddOp(
+      ops.unshift(makeAddOp(
         `/contents/${contentListID}/contents/${idx}/labels/${LabelContentItineraryDates}`,
         newItinDts.join(LabelContentItineraryDatesDelimeter)));
     }

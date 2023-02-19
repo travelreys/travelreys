@@ -10,7 +10,7 @@ import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 )
 
-// Trip Plan
+// Trip
 
 type TripPlan struct {
 	ID   string `json:"id" bson:"id"`
@@ -21,8 +21,8 @@ type TripPlan struct {
 	EndDate    time.Time            `json:"endDate" bson:"endDate"`
 
 	// Members
-	Creator TripMember            `json:"creator" bson:"creator"`
-	Members map[string]TripMember `json:"members" bson:"members"`
+	Creator Member            `json:"creator" bson:"creator"`
+	Members map[string]Member `json:"members" bson:"members"`
 
 	// Logistics
 	Notes    string                 `json:"notes" bson:"notes"`
@@ -47,7 +47,9 @@ type TripPlan struct {
 
 type TripPlansList []TripPlan
 
-func NewTripPlan(creator TripMember, name string) TripPlan {
+func NewTripPlan(creator Member, name string) TripPlan {
+	creator.Role = MemberRoleCreator
+
 	return TripPlan{
 		ID:         uuid.New().String(),
 		Name:       name,
@@ -56,7 +58,7 @@ func NewTripPlan(creator TripMember, name string) TripPlan {
 		EndDate:    time.Time{},
 
 		Creator: creator,
-		Members: map[string]TripMember{},
+		Members: map[string]Member{},
 
 		Flights:  map[string]Flight{},
 		Transits: map[string]BaseTransit{},
@@ -75,7 +77,7 @@ func NewTripPlan(creator TripMember, name string) TripPlan {
 	}
 }
 
-func NewTripPlanWithDates(creator TripMember, name string, start, end time.Time) TripPlan {
+func NewTripPlanWithDates(creator Member, name string, start, end time.Time) TripPlan {
 	plan := NewTripPlan(creator, name)
 	plan.StartDate = start
 	plan.EndDate = end
@@ -85,16 +87,27 @@ func NewTripPlanWithDates(creator TripMember, name string, start, end time.Time)
 // Members
 
 const (
-	TripMemberPermCollaborator = "collaborator"
-	TripMemberPermParticipant  = "participant"
+	MemberRoleCreator      = "creator"
+	MemberRoleCollaborator = "collaborator"
+	MemberRoleParticipant  = "participant"
 )
 
-type TripMember struct {
-	MemberID    string `json:"memberID" bson:"memberID"`
-	MemberEmail string `json:"memberEmail" bson:"memberEmail"`
+type Member struct {
+	ID   string `json:"id" bson:"id"`
+	Role string `json:"role" bson:"role"`
+
+	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
-type TripMembersList []TripMember
+type MembersList []Member
+
+func NewMember(id, role string) Member {
+	return Member{
+		ID:     id,
+		Role:   role,
+		Labels: map[string]string{},
+	}
+}
 
 // Transit
 
@@ -175,7 +188,7 @@ type TripContentComment struct {
 	ID      string `json:"id" bson:"id"`
 	Comment string `json:"comment" bson:"comment"`
 
-	Member TripMember `json:"member" bson:"member"`
+	Member Member `json:"member" bson:"member"`
 
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`

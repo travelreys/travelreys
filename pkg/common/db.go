@@ -43,7 +43,7 @@ func MakeRedisClient(uri string, isClusterMode bool) (redis.UniversalClient, err
 // Mongo
 
 var (
-	MongoConnectTimeout = 30 * time.Second
+	MongoConnectTimeout = 10 * time.Second
 )
 
 func MakeMongoDatabase(uri, dbName string) (*mongo.Database, error) {

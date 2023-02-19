@@ -1,23 +1,19 @@
-import React, { ChangeEvent, FC, useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
+import { useTranslation } from 'react-i18next';
 import {
   CalendarDaysIcon,
-  EllipsisHorizontalCircleIcon,
   MagnifyingGlassIcon,
   PencilIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
-import { Cog6ToothIcon } from '@heroicons/react/24/solid';
 
-
-import Dropdown from '../../components/common/Dropdown';
 import Modal from '../../components/common/Modal';
 import DatesPicker from '../../components/common/DatesPicker';
 import Spinner from '../../components/common/Spinner';
 
-import TripsSyncAPI from '../../apis/tripsSync';
 import ImagesAPI from '../../apis/images';
 import {
   nullDate,
@@ -25,11 +21,9 @@ import {
   printToDateFromRange,
   parseTripDate
 } from '../../lib/dates';
-import {
-  DefaultTransportationPreference,
-  LabelTransportationPreference
-} from '../../lib/trips';
-import { CommonCss, TripMenuJumboCss } from '../../assets/styles/global';
+import { makeReplaceOp } from '../../lib/tripsSync';
+import { TripMenuJumboCss } from '../../assets/styles/global';
+
 
 
 /////////////////////
@@ -140,76 +134,6 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
 }
 
 
-///////////////////
-// SettingsModal //
-///////////////////
-
-interface SettingsModalProps {
-  trip: any
-  isOpen: boolean
-  onClose: () => void
-  onTransportationPreferenceChange: (pref: string) => void
-}
-
-const SettingsModal: FC<SettingsModalProps> = (props: SettingsModalProps) => {
-
-  const [transportationPreference, setTransportationPreference] = useState(DefaultTransportationPreference);
-
-  useEffect(() => {
-    setTransportationPreference(_get(
-      props.trip, `labels.${LabelTransportationPreference}`, DefaultTransportationPreference
-    ))
-  }, [props.trip])
-
-  // Event Handlers
-  const transportationPreferenceOnChange = (e: any) => {
-    setTransportationPreference(e.target.value)
-    props.onTransportationPreferenceChange(e)
-  }
-
-  //  Renderers
-
-  const renderTransportationMode = () => {
-    return (
-      <div className='mb-2'>
-        <label
-          htmlFor="transportation"
-          className="block mb-2 text-sm font-bold text-gray-900"
-        >
-          Transportation mode preference
-        </label>
-        <select
-          id="transportation"
-          value={transportationPreference}
-          onChange={transportationPreferenceOnChange}
-          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-        >
-          <option value="walk+drive">Walk short distances + Drive</option>
-          <option value="walk+transit">Walk short distances + Public Transport</option>
-        </select>
-      </div>
-    );
-  }
-
-  return (
-    <Modal isOpen={props.isOpen}>
-      <div className={TripMenuJumboCss.SearchImageCard}>
-        <h2 className='text-xl font-bold mb-2'>Trip Settings</h2>
-        {renderTransportationMode()}
-        <button
-          type="button"
-          className='bg-indigo-500 mt-4 px-8 py-2 font-bold text-white rounded-full'
-          onClick={props.onClose}
-        >
-          Close
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-
-
 ///////////////
 // MenuJumbo //
 ///////////////
@@ -220,6 +144,8 @@ interface MenuJumboProps {
 
 const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
 
+  const {t} = useTranslation();
+
   // State
   const [tripName, setTripName] = useState<string>("");
   const [startDt, setStartDt] = useState<Date|undefined>();
@@ -228,7 +154,6 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
   // UI State
   const [isCoverImageModalOpen, setIsCoverImageModalOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // When props.trip changes, need to update the ui state
   useEffect(() => {
@@ -237,15 +162,14 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
     setEndDt(parseTripDate(props.trip.endDate));
   }, [props.trip])
 
-
   // Event Handlers - Trip Name
   const tripNameOnBlur = () => {
-    props.tripStateOnUpdate([TripsSyncAPI.newReplaceOp("/name", tripName)])
+    props.tripStateOnUpdate([makeReplaceOp("/name", tripName)])
   }
 
   // Event Handlers - Cover Image
   const coverImageOnSelect = (image: any) => {
-    props.tripStateOnUpdate([TripsSyncAPI.newReplaceOp("/coverImage", image)]);
+    props.tripStateOnUpdate([makeReplaceOp("/coverImage", image)]);
   }
 
   // Event Handlers - Trip Dates
@@ -260,21 +184,12 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
       const ops = [];
       const from = range.from || nullDate;
       const to = range.to || nullDate;
-      ops.push(TripsSyncAPI.newReplaceOp("/startDate", from));
-      ops.push(TripsSyncAPI.newReplaceOp("/endDate", to));
+      ops.push(makeReplaceOp("/startDate", from));
+      ops.push(makeReplaceOp("/endDate", to));
       props.tripStateOnUpdate(ops);
       setIsCalendarOpen(false);
       return;
     }
-  }
-
-  // Event Handlers - Trip Settings
-  const transportationPreferenceOnChange = (e: any) => {
-    const op = _get(props.trip, `/labels.${LabelTransportationPreference}`)
-      ? TripsSyncAPI.newReplaceOp: TripsSyncAPI.makeAddOp;
-    props.tripStateOnUpdate([
-      op(`/labels/${LabelTransportationPreference}`, e.target.value)
-    ]);
   }
 
   // Renderers
@@ -298,7 +213,8 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
   }
 
   const renderDatesButton = () => {
-    const range = {from: startDt, to: endDt}
+    const range = {from: startDt, to: endDt};
+    const dateFmt = "MMM d, yy"
     return (
       <div onBlur={tripDatesOnBlur}>
         <button
@@ -309,9 +225,9 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
           <CalendarDaysIcon className={TripMenuJumboCss.TripDatesBtnIcon} />
           {startDt ?
             <span>
-              {printFromDateFromRange(range, "MMM d, yy ")}
+              {printFromDateFromRange(range, dateFmt)}
               &nbsp;-&nbsp;
-              {printToDateFromRange(range, "MMM d, yy ")}
+              {printToDateFromRange(range, dateFmt)}
             </span> : null}
         </button>
         <DatesPicker
@@ -323,29 +239,11 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
     );
   }
 
-  const renderSettingsDropdown = () => {
-    const opts = [
-      (<button
-        type='button'
-        className={TripMenuJumboCss.SettingsBtn}
-        onClick={() => setIsSettingsModalOpen(true)}
-      >
-        <Cog6ToothIcon className={CommonCss.LeftIcon} />
-        Settings
-      </button>),
-    ];
-    const menu = (
-      <EllipsisHorizontalCircleIcon
-        className={CommonCss.DropdownIcon} />
-    );
-    return <Dropdown menu={menu} opts={opts} />
-  }
-
   const renderTripNameInput = () => {
     return (
       <div className={TripMenuJumboCss.TripNameInputCtn}>
         <div className={TripMenuJumboCss.TripNameInputWrapper}>
-          <div className='flex items-center mb-12'>
+          <div className={TripMenuJumboCss.TripNamInputHeader}>
             <input
               type="text"
               value={tripName}
@@ -353,7 +251,6 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
               onBlur={tripNameOnBlur}
               className={TripMenuJumboCss.TripNameInput}
             />
-            {renderSettingsDropdown()}
           </div>
           {renderDatesButton()}
         </div>
@@ -371,12 +268,6 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
         isOpen={isCoverImageModalOpen}
         onClose={() => {setIsCoverImageModalOpen(false)}}
         onCoverImageSelect={coverImageOnSelect}
-      />
-      <SettingsModal
-        trip={props.trip}
-        isOpen={isSettingsModalOpen}
-        onClose={() => {setIsSettingsModalOpen(false)}}
-        onTransportationPreferenceChange={transportationPreferenceOnChange}
       />
     </>
   );

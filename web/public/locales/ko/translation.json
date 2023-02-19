@@ -1,4 +1,10 @@
 {
+  "common": {
+    "settings": "설정"
+  },
+  "errors": {
+    "unexpectedError": "예기치 않은 오류"
+  },
   "navbar": {
     "loginModal": {
       "title": "tiinyplanet에 로그인",
@@ -17,7 +23,11 @@
       "logout": "로그아웃"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "다음 모험을 계획하세요!",
+      "createBtn": "새 여행 만들기"
+    },
     "upcomingTrips": "예정된 여행"
   }
 }

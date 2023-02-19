@@ -1,4 +1,10 @@
 {
+  "common": {
+    "settings": "Configuration"
+  },
+  "errors": {
+    "unexpectedError": "Erreur inattendue"
+  },
   "navbar": {
     "loginModal": {
       "title": "Connectez-vous à tiinyplanet",
@@ -17,7 +23,11 @@
       "logout": "Se déconnecter"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "Planifiez votre prochaine aventure !",
+      "createBtn": "Créer un nouveau voyage"
+    },
     "upcomingTrips": "Voyages à venir"
   }
 }

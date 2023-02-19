@@ -2,7 +2,7 @@ import axios from 'axios';
 import _get from 'lodash/get';
 import _filter from 'lodash/filter';
 
-import { BASE_URL } from './common';
+import { BASE_URL, makeCommonAxios } from './common';
 
 import airports from '../data/airports.json';
 
@@ -14,8 +14,8 @@ const FlightsAPI = {
     returnDate: string | undefined,
     cabinClass: string
   ) => {
-    const url = `${BASE_URL}/api/v1/flights/search`;
-    return axios.get(url, {
+    const ax = makeCommonAxios();
+    return ax.get(`/api/v1/flights/search`, {
       params: {
         numAdults: '1',
         currency: 'SGD',

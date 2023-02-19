@@ -1,4 +1,10 @@
 {
+  "common": {
+    "settings": "Tetapan"
+  },
+  "errors": {
+    "unexpectedError": "Ralat Tidak Dijangka"
+  },
   "navbar": {
     "loginModal": {
       "title": "Log masuk ke tiinyplanet",
@@ -17,7 +23,11 @@
       "log keluar": "Log keluar"
     }
   },
-  "title": {
+  "home": {
+    "tripJumbo": {
+      "title": "Rancang pengembaraan anda yang seterusnya!",
+      "createBtn": "Buat perjalanan baharu"
+    },
     "upcomingTrips": "Perjalanan Akan Datang"
   }
 }

@@ -2,56 +2,64 @@ package trips
 
 import (
 	context "context"
-	"fmt"
+	"errors"
 	"time"
 
+	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"go.uber.org/zap"
 )
 
-type loggingMiddleware struct {
+var (
+	ErrRBACMissing = errors.New("auth.rbac.missing")
+	ErrRBAC        = errors.New("auth.rbac.error")
+)
+
+type rbacMiddleware struct {
 	next   Service
 	logger *zap.Logger
 }
 
-func ServiceWithLoggingMiddleware(svc Service, logger *zap.Logger) Service {
-	return &loggingMiddleware{svc, logger}
+func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
+	return &rbacMiddleware{svc, logger}
 }
 
-func (mw *loggingMiddleware) CreateTripPlan(ctx context.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error) {
-	result, err := mw.next.CreateTripPlan(ctx, creator, name, start, end)
-	if err != nil {
-		mw.logger.Error(
-			"CreateTripPlan",
-			zap.String("creator", fmt.Sprintf("%+v", creator)),
-			zap.String("name", name),
-			zap.Time("start", start),
-			zap.Time("end", end),
-			zap.Error(err),
-		)
+func (mw rbacMiddleware) CreateTrip(ctx context.Context, creator Member, name string, start, end time.Time) (TripPlan, error) {
+	ci, err := common.ReadClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return TripPlan{}, ErrRBACMissing
 	}
-	return result, err
+	return mw.next.CreateTrip(ctx, creator, name, start, end)
 }
 
-func (mw *loggingMiddleware) ReadTripPlan(ctx context.Context, ID string) (TripPlan, error) {
-	result, err := mw.next.ReadTripPlan(ctx, ID)
-	if err != nil {
-		mw.logger.Error("ReadTripPlan", zap.String("id", ID), zap.Error(err))
+func (mw rbacMiddleware) ReadTrip(ctx context.Context, ID string) (TripPlan, error) {
+	ci, err := common.ReadClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return TripPlan{}, ErrRBACMissing
 	}
-	return result, err
+	return mw.next.ReadTrip(ctx, ID)
 }
 
-func (mw *loggingMiddleware) ListTripPlans(ctx context.Context, ff ListTripPlansFilter) ([]TripPlan, error) {
-	result, err := mw.next.ListTripPlans(ctx, ff)
-	if err != nil {
-		mw.logger.Error("ListTripPlans", zap.String("ff", fmt.Sprintf("%+v", ff)), zap.Error(err))
+func (mw rbacMiddleware) ReadTripWithUsers(ctx context.Context, ID string) (TripPlan, auth.UsersMap, error) {
+	ci, err := common.ReadClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return TripPlan{}, nil, ErrRBACMissing
 	}
-	return result, err
+	return mw.next.ReadTripWithUsers(ctx, ID)
 }
 
-func (mw *loggingMiddleware) DeleteTripPlan(ctx context.Context, ID string) error {
-	err := mw.next.DeleteTripPlan(ctx, ID)
-	if err != nil {
-		mw.logger.Error("ListTripPlans", zap.Error(err))
+func (mw rbacMiddleware) ListTrips(ctx context.Context, ff ListTripsFilter) (TripPlansList, error) {
+	ci, err := common.ReadClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return TripPlansList{}, ErrRBACMissing
 	}
-	return err
+	return mw.next.ListTrips(ctx, ff)
+}
+
+func (mw rbacMiddleware) DeleteTrip(ctx context.Context, ID string) error {
+	ci, err := common.ReadClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBACMissing
+	}
+	return mw.next.DeleteTrip(ctx, ID)
 }
