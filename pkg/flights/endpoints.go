@@ -2,18 +2,13 @@ package flights
 
 import (
 	"context"
-	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 )
 
 type SearchRequest struct {
-	origIATA   string
-	destIATA   string
-	numAdults  uint64
-	departDate time.Time
-	opts       FlightsSearchOptions
+	opts SearchOptions
 }
 
 type SearchResponse struct {
@@ -29,9 +24,9 @@ func NewSearchEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(SearchRequest)
 		if !ok {
-			return SearchResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
+			return SearchResponse{Err: common.ErrorMismatchEndpointReq}, nil
 		}
-		itins, err := svc.Search(ctx, req.origIATA, req.destIATA, req.numAdults, req.departDate, req.opts)
+		itins, err := svc.Search(ctx, req.opts)
 		return SearchResponse{Itineraries: itins, Err: err}, nil
 	}
 }

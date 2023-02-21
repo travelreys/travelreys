@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 	"go.uber.org/zap"
 )
 
 var (
-	ErrRBACMissing = errors.New("auth.rbac.missing")
-	ErrRBAC        = errors.New("auth.rbac.error")
+	ErrRBAC = errors.New("auth.rbac.error")
 )
 
 type rbacMiddleware struct {
@@ -26,29 +25,29 @@ func (mw rbacMiddleware) Login(ctx context.Context, authCode, provider string) (
 	return mw.next.Login(ctx, authCode, provider)
 }
 
-func (mw rbacMiddleware) ReadUser(ctx context.Context, ID string) (User, error) {
-	ci, err := common.ReadClientInfoFromCtx(ctx)
+func (mw rbacMiddleware) Read(ctx context.Context, ID string) (User, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return User{}, ErrRBACMissing
+		return User{}, ErrRBAC
 	}
-	return mw.next.ReadUser(ctx, ID)
+	return mw.next.Read(ctx, ID)
 }
 
-func (mw rbacMiddleware) ListUsers(ctx context.Context, ff ListUsersFilter) (UsersList, error) {
-	ci, err := common.ReadClientInfoFromCtx(ctx)
+func (mw rbacMiddleware) List(ctx context.Context, ff ListFilter) (UsersList, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return UsersList{}, ErrRBACMissing
+		return UsersList{}, ErrRBAC
 	}
-	return mw.next.ListUsers(ctx, ff)
+	return mw.next.List(ctx, ff)
 }
 
-func (mw rbacMiddleware) UpdateUser(ctx context.Context, ID string, ff UpdateUserFilter) error {
-	ci, err := common.ReadClientInfoFromCtx(ctx)
+func (mw rbacMiddleware) Update(ctx context.Context, ID string, ff UpdateFilter) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil {
-		return ErrRBACMissing
+		return ErrRBAC
 	}
 	if ci.UserID != ID {
 		return ErrRBAC
 	}
-	return mw.next.UpdateUser(ctx, ID, ff)
+	return mw.next.Update(ctx, ID, ff)
 }

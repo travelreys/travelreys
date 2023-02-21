@@ -4,15 +4,6 @@ import (
 	"errors"
 )
 
-var (
-	ErrorInvalidEndpointRequestType = errors.New("endpoint.invalidrequest")
-)
-var (
-	ErrBadPath         = errors.New("http.badpath")
-	ErrInvalidRequest  = errors.New("http.invalidrequest")
-	ErrInvalidJSONBody = errors.New("http.invalidjson")
-)
-
 type Errorer interface {
 	Error() error
 }

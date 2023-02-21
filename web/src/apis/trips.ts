@@ -4,19 +4,19 @@ import _get from "lodash/get";
 
 import { BASE_URL, makeCommonAxios } from './common';
 
-export interface CreateTripResponse {
+export interface CreateResponse {
   id: string
   error?: string
 }
 
-export interface ReadTripResponse {
-  tripPlan: any
+export interface ReadResponse {
+  trip: any
   users?: any
   error?: string
 }
 
-export interface ReadTripsResponse {
-  tripPlans: Array<any>
+export interface ReadsResponse {
+  trips: Array<any>
   error?: string
 }
 
@@ -28,11 +28,11 @@ const TripsAPI = {
     name: string,
     startDate: Date | undefined,
     endDate: Date | undefined
-  ): Promise<CreateTripResponse> => {
+  ): Promise<CreateResponse> => {
     const ax = makeCommonAxios();
     return ax.post(tripsPathPrefix, {name, startDate, endDate})
       .then((res) => {
-        const id = _get(res, 'data.tripPlan.id', "");
+        const id = _get(res, 'data.trip.id', "");
         return {id: id}
       })
       .catch((err) => {
@@ -40,28 +40,28 @@ const TripsAPI = {
       });
   },
 
-  readTrip: (id: string | undefined): Promise<ReadTripResponse> => {
+  readTrip: (id: string | undefined): Promise<ReadResponse> => {
     const ax = makeCommonAxios();
     return ax.get(`${tripsPathPrefix}/${id}`, { params: { withUsers: "true" } })
       .then(res => {
-        const tripPlan = _get(res, "data.tripPlan", {});
+        const trip = _get(res, "data.trip", {});
         const users = _get(res, "data.users", {});
-        return {tripPlan, users}
+        return {trip, users}
       })
       .catch((err) => {
-        return {tripPlan: {}, error: err.message}
+        return {trip: {}, error: err.message}
       });
   },
 
-  listTrips: (): Promise<ReadTripsResponse> => {
+  listTrips: (): Promise<ReadsResponse> => {
     const ax = makeCommonAxios();
     return ax.get(tripsPathPrefix)
       .then(res => {
-        const tripPlans = _get(res, "data.tripPlans", []);
-        return {tripPlans}
+        const trips = _get(res, "data.trips", []);
+        return {trips}
       })
       .catch((err) => {
-        return {tripPlans: [], error: err.message}
+        return {trips: [], error: err.message}
       });
   },
 };

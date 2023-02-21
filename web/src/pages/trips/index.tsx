@@ -28,16 +28,17 @@ import TripMap from '../../features/maps/TripMap';
 import TripMenuJumbo from '../../features/trip/MenuJumbo';
 import SettingsSection from '../../features/trip/SettingsSection';
 
-import TripsAPI, { ReadTripResponse } from '../../apis/trips';
+import TripsAPI, { ReadResponse } from '../../apis/trips';
 import TripsSyncAPI from '../../apis/tripsSync';
 import { NewSyncMessageHeap } from '../../lib/heap';
 import {
   JSONPatchOp,
-  makeSyncMsgJoinSession,
-  makeSyncMsgUpdateTrip,
-  SyncOpJoinSessionBroadcast,
-  SyncOpUpdateTrip } from '../../lib/tripsSync';
-  import { Auth, readAuthUser } from '../../lib/auth';
+  makeMsgUpdateTrip,
+  makeMsgJoinSession,
+  OpJoinSessionBroadcast,
+  OpUpdateTrip
+} from '../../lib/tripsSync';
+import { Auth, readAuthUser } from '../../lib/auth';
 import { CommonCss, TripMenuCss } from '../../assets/styles/global';
 import { MapsProvider } from '../../context/maps-context';
 
@@ -147,14 +148,20 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
 // TripPage
 
 const TripPage: FC = () => {
-  const routerParams = useParams();
-  const { id } = routerParams;
+  const { id } = useParams();
 
   // Trip State
   const tripRef = useRef(null as any);
   const [tripID, setTripID] = useState("");
   const [trip, setTrip] = useState(tripRef.current);
   const [tripUsers, setTripUsers] = useState({});
+
+
+  // Sync Session State
+  const wsRef = useRef(null as any);
+  const pq = NewSyncMessageHeap();
+  const nextTobCounter = useRef(0);
+
 
   // Map UI State
   const [mapNode, setMapNode] = useState(null) as any;
@@ -166,24 +173,16 @@ const TripPage: FC = () => {
     }
   }, []);
 
-  // Sync Session State
-  const wsRef = useRef(null as any);
-  const pq = NewSyncMessageHeap();
-  const nextTobCounter = useRef(0);
-
-  const shouldSetWs = (): boolean => {
-    return (wsRef.current === null && id != null)
-  }
-
   ///////////////////////
   // Use Effects - Map //
   ///////////////////////
 
   useEffect(() => {
     window.addEventListener("resize", () => {
-      if (mapNode) {
-        setMapDivWidth(mapNode.getBoundingClientRect().width);
+      if (!mapNode) {
+        return;
       }
+      setMapDivWidth(mapNode.getBoundingClientRect().width);
     })
   }, [mapNode])
 
@@ -202,35 +201,39 @@ const TripPage: FC = () => {
     }
   }, [])
 
+  const shouldSetWs = (id: string|undefined): boolean => {
+    return (wsRef.current === null && !_isEmpty(id))
+  }
+
   useEffect(() => {
     // Fetch Trip
     if (id) {
       TripsAPI.readTrip(id as string)
-        .then((data: ReadTripResponse) => {
-          tripRef.current = data.tripPlan;
+        .then((data: ReadResponse) => {
+          tripRef.current = data.trip;
           setTrip(tripRef.current);
           setTripUsers(data.users)
           setTripID(id as string);
         });
     }
     // Set up WS Connection
-    if (shouldSetWs()) {
+    if (shouldSetWs(id)) {
       const ws = TripsSyncAPI.startTripSyncSession();
       wsRef.current = ws;
 
       ws.addEventListener(WebsocketEvents.open, () => {
         const user = readAuthUser();
-        const joinMsg = makeSyncMsgJoinSession(id as string, user?.id || "");
+        const joinMsg = makeMsgJoinSession(id as string, user?.id || "");
         ws.send(JSON.stringify(joinMsg));
       });
 
       ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
         const msg = JSON.parse(e.data);
         switch (msg.opType) {
-          case SyncOpJoinSessionBroadcast:
+          case OpJoinSessionBroadcast:
             nextTobCounter.current = 1
             return;
-          case SyncOpUpdateTrip:
+          case OpUpdateTrip:
             break
           default:
             nextTobCounter.current += 1
@@ -257,7 +260,7 @@ const TripPage: FC = () => {
 
           // Process this message
           minMsg = pq.pop()!;
-          const patch = minMsg.syncDataUpdateTrip!.ops as any;
+          const patch = minMsg.data.updateTrip!.ops as any;
           const patchOpts = { mutate: false } as any;
           const newTrip = applyPatch(tripRef.current, patch, patchOpts);
 
@@ -273,9 +276,9 @@ const TripPage: FC = () => {
   // Event Handlers //
   ////////////////////
 
-  const tripStateOnUpdate = (ops: Array<JSONPatchOp>) => {
-    const updateMsg = makeSyncMsgUpdateTrip(tripID, ops);
-    wsRef.current.send(JSON.stringify(updateMsg));
+  const tripStateOnUpdate = (ops: Array<JSONPatchOp>, title: string) => {
+    const msg = makeMsgUpdateTrip(tripID, title, ops);
+    wsRef.current.send(JSON.stringify(msg));
   }
 
   // Renderers

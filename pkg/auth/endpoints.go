@@ -25,84 +25,84 @@ func NewLoginEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(LoginRequest)
 		if !ok {
-			return LoginResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
+			return LoginResponse{Err: common.ErrorMismatchEndpointReq}, nil
 		}
 		jwtTkn, err := svc.Login(ctx, req.Code, OIDCProviderGoogle)
 		return LoginResponse{JWTToken: jwtTkn, Err: err}, nil
 	}
 }
 
-type ReadUserRequest struct {
+type ReadRequest struct {
 	ID string `json:"id"`
 }
 
-type ReadUserResponse struct {
+type ReadResponse struct {
 	User User  `json:"user"`
 	Err  error `json:"error,omitempty"`
 }
 
-func (r ReadUserResponse) Error() error {
+func (r ReadResponse) Error() error {
 	return r.Err
 }
 
-func NewReadUserEndpoint(svc Service) endpoint.Endpoint {
+func NewReadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(ReadUserRequest)
+		req, ok := epReq.(ReadRequest)
 		if !ok {
-			return ReadUserResponse{
-				Err: common.ErrorInvalidEndpointRequestType,
+			return ReadResponse{
+				Err: common.ErrorMismatchEndpointReq,
 			}, nil
 		}
-		usr, err := svc.ReadUser(ctx, req.ID)
-		return ReadUserResponse{usr, err}, nil
+		usr, err := svc.Read(ctx, req.ID)
+		return ReadResponse{usr, err}, nil
 	}
 }
 
-type UpdateUserRequest struct {
-	ID string           `json:"id"`
-	FF UpdateUserFilter `json:"ff"`
+type UpdateRequest struct {
+	ID string       `json:"id"`
+	FF UpdateFilter `json:"ff"`
 }
 
-type UpdateUserResponse struct {
+type UpdateResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
-func (r UpdateUserResponse) Error() error {
+func (r UpdateResponse) Error() error {
 	return r.Err
 }
 
-func NewUpdateUserEndpoint(svc Service) endpoint.Endpoint {
+func NewUpdateEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(UpdateUserRequest)
+		req, ok := epReq.(UpdateRequest)
 		if !ok {
-			return UpdateUserResponse{
-				Err: common.ErrorInvalidEndpointRequestType,
+			return UpdateResponse{
+				Err: common.ErrorMismatchEndpointReq,
 			}, nil
 		}
-		err := svc.UpdateUser(ctx, req.ID, req.FF)
-		return UpdateUserResponse{err}, nil
+		err := svc.Update(ctx, req.ID, req.FF)
+		return UpdateResponse{err}, nil
 	}
 }
 
-type ListUsersRequest struct {
-	FF ListUsersFilter
+type ListRequest struct {
+	FF ListFilter
 }
-type ListUsersResponse struct {
+type ListResponse struct {
 	Users UsersList `json:"users"`
 	Err   error     `json:"error,omitempty"`
 }
 
-func (r ListUsersResponse) Error() error {
+func (r ListResponse) Error() error {
 	return r.Err
 }
 
-func NewListUsersEndpoint(svc Service) endpoint.Endpoint {
+func NewListEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(ListUsersRequest)
+		req, ok := epReq.(ListRequest)
 		if !ok {
-			return ListUsersResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
+			return ListResponse{Err: common.ErrorMismatchEndpointReq}, nil
 		}
-		users, err := svc.ListUsers(ctx, req.FF)
-		return ListUsersResponse{Users: users, Err: err}, nil
+		users, err := svc.List(ctx, req.FF)
+		return ListResponse{Users: users, Err: err}, nil
 	}
 }

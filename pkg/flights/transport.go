@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
-	"time"
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 
 	"github.com/gorilla/mux"
 )
@@ -16,7 +15,7 @@ import (
 func errToHttpCode() func(err error) int {
 	notFoundErrors := []error{}
 	appErrors := []error{}
-	authErrors := []error{ErrRBAC, ErrRBACMissing}
+	authErrors := []error{ErrRBAC}
 
 	return func(err error) int {
 		if common.ErrorContains(notFoundErrors, err) {
@@ -45,50 +44,24 @@ func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
-		kithttp.ServerBefore(common.AddClientInfoToCtx),
+		kithttp.ServerBefore(reqctx.ContextWithClientInfo),
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode())),
 	}
-
-	searchFlightsHandler := kithttp.NewServer(NewSearchEndpoint(svc), decodeSearchRequest, encodeResponse, opts...)
-	r.Handle("/api/v1/flights/search", searchFlightsHandler).Methods(http.MethodGet)
+	searchHandler := kithttp.NewServer(
+		NewSearchEndpoint(svc),
+		decodeSearchRequest,
+		encodeResponse,
+		opts...,
+	)
+	r.Handle("/api/v1/flights/search", searchHandler).Methods(http.MethodGet)
 	return r
 }
 
 func decodeSearchRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	q := r.URL.Query()
-	opts := FlightsSearchOptions{}
-
-	if q.Has("returnDate") {
-		opts["returnDate"] = q.Get("returnDate")
-	}
-	if q.Has("cabinClass") {
-		opts["cabinClass"] = q.Get("cabinClass")
-	}
-	if q.Has("currency") {
-		opts["currency"] = q.Get("currency")
-	}
-	if q.Has("duration") {
-		opts["duration"] = q.Get("duration")
-	}
-	if q.Has("stops") {
-		opts["stop"] = q.Get("stops")
-	}
-
-	numAdults, err := strconv.Atoi(q.Get("numAdults"))
+	opts, err := SearchOptionsFromURLValues(q)
 	if err != nil {
-		numAdults = 1
+		return nil, common.ErrInvalidRequest
 	}
-
-	departDate, err := time.Parse("2006-01-02", q.Get("departDate"))
-	if err != nil {
-		departDate = time.Time{}
-	}
-
-	return SearchRequest{
-		origIATA:   q.Get("origIATA"),
-		destIATA:   q.Get("destIATA"),
-		numAdults:  uint64(numAdults),
-		departDate: departDate,
-		opts:       opts,
-	}, nil
+	return SearchRequest{opts}, nil
 }

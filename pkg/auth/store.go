@@ -3,9 +3,8 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
-	"time"
 
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -13,124 +12,110 @@ import (
 )
 
 const (
-	CollectionUsers = "users"
-	BsonKeyID       = "id"
-	BsonKeyEmail    = "email"
-	StoreLoggerName = "auth.store"
+	bsonKeyID       = "id"
+	bsonKeyEmail    = "email"
+	collectionUsers = "users"
+	storeLoggerName = "auth.store"
 )
 
 var (
-	ErrUserNotFound         = errors.New("auth.store.user.notfound")
-	ErrUnexpectedStoreError = errors.New("auth.store.unexpectederror")
+	ErrUserNotFound         = errors.New("auth.store.user-not-found")
+	ErrUnexpectedStoreError = errors.New("auth.store.unexpected-error")
 )
 
-type UpdateUserFilter struct {
-	Labels map[string]string `json:"labels" bson:"labels"`
+type ReadFilter struct {
+	ID    string `json:"id" bson:"id"`
+	Email string `json:"email" bson:"email"`
 }
 
-type ListUsersFilter struct {
+type UpdateFilter struct {
+	Labels common.Labels `json:"labels" bson:"labels"`
+}
+
+type ListFilter struct {
 	IDs   []string `json:"ids" bson:"id"`
 	Email *string  `json:"email" bson:"email"`
 }
 
-func (ff ListUsersFilter) toBson() bson.M {
+func (ff ListFilter) toBson() bson.M {
 	bsonM := bson.M{}
 	if len(ff.IDs) > 0 {
-		bsonM[BsonKeyID] = bson.M{"$in": ff.IDs}
+		bsonM[bsonKeyID] = bson.M{"$in": ff.IDs}
 	}
 	if ff.Email != nil {
-		bsonM[BsonKeyEmail] = ff.Email
+		bsonM[bsonKeyEmail] = ff.Email
 	}
 	return bsonM
 }
 
 type Store interface {
-	ReadUserByID(context.Context, string) (User, error)
-	ReadUserByEmail(context.Context, string) (User, error)
-	ListUsers(context.Context, ListUsersFilter) (UsersList, error)
-	UpdateUser(context.Context, string, UpdateUserFilter) error
-	SaveUser(context.Context, User) error
+	Read(context.Context, ReadFilter) (User, error)
+	List(context.Context, ListFilter) (UsersList, error)
+	Update(context.Context, string, UpdateFilter) error
+	Save(context.Context, User) error
 }
 
 type store struct {
 	db       *mongo.Database
 	usrsColl *mongo.Collection
-	logger   *zap.Logger
+
+	logger *zap.Logger
 }
 
-func NewStore(db *mongo.Database, logger *zap.Logger) Store {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store {
+	ctx, cancel := context.WithTimeout(ctx, common.DbReqTimeout)
 	defer cancel()
 
-	usrsColl := db.Collection(CollectionUsers)
+	usrsColl := db.Collection(collectionUsers)
 
-	idIdx := mongo.IndexModel{Keys: bson.M{BsonKeyID: 1}}
+	idIdx := mongo.IndexModel{Keys: bson.M{bsonKeyID: 1}}
 	usrsColl.Indexes().CreateOne(ctx, idIdx)
 
-	return &store{db, usrsColl, logger.Named(StoreLoggerName)}
+	return &store{db, usrsColl, logger.Named(storeLoggerName)}
 }
 
-func (str store) ReadUserByID(ctx context.Context, ID string) (User, error) {
-	return str.readUserByFilter(ctx, bson.M{BsonKeyID: ID})
-}
-
-func (str store) ReadUserByEmail(ctx context.Context, email string) (User, error) {
-	return str.readUserByFilter(ctx, bson.M{BsonKeyEmail: email})
-}
-
-func (str store) readUserByFilter(ctx context.Context, ff bson.M) (User, error) {
+func (s store) Read(ctx context.Context, ff ReadFilter) (User, error) {
 	var usr User
 
-	err := str.usrsColl.FindOne(ctx, ff).Decode(&usr)
+	err := s.usrsColl.FindOne(ctx, ff).Decode(&usr)
 	if err == mongo.ErrNoDocuments {
 		return usr, ErrUserNotFound
 	}
 	if err != nil {
-		str.logger.Error(
-			"readUserByFilter",
-			zap.String("ff", fmt.Sprintf("%+v", ff)),
-			zap.Error(err))
+		s.logger.Error("Read", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return usr, ErrUnexpectedStoreError
 	}
 	return usr, err
 }
 
-func (str store) ListUsers(ctx context.Context, ff ListUsersFilter) (UsersList, error) {
+func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	list := UsersList{}
-	cursor, err := str.usrsColl.Find(ctx, ff.toBson())
+	cursor, err := s.usrsColl.Find(ctx, ff.toBson())
 	if err != nil {
-		str.logger.Error("ListUsers", zap.String("ff", fmt.Sprintf("%+v", ff)), zap.Error(err))
+		s.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return list, err
 	}
 	err = cursor.All(ctx, &list)
 	return list, err
 }
 
-func (str store) UpdateUser(ctx context.Context, ID string, ff UpdateUserFilter) error {
-	update := bson.M{"$set": ff}
-	_, err := str.usrsColl.UpdateOne(ctx, bson.M{BsonKeyID: ID}, update)
+func (s store) Update(ctx context.Context, ID string, ff UpdateFilter) error {
+	_, err := s.usrsColl.UpdateOne(ctx, bson.M{bsonKeyID: ID}, bson.M{"$set": ff})
 	if err == mongo.ErrNoDocuments {
 		return ErrUserNotFound
 	}
 	if err != nil {
-		str.logger.Error(
-			"UpdateUser",
-			zap.String("ff", fmt.Sprintf("%+v", ff)),
-			zap.String("ID", ID),
-			zap.Error(err))
+		s.logger.Error("Update", zap.String("ID", ID), zap.String("ff", common.FmtString(ff)), zap.Error(err))
 	}
 	return err
 }
 
-func (str store) SaveUser(ctx context.Context, usr User) error {
-	saveFF := bson.M{BsonKeyID: usr.ID}
+func (s store) Save(ctx context.Context, usr User) error {
+	saveFF := bson.M{bsonKeyID: usr.ID}
 	opts := options.Replace().SetUpsert(true)
-	_, err := str.usrsColl.ReplaceOne(ctx, saveFF, usr, opts)
+	_, err := s.usrsColl.ReplaceOne(ctx, saveFF, usr, opts)
 	if err != nil {
-		str.logger.Error(
-			"SaveUser",
-			zap.String("usr", fmt.Sprintf("%+v", usr)),
-			zap.Error(err))
+		s.logger.Error("Save", zap.String("usr", common.FmtString(usr)), zap.Error(err))
 	}
 	return err
 }

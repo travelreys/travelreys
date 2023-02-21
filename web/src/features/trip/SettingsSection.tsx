@@ -9,17 +9,78 @@ import { MagnifyingGlassCircleIcon } from '@heroicons/react/24/outline';
 import Modal from '../../components/common/Modal';
 import Avatar from '../../components/common/Avatar';
 
+import AuthAPI, { SearchUsersResponse } from '../../apis/auth';
 import {
-  DefaultTransportationPreference,
-  LabelTransportationPreference,
+  DefaultTransportModePref,
+  LabelTransportModePref,
+  MemberRoleCollaborator,
+  MemberRoleParticipant,
   userFromMemberID
 } from '../../lib/trips';
 import { Auth, LabelUserGoogleImage } from '../../lib/auth';
+import { Trips } from '../../lib/trips';
 import { makeAddOp, makeReplaceOp } from '../../lib/tripsSync';
+import { capitaliseWords } from '../../lib/strings';
 import { CommonCss, TripSettingsCss } from '../../assets/styles/global';
-import AuthAPI, { SearchUsersResponse } from '../../apis/auth';
 
 
+
+////////////////////
+// Transportation //
+////////////////////
+
+interface TransportSection {
+  trip: any
+  onSelect: (mode: string) => void
+}
+
+const TransportationSection: FC<TransportSection> = (props: TransportSection) => {
+
+  const { t } = useTranslation();
+  const [transportPref, setTransportPref] = useState(DefaultTransportModePref);
+
+  useEffect(() => {
+    setTransportPref(_get(
+      props.trip,
+      `labels.${LabelTransportModePref}`,
+      DefaultTransportModePref
+    ))
+  }, [props.trip])
+
+
+  // Event Handlers
+  const transportPrefOnChange = (e: any) => {
+    props.onSelect(e.target.value);
+  }
+
+  const selectID = "transportation";
+
+  return (
+    <div className='mb-8'>
+      <h2 className='font-bold text-2xl mb-2'>
+        {t("tripPage.settings.transportationTitle")}
+      </h2>
+      <div className='mb-2'>
+        <label id={selectID} className={TripSettingsCss.TransportModeLabel}>
+          {t("tripPage.settings.transportationModePreferenceLabel")}
+        </label>
+        <select
+          id={selectID}
+          value={transportPref}
+          onChange={transportPrefOnChange}
+          className={TripSettingsCss.TransportModeSelect}
+        >
+          <option value="walk+drive">
+            {t("tripPage.settings.transportationModePreferenceWalk+Drive")}
+          </option>
+          <option value="walk+transit">
+            {t("tripPage.settings.transportationModePreferenceWalk+Transit")}
+          </option>
+        </select>
+      </div>
+    </div>
+  );
+}
 
 
 /////////////////////
@@ -30,13 +91,14 @@ interface AddMembersModalProps {
   isOpen: boolean
   tripUsers: { [key: string]: Auth.User }
   onClose: () => void
-  onSelect: () => void
+  onSelect: (id: string, role: string) => void
 }
 
 const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) => {
   const { t } = useTranslation();
 
   const [searchEmail, setSearchEmail] = useState("");
+  const [selectedMemberRole, setSelectedMemberRole] = useState(MemberRoleCollaborator);
   const [foundUsers, setFoundUsers] = useState<Array<Auth.User>>([]);
   const debouncedValue = useDebounce<string>(searchEmail, 500);
 
@@ -59,11 +121,20 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
     }
   }, [debouncedValue]);
 
+  const memberRoleSelectOnChange = (e: any) => {
+    setSelectedMemberRole(e.target.value);
+  }
+
+  const memberOnClick = (id: string) => {
+    props.onSelect(id, selectedMemberRole)
+    props.onClose();
+  }
+
   // Renderers
   const renderHeader = () => {
     return (
-      <div className='flex justify-between items-center mb-4'>
-        <div className='text-gray-800 font-bold text-lg'>
+      <div className={TripSettingsCss.MemberSearchHeader}>
+        <div className={TripSettingsCss.MemberSearchHeaderTxt}>
           {t("tripPage.settings.addMemberTitle")}
         </div>
         <button
@@ -76,19 +147,35 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
     );
   }
 
-  const renderSearchInput = () => {
+  const renderSearchForm = () => {
+    const selectID = "memberRole";
     return (
-      <div className="relative mb-2">
-        <div className={TripSettingsCss.SearchIconCtn}>
-          <MagnifyingGlassCircleIcon className={TripSettingsCss.SearchIcon} />
+      <div className=''>
+        <div className="relative mb-4">
+          <div className={TripSettingsCss.MemberSearchIconCtn}>
+            <MagnifyingGlassCircleIcon className={TripSettingsCss.MemberSearchIcon} />
+          </div>
+          <input
+            type="text"
+            className={TripSettingsCss.MemberSearchInput}
+            placeholder={t('tripPage.settings.searchUsersPlaceholder') || ""}
+            value={searchEmail}
+            onChange={(e) => { setSearchEmail(e.target.value) }}
+          />
         </div>
-        <input
-          type="text"
-          className={TripSettingsCss.SearchInput}
-          placeholder={t('tripPage.settings.searchUsersPlaceholder') || ""}
-          value={searchEmail}
-          onChange={(e) => { setSearchEmail(e.target.value) }}
-        />
+        <select
+          id={selectID}
+          value={selectedMemberRole}
+          onChange={memberRoleSelectOnChange}
+          className={TripSettingsCss.MemberRoleSelect}
+        >
+          <option value={MemberRoleCollaborator}>
+            {t("tripPage.settings.memberRoleCollaborator")}
+          </option>
+          <option value={MemberRoleParticipant}>
+            {t("tripPage.settings.memberRoleParticipant")}
+          </option>
+        </select>
       </div>
     );
   }
@@ -104,24 +191,25 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
       const isMember = Object.hasOwn(props.tripUsers, usr.id);
       return (
         <button
+          key={usr.id}
           type="button"
-          className='flex items-center p-2 mb-4 text-left'
+          className={TripSettingsCss.MemberSearchItem}
           disabled={isMember}
-          onClick={props.onSelect}
+          onClick={() => memberOnClick(usr.id)}
         >
-          <div key={usr.id} className='inline-block h-10 w-10 mr-4'>
+          <div className={TripSettingsCss.MemberSearchItemAvatar}>
             <Avatar
+              placement="top"
               name={_get(usr, "name", "")}
               imgUrl={_get(usr, `labels.${LabelUserGoogleImage}`)}
-              placement="top"
             />
           </div>
           <div>
-            <p className='font-semibold'>
+            <p className={TripSettingsCss.MemberSearchItemName}>
               {usr.name}
             </p>
-            <p className='text-gray-500'>
-            {isMember ? "Already a member" : ""}
+            <p className={TripSettingsCss.MemberSearchItemDesc}>
+              {isMember ? t('tripPage.settings.alreadyMember') : `${usr.email}`}
             </p>
           </div>
         </button>
@@ -131,23 +219,87 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
 
   return (
     <Modal isOpen={props.isOpen}>
-      <div className='bg-white p-5'>
+      <div className='bg-white p-5 rounded-lg'>
         {renderHeader()}
-        {renderSearchInput()}
+        {renderSearchForm()}
         {renderSearchResults()}
-        <div className='flex justify-around items-center'>
-          <button
-            type="button"
-            className='bg-indigo-500 px-4 py-2 rounded-lg font-bold text-sm text-white'
-            onClick={props.onSelect}
-          >
-            {t("common.submit")}
-          </button>
-        </div>
       </div>
     </Modal>
   );
 }
+
+
+////////////////////
+// MembersSection //
+////////////////////
+
+interface MembersSectionProps {
+  trip: any
+  tripUsers: { [key: string]: Auth.User }
+  onAddUser: (id: string, role: string) => void
+}
+
+const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => {
+
+  const { t } = useTranslation();
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+
+  const renderMembersAvatar = () => {
+    let members = { [props.trip.creator.id]: props.trip.creator } as any;
+    members = Object.assign(members, props.trip.members);
+    return Object.values(members).map((mem: any) => {
+      const usr = userFromMemberID(mem, props.tripUsers);
+      return (
+        <div key={mem.id} className='flex items-center py-4 border-b border-gray-200'>
+          <div className={TripSettingsCss.MemberAvatarDiv}>
+            <Avatar
+              placement="top"
+              name={`${_get(usr, "name", "")} (${capitaliseWords(mem.role)}})`}
+              imgUrl={_get(usr, `labels.${LabelUserGoogleImage}`)}
+            />
+          </div>
+          <div>
+            <p className={TripSettingsCss.MemberSearchItemDesc}>
+              {capitaliseWords(mem.role)}
+            </p>
+            <p className={TripSettingsCss.MemberSearchItemName}>
+              {_get(usr, "name", "")}
+            </p>
+          </div>
+        </div>
+      );
+    });
+  }
+
+  return (
+    <>
+      <div className={TripSettingsCss.MemberSectionCtn}>
+        <div className={TripSettingsCss.MemberSectionHeader}>
+          <h2 className={TripSettingsCss.MemberSectionTitle}>
+            {t("tripPage.settings.membersTitle")}
+          </h2>
+          <button
+            type="button"
+            className={TripSettingsCss.SearchMemberBtn}
+            onClick={() => setIsAddMemberModalOpen(true)}
+          >
+            + {t("tripPage.settings.searchMember")}
+          </button>
+        </div>
+        <div>
+          {renderMembersAvatar()}
+        </div>
+      </div>
+      <AddMembersModal
+        isOpen={isAddMemberModalOpen}
+        tripUsers={props.tripUsers}
+        onClose={() => setIsAddMemberModalOpen(false)}
+        onSelect={props.onAddUser}
+      />
+    </>
+  );
+}
+
 
 /////////////////////
 // SettingsSection //
@@ -160,110 +312,34 @@ interface SettingsSectionProps {
 }
 
 const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) => {
-  const { t } = useTranslation();
-  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  const [transportationPreference, setTransportationPreference] = useState(DefaultTransportationPreference);
-
-  useEffect(() => {
-    setTransportationPreference(_get(
-      props.trip,
-      `labels.${LabelTransportationPreference}`,
-      DefaultTransportationPreference
-    ))
-  }, [props.trip])
 
   // Event Handlers
 
-  const transportationPreferenceOnChange = (e: any) => {
-    setTransportationPreference(e.target.value)
-
-    const op = _get(props.trip, `/labels.${LabelTransportationPreference}`)
+  const transportPrefOnChange = (mode: string) => {
+    const opFn = _get(props.trip, `/labels.${LabelTransportModePref}`)
       ? makeReplaceOp : makeAddOp;
-    props.tripStateOnUpdate([
-      op(`/labels/${LabelTransportationPreference}`, e.target.value)
-    ]);
+    props.tripStateOnUpdate([opFn(`/labels/${LabelTransportModePref}`, mode)]);
   }
 
-  //  Renderers
-
-  const renderTransportationMode = () => {
-    const selectID = "transportation"
-    return (
-      <div className='mb-4'>
-        <h2 className='font-bold text-xl mb-2'>
-          {t("tripPage.settings.transportationTitle")}
-        </h2>
-        <div className='mb-2'>
-          <label id={selectID} className={TripSettingsCss.TransportModeLabel}>
-            {t("tripPage.settings.transportationModePreferenceLabel")}
-          </label>
-          <select
-            id={selectID}
-            value={transportationPreference}
-            onChange={transportationPreferenceOnChange}
-            className={TripSettingsCss.TransportModeSelect}
-          >
-            <option value="walk+drive">
-              {t("tripPage.settings.transportationModePreferenceWalk+Drive")}
-            </option>
-            <option value="walk+transit">
-              {t("tripPage.settings.transportationModePreferenceWalk+Transit")}
-            </option>
-          </select>
-        </div>
-      </div>
-    );
+  const addNewUser = (id: string, role: string) => {
+    const member = { id, role, labels: {} } as Trips.Member;
+    props.tripStateOnUpdate([makeAddOp(`/members/${id}`, member)]);
   }
 
-  const renderMembers = () => {
-    let members = { [props.trip.creator.id]: props.trip.creator } as any;
-    members = Object.assign(members, props.trip.members);
-    members = Object.values(members).map((mem: any) => {
-      const user = userFromMemberID(mem, props.tripUsers);
-      return (
-        <div key={mem.id} className='inline-block h-12 w-12'>
-          <Avatar
-            name={_get(user, "name", "")}
-            imgUrl={_get(user, `labels.${LabelUserGoogleImage}`)}
-            placement="top"
-          />
-        </div>
-      );
-    });
-    return (
-      <div className='mb-4'>
-        <div className='flex justify-between items-center'>
-          <h2 className='font-bold text-xl mb-2'>
-            {t("tripPage.settings.membersTitle")}
-          </h2>
-          <button
-            type="button"
-            className='font-semibold text-gray-500'
-            onClick={() => setIsAddMemberModalOpen(true)}
-          >
-            + {t("tripPage.settings.searchMember")}
-          </button>
-        </div>
-        <div className='grid grid-cols-8 gap-4'>
-          {members}
-        </div>
-      </div>
-    );
-  }
+
 
   return (
-    <>
-      <div className='p-5'>
-        {renderTransportationMode()}
-        {renderMembers()}
-      </div>
-      <AddMembersModal
-        isOpen={isAddMemberModalOpen}
-        tripUsers={props.tripUsers}
-        onClose={() => setIsAddMemberModalOpen(false)}
-        onSelect={() => { }}
+    <div className='p-5'>
+      <TransportationSection
+        trip={props.trip}
+        onSelect={transportPrefOnChange}
       />
-    </>
+      <MembersSection
+        trip={props.trip}
+        tripUsers={props.tripUsers}
+        onAddUser={addNewUser}
+      />
+    </div>
   );
 }
 

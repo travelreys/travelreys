@@ -10,11 +10,11 @@ import (
 )
 
 type Service interface {
-	CreateTrip(ctx context.Context, creator Member, name string, start, end time.Time) (TripPlan, error)
-	ReadTrip(ctx context.Context, ID string) (TripPlan, error)
-	ReadTripWithUsers(ctx context.Context, ID string) (TripPlan, auth.UsersMap, error)
-	ListTrips(ctx context.Context, ff ListTripsFilter) (TripPlansList, error)
-	DeleteTrip(ctx context.Context, ID string) error
+	Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error)
+	Read(ctx context.Context, ID string) (Trip, error)
+	ReadWithUsers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
+	List(ctx context.Context, ff ListFilter) (TripsList, error)
+	Delete(ctx context.Context, ID string) error
 }
 
 type service struct {
@@ -27,8 +27,8 @@ func NewService(store Store, authSvc auth.Service, imageSvc images.Service) Serv
 	return &service{store, authSvc, imageSvc}
 }
 
-func (svc *service) CreateTrip(ctx context.Context, creator Member, name string, start, end time.Time) (TripPlan, error) {
-	plan := NewTripPlanWithDates(creator, name, start, end)
+func (svc *service) Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error) {
+	plan := NewTripWithDates(creator, name, start, end)
 	plan.CoverImage = images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))]
 
 	// bootstrap 1 content list
@@ -43,16 +43,16 @@ func (svc *service) CreateTrip(ctx context.Context, creator Member, name string,
 		plan.Itinerary = append(plan.Itinerary, itinList)
 	}
 
-	err := svc.store.SaveTripPlan(ctx, plan)
+	err := svc.store.Save(ctx, plan)
 	return plan, err
 }
 
-func (svc *service) ReadTrip(ctx context.Context, ID string) (TripPlan, error) {
-	return svc.store.ReadTrip(ctx, ID)
+func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {
+	return svc.store.Read(ctx, ID)
 }
 
-func (svc *service) ReadTripWithUsers(ctx context.Context, ID string) (TripPlan, auth.UsersMap, error) {
-	trip, err := svc.ReadTrip(ctx, ID)
+func (svc *service) ReadWithUsers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+	trip, err := svc.Read(ctx, ID)
 	if err != nil {
 		return trip, nil, err
 	}
@@ -60,8 +60,8 @@ func (svc *service) ReadTripWithUsers(ctx context.Context, ID string) (TripPlan,
 	for id := range trip.Members {
 		membersIDs = append(membersIDs, id)
 	}
-	ff := auth.ListUsersFilter{IDs: membersIDs}
-	users, err := svc.authSvc.ListUsers(ctx, ff)
+	ff := auth.ListFilter{IDs: membersIDs}
+	users, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
 		return trip, nil, err
 	}
@@ -73,10 +73,10 @@ func (svc *service) ReadTripWithUsers(ctx context.Context, ID string) (TripPlan,
 
 }
 
-func (svc *service) ListTrips(ctx context.Context, ff ListTripsFilter) (TripPlansList, error) {
-	return svc.store.ListTrips(ctx, ff)
+func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) {
+	return svc.store.List(ctx, ff)
 }
 
-func (svc *service) DeleteTrip(ctx context.Context, ID string) error {
-	return svc.store.DeleteTrip(ctx, ID)
+func (svc *service) Delete(ctx context.Context, ID string) error {
+	return svc.store.Delete(ctx, ID)
 }

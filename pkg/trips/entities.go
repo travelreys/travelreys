@@ -12,7 +12,7 @@ import (
 
 // Trip
 
-type TripPlan struct {
+type Trip struct {
 	ID   string `json:"id" bson:"id"`
 	Name string `json:"name" bson:"name"`
 
@@ -45,12 +45,12 @@ type TripPlan struct {
 	Tags   common.Tags   `json:"tags" bson:"tags"`
 }
 
-type TripPlansList []TripPlan
+type TripsList []Trip
 
-func NewTripPlan(creator Member, name string) TripPlan {
+func NewTrip(creator Member, name string) Trip {
 	creator.Role = MemberRoleCreator
 
-	return TripPlan{
+	return Trip{
 		ID:         uuid.New().String(),
 		Name:       name,
 		CoverImage: images.ImageMetadata{},
@@ -77,8 +77,8 @@ func NewTripPlan(creator Member, name string) TripPlan {
 	}
 }
 
-func NewTripPlanWithDates(creator Member, name string, start, end time.Time) TripPlan {
-	plan := NewTripPlan(creator, name)
+func NewTripWithDates(creator Member, name string, start, end time.Time) Trip {
+	plan := NewTrip(creator, name)
 	plan.StartDate = start
 	plan.EndDate = end
 	return plan

@@ -13,6 +13,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 )
 
+// NATS
+
 const (
 	NATSClientName = "tiinyplanet"
 )
@@ -22,32 +24,30 @@ func MakeNATSConn(url string) (*nats.Conn, error) {
 }
 
 // Redis
+func redisOptsToUnivOpts(opts *redis.Options) *redis.UniversalOptions {
+	return &redis.UniversalOptions{
+		Addrs:    []string{opts.Addr},
+		Password: opts.Password,
+	}
+}
 
-func MakeRedisClient(uri string, isClusterMode bool) (redis.UniversalClient, error) {
-	opt, err := redis.ParseURL(uri)
+func MakeRedisClient(uri string) (redis.UniversalClient, error) {
+	opts, err := redis.ParseURL(uri)
 	if err != nil {
 		return nil, err
 	}
-
-	if isClusterMode {
-		return redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:    []string{opt.Addr},
-			Password: opt.Password,
-		}), nil
-	}
-
-	rdb := redis.NewClient(opt)
-	return rdb, err
+	rdb := redis.NewUniversalClient(redisOptsToUnivOpts(opts))
+	return rdb, nil
 }
 
 // Mongo
 
 var (
-	MongoConnectTimeout = 10 * time.Second
+	DbReqTimeout = 3 * time.Second
 )
 
 func MakeMongoDatabase(uri, dbName string) (*mongo.Database, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), MongoConnectTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), DbReqTimeout)
 	defer cancel()
 
 	opts := options.Client().

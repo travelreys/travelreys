@@ -99,3 +99,7 @@ type Arrival struct {
 	Airport  Airport   `json:"airport"`
 	Datetime time.Time `json:"datetime"` // UTC
 }
+
+func calculateItineraryScore(price float64, durationInMins, stopCount uint64) float64 {
+	return float64(price) + float64(durationInMins) + float64(60*stopCount)
+}

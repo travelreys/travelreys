@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"net/url"
 	"os"
 
@@ -12,6 +13,17 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
+const (
+	envOAuthGoolgeSecretFile = "TIINYPLANET_OAUTH_GOOGLE_SECRET_FILE"
+	googleUserInfoURL        = "https://www.googleapis.com/oauth2/v2/userinfo?access_token="
+)
+
+// GetOAuthGoogleSecretFile retrieves the file path to Google OAuth2 secrets
+func GetOAuthGoogleSecretFile() string {
+	return os.Getenv(envOAuthGoolgeSecretFile)
+}
+
+// GoogleOAuth2Config contains OAuth2 secrets for Google SSO
 type GoogleOAuth2Config struct {
 	Web struct {
 		ClientID                string   `json:"client_id"`
@@ -24,6 +36,8 @@ type GoogleOAuth2Config struct {
 	} `json:"web"`
 }
 
+// NewGoogleOAuth2ConfigFromFile parses the secret file
+// and generates the GoogleOAuth2Config
 func NewGoogleOAuth2ConfigFromFile(file string) (GoogleOAuth2Config, error) {
 	cfg := GoogleOAuth2Config{}
 	jsonFile, err := os.Open(file)
@@ -32,7 +46,7 @@ func NewGoogleOAuth2ConfigFromFile(file string) (GoogleOAuth2Config, error) {
 	}
 	defer jsonFile.Close()
 
-	data, _ := ioutil.ReadAll(jsonFile)
+	data, _ := io.ReadAll(jsonFile)
 	json.Unmarshal(data, &cfg)
 	return cfg, nil
 }
@@ -41,12 +55,12 @@ type GoogleProvider struct {
 	cfg *oauth2.Config
 }
 
+// NewGoogleProvider returns a new Google OAuth2 provider
 func NewGoogleProvider(cfgFile string) (GoogleProvider, error) {
 	cfg, err := NewGoogleOAuth2ConfigFromFile(cfgFile)
 	if err != nil {
 		return GoogleProvider{}, err
 	}
-
 	return GoogleProvider{
 		cfg: &oauth2.Config{
 			ClientID:     cfg.Web.ClientID,
@@ -73,18 +87,18 @@ func (gp *GoogleProvider) TokenToUserInfo(ctx context.Context, token *oauth2.Tok
 	gusr := GoogleUser{}
 
 	client := gp.cfg.Client(ctx, token)
-	userInfoURLPrefix := "https://www.googleapis.com/oauth2/v2/userinfo?access_token=%s"
-	resp, err := client.Get(fmt.Sprintf(userInfoURLPrefix, url.QueryEscape(token.AccessToken)))
+	resp, err := client.Get(fmt.Sprintf(
+		"%s=%s", googleUserInfoURL, url.QueryEscape(token.AccessToken),
+	))
 	if err != nil {
 		return gusr, err
 	}
 	defer resp.Body.Close()
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return gusr, err
 	}
-
 	err = json.Unmarshal(data, &gusr)
 	return gusr, err
 }

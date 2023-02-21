@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
@@ -12,7 +13,8 @@ import (
 )
 
 const (
-	mapSerivceLogger = "maps.service"
+	mapSerivceLogger      = "maps.service"
+	envGoogleMapsApiToken = "TIINYPLANET_GOOGLE_MAPS_APIKEY"
 )
 
 var (
@@ -28,9 +30,16 @@ type Service interface {
 }
 
 type service struct {
-	apiToken string
-	c        *maps.Client
-	logger   *zap.Logger
+	c      *maps.Client
+	logger *zap.Logger
+}
+
+func GetApiToken() string {
+	return os.Getenv(envGoogleMapsApiToken)
+}
+
+func NewDefaulService(logger *zap.Logger) (Service, error) {
+	return NewService(GetApiToken(), logger)
 }
 
 func NewService(apiToken string, logger *zap.Logger) (Service, error) {
@@ -38,20 +47,7 @@ func NewService(apiToken string, logger *zap.Logger) (Service, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return &service{apiToken, c, logger.Named(mapSerivceLogger)}, nil
-}
-
-func (svc *service) stringArrayToPlaceDetailsFieldMasksArray(fields []string) ([]maps.PlaceDetailsFieldMask, error) {
-	list := []maps.PlaceDetailsFieldMask{}
-	for _, str := range fields {
-		field, err := maps.ParsePlaceDetailsFieldMask(str)
-		if err != nil {
-			return list, ErrInvalidField
-		}
-		list = append(list, field)
-	}
-	return list, nil
+	return &service{c, logger.Named(mapSerivceLogger)}, nil
 }
 
 func (svc *service) PlacesAutocomplete(ctx context.Context, query, types, sessiontoken string) (AutocompletePredictionList, error) {
@@ -79,11 +75,22 @@ func (svc *service) PlacesAutocomplete(ctx context.Context, query, types, sessio
 		preds = append(preds, AutocompletePrediction{ap})
 	}
 	return preds, nil
+}
 
+func (svc *service) stringsToPlaceDefaultsFieldMasks(fields []string) ([]maps.PlaceDetailsFieldMask, error) {
+	list := []maps.PlaceDetailsFieldMask{}
+	for _, str := range fields {
+		field, err := maps.ParsePlaceDetailsFieldMask(str)
+		if err != nil {
+			return list, ErrInvalidField
+		}
+		list = append(list, field)
+	}
+	return list, nil
 }
 
 func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken string) (Place, error) {
-	fieldMasks, err := svc.stringArrayToPlaceDetailsFieldMasksArray(fields)
+	fieldMasks, err := svc.stringsToPlaceDefaultsFieldMasks(fields)
 	if err != nil {
 		return Place{}, err
 	}

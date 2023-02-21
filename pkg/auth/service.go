@@ -3,8 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -23,9 +21,9 @@ var (
 
 type Service interface {
 	Login(context.Context, string, string) (string, error)
-	ReadUser(context.Context, string) (User, error)
-	ListUsers(ctx context.Context, ff ListUsersFilter) (UsersList, error)
-	UpdateUser(context.Context, string, UpdateUserFilter) error
+	Read(context.Context, string) (User, error)
+	List(ctx context.Context, ff ListFilter) (UsersList, error)
+	Update(context.Context, string, UpdateFilter) error
 }
 
 type service struct {
@@ -43,31 +41,35 @@ func NewService(gp GoogleProvider, store Store, logger *zap.Logger) Service {
 	}
 }
 
+func (svc service) googleLogin(ctx context.Context, authCode string) (User, error) {
+	tkn, err := svc.google.AuthCodeToToken(ctx, authCode)
+	if err != nil {
+		return User{}, ErrProviderGoogleError
+	}
+	gusr, err := svc.google.TokenToUserInfo(ctx, tkn)
+	if err != nil {
+		return User{}, ErrProviderGoogleError
+	}
+	usr := UserFromGoogleUser(gusr)
+	return usr, nil
+}
+
 func (svc service) Login(ctx context.Context, authCode, provider string) (string, error) {
-	var usr User
+	var (
+		usr User
+		err error
+	)
 	if provider == OIDCProviderGoogle {
-		tkn, err := svc.google.AuthCodeToToken(ctx, authCode)
-		if err != nil {
-			svc.logger.Error(
-				"Login",
-				zap.String("provider", provider),
-				zap.Error(err))
-			return "", ErrProviderGoogleError
-		}
-		gusr, err := svc.google.TokenToUserInfo(ctx, tkn)
-		if err != nil {
-			svc.logger.Error(
-				"Login",
-				zap.String("provider", provider),
-				zap.Error(err))
-			return "", ErrProviderGoogleError
-		}
-		usr = UserFromGoogleUser(gusr)
+		usr, err = svc.googleLogin(ctx, authCode)
+		svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
 	} else {
-		return "", ErrProviderNotSupported
+		err = ErrProviderNotSupported
+	}
+	if err != nil {
+		return "", err
 	}
 
-	existUsr, err := svc.store.ReadUserByEmail(ctx, usr.Email)
+	existUsr, err := svc.store.Read(ctx, ReadFilter{Email: usr.Email})
 	if err == ErrUserNotFound {
 		if err := svc.createUser(ctx, usr); err != nil {
 			return "", err
@@ -78,44 +80,36 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (string
 		usr = existUsr
 	}
 
-	jwtTkn, err := svc.issueJWTToken(usr)
+	jwt, err := svc.issueJwtToken(usr)
 	if err != nil {
+		svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
 		return "", err
 	}
-	return jwtTkn, nil
+	return jwt, nil
 }
 
-func (svc service) ReadUser(ctx context.Context, ID string) (User, error) {
-	return svc.store.ReadUserByID(ctx, ID)
+func (svc service) Read(ctx context.Context, ID string) (User, error) {
+	return svc.store.Read(ctx, ReadFilter{ID: ID})
 }
 
-func (svc service) UpdateUser(ctx context.Context, ID string, ff UpdateUserFilter) error {
-	return svc.store.UpdateUser(ctx, ID, ff)
+func (svc service) Update(ctx context.Context, ID string, ff UpdateFilter) error {
+	return svc.store.Update(ctx, ID, ff)
 }
 
-func (svc service) ListUsers(ctx context.Context, ff ListUsersFilter) (UsersList, error) {
-	return svc.store.ListUsers(ctx, ff)
+func (svc service) List(ctx context.Context, ff ListFilter) (UsersList, error) {
+	return svc.store.List(ctx, ff)
 }
 
 func (svc service) createUser(ctx context.Context, usr User) error {
-	return svc.store.SaveUser(ctx, usr)
+	return svc.store.Save(ctx, usr)
 }
 
-func (svc service) issueJWTToken(usr User) (string, error) {
+func (svc service) issueJwtToken(usr User) (string, error) {
 	token := jwt.NewWithClaims(common.JWTDefaultSigningMethod, jwt.MapClaims{
-		common.JWTClaimIss:   common.JWTIssuer,
-		common.JWTClaimSub:   usr.ID,
-		common.JWTClaimEmail: usr.Email,
-		common.JWTClaimIat:   time.Now().Unix(),
+		common.JwtClaimIss:   common.JwtIssuer,
+		common.JwtClaimSub:   usr.ID,
+		common.JwtClaimEmail: usr.Email,
+		common.JwtClaimIat:   time.Now().Unix(),
 	})
-
-	jwtSecret := os.Getenv("TIINYPLANET_JWT_SECRET")
-	tkn, err := token.SignedString([]byte(jwtSecret))
-	if err != nil {
-		svc.logger.Error(
-			"issueJWTToken",
-			zap.String("usr", fmt.Sprintf("%+v", usr)),
-			zap.Error(err))
-	}
-	return tkn, err
+	return token.SignedString(common.GetJwtSecretBytes())
 }

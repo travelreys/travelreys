@@ -3,9 +3,8 @@ package trips
 import (
 	context "context"
 	"errors"
-	"fmt"
-	"time"
 
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -13,98 +12,93 @@ import (
 )
 
 const (
-	BsonKeyID       = "id"
-	StoreLoggerName = "trips.store"
-	TripsColl       = "trips"
+	bsonKeyID       = "id"
+	tripsColl       = "trips"
+	storeLoggerName = "trips.store"
 )
 
 var (
-	ErrPlanNotFound         = errors.New("trip.store.trip.notfound")
-	ErrUnexpectedStoreError = errors.New("trip.store.unexpectederror")
+	ErrPlanNotFound         = errors.New("trip.store.not-found")
+	ErrUnexpectedStoreError = errors.New("trip.store.unexpected-error")
 )
 
-type ListTripsFilter struct {
+type ListFilter struct {
 	ID *string `json:"string"`
 }
 
-func (ff ListTripsFilter) toBSON() bson.M {
+func (f ListFilter) toBSON() bson.M {
 	bsonM := bson.M{}
-	if ff.ID != nil {
-		bsonM[BsonKeyID] = ff.ID
+	if f.ID != nil {
+		bsonM[bsonKeyID] = f.ID
 	}
 	return bsonM
 }
 
 type Store interface {
-	SaveTripPlan(ctx context.Context, plan TripPlan) error
-	ReadTrip(ctx context.Context, ID string) (TripPlan, error)
-	ListTrips(ctx context.Context, ff ListTripsFilter) (TripPlansList, error)
-	DeleteTrip(ctx context.Context, ID string) error
+	Save(ctx context.Context, plan Trip) error
+	Read(ctx context.Context, ID string) (Trip, error)
+	List(ctx context.Context, ff ListFilter) (TripsList, error)
+	Delete(ctx context.Context, ID string) error
 }
 
 type store struct {
 	db        *mongo.Database
 	tripsColl *mongo.Collection
-	logger    *zap.Logger
+
+	logger *zap.Logger
 }
 
-func NewStore(db *mongo.Database, logger *zap.Logger) Store {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store {
+	ctx, cancel := context.WithTimeout(ctx, common.DbReqTimeout)
 	defer cancel()
 
-	tripsColl := db.Collection(TripsColl)
+	tripsColl := db.Collection(tripsColl)
 
-	idIdx := mongo.IndexModel{Keys: bson.M{BsonKeyID: 1}}
+	idIdx := mongo.IndexModel{Keys: bson.M{bsonKeyID: 1}}
 	tripsColl.Indexes().CreateOne(ctx, idIdx)
 
-	return &store{db, tripsColl, logger.Named(StoreLoggerName)}
+	return &store{db, tripsColl, logger.Named(storeLoggerName)}
 }
 
-func (store *store) SaveTripPlan(ctx context.Context, plan TripPlan) error {
-	saveFF := bson.M{BsonKeyID: plan.ID}
+func (s *store) Save(ctx context.Context, plan Trip) error {
+	saveFF := bson.M{bsonKeyID: plan.ID}
 	opts := options.Replace().SetUpsert(true)
-	_, err := store.tripsColl.ReplaceOne(ctx, saveFF, plan, opts)
+	_, err := s.tripsColl.ReplaceOne(ctx, saveFF, plan, opts)
 	if err != nil {
-		store.logger.Error(
-			"SaveTripPlan",
-			zap.String("plan", fmt.Sprintf("%+v", plan)),
-			zap.Error(err),
-		)
+		s.logger.Error("Save", zap.Error(err))
 		return ErrUnexpectedStoreError
 	}
 	return nil
 }
 
-func (store *store) ReadTrip(ctx context.Context, ID string) (TripPlan, error) {
-	var plan TripPlan
-	err := store.tripsColl.FindOne(ctx, bson.M{BsonKeyID: ID}).Decode(&plan)
+func (s *store) Read(ctx context.Context, ID string) (Trip, error) {
+	var plan Trip
+	err := s.tripsColl.FindOne(ctx, bson.M{bsonKeyID: ID}).Decode(&plan)
 	if err == mongo.ErrNoDocuments {
 		return plan, ErrPlanNotFound
 	}
 	if err != nil {
-		store.logger.Error("ReadTrip", zap.String("id", ID), zap.Error(err))
+		s.logger.Error("Read", zap.String("id", ID), zap.Error(err))
 		return plan, ErrUnexpectedStoreError
 	}
 	return plan, err
 }
 
-func (store *store) ListTrips(ctx context.Context, ff ListTripsFilter) (TripPlansList, error) {
-	list := TripPlansList{}
-	bsonM := ff.toBSON()
-	cursor, err := store.tripsColl.Find(ctx, bsonM)
+func (s *store) List(ctx context.Context, ff ListFilter) (TripsList, error) {
+	list := TripsList{}
+	cursor, err := s.tripsColl.Find(ctx, ff.toBSON())
 	if err != nil {
-		store.logger.Error("ListTrips", zap.String("ff", fmt.Sprintf("%+v", ff)), zap.Error(err))
+		s.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return list, err
 	}
 	err = cursor.All(ctx, &list)
 	return list, err
 }
 
-func (store *store) DeleteTrip(ctx context.Context, ID string) error {
-	ff := bson.M{ID: ID}
-	_, err := store.tripsColl.DeleteOne(ctx, ff)
+func (s *store) Delete(ctx context.Context, ID string) error {
+	_, err := s.tripsColl.DeleteOne(ctx, bson.M{ID: ID})
 	if err != nil {
-		store.logger.Error("DeleteTrip", zap.String("id", ID), zap.Error(err))
+		s.logger.Error("Delete", zap.String("id", ID), zap.Error(err))
 		return ErrUnexpectedStoreError
 	}
 	return err

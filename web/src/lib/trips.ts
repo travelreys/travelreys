@@ -104,8 +104,10 @@ export namespace Trips {
   }
 }
 
-export const LabelTransportationPreference = "transportationPreference";
-export const DefaultTransportationPreference = "walk+drive";
+export const MemberRoleCollaborator = "collaborator";
+export const MemberRoleParticipant = "participant";
+export const LabelTransportModePref = "transportationPreference";
+export const DefaultTransportModePref = "walk+drive";
 export const PriceAmountPath = "price.amount";
 export const BudgetAmountJSONPath = "amount/amount";
 export const PriceAmountJSONPath = "price/amount";

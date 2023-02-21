@@ -18,53 +18,54 @@ const (
 	GroupCoordinators = "coordinators"
 )
 
-// syncSessConnectionsKey is the Redis for maintaining session connections
-func syncSessConnectionsKey(planID string) string {
-	return fmt.Sprintf("sync-session:%s:connections", planID)
+// sessConnectionsKey is the Redis key for maintaining session connections
+func sessConnectionsKey(tripID string) string {
+	return fmt.Sprintf("sync-session:%s:connections", tripID)
 }
 
-// syncSessCounterKey is the Redis for TOB counter
-func syncSessCounterKey(planID string) string {
-	return fmt.Sprintf("sync-session:%s:counter", planID)
+// sessCounterKey is the Redis for TOB counter
+func sessCounterKey(tripID string) string {
+	return fmt.Sprintf("sync-session:%s:counter", tripID)
 }
 
-// syncSessRequestSub is the NATS.io subj for client -> coordinator communication
-func syncSessRequestSubj(planID string) string {
-	return fmt.Sprintf("sync-session.requests.%s", planID)
+// sessRequestSub is the NATS.io subj for client -> coordinator communication
+func sessRequestSubj(tripID string) string {
+	return fmt.Sprintf("sync-session.requests.%s", tripID)
 }
 
-// syncSessTOBSubj is the NATS.io subj for coordinator -> client communication
-func syncSessTOBSubj(planID string) string {
-	return fmt.Sprintf("sync-session.tob.%s", planID)
+// sessTOBSubj is the NATS.io subj for coordinator -> client communication
+func sessTOBSubj(tripID string) string {
+	return fmt.Sprintf("sync-session.tob.%s", tripID)
 }
 
 // Session Store
 
-type SessionStore interface {
-	Read(ctx context.Context, planID string) (SyncSession, error)
-	AddConnToSession(ctx context.Context, conn SyncConnection) error
-	RemoveConnFromSession(ctx context.Context, conn SyncConnection) error
+type Store interface {
+	Read(ctx context.Context, tripID string) (Session, error)
+	AddConn(ctx context.Context, conn Connection) error
+	RemoveConn(ctx context.Context, conn Connection) error
 
-	GetSessionCounter(ctx context.Context, planID string) (uint64, error)
-	IncrSessionCounter(ctx context.Context, planID string) error
-	DeleteSessionCounter(ctx context.Context, planID string) error
+	GetCounter(ctx context.Context, tripID string) (uint64, error)
+	IncrCounter(ctx context.Context, tripID string) error
+	ResetCounter(ctx context.Context, tripID string) error
+	DeleteCounter(ctx context.Context, tripID string) error
 }
 
-type sessionStore struct {
+type store struct {
 	rdb redis.UniversalClient
 }
 
-func NewSessionStore(rdb redis.UniversalClient) SessionStore {
-	return &sessionStore{rdb}
+func NewStore(rdb redis.UniversalClient) Store {
+	return &store{rdb}
 }
 
-func (s *sessionStore) Read(ctx context.Context, planID string) (SyncSession, error) {
+func (s *store) Read(ctx context.Context, tripID string) (Session, error) {
 	var strSlice []string
-	key := syncSessConnectionsKey(planID)
+	key := sessConnectionsKey(tripID)
 	cmd := s.rdb.HVals(ctx, key)
 	err := cmd.ScanSlice(&strSlice)
 	if err != nil {
-		return SyncSession{}, err
+		return Session{}, err
 	}
 
 	members := trips.MembersList{}
@@ -73,24 +74,24 @@ func (s *sessionStore) Read(ctx context.Context, planID string) (SyncSession, er
 		json.Unmarshal([]byte(str), &mem)
 		members = append(members, mem)
 	}
-	return SyncSession{members}, err
+	return Session{members}, err
 }
 
-func (s *sessionStore) AddConnToSession(ctx context.Context, conn SyncConnection) error {
-	key := syncSessConnectionsKey(conn.PlanID)
+func (s *store) AddConn(ctx context.Context, conn Connection) error {
+	key := sessConnectionsKey(conn.TripID)
 	value, _ := json.Marshal(conn.Member)
-	cmd := s.rdb.HSet(ctx, key, conn.ConnectionID, value)
+	cmd := s.rdb.HSet(ctx, key, conn.ID, value)
 	return cmd.Err()
 }
 
-func (s *sessionStore) RemoveConnFromSession(ctx context.Context, conn SyncConnection) error {
-	key := syncSessConnectionsKey(conn.PlanID)
-	cmd := s.rdb.HDel(ctx, key, conn.ConnectionID)
+func (s *store) RemoveConn(ctx context.Context, conn Connection) error {
+	key := sessConnectionsKey(conn.TripID)
+	cmd := s.rdb.HDel(ctx, key, conn.ID)
 	return cmd.Err()
 }
 
-func (s *sessionStore) GetSessionCounter(ctx context.Context, planID string) (uint64, error) {
-	key := syncSessCounterKey(planID)
+func (s *store) GetCounter(ctx context.Context, tripID string) (uint64, error) {
+	key := sessCounterKey(tripID)
 	cmd := s.rdb.Get(ctx, key)
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
@@ -102,24 +103,30 @@ func (s *sessionStore) GetSessionCounter(ctx context.Context, planID string) (ui
 	return uint64(ctr), err
 }
 
-func (s *sessionStore) IncrSessionCounter(ctx context.Context, planID string) error {
-	key := syncSessCounterKey(planID)
+func (s *store) IncrCounter(ctx context.Context, tripID string) error {
+	key := sessCounterKey(tripID)
 	cmd := s.rdb.Incr(ctx, key)
 	return cmd.Err()
 }
 
-func (s *sessionStore) DeleteSessionCounter(ctx context.Context, planID string) error {
-	key := syncSessCounterKey(planID)
+func (s *store) ResetCounter(ctx context.Context, tripID string) error {
+	key := sessCounterKey(tripID)
+	cmd := s.rdb.Set(ctx, key, "1", 0)
+	return cmd.Err()
+}
+
+func (s *store) DeleteCounter(ctx context.Context, tripID string) error {
+	key := sessCounterKey(tripID)
 	cmd := s.rdb.Del(ctx, key)
 	return cmd.Err()
 }
 
 // Sync Message Store
 
-type SyncMessageStore interface {
-	Publish(planID string, msg SyncMessage) error
-	Subscribe(planID string) (<-chan SyncMessage, chan<- bool, error)
-	SubscribeQueue(planID, groupName string) (<-chan SyncMessage, chan<- bool, error)
+type MessageStore interface {
+	Publish(tripID string, msg Message) error
+	Subscribe(tripID string) (<-chan Message, chan<- bool, error)
+	SubscribeQueue(tripID, groupName string) (<-chan Message, chan<- bool, error)
 }
 
 type syncMsgStore struct {
@@ -127,12 +134,12 @@ type syncMsgStore struct {
 	rdb redis.UniversalClient
 }
 
-func NewSyncMessageStore(nc *nats.Conn, rdb redis.UniversalClient) SyncMessageStore {
+func NewMessageStore(nc *nats.Conn, rdb redis.UniversalClient) MessageStore {
 	return &syncMsgStore{nc, rdb}
 }
 
-func (sms *syncMsgStore) Publish(planID string, msg SyncMessage) error {
-	subj := syncSessRequestSubj(planID)
+func (sms *syncMsgStore) Publish(tripID string, msg Message) error {
+	subj := sessRequestSubj(tripID)
 	data, err := json.Marshal(msg)
 	if err != nil {
 		fmt.Println(err)
@@ -143,10 +150,10 @@ func (sms *syncMsgStore) Publish(planID string, msg SyncMessage) error {
 	return sms.nc.Flush()
 }
 
-func (sms *syncMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- bool, error) {
-	subj := syncSessRequestSubj(planID)
+func (sms *syncMsgStore) Subscribe(tripID string) (<-chan Message, chan<- bool, error) {
+	subj := sessRequestSubj(tripID)
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan SyncMessage, common.DefaultChSize)
+	msgCh := make(chan Message, common.DefaultChSize)
 
 	done := make(chan bool)
 
@@ -163,7 +170,7 @@ func (sms *syncMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- bo
 				close(msgCh)
 				return
 			case natsMsg := <-natsCh:
-				var msg SyncMessage
+				var msg Message
 				err := json.Unmarshal(natsMsg.Data, &msg)
 				if err == nil {
 					msgCh <- msg
@@ -175,10 +182,10 @@ func (sms *syncMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- bo
 	return msgCh, done, nil
 }
 
-func (sms *syncMsgStore) SubscribeQueue(planID, groupName string) (<-chan SyncMessage, chan<- bool, error) {
-	subj := syncSessRequestSubj(planID)
+func (sms *syncMsgStore) SubscribeQueue(tripID, groupName string) (<-chan Message, chan<- bool, error) {
+	subj := sessRequestSubj(tripID)
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan SyncMessage, common.DefaultChSize)
+	msgCh := make(chan Message, common.DefaultChSize)
 
 	done := make(chan bool)
 
@@ -195,7 +202,7 @@ func (sms *syncMsgStore) SubscribeQueue(planID, groupName string) (<-chan SyncMe
 				close(msgCh)
 				return
 			case natsMsg := <-natsCh:
-				var msg SyncMessage
+				var msg Message
 				err := json.Unmarshal(natsMsg.Data, &msg)
 				if err == nil {
 					msgCh <- msg
@@ -210,8 +217,8 @@ func (sms *syncMsgStore) SubscribeQueue(planID, groupName string) (<-chan SyncMe
 // TOB Message Store
 
 type TOBMessageStore interface {
-	Publish(planID string, msg SyncMessage) error
-	Subscribe(planID string) (<-chan SyncMessage, chan<- bool, error)
+	Publish(tripID string, msg Message) error
+	Subscribe(tripID string) (<-chan Message, chan<- bool, error)
 }
 
 type tobMsgStore struct {
@@ -223,8 +230,8 @@ func NewTOBMessageStore(nc *nats.Conn, rdb redis.UniversalClient) TOBMessageStor
 	return &tobMsgStore{nc, rdb}
 }
 
-func (tms *tobMsgStore) Publish(planID string, msg SyncMessage) error {
-	subj := syncSessTOBSubj(planID)
+func (tms *tobMsgStore) Publish(tripID string, msg Message) error {
+	subj := sessTOBSubj(tripID)
 	data, _ := json.Marshal(msg)
 
 	if err := tms.nc.Publish(subj, data); err != nil {
@@ -233,10 +240,10 @@ func (tms *tobMsgStore) Publish(planID string, msg SyncMessage) error {
 	return tms.nc.Flush()
 }
 
-func (tms *tobMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- bool, error) {
-	subj := syncSessTOBSubj(planID)
+func (tms *tobMsgStore) Subscribe(tripID string) (<-chan Message, chan<- bool, error) {
+	subj := sessTOBSubj(tripID)
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan SyncMessage, common.DefaultChSize)
+	msgCh := make(chan Message, common.DefaultChSize)
 
 	done := make(chan bool)
 
@@ -253,7 +260,7 @@ func (tms *tobMsgStore) Subscribe(planID string) (<-chan SyncMessage, chan<- boo
 				close(msgCh)
 				return
 			case natsMsg := <-natsCh:
-				var msg SyncMessage
+				var msg Message
 				err := json.Unmarshal(natsMsg.Data, &msg)
 				if err == nil {
 					msgCh <- msg

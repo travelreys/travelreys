@@ -65,7 +65,7 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
 
 interface TripsContainerProps {
   trips: Array<any>,
-  onCreateTripBtnClick: any
+  onCreateBtnClick: any
 }
 
 const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => {
@@ -81,7 +81,7 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
         </span>
         <button type="button"
           className={TripContainerCss.CreateBtn}
-          onClick={props.onCreateTripBtnClick}
+          onClick={props.onCreateBtnClick}
         >
           + Create new trip
         </button>

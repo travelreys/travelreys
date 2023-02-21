@@ -9,6 +9,7 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 )
 
 func errToHttpCode() func(err error) int {
@@ -43,7 +44,7 @@ func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
-		kithttp.ServerBefore(common.AddClientInfoToCtx),
+		kithttp.ServerBefore(reqctx.ContextWithClientInfo),
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode())),
 	}
 

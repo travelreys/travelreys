@@ -8,17 +8,17 @@ import {
   SelectRangeEventHandler
 } from 'react-day-picker';
 
-import TripsAPI, { CreateTripResponse, ReadTripsResponse } from '../../apis/trips';
+import TripsAPI, { CreateResponse, ReadsResponse } from '../../apis/trips';
 
 import Alert from '../../components/common/Alert';
-import CreateTripModal from '../../features/home/CreateTripModal';
+import CreateModal from '../../features/home/CreateModal';
 import Spinner from '../../components/common/Spinner';
 import TripsContainer from '../../features/home/TripsContainer';
 import { HomeCss } from '../../assets/styles/global';
 
 
 interface TripsJumboProps {
-  onCreateTripBtnClick: any,
+  onCreateBtnClick: any,
 }
 
 const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
@@ -32,7 +32,7 @@ const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
       </h1>
       <button type="button"
         className={HomeCss.CreateNewTripBtn}
-        onClick={props.onCreateTripBtnClick}
+        onClick={props.onCreateBtnClick}
       >
         + {t("home.tripJumbo.createBtn")}
       </button>
@@ -56,8 +56,8 @@ const HomePage: FC = () => {
   useEffect(() => {
     setIsLoading(true);
     TripsAPI.listTrips()
-      .then((res: ReadTripsResponse) => {
-        setTrips(res.tripPlans);
+      .then((res: ReadsResponse) => {
+        setTrips(res.trips);
         setAlertProps({});
         setIsLoading(false);
       })
@@ -86,7 +86,7 @@ const HomePage: FC = () => {
 
   const submitNewTripOnClick = () => {
     TripsAPI.createTrip(newTripName, newTripDates?.from, newTripDates?.to)
-    .then((res: CreateTripResponse) => {
+    .then((res: CreateResponse) => {
       history(`/trips/${res.id}`);
     })
     .catch(res => {
@@ -101,12 +101,12 @@ const HomePage: FC = () => {
   // Renderers
   const renderTrips = () => {
     if (trips.length === 0) {
-      return (<TripsJumbo onCreateTripBtnClick={createTripModalOpenOnClick} />);
+      return (<TripsJumbo onCreateBtnClick={createTripModalOpenOnClick} />);
     }
     return (
       <TripsContainer
         trips={trips}
-        onCreateTripBtnClick={createTripModalOpenOnClick}
+        onCreateBtnClick={createTripModalOpenOnClick}
       />
     );
   }
@@ -119,7 +119,7 @@ const HomePage: FC = () => {
     <div>
       {!_isEmpty(alertProps) ? <Alert {...alertProps} /> : null}
       {renderTrips()}
-      <CreateTripModal
+      <CreateModal
         isOpen={isCreateModelOpen}
         onClose={() => setIsCreateModalOpen(false)}
         tripName={newTripName}

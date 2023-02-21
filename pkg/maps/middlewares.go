@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +23,7 @@ func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
 }
 
 func (mw rbacMiddleware) PlacesAutocomplete(ctx context.Context, query, types, sessiontoken string) (AutocompletePredictionList, error) {
-	ci, err := common.ReadClientInfoFromCtx(ctx)
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return AutocompletePredictionList{}, ErrRBACMissing
 	}
@@ -31,7 +31,7 @@ func (mw rbacMiddleware) PlacesAutocomplete(ctx context.Context, query, types, s
 }
 
 func (mw rbacMiddleware) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken string) (Place, error) {
-	ci, err := common.ReadClientInfoFromCtx(ctx)
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return Place{}, ErrRBACMissing
 	}
@@ -39,7 +39,7 @@ func (mw rbacMiddleware) PlaceDetails(ctx context.Context, placeID string, field
 }
 
 func (mw rbacMiddleware) Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error) {
-	ci, err := common.ReadClientInfoFromCtx(ctx)
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return RouteList{}, ErrRBACMissing
 	}
@@ -47,7 +47,7 @@ func (mw rbacMiddleware) Directions(ctx context.Context, originPlaceID, destPlac
 }
 
 func (mw rbacMiddleware) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error) {
-	ci, err := common.ReadClientInfoFromCtx(ctx)
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return RouteList{}, ErrRBACMissing
 	}

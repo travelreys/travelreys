@@ -19,60 +19,70 @@ export const makeRemoveOp = (path: string, value: any): JSONPatchOp => {
   return {op: "remove", path, value}
 };
 
-export const SyncOpJoinSession = "SyncOpJoinSession";
-export const SyncOpLeaveSession = "SyncOpLeaveSession";
-export const SyncOpJoinSessionBroadcast = "SyncOpJoinSessionBroadcast";
-export const SyncOpUpdateTrip = "SyncOpUpdateTrip";
+export const OpJoinSession = "OpJoinSession";
+export const OpLeaveSession = "OpLeaveSession";
+export const OpJoinSessionBroadcast = "OpJoinSessionBroadcast";
+export const OpMemberUpdate = "OpMemberUpdate";
+export const OpUpdateTrip = "OpUpdateTrip";
 
 export namespace TripSync {
   export interface Message {
-    id?: string
+    connID?: string
+    tripID: string
+    op: "OpJoinSession" | "OpLeaveSession" | "OpJoinSessionBroadcast"| "OpMemberUpdate" |"OpUpdateTrip"
     counter?: number
-    tripPlanID: string
-    opType: string
-
-    syncDataJoinSession?: SyncDataJoinSession
-    syncDataLeaveSession?: SyncDataLeaveSession
-    syncDataPing?: SyncDataPing
-    syncDataUpdateTrip?: SyncDataUpdateTrip
+    data: MessageData
   }
 
-  interface SyncDataJoinSession {
+  interface MessageData {
+    joinSession?: MsgDataJoinSession
+    leaveSession?: MsgDataLeaveSession
+    memberUpdate?: MsgDataMemberUpdate
+    ping?: MsgDataPing
+    updateTrip?: MsgDataUpdateTrip
+  }
+
+  interface MsgDataJoinSession {
     memberID: string
   }
 
-  interface SyncDataLeaveSession {
+  interface MsgDataLeaveSession {
     memberID: string
   }
 
-  interface SyncDataPing {}
+  interface MsgDataMemberUpdate {
+    members: any
+  }
 
-  interface SyncDataUpdateTrip {
+  interface MsgDataPing {}
+
+  interface MsgDataUpdateTrip {
+    title: string
     ops: Array<JSONPatchOp>
   }
 
 };
 
-export const makeSyncMsgJoinSession = (tripPlanID: string, memberID: string): TripSync.Message => {
+export const makeMsgJoinSession = (tripID: string, memberID: string): TripSync.Message => {
   return {
-    tripPlanID,
-    opType: SyncOpJoinSession,
-    syncDataJoinSession: {memberID}
+    tripID,
+    op: OpJoinSession,
+    data: { joinSession: {memberID}}
   }
 }
 
-export const makeSyncMsgLeaveSession = (tripPlanID: string, memberID: string): TripSync.Message => {
+export const makeMsgLeaveSession = (tripID: string, memberID: string): TripSync.Message => {
   return {
-    tripPlanID,
-    opType: SyncOpLeaveSession,
-    syncDataLeaveSession: {memberID}
+    tripID,
+    op: OpLeaveSession,
+    data: { leaveSession: {memberID}}
   }
 }
 
-export const makeSyncMsgUpdateTrip = (tripPlanID: string, ops: Array<JSONPatchOp>): TripSync.Message => {
+export const makeMsgUpdateTrip = (tripID: string, title: string, ops: Array<JSONPatchOp>): TripSync.Message => {
   return {
-    tripPlanID,
-    opType: SyncOpUpdateTrip,
-    syncDataUpdateTrip: { ops },
+    tripID,
+    op: OpUpdateTrip,
+    data: { updateTrip: {title, ops}}
   };
 }

@@ -116,9 +116,9 @@ export const TripContainerCss = {
   TripCardFooter: "flex justify-between items-center",
 }
 
-export const CreateTripModalCss = {
+export const CreateModalCss = {
   CreateModalCard: "bg-white rounded-lg px-4 pt-5 pb-4 sm:p-8 sm:pb-4",
-  CreateTripTitle: "text-2xl font-bold text-center leading-6 text-slate-900 mb-6",
+  CreateTitle: "text-2xl font-bold text-center leading-6 text-slate-900 mb-6",
   TripNameCtn: "flex mb-4 border border-slate-200 rounded-lg",
   TripNameLabel: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   TripNameInput: "block flex-1 border-0 rounded-r-lg min-w-0 p-2.5 text-gray-900 text-sm w-full",
@@ -126,9 +126,9 @@ export const CreateTripModalCss = {
   TripDatesIcon: "inline align-bottom h-5 w-5 text-gray-500",
   TripDatesLabel: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   TripDatesInput: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
-  CreateTripBtnsCtn: "bg-gray-50 px-4 pt-3 pb-5 rounded-b-lg sm:flex sm:flex-row-reverse sm:px-6",
-  CreateTripBtn: "inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm",
-  CreateTripCancelBtn: "mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm",
+  CreateBtnsCtn: "bg-gray-50 px-4 pt-3 pb-5 rounded-b-lg sm:flex sm:flex-row-reverse sm:px-6",
+  CreateBtn: "inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm",
+  CreateCancelBtn: "mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm",
 }
 
 ///////////////
@@ -395,10 +395,23 @@ export const TripBudgetCss = {
 
 export const TripSettingsCss = {
   TransportModeLabel: "block mb-2 font-semibold text-gray-900",
-  TransportModeSelect: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ",
-  SearchIconCtn: "absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none",
-  SearchIcon: "h-6 w-6 text-slate-700",
-  SearchInput: "border border-slate-200 text-gray-900 text-sm rounded block w-full pl-10 p-4",
+  TransportModeSelect: "bg-white block w-full p-2.5 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500",
+
+  MemberSectionCtn: "mb-8",
+  MemberSectionHeader: "flex justify-between items-center",
+  MemberSectionTitle: "font-bold text-2xl",
+  SearchMemberBtn: "font-semibold text-gray-500",
+  MemberSearchHeader: "flex justify-between items-center mb-8",
+  MemberSearchHeaderTxt: "text-gray-800 font-bold text-xl",
+  MemberRoleSelect: "mb-4 bg-white block w-full p-2.5 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500",
+  MemberSearchIconCtn: "absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none",
+  MemberSearchIcon: "h-6 w-6 text-slate-700",
+  MemberSearchInput: "border border-slate-200 text-gray-900 text-sm rounded-lg block w-full pl-10 p-4",
+  MemberSearchItem: "flex items-center w-full p-2 mb-4 text-left rounded-lg hover:shadow hover:shadow-indigo-200",
+  MemberSearchItemAvatar: "inline-block h-10 w-10 mr-4",
+  MemberSearchItemName: "font-semibold",
+  MemberSearchItemDesc: "text-gray-500",
+  MemberAvatarDiv: "h-12 w-12 mr-4",
 }
 
 

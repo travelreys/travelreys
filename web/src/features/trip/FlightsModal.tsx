@@ -345,8 +345,8 @@ interface FlightsSearchFormProps {
 const FlightsSearchForm: FC<FlightsSearchFormProps> = (props: FlightsSearchFormProps) => {
 
   // Data State
-  const [origIATA, setOrigIATA] = useState("");
-  const [destIATA, setDestIATA] = useState("");
+  const [origin, setOrigIATA] = useState("");
+  const [destination, setDestIATA] = useState("");
   const [cabinClass, setCabinClass] = useState(cabinClasses[0]);
   const [flightDates, setFlightDates] = useState<DateRange>();
 
@@ -354,8 +354,8 @@ const FlightsSearchForm: FC<FlightsSearchFormProps> = (props: FlightsSearchFormP
   const [isCabinClassActive, setIsCabinClassActive] = useState(false);
   const [isOrigIATAFocus, setIsOrigIATAFocus] = useState(false);
   const [isDestIATAFocus, setIsDestIATAFocus] = useState(false);
-  const [origIATAQuery, setOrigIATAQuery] = useState("");
-  const [destIATAQuery, setDestIATAQuery] = useState("");
+  const [originQuery, setOrigIATAQuery] = useState("");
+  const [destinationQuery, setDestIATAQuery] = useState("");
 
 
   useEffect(() => {
@@ -369,7 +369,7 @@ const FlightsSearchForm: FC<FlightsSearchFormProps> = (props: FlightsSearchFormP
   const searchBtnOnClick = () => {
     const departDate = printFromDateFromRange(flightDates, 'y-MM-dd');
     const arrDate = printToDateFromRange(flightDates, 'y-MM-dd');
-    props.onSearch(origIATA, destIATA, departDate, arrDate, cabinClass.value);
+    props.onSearch(origin, destination, departDate, arrDate, cabinClass.value);
   }
 
   const flightDatesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
@@ -467,12 +467,12 @@ const FlightsSearchForm: FC<FlightsSearchFormProps> = (props: FlightsSearchFormP
             type="text"
             className={FlightsModalCss.FlightFromInput}
             placeholder="from city, airport"
-            value={origIATAQuery}
+            value={originQuery}
             onChange={(e) => {setOrigIATAQuery(e.target.value)}}
             onFocus={() => {setIsOrigIATAFocus(true)}}
             onBlur={(e) => {setTimeout(() => { setIsOrigIATAFocus(false) }, 200)}}
           />
-          {renderAirportsAutocomplete(isOrigIATAFocus, origIATAQuery, setOrigIATA, setOrigIATAQuery, setIsOrigIATAFocus)}
+          {renderAirportsAutocomplete(isOrigIATAFocus, originQuery, setOrigIATA, setOrigIATAQuery, setIsOrigIATAFocus)}
         </div>
         <div className="relative w-6/12">
           <div className={FlightsModalCss.FlightFromIconCtn}>
@@ -482,12 +482,12 @@ const FlightsSearchForm: FC<FlightsSearchFormProps> = (props: FlightsSearchFormP
             type="text"
             className={FlightsModalCss.FlightFromInput}
             placeholder="to city, airport"
-            value={destIATAQuery}
+            value={destinationQuery}
             onChange={(e) => { setDestIATAQuery(e.target.value)}}
             onFocus={() => {setIsDestIATAFocus(true)}}
             onBlur={(e) => {setTimeout(() => { setIsDestIATAFocus(false) }, 200)}}
           />
-          {renderAirportsAutocomplete(isDestIATAFocus, destIATAQuery, setDestIATA, setDestIATAQuery, setIsDestIATAFocus)}
+          {renderAirportsAutocomplete(isDestIATAFocus, destinationQuery, setDestIATA, setDestIATAQuery, setIsDestIATAFocus)}
         </div>
       </div>
     );
@@ -528,12 +528,12 @@ const FlightsModal: FC<FlightsModalProps> = (props: FlightsModalProps) => {
 
 
   // Event Handlers
-  const onSearch = (origIATA: string, destIATA: string, departDate: string, returnDate: string | undefined, cabinClass: string) => {
-    if (_isEmpty(origIATA)) {
+  const onSearch = (origin: string, destination: string, departDate: string, returnDate: string | undefined, cabinClass: string) => {
+    if (_isEmpty(origin)) {
       setAlertMsg("Please select a flight origin");
       return;
     }
-    if (_isEmpty(destIATA)) {
+    if (_isEmpty(destination)) {
       setAlertMsg("Please select a flight destination");
       return;
     }
@@ -546,7 +546,7 @@ const FlightsModal: FC<FlightsModalProps> = (props: FlightsModalProps) => {
     setIsLoading(true);
     setAlertMsg("");
 
-    FlightsAPI.search(origIATA, destIATA, departDate, returnDate, cabinClass)
+    FlightsAPI.search(origin, destination, departDate, returnDate, cabinClass)
     .then(res => {
       if (_isEmpty(returnDate)) {
         const oneways = _sortBy(_get(res, "data.itineraries.oneways", []), "bookingMetadata.score")

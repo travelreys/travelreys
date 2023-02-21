@@ -1,22 +1,33 @@
 package common
 
 import (
+	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
 const (
-	JWTIssuer     = "tiinyplanet"
-	JWTClaimIss   = "iss"
-	JWTClaimSub   = "sub"
-	JWTClaimEmail = "email"
-	JWTClaimIat   = "iat"
+	JwtIssuer     = "tiinyplanet"
+	JwtClaimIss   = "iss"
+	JwtClaimSub   = "sub"
+	JwtClaimEmail = "email"
+	JwtClaimIat   = "iat"
+
+	EnvJwtSecret = "TIINYPLANET_JWT_SECRET"
 )
 
 var (
 	JWTDefaultSigningMethod = jwt.SigningMethodHS512
 )
+
+func GetJwtSecret() string {
+	return os.Getenv(EnvJwtSecret)
+}
+
+func GetJwtSecretBytes() []byte {
+	return []byte(os.Getenv(EnvJwtSecret))
+}
 
 func ParseBearerAndToken(header string) (string, error) {
 	bearerAndToken := strings.Split(header, " ")

@@ -8,8 +8,8 @@ import airports from '../data/airports.json';
 
 const FlightsAPI = {
   search: (
-    origIATA: string,
-    destIATA: string,
+    origin: string,
+    destination: string,
     departDate: string,
     returnDate: string | undefined,
     cabinClass: string
@@ -17,10 +17,10 @@ const FlightsAPI = {
     const ax = makeCommonAxios();
     return ax.get(`/api/v1/flights/search`, {
       params: {
-        numAdults: '1',
+        adults: '1',
         currency: 'SGD',
-        origIATA: origIATA.toUpperCase(),
-        destIATA: destIATA.toUpperCase(),
+        origin: origin.toUpperCase(),
+        destination: destination.toUpperCase(),
         departDate,
         returnDate,
         cabinClass,

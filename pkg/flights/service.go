@@ -2,28 +2,20 @@ package flights
 
 import (
 	"context"
-	"time"
 )
 
 type Service interface {
-	Search(ctx context.Context, origIATA, destIATA string, numAdults uint64, departDate time.Time, opts FlightsSearchOptions) (Itineraries, error)
+	Search(ctx context.Context, opts SearchOptions) (Itineraries, error)
 }
 
 type service struct {
-	flightAPI WebFlightsAPI
+	flightAPI WebAPI
 }
 
-func NewService(flightAPI WebFlightsAPI) Service {
+func NewService(flightAPI WebAPI) Service {
 	return &service{flightAPI}
 }
 
-func (svc *service) Search(
-	ctx context.Context,
-	origIATA,
-	destIATA string,
-	numAdults uint64,
-	departDate time.Time,
-	opts FlightsSearchOptions,
-) (Itineraries, error) {
-	return svc.flightAPI.Search(ctx, origIATA, destIATA, numAdults, departDate, opts)
+func (svc *service) Search(ctx context.Context, opts SearchOptions) (Itineraries, error) {
+	return svc.flightAPI.Search(ctx, opts)
 }

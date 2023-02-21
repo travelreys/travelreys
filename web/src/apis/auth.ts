@@ -10,7 +10,7 @@ export interface  LoginResponse {
   error?: string
 }
 
-export interface ReadUserResponse {
+export interface ReadResponse {
   user?: Auth.User
   error?: string
 }
@@ -20,15 +20,15 @@ export interface SearchUsersResponse {
   error?: string
 }
 
-export interface UpdateUserFilter {
+export interface UpdateFilter {
   labels: {[key: string]: string}
 }
 
-export const makeUpdateUserFilter = (labels: {[key: string]: string}): UpdateUserFilter => {
+export const makeUpdateFilter = (labels: {[key: string]: string}): UpdateFilter => {
   return {labels}
 }
 
-export interface UpdateUserResponse {
+export interface UpdateResponse {
   error?: string
 }
 
@@ -38,7 +38,7 @@ const authUserPathPrefix = "/api/v1/auth/users";
 const AuthAPI = {
 
   login: async (authCode: string): Promise<LoginResponse> => {
-    const url = `${BASE_URL}/${authLoginPathPrefix}`;
+    const url = `${BASE_URL}${authLoginPathPrefix}`;
     return axios.post(url, { code: authCode })
       .then((res) => {
         const token = _get(res, "data.jwtToken", "");
@@ -49,7 +49,7 @@ const AuthAPI = {
       });
   },
 
-  readUser: (usrID: string): Promise<ReadUserResponse> => {
+  readUser: (usrID: string): Promise<ReadResponse> => {
     const ax = makeCommonAxios();
     return ax.get(`${authUserPathPrefix}/${usrID}`)
       .then((res) => {
@@ -73,7 +73,7 @@ const AuthAPI = {
       })
   },
 
-  updateUser: (usrID: string, ff: UpdateUserFilter): Promise<UpdateUserResponse> => {
+  updateUser: (usrID: string, ff: UpdateFilter): Promise<UpdateResponse> => {
     const ax = makeCommonAxios();
     return ax.put(`${authUserPathPrefix}/${usrID}`, {ff})
       .then((res) => {

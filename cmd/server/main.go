@@ -15,33 +15,27 @@ import (
 )
 
 const (
-	cfgFlagHost     = "host"
-	cfgFlagHostname = "hostname"
-	cfgFlagPort     = "port"
-	cfgFlagLogLevel = "log-level"
-
-	cfgFlagCORSOrigin = "cors-origin"
-
-	cfgFlagMongoURL         = "mongo-url"
-	cfgFlagMongoDBName      = "mongo-dbname"
-	cfgFlagNatsURL          = "nats-url"
-	cfgFlagRedisURL         = "redis-url"
-	cfgFlagRedisClusterMode = "redis-cluster-mode"
+	cfgFlagHost        = "host"
+	cfgFlagHostname    = "hostname"
+	cfgFlagPort        = "port"
+	cfgFlagLogLevel    = "log-level"
+	cfgFlagCORSOrigin  = "cors-origin"
+	cfgFlagMongoURL    = "mongo-url"
+	cfgFlagMongoDBName = "mongo-dbname"
+	cfgFlagNatsURL     = "nats-url"
+	cfgFlagRedisURL    = "redis-url"
 
 	envVarPrefix = "TIINYPLANET"
 )
 
 type ServerConfig struct {
-	Host string `mapstructure:"host"`
-	Port string `mapstructure:"port"`
-
-	CORSOrigin string `mapstructure:"cors-origin"`
-
-	NatsURL          string `mapstructure:"nats-url"`
-	RedisURL         string `mapstructure:"redis-url"`
-	RedisClusterMode bool   `mapstructure:"redis-cluster-mode"`
-	MongoURL         string `mapstructure:"mongo-url"`
-	MongoDBName      string `mapstructure:"mongo-dbname"`
+	Host        string `mapstructure:"host"`
+	Port        string `mapstructure:"port"`
+	CORSOrigin  string `mapstructure:"cors-origin"`
+	NatsURL     string `mapstructure:"nats-url"`
+	RedisURL    string `mapstructure:"redis-url"`
+	MongoURL    string `mapstructure:"mongo-url"`
+	MongoDBName string `mapstructure:"mongo-dbname"`
 }
 
 func (cfg ServerConfig) HTTPBindAddress() string {
@@ -58,7 +52,6 @@ func main() {
 	viper.SetDefault(cfgFlagCORSOrigin, "*")
 	viper.SetDefault(cfgFlagNatsURL, "")
 	viper.SetDefault(cfgFlagRedisURL, "")
-	viper.SetDefault(cfgFlagRedisClusterMode, false)
 	viper.SetDefault(cfgFlagMongoURL, "")
 	viper.SetDefault(cfgFlagMongoDBName, "")
 

@@ -7,6 +7,7 @@ import (
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 
 	"github.com/gorilla/mux"
 )
@@ -14,7 +15,7 @@ import (
 func errToHttpCode() func(err error) int {
 	notFoundErrors := []error{}
 	appErrors := []error{ErrEmptySearchQuery, ErrProviderUnsplashError}
-	authErrors := []error{ErrRBAC, ErrRBACMissing}
+	authErrors := []error{ErrRBAC}
 
 	return func(err error) int {
 		if common.ErrorContains(notFoundErrors, err) {
@@ -43,7 +44,7 @@ func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
-		kithttp.ServerBefore(common.AddClientInfoToCtx),
+		kithttp.ServerBefore(reqctx.ContextWithClientInfo),
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode())),
 	}
 

@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 	"go.uber.org/zap"
 )
 
 var (
-	ErrRBACMissing = errors.New("auth.rbac.missing")
-	ErrRBAC        = errors.New("auth.rbac.error")
+	ErrRBAC = errors.New("auth.rbac.error")
 )
 
 type rbacMiddleware struct {
@@ -22,10 +21,10 @@ func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
 	return &rbacMiddleware{svc, logger}
 }
 
-func (mw rbacMiddleware) Search(ctx context.Context, query string) (ImageMetadataList, error) {
-	ci, err := common.ReadClientInfoFromCtx(ctx)
+func (mw rbacMiddleware) Search(ctx context.Context, query string) (MetadataList, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return ImageMetadataList{}, ErrRBACMissing
+		return MetadataList{}, ErrRBAC
 	}
 	return mw.next.Search(ctx, query)
 }

@@ -22,8 +22,8 @@ import GoogleIcon from '../icons/GoogleIcon';
 
 import AuthAPI, {
   LoginResponse,
-  makeUpdateUserFilter,
-  ReadUserResponse
+  makeUpdateFilter,
+  ReadResponse
 } from '../../apis/auth';
 import {
   deleteAuthToken,
@@ -75,7 +75,7 @@ const LoginModal: FC<LoginModalProps> = (props: LoginModalProps) => {
         .then((metadata) => {
           return AuthAPI.readUser(metadata!.sub)
         })
-        .then((res: ReadUserResponse) => {
+        .then((res: ReadResponse) => {
           if (res.error) {
             // do smth with error
           }
@@ -303,7 +303,7 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
     dispatch(makeSetUserAction(newUser));
 
     AuthAPI.updateUser(
-      state.user?.id || "", makeUpdateUserFilter(newUser.labels));
+      state.user?.id || "", makeUpdateFilter(newUser.labels));
   }
 
   const localeOnSelect = (loc: string) => {
@@ -312,7 +312,7 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
     dispatch(makeSetUserAction(newUser));
 
     AuthAPI.updateUser(
-      state.user?.id || "", makeUpdateUserFilter(newUser.labels))
+      state.user?.id || "", makeUpdateFilter(newUser.labels))
     .then(() => {
       i18n.changeLanguage(loc);
     })
