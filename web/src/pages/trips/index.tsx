@@ -28,15 +28,17 @@ import TripMap from '../../features/maps/TripMap';
 import TripMenuJumbo from '../../features/trip/MenuJumbo';
 import SettingsSection from '../../features/trip/SettingsSection';
 
-import TripsAPI, { ReadResponse } from '../../apis/trips';
+import TripsAPI, { ReadMembersResponse, ReadResponse } from '../../apis/trips';
 import TripsSyncAPI from '../../apis/tripsSync';
 import { NewSyncMessageHeap } from '../../lib/heap';
 import {
   JSONPatchOp,
   makeMsgUpdateTrip,
   makeMsgJoinSession,
-  OpJoinSessionBroadcast,
-  OpUpdateTrip
+  OpUpdateTrip,
+  OpMemberUpdate,
+  UpdateTitleAddNewMember,
+  TripSync
 } from '../../lib/tripsSync';
 import { Auth, readAuthUser } from '../../lib/auth';
 import { CommonCss, TripMenuCss } from '../../assets/styles/global';
@@ -46,12 +48,11 @@ import { MapsProvider } from '../../context/maps-context';
 
 interface TripPlanningMenuProps {
   trip: any
-  tripUsers: {[key: string]: Auth.User}
+  tripMembers: {[key: string]: Auth.User}
   tripStateOnUpdate: any
 }
 
 const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProps) => {
-
   const [tab, setTab] = useState("home");
 
   // Renderers
@@ -136,7 +137,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           ?
           <SettingsSection
             trip={props.trip}
-            tripUsers={props.tripUsers}
+            tripMembers={props.tripMembers}
             tripStateOnUpdate={props.tripStateOnUpdate}
           />
           : null}
@@ -152,16 +153,13 @@ const TripPage: FC = () => {
 
   // Trip State
   const tripRef = useRef(null as any);
-  const [tripID, setTripID] = useState("");
   const [trip, setTrip] = useState(tripRef.current);
-  const [tripUsers, setTripUsers] = useState({});
-
+  const [tripMembers, setTripMembers] = useState({});
 
   // Sync Session State
   const wsRef = useRef(null as any);
   const pq = NewSyncMessageHeap();
   const nextTobCounter = useRef(0);
-
 
   // Map UI State
   const [mapNode, setMapNode] = useState(null) as any;
@@ -173,23 +171,34 @@ const TripPage: FC = () => {
     }
   }, []);
 
-  ///////////////////////
-  // Use Effects - Map //
-  ///////////////////////
-
   useEffect(() => {
     window.addEventListener("resize", () => {
-      if (!mapNode) {
-        return;
+      if (mapNode) {
+        setMapDivWidth(mapNode.getBoundingClientRect().width);
       }
-      setMapDivWidth(mapNode.getBoundingClientRect().width);
     })
   }, [mapNode])
 
 
   /////////////////////////////
-  // Use Effects - Websocker //
+  // Use Effects - Websocket //
   /////////////////////////////
+
+  const shouldSetWs = (id: string|undefined): boolean => {
+    return (wsRef.current === null && !_isEmpty(id))
+  }
+
+  const handleUpdateMsgTitle = (title?: string) => {
+    if (_isEmpty(title)) {
+      return;
+    }
+    if (title == UpdateTitleAddNewMember) {
+      TripsAPI.readMembers(id as string)
+        .then((data: ReadMembersResponse) => {
+          setTripMembers(data.members);
+        });
+    }
+  }
 
   // Close WS when leaving page
   useEffect(() => {
@@ -201,19 +210,14 @@ const TripPage: FC = () => {
     }
   }, [])
 
-  const shouldSetWs = (id: string|undefined): boolean => {
-    return (wsRef.current === null && !_isEmpty(id))
-  }
-
   useEffect(() => {
     // Fetch Trip
     if (id) {
-      TripsAPI.readTrip(id as string)
+      TripsAPI.read(id as string)
         .then((data: ReadResponse) => {
           tripRef.current = data.trip;
           setTrip(tripRef.current);
-          setTripUsers(data.users)
-          setTripID(id as string);
+          setTripMembers(data.members)
         });
     }
     // Set up WS Connection
@@ -228,9 +232,9 @@ const TripPage: FC = () => {
       });
 
       ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
-        const msg = JSON.parse(e.data);
-        switch (msg.opType) {
-          case OpJoinSessionBroadcast:
+        const msg = JSON.parse(e.data) as TripSync.Message;
+        switch (msg.op) {
+          case OpMemberUpdate:
             nextTobCounter.current = 1
             return;
           case OpUpdateTrip:
@@ -240,7 +244,7 @@ const TripPage: FC = () => {
             return;
         }
 
-        // Add message to min-heap
+        // Add OpUpdateTrip message to min-heap
         pq.push(msg);
 
         let nxtCtr = nextTobCounter.current
@@ -260,13 +264,15 @@ const TripPage: FC = () => {
 
           // Process this message
           minMsg = pq.pop()!;
-          const patch = minMsg.data.updateTrip!.ops as any;
-          const patchOpts = { mutate: false } as any;
-          const newTrip = applyPatch(tripRef.current, patch, patchOpts);
-
+          const newTrip = applyPatch(
+            tripRef.current,
+            minMsg.data.updateTrip!.ops as any,
+            { mutate: false },
+          );
           nxtCtr += 1
           tripRef.current = newTrip.doc
           setTrip(tripRef.current);
+          handleUpdateMsgTitle(minMsg.data.updateTrip?.title)
         }
       })
     }
@@ -277,7 +283,7 @@ const TripPage: FC = () => {
   ////////////////////
 
   const tripStateOnUpdate = (ops: Array<JSONPatchOp>, title: string) => {
-    const msg = makeMsgUpdateTrip(tripID, title, ops);
+    const msg = makeMsgUpdateTrip(id!, title, ops);
     wsRef.current.send(JSON.stringify(msg));
   }
 
@@ -293,7 +299,7 @@ const TripPage: FC = () => {
         <div className="flex">
           <TripPlanningMenu
             trip={tripRef.current}
-            tripUsers={tripUsers}
+            tripMembers={tripMembers}
             tripStateOnUpdate={tripStateOnUpdate}
           />
           <div className='flex-1' ref={measuredRef}>

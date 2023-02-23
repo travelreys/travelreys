@@ -19,10 +19,9 @@ import {
 } from '../../lib/trips';
 import { Auth, LabelUserGoogleImage } from '../../lib/auth';
 import { Trips } from '../../lib/trips';
-import { makeAddOp, makeReplaceOp } from '../../lib/tripsSync';
+import { makeAddOp, makeReplaceOp, UpdateTitleAddNewMember } from '../../lib/tripsSync';
 import { capitaliseWords } from '../../lib/strings';
 import { CommonCss, TripSettingsCss } from '../../assets/styles/global';
-
 
 
 ////////////////////
@@ -89,7 +88,7 @@ const TransportationSection: FC<TransportSection> = (props: TransportSection) =>
 
 interface AddMembersModalProps {
   isOpen: boolean
-  tripUsers: { [key: string]: Auth.User }
+  tripMembers: { [key: string]: Auth.User }
   onClose: () => void
   onSelect: (id: string, role: string) => void
 }
@@ -100,7 +99,7 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
   const [searchEmail, setSearchEmail] = useState("");
   const [selectedMemberRole, setSelectedMemberRole] = useState(MemberRoleCollaborator);
   const [foundUsers, setFoundUsers] = useState<Array<Auth.User>>([]);
-  const debouncedValue = useDebounce<string>(searchEmail, 500);
+  const debouncedValue = useDebounce<string>(searchEmail, 1000);
 
   // API
   const searchUsers = (email: string) => {
@@ -114,7 +113,6 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
   }
 
   // Event Handlers
-
   useEffect(() => {
     if (!_isEmpty(debouncedValue)) {
       searchUsers(debouncedValue);
@@ -188,7 +186,7 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
       return <div>{t('tripPage.settings.noUsersFound')}</div>;
     }
     return foundUsers.map((usr: Auth.User) => {
-      const isMember = Object.hasOwn(props.tripUsers, usr.id);
+      const isMember = Object.hasOwn(props.tripMembers, usr.id);
       return (
         <button
           key={usr.id}
@@ -235,12 +233,11 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
 
 interface MembersSectionProps {
   trip: any
-  tripUsers: { [key: string]: Auth.User }
+  tripMembers: { [key: string]: Auth.User }
   onAddUser: (id: string, role: string) => void
 }
 
 const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => {
-
   const { t } = useTranslation();
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
@@ -248,7 +245,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
     let members = { [props.trip.creator.id]: props.trip.creator } as any;
     members = Object.assign(members, props.trip.members);
     return Object.values(members).map((mem: any) => {
-      const usr = userFromMemberID(mem, props.tripUsers);
+      const usr = userFromMemberID(mem, props.tripMembers);
       return (
         <div key={mem.id} className='flex items-center py-4 border-b border-gray-200'>
           <div className={TripSettingsCss.MemberAvatarDiv}>
@@ -263,7 +260,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
               {capitaliseWords(mem.role)}
             </p>
             <p className={TripSettingsCss.MemberSearchItemName}>
-              {_get(usr, "name", "")}
+              {_get(usr, "name", mem.id)}
             </p>
           </div>
         </div>
@@ -292,7 +289,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
       </div>
       <AddMembersModal
         isOpen={isAddMemberModalOpen}
-        tripUsers={props.tripUsers}
+        tripMembers={props.tripMembers}
         onClose={() => setIsAddMemberModalOpen(false)}
         onSelect={props.onAddUser}
       />
@@ -307,7 +304,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
 
 interface SettingsSectionProps {
   trip: any
-  tripUsers: { [key: string]: Auth.User }
+  tripMembers: { [key: string]: Auth.User }
   tripStateOnUpdate: any
 }
 
@@ -323,10 +320,8 @@ const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) 
 
   const addNewUser = (id: string, role: string) => {
     const member = { id, role, labels: {} } as Trips.Member;
-    props.tripStateOnUpdate([makeAddOp(`/members/${id}`, member)]);
+    props.tripStateOnUpdate([makeAddOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
   }
-
-
 
   return (
     <div className='p-5'>
@@ -336,7 +331,7 @@ const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) 
       />
       <MembersSection
         trip={props.trip}
-        tripUsers={props.tripUsers}
+        tripMembers={props.tripMembers}
         onAddUser={addNewUser}
       />
     </div>

@@ -69,7 +69,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     setIsUpdatingDates(true)
   }
 
-  const datesOnChange: SelectRangeEventHandler = (range: DateRange | undefined) => {
+  const datesOnChange: SelectRangeEventHandler = (range?: DateRange) => {
     setCheckinDates(range);
   }
 

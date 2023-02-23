@@ -338,7 +338,7 @@ interface ContentListProps {
   onDeleteList: (contentListID: string) => void
   onUpdateName: (name: string, contentListID: string) => void
   onAddContent: (title: string, contentListID: string) => void
-  onUpdateColorIcon: (color: string|undefined, icon: string|undefined, contentListID: string) => void
+  onUpdateColorIcon: (contentListID: string, color?: string, icon?: string) => void
   onUpdateContentName: (title: string, idx: number, contentListID: string) => void
   onDeleteContent: (idx: number, contentListID: string) => void
   onUpdateContentPlace: (idx: number, place: any, contentListID: string) => void
@@ -372,8 +372,8 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
     setNewContentTitle("");
   }
 
-  const colorIconOnSubmit = (color: string | undefined, icon: string | undefined) => {
-    props.onUpdateColorIcon(color, icon, props.contentList.id)
+  const colorIconOnSubmit = (color?: string, icon?: string) => {
+    props.onUpdateColorIcon(props.contentList.id, color, icon)
   }
 
   // Event Handlers - Content
@@ -570,7 +570,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
     props.tripStateOnUpdate(ops);
   }
 
-  const updateContentListColorIcon = (color: string | undefined, icon: string | undefined, contentListID: string) => {
+  const updateContentListColorIcon = (contentListID: string, color?: string, icon?: string) => {
     const ctntList = _get(props.trip, `contents.${contentListID}`);
     const colorLabel = _get(ctntList, `labels.${LabelContentListColor}`);
     const iconLabel = _get(ctntList, `labels.${LabelContentListIcon}`);

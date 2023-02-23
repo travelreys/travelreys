@@ -25,7 +25,7 @@ func NewLoginEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(LoginRequest)
 		if !ok {
-			return LoginResponse{Err: common.ErrorMismatchEndpointReq}, nil
+			return LoginResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
 		jwtTkn, err := svc.Login(ctx, req.Code, OIDCProviderGoogle)
 		return LoginResponse{JWTToken: jwtTkn, Err: err}, nil
@@ -50,7 +50,7 @@ func NewReadEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(ReadRequest)
 		if !ok {
 			return ReadResponse{
-				Err: common.ErrorMismatchEndpointReq,
+				Err: common.ErrorEndpointReqMismatch,
 			}, nil
 		}
 		usr, err := svc.Read(ctx, req.ID)
@@ -76,7 +76,7 @@ func NewUpdateEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(UpdateRequest)
 		if !ok {
 			return UpdateResponse{
-				Err: common.ErrorMismatchEndpointReq,
+				Err: common.ErrorEndpointReqMismatch,
 			}, nil
 		}
 		err := svc.Update(ctx, req.ID, req.FF)
@@ -100,7 +100,7 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListRequest)
 		if !ok {
-			return ListResponse{Err: common.ErrorMismatchEndpointReq}, nil
+			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
 		users, err := svc.List(ctx, req.FF)
 		return ListResponse{Users: users, Err: err}, nil

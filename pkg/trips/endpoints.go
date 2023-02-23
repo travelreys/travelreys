@@ -18,7 +18,7 @@ type CreateRequest struct {
 	EndDate   time.Time `json:"endDate"`
 }
 type CreateResponse struct {
-	Plan Trip  `json:"trip"`
+	Trip Trip  `json:"trip"`
 	Err  error `json:"error,omitempty"`
 }
 
@@ -31,27 +31,27 @@ func NewCreateEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(CreateRequest)
 		if !ok {
 			return CreateResponse{
-				Err: common.ErrorMismatchEndpointReq}, nil
+				Err: common.ErrorEndpointReqMismatch}, nil
 		}
 
 		ci, err := reqctx.ClientInfoFromCtx(ctx)
 		if err != nil {
-			return CreateResponse{Plan: Trip{}, Err: ErrRBAC}, nil
+			return CreateResponse{Trip: Trip{}, Err: ErrRBAC}, nil
 		}
 
 		creator := NewMember(ci.UserID, MemberRoleCreator)
 		plan, err := svc.Create(ctx, creator, req.Name, req.StartDate, req.EndDate)
-		return CreateResponse{Plan: plan, Err: err}, nil
+		return CreateResponse{Trip: plan, Err: err}, nil
 	}
 }
 
 type ReadRequest struct {
-	ID        string `json:"id"`
-	WithUsers bool   `json:"withUsers"`
+	ID          string `json:"id"`
+	WithMembers bool   `json:"withMembers"`
 }
 
 type ReadResponse struct {
-	Plan Trip  `json:"trip"`
+	Trip Trip  `json:"trip"`
 	Err  error `json:"error,omitempty"`
 }
 
@@ -59,13 +59,13 @@ func (r ReadResponse) Error() error {
 	return r.Err
 }
 
-type ReadWithUsersResponse struct {
-	Plan  Trip          `json:"trip"`
-	Users auth.UsersMap `json:"users"`
-	Err   error         `json:"error,omitempty"`
+type ReadWithMembersResponse struct {
+	Trip    Trip          `json:"trip"`
+	Members auth.UsersMap `json:"members"`
+	Err     error         `json:"error,omitempty"`
 }
 
-func (r ReadWithUsersResponse) Error() error {
+func (r ReadWithMembersResponse) Error() error {
 	return r.Err
 }
 
@@ -73,16 +73,40 @@ func NewReadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ReadRequest)
 		if !ok {
-			return ReadResponse{Err: common.ErrorMismatchEndpointReq}, nil
+			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-
-		if req.WithUsers {
-			plan, users, err := svc.ReadWithUsers(ctx, req.ID)
-			return ReadWithUsersResponse{Plan: plan, Users: users, Err: err}, nil
+		if req.WithMembers {
+			plan, members, err := svc.ReadWithMembers(ctx, req.ID)
+			return ReadWithMembersResponse{
+				Trip: plan, Members: members, Err: err,
+			}, nil
 		}
-
 		plan, err := svc.Read(ctx, req.ID)
-		return ReadResponse{Plan: plan, Err: err}, nil
+		return ReadResponse{Trip: plan, Err: err}, nil
+	}
+}
+
+type ReadMembersRequest struct {
+	ID string `json:"id"`
+}
+
+type ReadMembersResponse struct {
+	Members auth.UsersMap `json:"members"`
+	Err     error         `json:"error,omitempty"`
+}
+
+func (r ReadMembersResponse) Error() error {
+	return r.Err
+}
+
+func NewReadMembersEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ReadMembersRequest)
+		if !ok {
+			return ReadMembersResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		members, err := svc.ReadMembers(ctx, req.ID)
+		return ReadMembersResponse{Members: members, Err: err}, nil
 	}
 }
 
@@ -90,7 +114,7 @@ type ListRequest struct {
 	FF ListFilter
 }
 type ListResponse struct {
-	Plans TripsList `json:"trips"`
+	Trips TripsList `json:"trips"`
 	Err   error     `json:"error,omitempty"`
 }
 
@@ -102,10 +126,10 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListRequest)
 		if !ok {
-			return ListResponse{Err: common.ErrorMismatchEndpointReq}, nil
+			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
 		plans, err := svc.List(ctx, req.FF)
-		return ListResponse{Plans: plans, Err: err}, nil
+		return ListResponse{Trips: plans, Err: err}, nil
 	}
 }
 
@@ -125,7 +149,7 @@ func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(DeleteRequest)
 		if !ok {
-			return DeleteResponse{Err: common.ErrorMismatchEndpointReq}, nil
+			return DeleteResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
 		err := svc.Delete(ctx, req.ID)
 		return DeleteResponse{Err: err}, nil

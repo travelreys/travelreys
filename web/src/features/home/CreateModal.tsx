@@ -9,7 +9,7 @@ import InputDatesPicker from '../../components/common/InputDatesPicker';
 interface CreateModalProps {
   isOpen: boolean,
   onClose: any,
-  tripName: string | undefined,
+  tripName?: string,
   tripNameOnChange: any,
   tripDates: any,
   tripDatesOnSelect: any,

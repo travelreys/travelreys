@@ -11,7 +11,12 @@ export interface CreateResponse {
 
 export interface ReadResponse {
   trip: any
-  users?: any
+  members?: any
+  error?: string
+}
+
+export interface ReadMembersResponse {
+  members?: any
   error?: string
 }
 
@@ -24,11 +29,7 @@ export interface ReadsResponse {
 const tripsPathPrefix = "/api/v1/trips";
 
 const TripsAPI = {
-  createTrip: (
-    name: string,
-    startDate: Date | undefined,
-    endDate: Date | undefined
-  ): Promise<CreateResponse> => {
+  create: ( name: string, startDate?: Date, endDate?: Date): Promise<CreateResponse> => {
     const ax = makeCommonAxios();
     return ax.post(tripsPathPrefix, {name, startDate, endDate})
       .then((res) => {
@@ -40,20 +41,32 @@ const TripsAPI = {
       });
   },
 
-  readTrip: (id: string | undefined): Promise<ReadResponse> => {
+  read: (id?: string): Promise<ReadResponse> => {
     const ax = makeCommonAxios();
-    return ax.get(`${tripsPathPrefix}/${id}`, { params: { withUsers: "true" } })
+    return ax.get(`${tripsPathPrefix}/${id}`, { params: { withMembers: "true" } })
       .then(res => {
-        const trip = _get(res, "data.trip", {});
-        const users = _get(res, "data.users", {});
-        return {trip, users}
+        return {
+          trip: _get(res, "data.trip", {}),
+          members: _get(res, "data.members", {})
+        }
       })
       .catch((err) => {
         return {trip: {}, error: err.message}
       });
   },
 
-  listTrips: (): Promise<ReadsResponse> => {
+  readMembers: (id?: string): Promise<ReadMembersResponse> => {
+    const ax = makeCommonAxios();
+    return ax.get(`${tripsPathPrefix}/${id}/members`)
+      .then(res => {
+        return {members: _get(res, "data.members", {})}
+      })
+      .catch((err) => {
+        return {trip: {}, error: err.message}
+      });
+  },
+
+  list: (): Promise<ReadsResponse> => {
     const ax = makeCommonAxios();
     return ax.get(tripsPathPrefix)
       .then(res => {

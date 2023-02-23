@@ -372,7 +372,7 @@ const FlightsSearchForm: FC<FlightsSearchFormProps> = (props: FlightsSearchFormP
     props.onSearch(origin, destination, departDate, arrDate, cabinClass.value);
   }
 
-  const flightDatesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
+  const flightDatesOnSelect: SelectRangeEventHandler = (range?: DateRange) => {
     setFlightDates(range);
   };
 

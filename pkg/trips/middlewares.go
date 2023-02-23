@@ -39,18 +39,26 @@ func (mw rbacMiddleware) Read(ctx context.Context, ID string) (Trip, error) {
 	return mw.next.Read(ctx, ID)
 }
 
-func (mw rbacMiddleware) ReadWithUsers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+func (mw rbacMiddleware) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return Trip{}, nil, ErrRBAC
 	}
-	return mw.next.ReadWithUsers(ctx, ID)
+	return mw.next.ReadWithMembers(ctx, ID)
+}
+
+func (mw rbacMiddleware) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+	return mw.next.ReadMembers(ctx, ID)
 }
 
 func (mw rbacMiddleware) List(ctx context.Context, ff ListFilter) (TripsList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return TripsList{}, ErrRBAC
+		return nil, ErrRBAC
 	}
 	return mw.next.List(ctx, ff)
 }

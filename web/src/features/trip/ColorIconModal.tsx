@@ -36,7 +36,7 @@ interface ColorIconModalProps {
   icons: Array<string>
 
   onClose: () => void
-  onSubmit: (color: string | undefined, icon: string | undefined) => void
+  onSubmit: (color?: string, icon?: string) => void
 }
 
 const ColorIconModal: FC<ColorIconModalProps> = (props: ColorIconModalProps) => {

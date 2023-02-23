@@ -173,7 +173,7 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
   }
 
   // Event Handlers - Trip Dates
-  const tripDatesOnChange: SelectRangeEventHandler = (range: DateRange | undefined) => {
+  const tripDatesOnChange: SelectRangeEventHandler = (range?: DateRange) => {
     setStartDt(range?.from);
     setEndDt(range?.to);
   }

@@ -117,7 +117,7 @@ func (crd *Coordinator) Run() error {
 					crd.Stop()
 					return
 				}
-				// Replace with leaving broadcast message
+				// Replace with member update msg
 				msg = NewMsgMemberUpdate(msg.TripID, sess.Members)
 			}
 

@@ -21,15 +21,18 @@ export const makeRemoveOp = (path: string, value: any): JSONPatchOp => {
 
 export const OpJoinSession = "OpJoinSession";
 export const OpLeaveSession = "OpLeaveSession";
-export const OpJoinSessionBroadcast = "OpJoinSessionBroadcast";
+export const OpPingSession = "OpPingSession";
 export const OpMemberUpdate = "OpMemberUpdate";
 export const OpUpdateTrip = "OpUpdateTrip";
+
+export const UpdateTitleAddNewMember = "AddNewMember";
+
 
 export namespace TripSync {
   export interface Message {
     connID?: string
     tripID: string
-    op: "OpJoinSession" | "OpLeaveSession" | "OpJoinSessionBroadcast"| "OpMemberUpdate" |"OpUpdateTrip"
+    op: "OpJoinSession" | "OpLeaveSession" | "OpPingSession"| "OpMemberUpdate" |"OpUpdateTrip"
     counter?: number
     data: MessageData
   }
@@ -60,7 +63,6 @@ export namespace TripSync {
     title: string
     ops: Array<JSONPatchOp>
   }
-
 };
 
 export const makeMsgJoinSession = (tripID: string, memberID: string): TripSync.Message => {

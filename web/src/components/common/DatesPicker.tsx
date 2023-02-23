@@ -19,7 +19,7 @@ const DatesPicker: FC<InputDatesPickerProps> = (props: InputDatesPickerProps) =>
   const matches = useMediaQuery('(min-width: 768px)');
 
   // Event Handlers
-  const datesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
+  const datesOnSelect: SelectRangeEventHandler = (range?: DateRange) => {
     props.onSelect(range);
   };
 

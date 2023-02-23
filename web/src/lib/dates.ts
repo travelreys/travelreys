@@ -58,7 +58,7 @@ export const parseISO = (date: string) => {
   return _parseISO(date);
 }
 
-export const parseTripDate = (tripDate: string | undefined) => {
+export const parseTripDate = (tripDate?: string) => {
   if (_isEmpty(tripDate)) {
     return undefined;
   }

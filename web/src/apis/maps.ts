@@ -11,7 +11,7 @@ const MapsAPI = {
       params: { query, types: typesParam, sessiontoken }
     });
   },
-  placeDetails: (placeID: string, fields: Array<string>, sessiontoken: string | undefined) => {
+  placeDetails: (placeID: string, fields: Array<string>, sessiontoken?: string) => {
     const url = `${BASE_URL}/api/v1/maps/place/details`;
     const fieldsParam = fields.join(",");
     return axios.get(url, {

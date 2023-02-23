@@ -15,7 +15,7 @@ var (
 	ErrInvalidAuthToken      = errors.New("jwt.invalid-auth-token")
 	ErrInvalidSigningMethod  = errors.New("jwt.invalid-signing-method")
 	ErrMissingJWTClaims      = errors.New("jwt.missing-claims")
-	ErrorMismatchEndpointReq = errors.New("endpoint.invalidrequest")
+	ErrorEndpointReqMismatch = errors.New("endpoint.invalidrequest")
 )
 
 func EncodeErrorFactory(errToCode func(error) int) func(context.Context, error, http.ResponseWriter) {

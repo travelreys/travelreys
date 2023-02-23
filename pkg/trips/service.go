@@ -12,7 +12,8 @@ import (
 type Service interface {
 	Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error)
 	Read(ctx context.Context, ID string) (Trip, error)
-	ReadWithUsers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
+	ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
+	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	Delete(ctx context.Context, ID string) error
 }
@@ -51,7 +52,7 @@ func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {
 	return svc.store.Read(ctx, ID)
 }
 
-func (svc *service) ReadWithUsers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
 	trip, err := svc.Read(ctx, ID)
 	if err != nil {
 		return trip, nil, err
@@ -70,7 +71,27 @@ func (svc *service) ReadWithUsers(ctx context.Context, ID string) (Trip, auth.Us
 		usersMap[usr.ID] = usr
 	}
 	return trip, usersMap, nil
+}
 
+func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
+	trip, err := svc.Read(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	membersIDs := []string{trip.Creator.ID}
+	for id := range trip.Members {
+		membersIDs = append(membersIDs, id)
+	}
+	ff := auth.ListFilter{IDs: membersIDs}
+	users, err := svc.authSvc.List(ctx, ff)
+	if err != nil {
+		return nil, err
+	}
+	usersMap := auth.UsersMap{}
+	for _, usr := range users {
+		usersMap[usr.ID] = usr
+	}
+	return usersMap, nil
 }
 
 func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) {

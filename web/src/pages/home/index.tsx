@@ -55,7 +55,7 @@ const HomePage: FC = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    TripsAPI.listTrips()
+    TripsAPI.list()
       .then((res: ReadsResponse) => {
         setTrips(res.trips);
         setAlertProps({});
@@ -72,7 +72,7 @@ const HomePage: FC = () => {
 
   // Event Handlers
 
-  const createTripModalOpenOnClick = () => {
+  const createModalOpenOnClick = () => {
     setIsCreateModalOpen(true);
   }
 
@@ -80,12 +80,12 @@ const HomePage: FC = () => {
     setNewTripName(event.target.value);
   }
 
-  const newTripDatesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
+  const newTripDatesOnSelect: SelectRangeEventHandler = (range?: DateRange) => {
     setNewTripDates(range);
   };
 
   const submitNewTripOnClick = () => {
-    TripsAPI.createTrip(newTripName, newTripDates?.from, newTripDates?.to)
+    TripsAPI.create(newTripName, newTripDates?.from, newTripDates?.to)
     .then((res: CreateResponse) => {
       history(`/trips/${res.id}`);
     })
@@ -101,12 +101,12 @@ const HomePage: FC = () => {
   // Renderers
   const renderTrips = () => {
     if (trips.length === 0) {
-      return (<TripsJumbo onCreateBtnClick={createTripModalOpenOnClick} />);
+      return (<TripsJumbo onCreateBtnClick={createModalOpenOnClick} />);
     }
     return (
       <TripsContainer
         trips={trips}
-        onCreateBtnClick={createTripModalOpenOnClick}
+        onCreateBtnClick={createModalOpenOnClick}
       />
     );
   }

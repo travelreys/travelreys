@@ -260,7 +260,7 @@ interface TripItineraryListProps {
   itineraryList: Trips.ItineraryList
   tripStateOnUpdate: any
 
-  onUpdateColorIcon: (color: string|undefined, icon: string|undefined, itinListIdx: number) => void
+  onUpdateColorIcon: (itinListIdx: number, color?: string, icon?: string) => void
 }
 
 const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListProps) => {
@@ -276,8 +276,8 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   // Event Handlers
 
-  const colorIconOnSubmit = (color: string | undefined, icon: string | undefined) => {
-    props.onUpdateColorIcon(color, icon, props.itineraryListIdx)
+  const colorIconOnSubmit = (color?: string, icon?: string) => {
+    props.onUpdateColorIcon(props.itineraryListIdx, color, icon)
   }
 
   const updateItinContents = (newItinContents: Array<Trips.ItineraryContent>) => {
@@ -536,7 +536,7 @@ interface ItinerarySectionProps {
 
 const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProps) => {
 
-  const updateItineraryListColorIcon = (color: string | undefined, icon: string | undefined, itinListIdx: number) => {
+  const updateItineraryListColorIcon = (itinListIdx: number, color?: string, icon?: string) => {
     const ctntList = _get(props.trip, `itinerary.${itinListIdx}`);
     const colorLabel = _get(ctntList, `labels.${LabelContentListColor}`);
     const iconLabel = _get(ctntList, `labels.${LabelContentListIcon}`);
@@ -577,7 +577,6 @@ const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProp
                 itineraryListIdx={idx}
                 itineraryList={l}
                 tripStateOnUpdate={props.tripStateOnUpdate}
-
                 onUpdateColorIcon={updateItineraryListColorIcon}
               />
               <hr className={TripItinerarySectionCss.Hr} />
