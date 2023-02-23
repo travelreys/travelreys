@@ -3,23 +3,31 @@ import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import { useTranslation } from 'react-i18next';
 import { useDebounce } from 'usehooks-ts';
-import { XMarkIcon } from '@heroicons/react/24/solid';
-import { MagnifyingGlassCircleIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { EllipsisHorizontalCircleIcon, MagnifyingGlassCircleIcon } from '@heroicons/react/24/outline';
 
-import Modal from '../../components/common/Modal';
 import Avatar from '../../components/common/Avatar';
+import Dropdown from '../../components/common/Dropdown';
+import Modal from '../../components/common/Modal';
+
 
 import AuthAPI, { SearchUsersResponse } from '../../apis/auth';
 import {
   DefaultTransportModePref,
   LabelTransportModePref,
   MemberRoleCollaborator,
+  MemberRoleCreator,
   MemberRoleParticipant,
   userFromMemberID
 } from '../../lib/trips';
 import { Auth, LabelUserGoogleImage } from '../../lib/auth';
 import { Trips } from '../../lib/trips';
-import { makeAddOp, makeReplaceOp, UpdateTitleAddNewMember } from '../../lib/tripsSync';
+import {
+  makeAddOp,
+  makeRemoveOp,
+  makeReplaceOp,
+  UpdateTitleAddNewMember
+} from '../../lib/tripsSync';
 import { capitaliseWords } from '../../lib/strings';
 import { CommonCss, TripSettingsCss } from '../../assets/styles/global';
 
@@ -99,7 +107,7 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
   const [searchEmail, setSearchEmail] = useState("");
   const [selectedMemberRole, setSelectedMemberRole] = useState(MemberRoleCollaborator);
   const [foundUsers, setFoundUsers] = useState<Array<Auth.User>>([]);
-  const debouncedValue = useDebounce<string>(searchEmail, 1000);
+  const debouncedValue = useDebounce<string>(searchEmail, 600);
 
   // API
   const searchUsers = (email: string) => {
@@ -234,35 +242,63 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
 interface MembersSectionProps {
   trip: any
   tripMembers: { [key: string]: Auth.User }
-  onAddUser: (id: string, role: string) => void
+  onAddMember: (id: string, role: string) => void
+  onDeleteMember: (id: string) => void
 }
 
 const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => {
   const { t } = useTranslation();
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
+
+  // Event Handlers
+  const memberDeleteBtnOnClick = (id: string) => {
+    props.onDeleteMember(id)
+  }
+
   const renderMembersAvatar = () => {
     let members = { [props.trip.creator.id]: props.trip.creator } as any;
     members = Object.assign(members, props.trip.members);
     return Object.values(members).map((mem: any) => {
       const usr = userFromMemberID(mem, props.tripMembers);
+
+      const renderDropdown = () => {
+        const opts = [
+          <button
+            type='button'
+            className={CommonCss.DeleteBtn}
+            onClick={() => memberDeleteBtnOnClick(mem.id)}
+          >
+            <TrashIcon className={CommonCss.LeftIcon} />
+            Delete
+          </button>,
+        ];
+        const menu = (
+          <EllipsisHorizontalCircleIcon className={CommonCss.DropdownIcon} />
+        );
+        return <Dropdown menu={menu} opts={opts} />
+      }
+
       return (
-        <div key={mem.id} className='flex items-center py-4 border-b border-gray-200'>
-          <div className={TripSettingsCss.MemberAvatarDiv}>
-            <Avatar
-              placement="top"
-              name={`${_get(usr, "name", "")} (${capitaliseWords(mem.role)}})`}
-              imgUrl={_get(usr, `labels.${LabelUserGoogleImage}`)}
-            />
+        <div key={mem.id} className={TripSettingsCss.MemberCtn}>
+          <div className='flex flex-1'>
+            <div className={TripSettingsCss.MemberAvatarDiv}>
+              <Avatar
+                placement="top"
+                name={`${_get(usr, "name", "")} (${capitaliseWords(mem.role)}})`}
+                imgUrl={_get(usr, `labels.${LabelUserGoogleImage}`)}
+              />
+            </div>
+            <div>
+              <p className={TripSettingsCss.MemberSearchItemDesc}>
+                {capitaliseWords(mem.role)}
+              </p>
+              <p className={TripSettingsCss.MemberSearchItemName}>
+                {_get(usr, "name", mem.id)}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className={TripSettingsCss.MemberSearchItemDesc}>
-              {capitaliseWords(mem.role)}
-            </p>
-            <p className={TripSettingsCss.MemberSearchItemName}>
-              {_get(usr, "name", mem.id)}
-            </p>
-          </div>
+          {mem.role === MemberRoleCreator ? null: renderDropdown()}
         </div>
       );
     });
@@ -291,7 +327,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
         isOpen={isAddMemberModalOpen}
         tripMembers={props.tripMembers}
         onClose={() => setIsAddMemberModalOpen(false)}
-        onSelect={props.onAddUser}
+        onSelect={props.onAddMember}
       />
     </>
   );
@@ -318,13 +354,19 @@ const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) 
     props.tripStateOnUpdate([opFn(`/labels/${LabelTransportModePref}`, mode)]);
   }
 
-  const addNewUser = (id: string, role: string) => {
+  const addMember = (id: string, role: string) => {
     const member = { id, role, labels: {} } as Trips.Member;
     props.tripStateOnUpdate([makeAddOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
   }
 
+  const deleteMember = (id: string) => {
+    const member = { id } as Trips.Member;
+    props.tripStateOnUpdate([makeRemoveOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
+  }
+
+
   return (
-    <div className='p-5'>
+    <div className='p-5 px-8'>
       <TransportationSection
         trip={props.trip}
         onSelect={transportPrefOnChange}
@@ -332,7 +374,8 @@ const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) 
       <MembersSection
         trip={props.trip}
         tripMembers={props.tripMembers}
-        onAddUser={addNewUser}
+        onAddMember={addMember}
+        onDeleteMember={deleteMember}
       />
     </div>
   );

@@ -18,7 +18,7 @@ import { Auth } from "./auth";
 export namespace Trips {
   export interface Member {
     id: string
-    role: string
+    role: "creator" | "collaborator" | "participant"
     labels: Map<string, string>
   }
 
@@ -104,6 +104,7 @@ export namespace Trips {
   }
 }
 
+export const MemberRoleCreator = "creator";
 export const MemberRoleCollaborator = "collaborator";
 export const MemberRoleParticipant = "participant";
 export const LabelTransportModePref = "transportationPreference";

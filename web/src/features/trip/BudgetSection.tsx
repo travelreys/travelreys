@@ -26,7 +26,6 @@ import { Tooltip } from 'react-tooltip'
 import Modal from '../../components/common/Modal';
 import Dropdown from '../../components/common/Dropdown';
 
-import TripsSyncAPI from '../../apis/tripsSync';
 import {
   BudgetAmountJSONPath,
   budgetAmt,

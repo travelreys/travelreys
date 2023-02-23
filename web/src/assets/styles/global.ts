@@ -411,6 +411,7 @@ export const TripSettingsCss = {
   MemberSearchItemAvatar: "inline-block h-10 w-10 mr-4",
   MemberSearchItemName: "font-semibold",
   MemberSearchItemDesc: "text-gray-500",
+  MemberCtn: "flex items-center py-4 border-b border-gray-200",
   MemberAvatarDiv: "h-12 w-12 mr-4",
 }
 
