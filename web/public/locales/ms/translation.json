@@ -1,0 +1,33 @@
+{
+  "common": {
+    "settings": "Tetapan"
+  },
+  "errors": {
+    "unexpectedError": "Ralat Tidak Dijangka"
+  },
+  "navbar": {
+    "loginModal": {
+      "title": "Log masuk ke tiinyplanet",
+      "googleSignIn": "Log masuk dengan Google"
+    },
+    "currencySelector": {
+      "title": "Pilih mata wang anda"
+    },
+    "localeSelector": {
+      "title": "Pilih bahasa anda"
+    },
+    "landingPageActions": {
+      "log masuk": "Log masuk"
+    },
+    "appPageActions": {
+      "log keluar": "Log keluar"
+    }
+  },
+  "home": {
+    "tripJumbo": {
+      "title": "Rancang pengembaraan anda yang seterusnya!",
+      "createBtn": "Buat perjalanan baharu"
+    },
+    "upcomingTrips": "Perjalanan Akan Datang"
+  }
+}

@@ -9,30 +9,128 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-)
-
-var (
-	ErrInvalidSearchRequest = errors.New("invalid-flights-search-request")
+	"go.uber.org/zap"
 )
 
 const (
-	DefaultCurrency = "USD"
+	DefaultCurrency      = "USD"
+	envSkyscannerApiKey  = "TIINYPLANET_SKYSCANNER_APIKEY"
+	envSkyscannerApiHost = "TIINYPLANET_SKYSCANNER_APIHOST"
+
+	fieldAdults        = "adults"
+	fieldOrigin        = "origin"
+	fieldDestination   = "destination"
+	fieldDepartureDate = "departureDate"
+	fieldCurrency      = "currency"
+	fieldCabinClass    = "cabin"
+	fieldReturnData    = "returnDate"
+	fieldDuration      = "duration"
+	fieldStops         = "stops"
+
+	webLoggerName = "flights.webapi"
 )
 
-type FlightsSearchOptions map[string]string
+var (
+	ErrInvalidSearchRequest = errors.New("web.invalidrequests")
+)
 
-type WebFlightsAPI interface {
-	Search(
-		ctx context.Context,
-		origIATA,
-		destIATA string,
-		numAdults uint64,
-		departDate time.Time,
-		opts FlightsSearchOptions,
-	) (Itineraries, error)
+type SearchOptions struct {
+	Adults        int64
+	Origin        string
+	Destination   string
+	DepartureDate time.Time
+	ReturnDate    time.Time
+	Currency      string
+	CabinClass    string
+	Duration      string
+	Stops         string
+}
+
+func SearchOptionsFromURLValues(q url.Values) (SearchOptions, error) {
+	opts := SearchOptions{}
+	if q.Has(fieldCabinClass) {
+		opts.CabinClass = q.Get(fieldCabinClass)
+	}
+	if q.Has(fieldCurrency) {
+		opts.Currency = q.Get(fieldCurrency)
+	}
+	if q.Has(fieldDuration) {
+		opts.Duration = q.Get(fieldDuration)
+	}
+	if q.Has(fieldStops) {
+		opts.Stops = q.Get(fieldStops)
+	}
+	if q.Has(fieldReturnData) {
+		dt, err := time.Parse("2006-01-02", q.Get(fieldReturnData))
+		if err != nil {
+			opts.ReturnDate = time.Time{}
+		}
+		opts.ReturnDate = dt
+	}
+
+	dt, err := time.Parse("2006-01-02", q.Get("departDate"))
+	if err != nil {
+		return opts, err
+	}
+
+	adults, err := strconv.Atoi(q.Get(fieldAdults))
+	if err != nil {
+		return opts, err
+	}
+	opts.Origin = q.Get(fieldOrigin)
+	opts.Destination = q.Get(fieldDestination)
+	opts.DepartureDate = dt
+	opts.Adults = int64(adults)
+	return opts, nil
+}
+
+func (opts SearchOptions) Validate() error {
+	if (opts.Origin == "" ||
+		opts.Destination == "" ||
+		opts.Adults <= 0 ||
+		opts.DepartureDate.Equal(time.Time{})) {
+		return ErrInvalidSearchRequest
+	}
+	return nil
+}
+
+func (opts SearchOptions) IsRoundTrip() bool {
+	return !opts.ReturnDate.Equal(time.Time{})
+}
+
+func (opts SearchOptions) ToRawURLQuery() string {
+	values := url.Values{}
+
+	values.Set(fieldOrigin, opts.Origin)
+	values.Set(fieldDestination, opts.Destination)
+	values.Set(fieldAdults, fmt.Sprintf("%d", opts.Adults))
+	values.Set(fieldDepartureDate, opts.DepartureDate.Format("2006-01-02"))
+
+	if !opts.ReturnDate.Equal(time.Time{}) {
+		values.Set(fieldReturnData, opts.ReturnDate.Format("2006-01-02"))
+	}
+	if opts.CabinClass != "" {
+		values.Set(fieldCabinClass, opts.CabinClass)
+	}
+	if opts.Duration != "" {
+		values.Set(fieldDuration, opts.Duration)
+	}
+	if opts.Stops != "" {
+		values.Set(fieldStops, opts.Stops)
+	}
+	if opts.Currency != "" {
+		values.Set(fieldCurrency, opts.Currency)
+	}
+
+	return values.Encode()
+}
+
+type WebAPI interface {
+	Search(ctx context.Context, opts SearchOptions) (Itineraries, error)
 }
 
 // Skyscanner
@@ -127,10 +225,6 @@ type SkyscannerResponse struct {
 	} `json:"itineraries"`
 }
 
-func calculateItineraryScore(price float64, durationInMins, stopCount uint64) float64 {
-	return float64(price) + float64(durationInMins) + float64(60*stopCount)
-}
-
 func (res SkyscannerResponse) MakeFlightFromSkyLeg(skyleg SkyscannerLeg) Flight {
 	flight := Flight{
 		ID:       skyleg.ID,
@@ -196,7 +290,7 @@ func (res SkyscannerResponse) ToOnewayItineraries(currency string) Itineraries {
 			DepartFlight: departFlight,
 			BookingMetadata: BookingMetadata{
 				BookingURL: pricing.URL,
-				Price: common.PriceMetadata{
+				Price: common.Price{
 					Amount:   pricing.Price.Amount,
 					Currency: currency,
 				},
@@ -224,7 +318,7 @@ func (res SkyscannerResponse) ToRoundtripItineraries(currency string) Itinerarie
 
 		bookingMetadata := BookingMetadata{
 			BookingURL: pricing.URL,
-			Price: common.PriceMetadata{
+			Price: common.Price{
 				Amount:   pricing.Price.Amount,
 				Currency: currency,
 			},
@@ -255,16 +349,24 @@ func (res SkyscannerResponse) ToRoundtripItineraries(currency string) Itinerarie
 type skyscanner struct {
 	apiKey  string
 	apiHost string
+
+	logger *zap.Logger
 }
 
-func NewSkyscannerAPI() WebFlightsAPI {
-	apiKey := os.Getenv("TIINYPLANET_SKYSCANNER_APIKEY")
-	apiHost := os.Getenv("TIINYPLANET_SKYSCANNER_APIHOST")
-	return &skyscanner{apiKey, apiHost}
+func GetApiHost() string {
+	return os.Getenv(envSkyscannerApiHost)
 }
 
-func (api skyscanner) urlpath() string {
-	return fmt.Sprintf("https://%s/search-extended", api.apiHost)
+func GetApiKey() string {
+	return os.Getenv(envSkyscannerApiKey)
+}
+
+func NewDefaultWebAPI(logger *zap.Logger) WebAPI {
+	return NewWebAPI(GetApiHost(), GetApiKey(), logger)
+}
+
+func NewWebAPI(key, host string, logger *zap.Logger) WebAPI {
+	return &skyscanner{key, host, logger.Named(webLoggerName)}
 }
 
 func (api skyscanner) Get(getURL *url.URL) ([]byte, error) {
@@ -281,63 +383,32 @@ func (api skyscanner) Get(getURL *url.URL) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := io.ReadAll(resp.Body)
-	return body, err
+	return io.ReadAll(resp.Body)
 }
 
-func (api skyscanner) isRoundTrip(opts FlightsSearchOptions) bool {
-	_, ok := opts["returnDate"]
-	return ok
-}
+func (api skyscanner) Search(ctx context.Context, opts SearchOptions) (Itineraries, error) {
+	queryURL, _ := url.Parse(fmt.Sprintf("https://%s/search-extended", api.apiHost))
+	queryURL.RawQuery = opts.ToRawURLQuery()
 
-func (api skyscanner) Search(ctx context.Context, origIATA, destIATA string, numAdults uint64, departDate time.Time, opts FlightsSearchOptions) (Itineraries, error) {
-	if origIATA == "" || destIATA == "" || numAdults <= 0 || departDate.Equal(time.Time{}) {
-		return Itineraries{}, ErrInvalidSearchRequest
+	currency := opts.Currency
+	if currency == "" {
+		currency = DefaultCurrency
 	}
-
-	queryURL, _ := url.Parse(api.urlpath())
-	queryParams := queryURL.Query()
-
-	queryParams.Set("adults", fmt.Sprintf("%d", numAdults))
-	queryParams.Set("origin", origIATA)
-	queryParams.Set("destination", destIATA)
-	queryParams.Set("departureDate", departDate.Format("2006-01-02"))
-
-	if val, ok := opts["returnDate"]; ok {
-		queryParams.Set("returnDate", val)
-	}
-	if val, ok := opts["cabinClass"]; ok {
-		queryParams.Set("cabinClass", val)
-	}
-
-	currency := DefaultCurrency
-	if val, ok := opts["currency"]; ok {
-		currency = val
-	}
-	queryParams.Set("currency", currency)
-	if val, ok := opts["duration"]; ok {
-		queryParams.Set("duration", val)
-	}
-	if val, ok := opts["stops"]; ok {
-		queryParams.Set("stops", val)
-	}
-	queryURL.RawQuery = queryParams.Encode()
 
 	body, err := api.Get(queryURL)
 	if err != nil {
+		api.logger.Error("Search", zap.Error(err))
 		return Itineraries{}, err
 	}
 
 	var res SkyscannerResponse
-	err = json.Unmarshal(body, &res)
-	if err != nil {
+	if err = json.Unmarshal(body, &res); err != nil {
+		api.logger.Error("Search", zap.Error(err))
 		return Itineraries{}, err
 	}
 
-	isRoundTrip := api.isRoundTrip(opts)
-	if isRoundTrip {
+	if opts.IsRoundTrip() {
 		return res.ToRoundtripItineraries(currency), nil
-	} else {
-		return res.ToOnewayItineraries(currency), nil
 	}
+	return res.ToOnewayItineraries(currency), nil
 }

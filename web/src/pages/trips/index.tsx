@@ -5,68 +5,64 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
-import { applyPatch,  } from 'json-joy/es6/json-patch';
+import { applyPatch, } from 'json-joy/es6/json-patch';
 import { WebsocketEvents } from 'websocket-ts/lib';
 import {
   BanknotesIcon,
   CalendarDaysIcon,
-  FolderArrowDownIcon,
-  GlobeAmericasIcon,
   HomeIcon
-} from '@heroicons/react/24/outline'
+} from '@heroicons/react/24/outline';
+import { Cog6ToothIcon } from '@heroicons/react/24/solid';
 
-import TripsAPI from '../../apis/trips';
-import TripsSyncAPI, { JSONPatchOp } from '../../apis/tripsSync';
-
-import ItinerarySection from '../../components/trip/ItinerarySection';
-import NotesSection from '../../components/trip/Notes';
+import BudgetSection from '../../features/trip/BudgetSection';
+import ItinerarySection from '../../features/trip/ItinerarySection';
+import NotesSection from '../../features/trip/Notes';
 import Spinner from '../../components/common/Spinner';
-import TripContentSection from '../../components/trip/ContentSection';
-import TripLogisticsSection from '../../components/trip/LogisticsSection';
-import TripMap from '../../components/maps/TripMap';
-import TripMenuJumbo from '../../components/trip/MenuJumbo';
+import { NavbarLogo } from '../../components/common/Navbar';
+import TripContentSection from '../../features/trip/ContentSection';
+import TripLogisticsSection from '../../features/trip/LogisticsSection';
+import TripMap from '../../features/maps/TripMap';
+import TripMenuJumbo from '../../features/trip/MenuJumbo';
+import SettingsSection from '../../features/trip/SettingsSection';
 
-import { TripMenuCss } from '../../styles/global';
+import TripsAPI, { ReadMembersResponse, ReadResponse } from '../../apis/trips';
+import TripsSyncAPI from '../../apis/tripsSync';
+import { NewSyncMessageHeap } from '../../lib/heap';
+import {
+  JSONPatchOp,
+  makeMsgUpdateTrip,
+  makeMsgJoinSession,
+  OpUpdateTrip,
+  OpMemberUpdate,
+  UpdateTitleAddNewMember,
+  TripSync
+} from '../../lib/tripsSync';
+import { Auth, readAuthUser } from '../../lib/auth';
+import { CommonCss, TripMenuCss } from '../../assets/styles/global';
 import { MapsProvider } from '../../context/maps-context';
-import { NewSyncMessageHeap } from '../../utils/heap';
-import BudgetSection from '../../components/trip/BudgetSection';
-
 
 // TripPlanningMenu
 
 interface TripPlanningMenuProps {
   trip: any
+  tripMembers: {[key: string]: Auth.User}
   tripStateOnUpdate: any
 }
 
 const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProps) => {
-
   const [tab, setTab] = useState("home");
 
-
   // Renderers
-  const renderNavBar = () => {
-    return (
-      <nav className={TripMenuCss.TripMenuNav}>
-        <Link to="/" className='block align-middle'>
-          <GlobeAmericasIcon className='inline h-10 w-10'/>
-          <span className='inline-block text-2xl align-middle'>
-            tiinyplanet
-          </span>
-        </Link>
-      </nav>
-    );
-  }
-
   const renderTabs = () => {
     const tabs = [
       { title: "Home", icon: HomeIcon },
       { title: "Itinerary", icon: CalendarDaysIcon },
       { title: "Budget", icon: BanknotesIcon },
-      { title: "Attachments", icon: FolderArrowDownIcon },
+      // { title: "Attachments", icon: FolderArrowDownIcon },
+      { title: "Settings", icon: Cog6ToothIcon },
     ];
 
     return (
@@ -77,9 +73,9 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
               <button
                 key={idx} type="button"
                 className={TripMenuCss.TabItemBtn}
-                onClick={() => { setTab(tab.title.toLowerCase())} }
+                onClick={() => { setTab(tab.title.toLowerCase()) }}
               >
-                <tab.icon className='h-6 w-6 mb-1'/>
+                <tab.icon className='h-6 w-6 mb-1' />
                 <span className={TripMenuCss.TabItemBtnTxt}>
                   {tab.title}
                 </span>
@@ -102,7 +98,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
-        <hr className='w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded'/>
+        <hr className={CommonCss.HrShort} />
         <TripContentSection
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
@@ -111,30 +107,39 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
     );
   }
 
-
   return (
     <aside className={TripMenuCss.TripMenuCtn}>
       <div className={TripMenuCss.TripMenu}>
-        {renderNavBar()}
+        <nav className={CommonCss.Navbar}>
+          <NavbarLogo href='/home' />
+        </nav>
         <TripMenuJumbo
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
         {renderTabs()}
-        { tab === "home" ? renderHome() : null}
-        { tab === "itinerary"
+        {tab === "home" ? renderHome() : null}
+        {tab === "itinerary"
           ?
           <ItinerarySection
             trip={props.trip}
             tripStateOnUpdate={props.tripStateOnUpdate}
           />
           : null}
-        { tab === "budget"
+        {tab === "budget"
           ?
-            <BudgetSection
-              trip={props.trip}
-              tripStateOnUpdate={props.tripStateOnUpdate}
-            />
+          <BudgetSection
+            trip={props.trip}
+            tripStateOnUpdate={props.tripStateOnUpdate}
+          />
+          : null}
+        {tab === "settings"
+          ?
+          <SettingsSection
+            trip={props.trip}
+            tripMembers={props.tripMembers}
+            tripStateOnUpdate={props.tripStateOnUpdate}
+          />
           : null}
       </div>
     </aside>
@@ -144,13 +149,17 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
 // TripPage
 
 const TripPage: FC = () => {
-  const routerParams = useParams();
-  const { id } = routerParams;
+  const { id } = useParams();
 
   // Trip State
   const tripRef = useRef(null as any);
-  const [tripID, setTripID] = useState("");
   const [trip, setTrip] = useState(tripRef.current);
+  const [tripMembers, setTripMembers] = useState({});
+
+  // Sync Session State
+  const wsRef = useRef(null as any);
+  const pq = NewSyncMessageHeap();
+  const nextTobCounter = useRef(0);
 
   // Map UI State
   const [mapNode, setMapNode] = useState(null) as any;
@@ -162,16 +171,34 @@ const TripPage: FC = () => {
     }
   }, []);
 
-  // Sync Session State
-  const wsRef = useRef(null as any);
-  const pq = NewSyncMessageHeap();
-  const nextTobCounter = useRef(0);
+  useEffect(() => {
+    window.addEventListener("resize", () => {
+      if (mapNode) {
+        setMapDivWidth(mapNode.getBoundingClientRect().width);
+      }
+    })
+  }, [mapNode])
 
-  const shouldSetWs = (): boolean => {
-    return (wsRef.current === null && id != null)
+
+  /////////////////////////////
+  // Use Effects - Websocket //
+  /////////////////////////////
+
+  const shouldSetWs = (id: string|undefined): boolean => {
+    return (wsRef.current === null && !_isEmpty(id))
   }
 
-  // Use Effects
+  const handleUpdateMsgTitle = (title?: string) => {
+    if (_isEmpty(title)) {
+      return;
+    }
+    if (title == UpdateTitleAddNewMember) {
+      TripsAPI.readMembers(id as string)
+        .then((data: ReadMembersResponse) => {
+          setTripMembers(data.members);
+        });
+    }
+  }
 
   // Close WS when leaving page
   useEffect(() => {
@@ -183,43 +210,41 @@ const TripPage: FC = () => {
     }
   }, [])
 
-
   useEffect(() => {
     // Fetch Trip
     if (id) {
-      TripsAPI.readTrip(id as string).then((data) => {
-        tripRef.current = _get(data, "tripPlan", {});
-        setTrip(tripRef.current);
-        setTripID(id as string);
-      });
+      TripsAPI.read(id as string)
+        .then((data: ReadResponse) => {
+          tripRef.current = data.trip;
+          setTrip(tripRef.current);
+          setTripMembers(data.members)
+        });
     }
     // Set up WS Connection
-    if (shouldSetWs()) {
+    if (shouldSetWs(id)) {
       const ws = TripsSyncAPI.startTripSyncSession();
       wsRef.current = ws;
 
       ws.addEventListener(WebsocketEvents.open, () => {
-        const joinMsg = TripsSyncAPI.makeSyncMsgJoinSession(
-          id as string,
-          "memberID",
-          "memberEmail");
+        const user = readAuthUser();
+        const joinMsg = makeMsgJoinSession(id as string, user?.id || "");
         ws.send(JSON.stringify(joinMsg));
       });
 
       ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
-        const msg = JSON.parse(e.data);
-        switch (msg.opType) {
-          case "SyncOpJoinSessionBroadcast":
+        const msg = JSON.parse(e.data) as TripSync.Message;
+        switch (msg.op) {
+          case OpMemberUpdate:
             nextTobCounter.current = 1
             return;
-          case "SyncOpUpdateTrip":
+          case OpUpdateTrip:
             break
           default:
             nextTobCounter.current += 1
             return;
-          }
+        }
 
-        // Add message to min-heap
+        // Add OpUpdateTrip message to min-heap
         pq.push(msg);
 
         let nxtCtr = nextTobCounter.current
@@ -239,31 +264,27 @@ const TripPage: FC = () => {
 
           // Process this message
           minMsg = pq.pop()!;
-          const patch = minMsg.syncDataUpdateTrip!.ops as any;
-          const patchOpts = {mutate: false} as any;
-          const newTrip = applyPatch(tripRef.current, patch, patchOpts);
-
+          const newTrip = applyPatch(
+            tripRef.current,
+            minMsg.data.updateTrip!.ops as any,
+            { mutate: false },
+          );
           nxtCtr += 1
           tripRef.current = newTrip.doc
           setTrip(tripRef.current);
+          handleUpdateMsgTitle(minMsg.data.updateTrip?.title)
         }
       })
     }
   }, [id])
 
+  ////////////////////
+  // Event Handlers //
+  ////////////////////
 
-  useEffect(() => {
-    window.addEventListener("resize", () => {
-      if(mapNode) {
-        setMapDivWidth(mapNode.getBoundingClientRect().width);
-      }
-    })
-  }, [mapNode])
-
-  // Event Handlers
-  const tripStateOnUpdate = (ops: Array<JSONPatchOp>) => {
-    const updateMsg = TripsSyncAPI.makeSyncMsgUpdateTrip(tripID, ops);
-    wsRef.current.send(JSON.stringify(updateMsg));
+  const tripStateOnUpdate = (ops: Array<JSONPatchOp>, title: string) => {
+    const msg = makeMsgUpdateTrip(id!, title, ops);
+    wsRef.current.send(JSON.stringify(msg));
   }
 
   // Renderers
@@ -274,18 +295,21 @@ const TripPage: FC = () => {
 
   return (
     <MapsProvider>
-      <div className="flex">
-        <TripPlanningMenu
-          trip={tripRef.current}
-          tripStateOnUpdate={tripStateOnUpdate}
-        />
-        <div className='flex-1' ref={measuredRef}>
-          <TripMap
+      <main className='min-h-screen'>
+        <div className="flex">
+          <TripPlanningMenu
             trip={tripRef.current}
-            width={mapDivWidth}
+            tripMembers={tripMembers}
+            tripStateOnUpdate={tripStateOnUpdate}
           />
+          <div className='flex-1' ref={measuredRef}>
+            <TripMap
+              trip={tripRef.current}
+              width={mapDivWidth}
+            />
+          </div>
         </div>
-      </div>
+      </main>
     </MapsProvider>
   );
 }

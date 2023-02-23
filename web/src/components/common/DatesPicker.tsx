@@ -8,18 +8,18 @@ import {
   SelectRangeEventHandler
 } from 'react-day-picker';
 
-interface InputDatesPicketProps {
+interface InputDatesPickerProps {
   dates?: DateRange
   onSelect: any
   isOpen: boolean
 }
 
-const DatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProps) => {
+const DatesPicker: FC<InputDatesPickerProps> = (props: InputDatesPickerProps) => {
 
   const matches = useMediaQuery('(min-width: 768px)');
 
   // Event Handlers
-  const datesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
+  const datesOnSelect: SelectRangeEventHandler = (range?: DateRange) => {
     props.onSelect(range);
   };
 

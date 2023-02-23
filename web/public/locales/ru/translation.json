@@ -1,0 +1,30 @@
+{
+  "common": {
+    "settings": "приложения"
+  },
+  "navbar": {
+    "loginModal": {
+      "title": "Войти на tiinyplanet",
+      "googleSignIn": "Войти через Google"
+    },
+    "currencySelector": {
+      "title": "Выберите валюту"
+    },
+    "localeSelector": {
+      "title": "Выберите язык"
+    },
+    "landingPageActions": {
+      "login": "Войти"
+    },
+    "appPageActions": {
+      "logout": "Выйти"
+    }
+  },
+  "home": {
+    "tripJumbo": {
+      "title": "Спланируй свое следующее приключение!",
+      "createBtn": "Создать новую поездку"
+    },
+    "upcomingTrips": "Предстоящие поездки"
+  }
+}

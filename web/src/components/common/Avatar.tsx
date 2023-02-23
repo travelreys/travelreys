@@ -2,10 +2,12 @@ import React, { FC } from 'react';
 import _get from 'lodash/get';
 import { usePopperTooltip } from 'react-popper-tooltip';
 
-import { stringToColor } from '../../utils/strings';
+import { stringToColor } from '../../lib/strings';
+import { AvatarCss } from '../../assets/styles/global';
 
 interface AvatarProps {
   name: string
+  imgUrl?: string
   placement: string
 }
 
@@ -21,20 +23,35 @@ const Avatar: FC<AvatarProps> = (props: AvatarProps) => {
     backgroundColor: stringToColor(props.name),
   }
 
+  // Renderers
+  const renderImg = () => {
+    return (
+      <img className="h-full w-full rounded-full"
+        src={props.imgUrl}
+        alt="profile image"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
+  const renderName = () => {
+    return (
+      <span className={AvatarCss.InitialsTxt}>
+        {_get(props.name, "0")}
+      </span>
+    );
+  }
+
   return (
     <>
-      <div
-        ref={setTriggerRef}
-        style={style}
-        className="relative inline-flex items-center justify-center w-7 h-7 overflow-hidden rounded-full"
-      >
-        <span className="font-medium text-white uppercase">{_get(props.name, "0")}</span>
+      <div ref={setTriggerRef} style={style} className={AvatarCss.Ctn}>
+        {props.imgUrl ? renderImg() : renderName()}
       </div>
       {visible && (
         <div
           ref={setTooltipRef}
+          className={AvatarCss.Tooltip}
           {...getTooltipProps()}
-          className="absolute z-10 inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm tooltip"
         >
           {props.name}
         </div>

@@ -1,0 +1,33 @@
+{
+  "common": {
+    "settings": "設置"
+  },
+  "errors": {
+    "unexpectedError": "意外錯誤"
+  },
+  "navbar": {
+    "loginModal": {
+      "title": "登錄tiinyplanet",
+      "googleSignIn": "使用谷歌登錄"
+    },
+    "currencySelector": {
+      "title": "選擇您的貨幣"
+    },
+    "localeSelector": {
+      "title": "選擇您的語言"
+    },
+    "landingPageActions": {
+      "login": "登錄"
+    },
+    "appPageActions": {
+      "logout": "註銷"
+    }
+  },
+  "home": {
+    "tripJumbo": {
+      "title": "計劃你的下一次冒險！",
+      "createBtn": "創建新行程"
+    },
+    "upcomingTrips": "即將到來的旅行"
+  }
+}

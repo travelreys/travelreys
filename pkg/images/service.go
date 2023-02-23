@@ -8,24 +8,24 @@ import (
 // Service
 
 var (
-	ErrEmptyQuery = errors.New("empty-image-search-query")
+	ErrEmptySearchQuery = errors.New("images.service.search.emptyquery")
 )
 
 type Service interface {
-	Search(ctx context.Context, query string) (ImageMetadataList, error)
+	Search(ctx context.Context, query string) (MetadataList, error)
 }
 
 type service struct {
-	api WebImageAPI
+	api WebAPI
 }
 
-func NewService(webAPI WebImageAPI) Service {
+func NewService(webAPI WebAPI) Service {
 	return &service{webAPI}
 }
 
-func (svc *service) Search(ctx context.Context, query string) (ImageMetadataList, error) {
+func (svc *service) Search(ctx context.Context, query string) (MetadataList, error) {
 	if query == "" {
-		return ImageMetadataList{}, ErrEmptyQuery
+		return MetadataList{}, ErrEmptySearchQuery
 	}
 	return svc.api.Search(ctx, query)
 }

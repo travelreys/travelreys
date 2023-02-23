@@ -3,100 +3,92 @@ package tripssync
 import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
-	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 )
 
-// Sync Session State
-
-type SyncConnection struct {
-	PlanID       string
-	ConnectionID string
-	Member       trips.TripMember
+// Connection represents a user's participation
+// to the multiplayer collaboration session.
+type Connection struct {
+	ID     string
+	TripID string
+	Member trips.Member
 }
 
-type SyncSession struct {
+// Session keeps track of all the participants in current session
+type Session struct {
 	// Members is a list of members in the current session
-	Members trips.TripMembersList `json:"members"`
+	Members trips.MembersList `json:"members"`
 }
-
-// Sync Message
 
 const (
-	SyncOpJoinSession           = "SyncOpJoinSession"
-	SyncOpJoinSessionBroadcast  = "SyncOpJoinSessionBroadcast"
-	SyncOpLeaveSession          = "SyncOpLeaveSession"
-	SyncOpLeaveSessionBroadcast = "SyncOpLeaveSessionBroadcast"
-	SyncOpPingSession           = "SyncOpPingSession"
-	SyncOpFetchTrip             = "SyncOpFetchTrip"
-	SyncOpUpdateTrip            = "SyncOpUpdateTrip"
+	OpJoinSession  = "OpJoinSession"
+	OpLeaveSession = "OpLeaveSession"
+	OpPingSession  = "OpPingSession"
+	OpMemberUpdate = "OpMemberUpdate"
+	OpUpdateTrip   = "OpUpdateTrip"
 )
 
-func isValidSyncMessageType(opType string) bool {
-	return utils.StringContains([]string{
-		SyncOpJoinSession,
-		SyncOpLeaveSession,
-		SyncOpPingSession,
-		SyncOpFetchTrip,
-		SyncOpUpdateTrip,
-	}, opType)
+func isValidMessageType(op string) bool {
+	return common.StringContains([]string{
+		OpJoinSession,
+		OpLeaveSession,
+		OpPingSession,
+		OpMemberUpdate,
+		OpUpdateTrip,
+	}, op)
 }
 
-type SyncMessage struct {
-	ID         string `json:"id"`      // Users' connection id
-	Counter    uint64 `json:"counter"` // Should be monotonically increasing
-	TripPlanID string `json:"tripPlanID"`
-	OpType     string `json:"opType"`
-
-	SyncDataJoinSession           `json:"syncDataJoinSession"`
-	SyncDataJoinSessionBroadcast  `json:"syncDataJoinSessionBroadcast"`
-	SyncDataLeaveSession          `json:"syncDataLeaveSession"`
-	SyncDataLeaveSessionBroadcast `json:"syncDataLeaveSessionBroadcast"`
-	SyncDataPing                  `json:"syncDataPing"`
-	SyncDataUpdateTrip            `json:"syncDataUpdateTrip"`
+type Message struct {
+	ConnID  string      `json:"connId"`
+	TripID  string      `json:"tripId"`
+	Op      string      `json:"op"`
+	Counter uint64      `json:"counter"` // Should be monotonically increasing
+	Data    MessageData `json:"data"`
 }
 
-type SyncDataJoinSession struct {
-	trips.TripMember
+type MessageData struct {
+	JoinSession  MsgDataJoinSession  `json:"joinSession"`
+	LeaveSession MsgDataLeaveSession `json:"leaveSession"`
+	MemberUpdate MsgDataMemberUpdate `json:"memberUpdate"`
+	Ping         MsgDataPing         `json:"ping"`
+	UpdateTrip   MsgDataUpdateTrip   `json:"updateTrip"`
 }
 
-type SyncDataJoinSessionBroadcast struct {
-	trips.TripMembersList
+// MsgDataJoinSession contains the member that joins the session
+type MsgDataJoinSession struct {
+	trips.Member
 }
 
-func NewSyncMessageJoinSessionBroadcast(tripPlanID string, members trips.TripMembersList) SyncMessage {
-	return SyncMessage{
-		TripPlanID:                   tripPlanID,
-		OpType:                       SyncOpJoinSessionBroadcast,
-		SyncDataJoinSessionBroadcast: SyncDataJoinSessionBroadcast{members},
+// MsgDataLeaveSession contains the member that left the session
+type MsgDataLeaveSession struct {
+	trips.Member
+}
+
+func NewMsgLeaveSession(connID, tripID string) Message {
+	return Message{
+		ConnID: connID,
+		TripID: tripID,
+		Op:     OpLeaveSession,
+		Data: MessageData{
+			LeaveSession: MsgDataLeaveSession{},
+		},
 	}
 }
 
-type SyncDataLeaveSession struct {
-	trips.TripMember
+type MsgDataMemberUpdate struct {
+	trips.MembersList
 }
 
-func NewSyncMessageLeaveSession(connID, tripPlanID string) SyncMessage {
-	return SyncMessage{
-		OpType:     SyncOpLeaveSession,
-		ID:         connID,
-		TripPlanID: tripPlanID,
+func NewMsgMemberUpdate(tripID string, members trips.MembersList) Message {
+	return Message{
+		TripID: tripID,
+		Op:     OpMemberUpdate,
+		Data:   MessageData{MemberUpdate: MsgDataMemberUpdate{members}},
 	}
 }
 
-type SyncDataLeaveSessionBroadcast struct {
-	trips.TripMembersList
-}
+type MsgDataPing struct{}
 
-func NewSyncMessageLeaveSessionBroadcast(tripPlanID string, members trips.TripMembersList) SyncMessage {
-	return SyncMessage{
-		TripPlanID:                    tripPlanID,
-		OpType:                        SyncOpLeaveSessionBroadcast,
-		SyncDataLeaveSessionBroadcast: SyncDataLeaveSessionBroadcast{members},
-	}
-}
-
-type SyncDataPing struct{}
-
-type SyncDataUpdateTrip struct {
-	Ops []common.JSONPatchOp `json:"ops"`
+type MsgDataUpdateTrip struct {
+	Title string               `json:"title"`
+	Ops   []common.JSONPatchOp `json:"ops"`
 }

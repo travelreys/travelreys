@@ -1,0 +1,30 @@
+{
+  "errors": {
+    "unexpectedError": "Konfigurasi"
+  },
+  "navbar": {
+    "loginModal": {
+      "title": "Masuk ke tiinyplanet",
+      "googleSignIn": "Masuk dengan Google"
+    },
+    "currencySelector": {
+      "title": "Pilih mata uang Anda"
+    },
+    "localeSelector": {
+      "title": "Pilih bahasa Anda"
+    },
+    "landingPageActions": {
+      "masuk": "Masuk"
+    },
+    "appPageActions": {
+      "keluar": "keluar"
+    }
+  },
+  "home": {
+    "tripJumbo": {
+      "title": "Rencanakan petualangan Anda berikutnya!",
+      "createBtn": "Buat perjalanan baru"
+    },
+    "upcomingTrips": "Perjalanan Mendatang"
+  }
+}

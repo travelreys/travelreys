@@ -3,7 +3,6 @@ package tripssync
 import (
 	context "context"
 	"encoding/json"
-	"fmt"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/google/uuid"
@@ -17,8 +16,8 @@ import (
 /***************/
 
 type Coordinator struct {
-	id     string
-	planID string
+	ID     string
+	tripID string
 
 	// plan is the coordinators' local copy of the trip plan
 	plan []byte
@@ -30,56 +29,56 @@ type Coordinator struct {
 
 	// queue maintains a FIFO Total Order Broadcast together
 	// with Counter.
-	queue chan SyncMessage
+	queue chan Message
 
 	// msgCh recevies request message from clients
-	msgCh  <-chan SyncMessage
+	msgCh  <-chan Message
 	doneCh chan<- bool
 
-	sesnStore SessionStore
-	sms       SyncMessageStore
-	tms       TOBMessageStore
+	store     Store
+	msgStore  MessageStore
+	tobStore  TOBMessageStore
 	tripStore trips.Store
 
 	logger *zap.Logger
 }
 
 func NewCoordinator(
-	planID string,
-	sesnStore SessionStore,
-	sms SyncMessageStore,
-	tms TOBMessageStore,
+	tripID string,
+	store Store,
+	msgStore MessageStore,
+	tobStore TOBMessageStore,
 	tripStore trips.Store,
+
 	logger *zap.Logger,
 ) *Coordinator {
 	return &Coordinator{
-		id:        uuid.New().String(),
-		planID:    planID,
+		ID:        uuid.New().String(),
+		tripID:    tripID,
 		plan:      []byte{},
 		counter:   0,
-		queue:     make(chan SyncMessage, common.DefaultChSize),
-		sesnStore: sesnStore,
-		sms:       sms,
-		tms:       tms,
+		queue:     make(chan Message, common.DefaultChSize),
+		store:     store,
+		msgStore:  msgStore,
+		tobStore:  tobStore,
 		tripStore: tripStore,
-		logger:    logger,
+		logger:    logger.Named("sync.coordinator"),
 	}
 }
 
 func (crd *Coordinator) Init() error {
-	crd.logger.Info("new coordinator", zap.String("planID", crd.planID))
+	crd.logger.Info("new coordinator", zap.String("tripID", crd.tripID))
 
 	// 1. Initialise plan for coordinator
-	plan, err := crd.tripStore.ReadTripPlan(context.Background(), crd.planID)
+	plan, err := crd.tripStore.Read(context.Background(), crd.tripID)
 	if err != nil {
 		return err
 	}
 	planBytes, _ := json.Marshal(plan)
 	crd.plan = planBytes
-	crd.logger.Debug("loaded plan", zap.String("plan", string(crd.plan)))
 
 	// 2.Subscribe to updates from clients
-	msgCh, done, err := crd.sms.SubscribeQueue(crd.planID, GroupCoordinators)
+	msgCh, done, err := crd.msgStore.SubscribeQueue(crd.tripID, GroupCoordinators)
 	if err != nil {
 		crd.logger.Error("subscribe fail", zap.Error(err))
 		return err
@@ -90,7 +89,7 @@ func (crd *Coordinator) Init() error {
 }
 
 func (crd *Coordinator) Stop() {
-	crd.sesnStore.DeleteSessionCounter(context.Background(), crd.planID)
+	crd.store.DeleteCounter(context.Background(), crd.tripID)
 	if crd.doneCh != nil {
 		crd.doneCh <- true
 	}
@@ -98,29 +97,28 @@ func (crd *Coordinator) Stop() {
 }
 
 func (crd *Coordinator) Run() error {
-	crd.logger.Info("running coordinator", zap.String("planID", crd.planID))
-
+	crd.logger.Info("running coordinator", zap.String("tripID", crd.tripID))
 	go func() {
 		// 3.1. Takes in op msg indicating changes from clients
 		for msg := range crd.msgCh {
-			crd.logger.Debug("recv msg", zap.String("msg", fmt.Sprintf("%+v", msg)))
+			crd.logger.Debug("recv msg", zap.String("msg", common.FmtString(msg)))
 
-			switch msg.OpType {
-			case SyncOpJoinSession:
+			switch msg.Op {
+			case OpJoinSession:
 				// Got new player, reset counter
 				crd.counter = 0
-				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
-				msg = NewSyncMessageJoinSessionBroadcast(msg.TripPlanID, sess.Members)
-			case SyncOpLeaveSession:
+				sess, _ := crd.store.Read(context.Background(), crd.tripID)
+				msg = NewMsgMemberUpdate(msg.TripID, sess.Members)
+			case OpLeaveSession:
 				// stop coordinator if no users left in session
-				sess, _ := crd.sesnStore.Read(context.Background(), crd.planID)
+				sess, _ := crd.store.Read(context.Background(), crd.tripID)
 				if len(sess.Members) == 0 {
-					crd.logger.Info("stopping coordinator", zap.String("planID", crd.planID))
+					crd.logger.Info("stopping coordinator", zap.String("tripID", crd.tripID))
 					crd.Stop()
 					return
 				}
-				// Replace with leaving broadcast message
-				msg = NewSyncMessageLeaveSessionBroadcast(msg.TripPlanID, sess.Members)
+				// Replace with member update msg
+				msg = NewMsgMemberUpdate(msg.TripID, sess.Members)
 			}
 
 			// 3.2. Give each message a counter
@@ -132,53 +130,46 @@ func (crd *Coordinator) Run() error {
 			// Need to update the counter
 			crd.counter++
 			crd.logger.Debug("next counter", zap.Uint64("counter", crd.counter))
-
 		}
 	}()
 
 	go func() {
 		// 4.1 Read message from FIFO Queue
 		for msg := range crd.queue {
-			// 4.2 Update local plan and persist the data (if required)
-			// Update local copy of plan + validate if the op is valid
-			if msg.OpType == SyncOpUpdateTrip {
-				crd.HandleTOBSyncOpUpdateTrip(msg)
+			switch msg.Op {
+			case OpUpdateTrip:
+				// 4.2 Update local plan and persist the data (if required)
+				// Update local copy of plan + validate if the op is valid
+				crd.HandleTOBOpUpdateTrip(msg)
+			case OpMemberUpdate:
+				crd.store.ResetCounter(context.Background(), msg.TripID)
 			}
 			// 4.3 Broadcasts the tob msg to all other connected clients
-			crd.tms.Publish(crd.planID, msg)
+			crd.tobStore.Publish(crd.tripID, msg)
 		}
 	}()
-
 	return nil
 }
 
-// HandleSyncOpUpdateTrip handles SyncOpUpdateTrip messages
-func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
-	patchJSON, _ := json.Marshal(msg.SyncDataUpdateTrip.Ops)
-
-	patch, _ := jsonpatch.DecodePatch(patchJSON)
-	fmt.Printf("%+v\n", string(crd.plan))
-	fmt.Println(string(patchJSON))
-	fmt.Println(patch)
+// HandleOpUpdateTrip handles OpUpdateTrip messages
+func (crd *Coordinator) HandleTOBOpUpdateTrip(msg Message) {
+	patchOps, _ := json.Marshal(msg.Data.UpdateTrip.Ops)
+	patch, _ := jsonpatch.DecodePatch(patchOps)
 	modified, err := patch.Apply(crd.plan)
 	if err != nil {
 		crd.logger.Error("json patch apply", zap.Error(err))
 		return
 	}
 	crd.plan = modified
-	crd.logger.Debug("modified plan", zap.String("modified", string(modified)))
 
-	var toSave trips.TripPlan
-	err = json.Unmarshal(crd.plan, &toSave)
-	if err != nil {
-		crd.logger.Error("json unmarshall", zap.Error(err))
+	var toSave trips.Trip
+	if err = json.Unmarshal(crd.plan, &toSave); err != nil {
+		crd.logger.Error("json unmarshall fails", zap.Error(err))
 	}
-
-	err = crd.tripStore.SaveTripPlan(context.Background(), toSave)
-	if err != nil {
-		crd.logger.Error("json unmarshall", zap.Error(err))
+	if err = crd.tripStore.Save(context.Background(), toSave); err != nil {
+		crd.logger.Error("tripStore save fails", zap.Error(err))
 	}
-	crd.sesnStore.IncrSessionCounter(context.Background(), crd.planID)
+	crd.store.IncrCounter(context.Background(), crd.tripID)
 }
 
 /***********
@@ -186,25 +177,25 @@ func (crd *Coordinator) HandleTOBSyncOpUpdateTrip(msg SyncMessage) {
 /***********/
 
 type CoordinatorSpawner struct {
-	sesnStore SessionStore
-	sms       SyncMessageStore
-	tms       TOBMessageStore
+	store     Store
+	msgStore  MessageStore
+	tobStore  TOBMessageStore
 	tripStore trips.Store
 
 	logger *zap.Logger
 }
 
 func NewCoordinatorSpawner(
-	sesnStore SessionStore,
-	sms SyncMessageStore,
-	tms TOBMessageStore,
+	store Store,
+	msgStore MessageStore,
+	tobStore TOBMessageStore,
 	tripStore trips.Store,
 	logger *zap.Logger,
 ) *CoordinatorSpawner {
 	return &CoordinatorSpawner{
-		sesnStore: sesnStore,
-		sms:       sms,
-		tms:       tms,
+		store:     store,
+		msgStore:  msgStore,
+		tobStore:  tobStore,
 		tripStore: tripStore,
 		logger:    logger,
 	}
@@ -213,7 +204,7 @@ func NewCoordinatorSpawner(
 // Run listens to SynOpJoinSession requests and spawn a
 // coordinator if there is only 1 member in the session (i.e new session)
 func (spwn *CoordinatorSpawner) Run() error {
-	msgCh, done, err := spwn.sms.Subscribe("*")
+	msgCh, done, err := spwn.msgStore.Subscribe("*")
 	if err != nil {
 		return err
 	}
@@ -223,10 +214,10 @@ func (spwn *CoordinatorSpawner) Run() error {
 	}()
 
 	for msg := range msgCh {
-		if msg.OpType != SyncOpJoinSession {
+		if msg.Op != OpJoinSession {
 			continue
 		}
-		sess, err := spwn.sesnStore.Read(context.Background(), msg.TripPlanID)
+		sess, err := spwn.store.Read(context.Background(), msg.TripID)
 		if err != nil {
 			// TODO: handle error here
 			spwn.logger.Error("unable to read session", zap.Error(err))
@@ -236,12 +227,11 @@ func (spwn *CoordinatorSpawner) Run() error {
 			// First member would have joined!
 			continue
 		}
-
 		coord := NewCoordinator(
-			msg.TripPlanID,
-			spwn.sesnStore,
-			spwn.sms,
-			spwn.tms,
+			msg.TripID,
+			spwn.store,
+			spwn.msgStore,
+			spwn.tobStore,
 			spwn.tripStore,
 			spwn.logger,
 		)

@@ -1,7 +1,7 @@
 import React, { ChangeEvent, FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
-import { ModalCss } from '../../styles/global';
+import { ModalCss } from '../../assets/styles/global';
 
 // Modal
 

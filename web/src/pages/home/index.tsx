@@ -1,5 +1,6 @@
 import React, { FC, useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import {
@@ -7,17 +8,41 @@ import {
   SelectRangeEventHandler
 } from 'react-day-picker';
 
-import TripsAPI from '../../apis/trips';
+import TripsAPI, { CreateResponse, ReadsResponse } from '../../apis/trips';
 
 import Alert from '../../components/common/Alert';
-import CreateTripModal from '../../components/home/CreateTripModal';
+import CreateModal from '../../features/home/CreateModal';
 import Spinner from '../../components/common/Spinner';
-import TripsContainer from '../../components/home/TripsContainer';
-import TripsJumbo from '../../components/home/TripsJumbo';
+import TripsContainer from '../../features/home/TripsContainer';
+import { HomeCss } from '../../assets/styles/global';
 
+
+interface TripsJumboProps {
+  onCreateBtnClick: any,
+}
+
+const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
+
+  const {t} = useTranslation();
+
+  return (
+    <div>
+      <h1 className={HomeCss.TripJumboTitle}>
+        {t("home.tripJumbo.title")}
+      </h1>
+      <button type="button"
+        className={HomeCss.CreateNewTripBtn}
+        onClick={props.onCreateBtnClick}
+      >
+        + {t("home.tripJumbo.createBtn")}
+      </button>
+    </div>
+  );
+}
 
 const HomePage: FC = () => {
   const history = useNavigate();
+  const { t } = useTranslation();
 
   // UI State
   const [isLoading, setIsLoading] = useState(false);
@@ -30,16 +55,24 @@ const HomePage: FC = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    TripsAPI.readTrips()
-    .then((res) => {
-      setTrips(_get(res, "tripPlans", []));
-      setIsLoading(false);
-    })
+    TripsAPI.list()
+      .then((res: ReadsResponse) => {
+        setTrips(res.trips);
+        setAlertProps({});
+        setIsLoading(false);
+      })
+      .catch(res => {
+        setAlertProps({
+          title: t("errors.unexpectedError"),
+          message: res.error,
+          status: "error"
+        });
+      })
   }, [])
 
   // Event Handlers
 
-  const createTripModalOpenOnClick = () => {
+  const createModalOpenOnClick = () => {
     setIsCreateModalOpen(true);
   }
 
@@ -47,30 +80,33 @@ const HomePage: FC = () => {
     setNewTripName(event.target.value);
   }
 
-  const newTripDatesOnSelect: SelectRangeEventHandler = (range: DateRange | undefined) => {
+  const newTripDatesOnSelect: SelectRangeEventHandler = (range?: DateRange) => {
     setNewTripDates(range);
   };
 
   const submitNewTripOnClick = () => {
-    TripsAPI.createTrip(newTripName, newTripDates?.from, newTripDates?.to)
-    .then((res: any) => {
-      history(`/trips/${_get(res, 'data.tripPlan.id')}`);
+    TripsAPI.create(newTripName, newTripDates?.from, newTripDates?.to)
+    .then((res: CreateResponse) => {
+      history(`/trips/${res.id}`);
     })
-    .catch(error => {
-      const errMsg = _get(error, "message") || _get(error.data, "error");
-      setAlertProps({title: "Unexpected Error", message: errMsg, status: "error"});
-    })
+    .catch(res => {
+      setAlertProps({
+        title: t("errors.unexpectedError"),
+        message: res.error,
+        status: "error"
+      });
+    });
   }
 
   // Renderers
   const renderTrips = () => {
     if (trips.length === 0) {
-      return (<TripsJumbo onCreateTripBtnClick={createTripModalOpenOnClick} />);
+      return (<TripsJumbo onCreateBtnClick={createModalOpenOnClick} />);
     }
     return (
       <TripsContainer
         trips={trips}
-        onCreateTripBtnClick={createTripModalOpenOnClick}
+        onCreateBtnClick={createModalOpenOnClick}
       />
     );
   }
@@ -83,7 +119,7 @@ const HomePage: FC = () => {
     <div>
       {!_isEmpty(alertProps) ? <Alert {...alertProps} /> : null}
       {renderTrips()}
-      <CreateTripModal
+      <CreateModal
         isOpen={isCreateModelOpen}
         onClose={() => setIsCreateModalOpen(false)}
         tripName={newTripName}

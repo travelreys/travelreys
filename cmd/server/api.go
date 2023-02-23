@@ -1,70 +1,84 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tiinyplanet/tiinyplanet/pkg/api"
+	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
+	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
 	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
-	"github.com/tiinyplanet/tiinyplanet/pkg/utils"
 	"go.uber.org/zap"
 )
 
 func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
-
-	db, err := utils.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
+	// Databases, external services and persistent storage
+	db, err := common.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
 	if err != nil {
+		logger.Error("cannot connect to mongo db", zap.Error(err))
+		return nil, err
+	}
+	nc, err := common.MakeNATSConn(cfg.NatsURL)
+	if err != nil {
+		logger.Error("cannot connect to NATS", zap.Error(err))
+		return nil, err
+	}
+	rdb, err := common.MakeRedisClient(cfg.RedisURL)
+	if err != nil {
+		logger.Error("cannot connect to redis", zap.Error(err))
 		return nil, err
 	}
 
-	nc, err := utils.MakeNATSConn(cfg.NatsURL)
-	if err != nil {
-		return nil, err
-	}
-	rdb, err := utils.MakeRedisClient(cfg.RedisURL, cfg.RedisClusterMode)
-	if err != nil {
-		return nil, err
-	}
+	ctx := context.Background()
 
-	// Images
-	unsplash := images.NewWebImageAPI()
-	imageSvc := images.NewService(unsplash)
-
-	// Maps
-	mapsSvc, err := maps.NewService()
+	// Auth
+	gp, err := auth.NewGoogleProvider(auth.GetOAuthGoogleSecretFile())
 	if err != nil {
 		return nil, err
 	}
+	authStore := auth.NewStore(ctx, db, logger)
+	authSvc := auth.NewService(gp, authStore, logger)
+	authSvc = auth.ServiceWithRBACMiddleware(authSvc, logger)
 
 	// Flights
-	skyscanner := flights.NewSkyscannerAPI()
-	flightsSvc := flights.NewService(skyscanner)
+	flightsSvc := flights.NewService(flights.NewDefaultWebAPI(logger))
+	flightsSvc = flights.ServiceWithRBACMiddleware(flightsSvc, logger)
 
-	// Trips
-	tripStore := trips.NewStore(db)
-	tripSvc := trips.NewService(tripStore, imageSvc)
-	tripSvc = trips.ServiceWithLoggingMiddleware(tripSvc, logger)
+	// Images
+	imageSvc := images.NewService(images.NewDefaultWebAPI(logger))
+	imageSvc = images.ServiceWithRBACMiddleware(imageSvc, logger)
 
-	r := mux.NewRouter()
-	securityMW := utils.NewSecureHeadersMiddleware(cfg.CORSOrigin)
-	wrwMW := utils.NewWrappedReponseWriterMiddleware()
-	loggingMW := utils.NewMuxLoggingMiddleware(logger)
-	metricsMW := utils.NewMetricsMiddleware()
-
-	// Collab
-	sesnStore := tripssync.NewSessionStore(rdb)
-	smStore := tripssync.NewSyncMessageStore(nc, rdb)
-	tobStore := tripssync.NewTOBMessageStore(nc, rdb)
-
-	pxy, err := tripssync.NewProxy(sesnStore, smStore, tobStore, tripStore)
+	// Maps
+	mapsSvc, err := maps.NewDefaulService(logger)
 	if err != nil {
+		logger.Error("unable to connect map service", zap.Error(err))
 		return nil, err
 	}
-	proxyServer := tripssync.MakeProxyServer(pxy, logger)
+
+	// Trips
+	tripStore := trips.NewStore(ctx, db, logger)
+	tripSvc := trips.NewService(tripStore, authSvc, imageSvc)
+	tripSvc = trips.ServiceWithRBACMiddleware(tripSvc, logger)
+
+	r := mux.NewRouter()
+	securityMW := api.NewSecureHeadersMiddleware(cfg.CORSOrigin)
+	wrwMW := api.NewWrappedReponseWriterMiddleware()
+	loggingMW := api.NewMuxLoggingMiddleware(logger)
+	metricsMW := api.NewMetricsMiddleware()
+
+	// TripSync
+	store := tripssync.NewStore(rdb)
+	msgStore := tripssync.NewMessageStore(nc, rdb)
+	tobStore := tripssync.NewTOBMessageStore(nc, rdb)
+
+	svc := tripssync.NewService(store, msgStore, tobStore, tripStore)
+	wsSvr := tripssync.NewWebsocketServer(svc, logger)
 
 	r.Use(securityMW.Handler)
 	r.Use(wrwMW.Handler)
@@ -72,12 +86,13 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.Use(metricsMW.Handler)
 
 	r.Handle("/metrics", promhttp.Handler())
-	r.HandleFunc("/healthz", utils.HealthzHandler)
-	r.HandleFunc("/ws", proxyServer.HandleFunc)
+	r.HandleFunc("/healthz", api.HealthzHandler)
+	r.HandleFunc("/ws", wsSvr.HandleFunc)
 
+	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvc))
+	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
-	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 
 	return &http.Server{

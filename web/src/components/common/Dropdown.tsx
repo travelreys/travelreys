@@ -4,6 +4,7 @@ import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import { ChevronUpIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { DropdownCss } from '../../assets/styles/global';
 
 interface DropdownProps {
   menu: any
@@ -17,12 +18,10 @@ const Dropdown: FC<DropdownProps> = (props: DropdownProps) => {
   const [isActive, setIsActive] = useState(false);
 
   const opts = (
-    <div className={"z-10 w-44 rounded-lg bg-white shadow block absolute right-0"}>
-      <ul className={"z-10 w-44 rounded-lg bg-white shadow"}>
+    <div className={DropdownCss.OptsCtn}>
+      <ul className={DropdownCss.OptsList}>
         {props.opts.map((opt: any, idx: number) => (
-          <li
-            key={idx}
-            className={"block rounded-lg py-2 px-4"}>
+          <li key={idx} className={DropdownCss.OptItem}>
             {opt}
           </li>
         ))}

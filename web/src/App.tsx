@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
-import Layout from './layouts/Layout';
-import TripsLayout from './layouts/TripsLayout'
 import HomePage from './pages/home';
+import LandingPage from './pages/landing';
+import Layout from './layouts/Layout';
 import TripPage from './pages/trips';
+import ProfilePage from './pages/profile';
+import { readAuthUser } from './lib/auth';
+import { makeSetUserAction, UserProvider, useUser } from './context/user-context';
 
 const router = createBrowserRouter([
   {
@@ -17,13 +21,20 @@ const router = createBrowserRouter([
     children: [
       {
         path: "",
+        element: <LandingPage />,
+      },
+      {
+        path: "home",
         element: <HomePage />,
+      },
+      {
+        path: "profile",
+        element: <ProfilePage />,
       },
     ],
   },
   {
     path: "trips",
-    element: <TripsLayout />,
     children: [
       {
         path: ":id",
@@ -33,13 +44,30 @@ const router = createBrowserRouter([
   },
 ]);
 
+const _App: React.FC = () => {
+  const {state, dispatch} = useUser();
+  useEffect(() => {
+    if (state.user === null) {
+      dispatch(makeSetUserAction(readAuthUser()))
+    }
+  }, [])
 
-function App() {
+  return (<RouterProvider router={router} />);
+}
+
+const App: React.FC = () => {
   return (
-    <div className="App">
-      <RouterProvider router={router} />
+    <div className="app">
+      <GoogleOAuthProvider
+        clientId="697392212622-m3mcs1396bu9tuc8joqolrj6uid0u374.apps.googleusercontent.com"
+      >
+        <UserProvider>
+          <_App />
+        </UserProvider>
+      </GoogleOAuthProvider>
     </div>
   );
+
 }
 
 export default App;

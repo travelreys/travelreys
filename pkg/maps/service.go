@@ -5,14 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"googlemaps.github.io/maps"
 )
 
+const (
+	mapSerivceLogger      = "maps.service"
+	envGoogleMapsApiToken = "TIINYPLANET_GOOGLE_MAPS_APIKEY"
+)
+
 var (
-	ErrInvalidSessionToken = errors.New("ErrInvalidSessionToken")
-	ErrInvalidField        = errors.New("ErrInvalidField")
+	ErrInvalidSessionToken = errors.New("maps.service.invalidsessiontoken")
+	ErrInvalidField        = errors.New("maps.service.invalidfield")
 )
 
 type Service interface {
@@ -23,31 +30,24 @@ type Service interface {
 }
 
 type service struct {
-	apiToken string
-	c        *maps.Client
+	c      *maps.Client
+	logger *zap.Logger
 }
 
-func NewService() (Service, error) {
-	apiToken := os.Getenv("TIINYPLANET_GMAPS_APIKEY")
+func GetApiToken() string {
+	return os.Getenv(envGoogleMapsApiToken)
+}
 
+func NewDefaulService(logger *zap.Logger) (Service, error) {
+	return NewService(GetApiToken(), logger)
+}
+
+func NewService(apiToken string, logger *zap.Logger) (Service, error) {
 	c, err := maps.NewClient(maps.WithAPIKey(apiToken))
 	if err != nil {
 		return nil, err
 	}
-
-	return &service{apiToken, c}, nil
-}
-
-func (svc *service) stringArrayToPlaceDetailsFieldMasksArray(fields []string) ([]maps.PlaceDetailsFieldMask, error) {
-	list := []maps.PlaceDetailsFieldMask{}
-	for _, str := range fields {
-		field, err := maps.ParsePlaceDetailsFieldMask(str)
-		if err != nil {
-			return list, ErrInvalidField
-		}
-		list = append(list, field)
-	}
-	return list, nil
+	return &service{c, logger.Named(mapSerivceLogger)}, nil
 }
 
 func (svc *service) PlacesAutocomplete(ctx context.Context, query, types, sessiontoken string) (AutocompletePredictionList, error) {
@@ -62,6 +62,12 @@ func (svc *service) PlacesAutocomplete(ctx context.Context, query, types, sessio
 	}
 	res, err := svc.c.PlaceAutocomplete(ctx, req)
 	if err != nil {
+		svc.logger.Error("PlacesAutocomplete",
+			zap.String("query", query),
+			zap.String("types", types),
+			zap.String("sessiontoken", sessiontoken),
+			zap.Error(err),
+		)
 		return AutocompletePredictionList{}, err
 	}
 	preds := AutocompletePredictionList{}
@@ -69,11 +75,22 @@ func (svc *service) PlacesAutocomplete(ctx context.Context, query, types, sessio
 		preds = append(preds, AutocompletePrediction{ap})
 	}
 	return preds, nil
+}
 
+func (svc *service) stringsToPlaceDefaultsFieldMasks(fields []string) ([]maps.PlaceDetailsFieldMask, error) {
+	list := []maps.PlaceDetailsFieldMask{}
+	for _, str := range fields {
+		field, err := maps.ParsePlaceDetailsFieldMask(str)
+		if err != nil {
+			return list, ErrInvalidField
+		}
+		list = append(list, field)
+	}
+	return list, nil
 }
 
 func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken string) (Place, error) {
-	fieldMasks, err := svc.stringArrayToPlaceDetailsFieldMasksArray(fields)
+	fieldMasks, err := svc.stringsToPlaceDefaultsFieldMasks(fields)
 	if err != nil {
 		return Place{}, err
 	}
@@ -85,6 +102,12 @@ func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []s
 	if sessiontoken != "" {
 		stuuid, err := uuid.Parse(sessiontoken)
 		if err != nil {
+			svc.logger.Error("PlaceDetails",
+				zap.String("placeID", placeID),
+				zap.String("fields", strings.Join(fields, ",")),
+				zap.String("sessiontoken", sessiontoken),
+				zap.Error(err),
+			)
 			return Place{}, err
 		}
 		req.SessionToken = maps.PlaceAutocompleteSessionToken(stuuid)
@@ -103,6 +126,12 @@ func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, 
 
 	groutes, _, err := svc.c.Directions(ctx, req)
 	if err != nil {
+		svc.logger.Error("Directions",
+			zap.String("originPlaceID", originPlaceID),
+			zap.String("destPlaceID", destPlaceID),
+			zap.String("mode", mode),
+			zap.Error(err),
+		)
 		return RouteList{}, err
 	}
 
@@ -127,10 +156,14 @@ func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceI
 		Optimize:    true,
 	}
 
-	// maps.DecodePolyline()
-
 	groutes, _, err := svc.c.Directions(ctx, req)
 	if err != nil {
+		svc.logger.Error("OptimizeRoute",
+			zap.String("originPlaceID", originPlaceID),
+			zap.String("destPlaceID", destPlaceID),
+			zap.String("waypointsPlaceID", strings.Join(waypointsPlaceID, ",")),
+			zap.Error(err),
+		)
 		return RouteList{}, err
 	}
 

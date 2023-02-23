@@ -56,10 +56,10 @@ type RoundTrip struct {
 type RoundTripMap map[string]*RoundTrip
 
 type BookingMetadata struct {
-	Score              float64              `json:"score"`
-	Price              common.PriceMetadata `json:"priceMetadata"`
-	BookingURL         string               `json:"bookingURL"`         // URL to book the ticket
-	BookingDeeplinkURL string               `json:"bookingDeeplinkURL"` // URL to see other options!
+	Score              float64      `json:"score"`
+	Price              common.Price `json:"price"`
+	BookingURL         string       `json:"bookingURL"`         // URL to book the ticket
+	BookingDeeplinkURL string       `json:"bookingDeeplinkURL"` // URL to see other options!
 }
 
 type BookingMetadataList []BookingMetadata
@@ -98,4 +98,8 @@ type Departure struct {
 type Arrival struct {
 	Airport  Airport   `json:"airport"`
 	Datetime time.Time `json:"datetime"` // UTC
+}
+
+func calculateItineraryScore(price float64, durationInMins, stopCount uint64) float64 {
+	return float64(price) + float64(durationInMins) + float64(60*stopCount)
 }

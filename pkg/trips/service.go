@@ -1,32 +1,36 @@
 package trips
 
 import (
+	context "context"
 	"math/rand"
 	"time"
 
+	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
 	"github.com/tiinyplanet/tiinyplanet/pkg/images"
-	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 )
 
 type Service interface {
-	CreateTripPlan(ctx reqctx.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error)
-	ReadTripPlan(ctx reqctx.Context, ID string) (TripPlan, error)
-	ListTripPlans(ctx reqctx.Context, ff ListTripPlansFilter) ([]TripPlan, error)
-	DeleteTripPlan(ctx reqctx.Context, ID string) error
+	Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error)
+	Read(ctx context.Context, ID string) (Trip, error)
+	ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
+	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
+	List(ctx context.Context, ff ListFilter) (TripsList, error)
+	Delete(ctx context.Context, ID string) error
 }
 
 type service struct {
 	store    Store
+	authSvc  auth.Service
 	imageSvc images.Service
 }
 
-func NewService(store Store, imageSvc images.Service) Service {
-	return &service{store, imageSvc}
+func NewService(store Store, authSvc auth.Service, imageSvc images.Service) Service {
+	return &service{store, authSvc, imageSvc}
 }
 
-func (svc *service) CreateTripPlan(ctx reqctx.Context, creator TripMember, name string, start, end time.Time) (TripPlan, error) {
-	plan := NewTripPlanWithDates(creator, name, start, end)
-	plan.CoverImage = stockImageList[rand.Intn(len(stockImageList))]
+func (svc *service) Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error) {
+	plan := NewTripWithDates(creator, name, start, end)
+	plan.CoverImage = images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))]
 
 	// bootstrap 1 content list
 	contentList := NewTripContentList("")
@@ -40,18 +44,60 @@ func (svc *service) CreateTripPlan(ctx reqctx.Context, creator TripMember, name 
 		plan.Itinerary = append(plan.Itinerary, itinList)
 	}
 
-	err := svc.store.SaveTripPlan(ctx, plan)
+	err := svc.store.Save(ctx, plan)
 	return plan, err
 }
 
-func (svc *service) ReadTripPlan(ctx reqctx.Context, ID string) (TripPlan, error) {
-	return svc.store.ReadTripPlan(ctx, ID)
+func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {
+	return svc.store.Read(ctx, ID)
 }
 
-func (svc *service) ListTripPlans(ctx reqctx.Context, ff ListTripPlansFilter) ([]TripPlan, error) {
-	return svc.store.ListTripPlans(ctx, ff)
+func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+	trip, err := svc.Read(ctx, ID)
+	if err != nil {
+		return trip, nil, err
+	}
+	membersIDs := []string{trip.Creator.ID}
+	for id := range trip.Members {
+		membersIDs = append(membersIDs, id)
+	}
+	ff := auth.ListFilter{IDs: membersIDs}
+	users, err := svc.authSvc.List(ctx, ff)
+	if err != nil {
+		return trip, nil, err
+	}
+	usersMap := auth.UsersMap{}
+	for _, usr := range users {
+		usersMap[usr.ID] = usr
+	}
+	return trip, usersMap, nil
 }
 
-func (svc *service) DeleteTripPlan(ctx reqctx.Context, ID string) error {
-	return svc.store.DeleteTripPlan(ctx, ID)
+func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
+	trip, err := svc.Read(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	membersIDs := []string{trip.Creator.ID}
+	for id := range trip.Members {
+		membersIDs = append(membersIDs, id)
+	}
+	ff := auth.ListFilter{IDs: membersIDs}
+	users, err := svc.authSvc.List(ctx, ff)
+	if err != nil {
+		return nil, err
+	}
+	usersMap := auth.UsersMap{}
+	for _, usr := range users {
+		usersMap[usr.ID] = usr
+	}
+	return usersMap, nil
+}
+
+func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) {
+	return svc.store.List(ctx, ff)
+}
+
+func (svc *service) Delete(ctx context.Context, ID string) error {
+	return svc.store.Delete(ctx, ID)
 }

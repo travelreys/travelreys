@@ -5,112 +5,153 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
 )
 
 // Trips Endpoints
 
-type CreateTripPlanRequest struct {
+type CreateRequest struct {
 	Name      string    `json:"name"`
 	StartDate time.Time `json:"startDate"`
 	EndDate   time.Time `json:"endDate"`
 }
-type CreateTripPlanResponse struct {
-	Plan TripPlan `json:"tripPlan"`
-	Err  error    `json:"error,omitempty"`
+type CreateResponse struct {
+	Trip Trip  `json:"trip"`
+	Err  error `json:"error,omitempty"`
 }
 
-func (r CreateTripPlanResponse) Error() error {
+func (r CreateResponse) Error() error {
 	return r.Err
 }
 
-func NewCreateTripPlanEndpoint(svc Service) endpoint.Endpoint {
+func NewCreateEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(CreateTripPlanRequest)
+		req, ok := epReq.(CreateRequest)
 		if !ok {
-			return CreateTripPlanResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
-		}
-		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
-		creator := TripMember{
-			MemberID:    "1",
-			MemberEmail: "awhdes@gmail.com",
+			return CreateResponse{
+				Err: common.ErrorEndpointReqMismatch}, nil
 		}
 
-		plan, err := svc.CreateTripPlan(rctx, creator, req.Name, req.StartDate, req.EndDate)
-		return CreateTripPlanResponse{Plan: plan, Err: err}, nil
+		ci, err := reqctx.ClientInfoFromCtx(ctx)
+		if err != nil {
+			return CreateResponse{Trip: Trip{}, Err: ErrRBAC}, nil
+		}
+
+		creator := NewMember(ci.UserID, MemberRoleCreator)
+		plan, err := svc.Create(ctx, creator, req.Name, req.StartDate, req.EndDate)
+		return CreateResponse{Trip: plan, Err: err}, nil
 	}
 }
 
-type ReadTripPlanRequest struct {
+type ReadRequest struct {
+	ID          string `json:"id"`
+	WithMembers bool   `json:"withMembers"`
+}
+
+type ReadResponse struct {
+	Trip Trip  `json:"trip"`
+	Err  error `json:"error,omitempty"`
+}
+
+func (r ReadResponse) Error() error {
+	return r.Err
+}
+
+type ReadWithMembersResponse struct {
+	Trip    Trip          `json:"trip"`
+	Members auth.UsersMap `json:"members"`
+	Err     error         `json:"error,omitempty"`
+}
+
+func (r ReadWithMembersResponse) Error() error {
+	return r.Err
+}
+
+func NewReadEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ReadRequest)
+		if !ok {
+			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		if req.WithMembers {
+			plan, members, err := svc.ReadWithMembers(ctx, req.ID)
+			return ReadWithMembersResponse{
+				Trip: plan, Members: members, Err: err,
+			}, nil
+		}
+		plan, err := svc.Read(ctx, req.ID)
+		return ReadResponse{Trip: plan, Err: err}, nil
+	}
+}
+
+type ReadMembersRequest struct {
 	ID string `json:"id"`
 }
 
-type ReadTripPlanResponse struct {
-	Plan TripPlan `json:"tripPlan"`
-	Err  error    `json:"error,omitempty"`
+type ReadMembersResponse struct {
+	Members auth.UsersMap `json:"members"`
+	Err     error         `json:"error,omitempty"`
 }
 
-func (r ReadTripPlanResponse) Error() error {
+func (r ReadMembersResponse) Error() error {
 	return r.Err
 }
 
-func NewReadTripPlanEndpoint(svc Service) endpoint.Endpoint {
+func NewReadMembersEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(ReadTripPlanRequest)
+		req, ok := epReq.(ReadMembersRequest)
 		if !ok {
-			return ReadTripPlanResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
+			return ReadMembersResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
-		plan, err := svc.ReadTripPlan(rctx, req.ID)
-		return ReadTripPlanResponse{Plan: plan, Err: err}, nil
+		members, err := svc.ReadMembers(ctx, req.ID)
+		return ReadMembersResponse{Members: members, Err: err}, nil
 	}
 }
 
-type ListTripPlansRequest struct {
-	FF ListTripPlansFilter
+type ListRequest struct {
+	FF ListFilter
 }
-type ListTripPlansResponse struct {
-	Plans TripPlansList `json:"tripPlans"`
-	Err   error         `json:"error,omitempty"`
+type ListResponse struct {
+	Trips TripsList `json:"trips"`
+	Err   error     `json:"error,omitempty"`
 }
 
-func (r ListTripPlansResponse) Error() error {
+func (r ListResponse) Error() error {
 	return r.Err
 }
 
-func NewListTripPlansEndpoint(svc Service) endpoint.Endpoint {
+func NewListEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(ListTripPlansRequest)
+		req, ok := epReq.(ListRequest)
 		if !ok {
-			return ListTripPlansResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
+			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
-		plans, err := svc.ListTripPlans(rctx, req.FF)
-		return ListTripPlansResponse{Plans: plans, Err: err}, nil
+		plans, err := svc.List(ctx, req.FF)
+		return ListResponse{Trips: plans, Err: err}, nil
 	}
 }
 
-type DeleteTripPlanRequest struct {
+type DeleteRequest struct {
 	ID string `json:"id"`
 }
 
-type DeleteTripPlanResponse struct {
+type DeleteResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
-func (r DeleteTripPlanResponse) Error() error {
+func (r DeleteResponse) Error() error {
 	return r.Err
 }
 
-func NewDeleteTripPlanEndpoint(svc Service) endpoint.Endpoint {
+func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(DeleteTripPlanRequest)
+		req, ok := epReq.(DeleteRequest)
 		if !ok {
-			return DeleteTripPlanResponse{Err: common.ErrorInvalidEndpointRequestType}, nil
+			return DeleteResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		rctx := reqctx.Context{Context: ctx, CallerInfo: reqctx.CallerInfo{}}
-		err := svc.DeleteTripPlan(rctx, req.ID)
-		return DeleteTripPlanResponse{Err: err}, nil
+		err := svc.Delete(ctx, req.ID)
+		return DeleteResponse{Err: err}, nil
 	}
 }

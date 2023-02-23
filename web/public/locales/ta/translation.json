@@ -1,0 +1,33 @@
+{
+  "common": {
+    "settings": "அமைப்புகள்"
+  },
+  "errors": {
+    "unexpectedError": "எதிர்பாராத பிழை"
+  },
+  "navbar": {
+    "loginModal": {
+      "title": "tiinyplanet இல் உள்நுழைக",
+      "googleSignIn": "Google உடன் உள்நுழைக"
+    },
+    "currencySelector": {
+      "title": "உங்கள் நாணயத்தைத் தேர்ந்தெடுக்கவும்"
+    },
+    "localeSelector": {
+      "title": "உங்கள் மொழியை தேர்ந்தெடு"
+    },
+    "landingPageActions": {
+      "உள்நுழை": "உள்நுழை"
+    },
+    "appPageActions": {
+      "வெளியேறு": "வெளியேறு"
+    }
+  },
+  "home": {
+    "tripJumbo": {
+      "title": "உங்கள் அடுத்த சாகசத்தைத் திட்டமிடுங்கள்!",
+      "createBtn": "புதிய பயணத்தை உருவாக்கு"
+    },
+    "upcomingTrips": "வரவிருக்கும் பயணங்கள்"
+  }
+}

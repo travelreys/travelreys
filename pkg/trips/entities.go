@@ -10,9 +10,9 @@ import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 )
 
-// Trip Plan
+// Trip
 
-type TripPlan struct {
+type Trip struct {
 	ID   string `json:"id" bson:"id"`
 	Name string `json:"name" bson:"name"`
 
@@ -21,8 +21,8 @@ type TripPlan struct {
 	EndDate    time.Time            `json:"endDate" bson:"endDate"`
 
 	// Members
-	Creator TripMember            `json:"creator" bson:"creator"`
-	Members map[string]TripMember `json:"members" bson:"members"`
+	Creator Member            `json:"creator" bson:"creator"`
+	Members map[string]Member `json:"members" bson:"members"`
 
 	// Logistics
 	Notes    string                 `json:"notes" bson:"notes"`
@@ -45,10 +45,12 @@ type TripPlan struct {
 	Tags   common.Tags   `json:"tags" bson:"tags"`
 }
 
-type TripPlansList []TripPlan
+type TripsList []Trip
 
-func NewTripPlan(creator TripMember, name string) TripPlan {
-	return TripPlan{
+func NewTrip(creator Member, name string) Trip {
+	creator.Role = MemberRoleCreator
+
+	return Trip{
 		ID:         uuid.New().String(),
 		Name:       name,
 		CoverImage: images.ImageMetadata{},
@@ -56,7 +58,7 @@ func NewTripPlan(creator TripMember, name string) TripPlan {
 		EndDate:    time.Time{},
 
 		Creator: creator,
-		Members: map[string]TripMember{},
+		Members: map[string]Member{},
 
 		Flights:  map[string]Flight{},
 		Transits: map[string]BaseTransit{},
@@ -75,8 +77,8 @@ func NewTripPlan(creator TripMember, name string) TripPlan {
 	}
 }
 
-func NewTripPlanWithDates(creator TripMember, name string, start, end time.Time) TripPlan {
-	plan := NewTripPlan(creator, name)
+func NewTripWithDates(creator Member, name string, start, end time.Time) Trip {
+	plan := NewTrip(creator, name)
 	plan.StartDate = start
 	plan.EndDate = end
 	return plan
@@ -85,16 +87,27 @@ func NewTripPlanWithDates(creator TripMember, name string, start, end time.Time)
 // Members
 
 const (
-	TripMemberPermCollaborator = "collaborator"
-	TripMemberPermParticipant  = "participant"
+	MemberRoleCreator      = "creator"
+	MemberRoleCollaborator = "collaborator"
+	MemberRoleParticipant  = "participant"
 )
 
-type TripMember struct {
-	MemberID    string `json:"memberID" bson:"memberID"`
-	MemberEmail string `json:"memberEmail" bson:"memberEmail"`
+type Member struct {
+	ID   string `json:"id" bson:"id"`
+	Role string `json:"role" bson:"role"`
+
+	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
-type TripMembersList []TripMember
+type MembersList []Member
+
+func NewMember(id, role string) Member {
+	return Member{
+		ID:     id,
+		Role:   role,
+		Labels: map[string]string{},
+	}
+}
 
 // Transit
 
@@ -106,9 +119,9 @@ type BaseTransit struct {
 	ID   string `json:"id" bson:"id"`
 	Type string `json:"type"`
 
-	ConfirmationID string               `json:"confirmationID" bson:"confirmationID"`
-	Notes          string               `json:"notes" bson:"notes"`
-	Price          common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
+	ConfirmationID string       `json:"confirmationID" bson:"confirmationID"`
+	Notes          string       `json:"notes" bson:"notes"`
+	Price          common.Price `json:"price" bson:"price"`
 
 	Tags        common.Tags         `json:"tags" bson:"tags"`
 	Labels      common.Labels       `json:"labels" bson:"labels"`
@@ -129,13 +142,13 @@ type Flight struct {
 type Lodging struct {
 	ID string `json:"id" bson:"id"`
 
-	NumGuests      int32                `json:"numGuests" bson:"numGuests"`
-	CheckinTime    time.Time            `json:"checkinTime" bson:"checkinTime"`
-	CheckoutTime   time.Time            `json:"checkoutTime" bson:"checkoutTime"`
-	Price          common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
-	ConfirmationID string               `json:"confirmationID" bson:"confirmationID"`
-	Notes          string               `json:"notes" bson:"notes"`
-	Place          maps.Place           `json:"place" bson:"place"`
+	NumGuests      int32        `json:"numGuests" bson:"numGuests"`
+	CheckinTime    time.Time    `json:"checkinTime" bson:"checkinTime"`
+	CheckoutTime   time.Time    `json:"checkoutTime" bson:"checkoutTime"`
+	Price          common.Price `json:"price" bson:"price"`
+	ConfirmationID string       `json:"confirmationID" bson:"confirmationID"`
+	Notes          string       `json:"notes" bson:"notes"`
+	Place          maps.Place   `json:"place" bson:"place"`
 
 	Tags        common.Tags         `json:"tags" bson:"tags"`
 	Labels      common.Labels       `json:"labels" bson:"labels"`
@@ -175,7 +188,7 @@ type TripContentComment struct {
 	ID      string `json:"id" bson:"id"`
 	Comment string `json:"comment" bson:"comment"`
 
-	Member TripMember `json:"member" bson:"member"`
+	Member Member `json:"member" bson:"member"`
 
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
@@ -188,9 +201,9 @@ type ItineraryContent struct {
 	TripContentListID string `json:"tripContentListId" bson:"tripContentListId"`
 	TripContentID     string `json:"tripContentId" bson:"tripContentId"`
 
-	Price     common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
-	StartTime time.Time            `json:"startTime" bson:"startTime"`
-	EndTime   time.Time            `json:"endTime" bson:"endTime"`
+	Price     common.Price `json:"price" bson:"price"`
+	StartTime time.Time    `json:"startTime" bson:"startTime"`
+	EndTime   time.Time    `json:"endTime" bson:"endTime"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
@@ -221,9 +234,9 @@ func NewItineraryList(date time.Time) ItineraryList {
 // Budget
 
 type Budget struct {
-	ID     string               `json:"id" bson:"id"`
-	Amount common.PriceMetadata `json:"amount" bson:"amount"`
-	Items  BudgetItemsList      `json:"items" bson:"items"`
+	ID     string          `json:"id" bson:"id"`
+	Amount common.Price    `json:"amount" bson:"amount"`
+	Items  BudgetItemsList `json:"items" bson:"items"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 	Tags   common.Tags   `json:"tags" bson:"tags"`
@@ -231,7 +244,7 @@ type Budget struct {
 
 func NewBudget() Budget {
 	return Budget{
-		Amount: common.PriceMetadata{},
+		Amount: common.Price{},
 		Items:  BudgetItemsList{},
 		Labels: common.Labels{},
 		Tags:   common.Tags{},
@@ -239,9 +252,9 @@ func NewBudget() Budget {
 }
 
 type BudgetItem struct {
-	Title         string               `json:"title" bson:"title"`
-	Desc          string               `json:"desc" bson:"desc"`
-	PriceMetadata common.PriceMetadata `json:"priceMetadata" bson:"priceMetadata"`
+	Title string       `json:"title" bson:"title"`
+	Desc  string       `json:"desc" bson:"desc"`
+	Price common.Price `json:"price" bson:"price"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 	Tag    common.Tags   `json:"tags" bson:"tags"`

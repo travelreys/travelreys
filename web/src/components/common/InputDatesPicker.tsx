@@ -4,8 +4,8 @@ import _isEmpty from 'lodash/isEmpty';
 
 import { DayPicker, DateRange, SelectRangeEventHandler } from 'react-day-picker';
 import { CalendarDaysIcon } from '@heroicons/react/24/outline'
-import { InputDatesPickerCss } from '../../styles/global';
-import { printFromDateFromRange, printToDateFromRange } from '../../utils/dates';
+import { InputDatesPickerCss } from '../../assets/styles/global';
+import { printFromDateFromRange, printToDateFromRange } from '../../lib/dates';
 import DatesPicker from './DatesPicker';
 
 interface InputDatesPicketProps {

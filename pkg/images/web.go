@@ -3,39 +3,56 @@ package images
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+
+	"go.uber.org/zap"
 )
 
 const (
 	// https://unsplash.com/documentation
-	UNSPLASH_URL = "https://api.unsplash.com"
+	webapiLoggerName     = "images.webapi"
+	unsplashUrl          = "https://api.unsplash.com"
+	envUnsplashAccessKey = "TIINYPLANET_UNSPLASH_ACCESSKEY"
 )
 
-type ImageSearchResponse struct {
-	Total      uint64            `json:"total"`
-	TotalPages uint64            `json:"total_pages"`
-	Results    ImageMetadataList `json:"results"`
+var (
+	ErrProviderUnsplashError = errors.New("images.webapi.unsplash.error")
+)
+
+type WebAPI interface {
+	Search(context.Context, string) (MetadataList, error)
 }
 
-type WebImageAPI interface {
-	Search(ctx context.Context, query string) (ImageMetadataList, error)
+type ImageSearchResponse struct {
+	Total      uint64       `json:"total"`
+	TotalPages uint64       `json:"total_pages"`
+	Results    MetadataList `json:"results"`
 }
 
 type unsplash struct {
 	accesskey string
+	logger    *zap.Logger
 }
 
-func NewWebImageAPI() WebImageAPI {
-	accesskey := os.Getenv("TIINYPLANET_UNSPLASH_ACCESSKEY")
-	return unsplash{accesskey}
+func GetApiAccessKey() string {
+	return os.Getenv(envUnsplashAccessKey)
 }
 
-func (api unsplash) fullUrlPath(path string) string {
-	return fmt.Sprintf("%s/%s", UNSPLASH_URL, path)
+func NewDefaultWebAPI(logger *zap.Logger) WebAPI {
+	return NewWebAPI(GetApiAccessKey(), logger)
+}
+
+func NewWebAPI(accesskey string, logger *zap.Logger) WebAPI {
+	return unsplash{accesskey, logger.Named(webapiLoggerName)}
+}
+
+func (api unsplash) fullUrl(path string) string {
+	return fmt.Sprintf("%s/%s", unsplashUrl, path)
 }
 
 func (api unsplash) Get(getURL *url.URL) ([]byte, error) {
@@ -54,12 +71,12 @@ func (api unsplash) Get(getURL *url.URL) ([]byte, error) {
 	return body, err
 }
 
-func (api unsplash) Search(ctx context.Context, query string) (ImageMetadataList, error) {
+func (api unsplash) Search(ctx context.Context, query string) (MetadataList, error) {
 	if query == "" {
-		return ImageMetadataList{}, ErrEmptyQuery
+		return MetadataList{}, ErrEmptySearchQuery
 	}
 
-	queryURL, _ := url.Parse(api.fullUrlPath("/search/photos"))
+	queryURL, _ := url.Parse(api.fullUrl("/search/photos"))
 	queryParams := queryURL.Query()
 	queryParams.Set("query", query)
 	queryParams.Set("per_page", "30")
@@ -69,13 +86,15 @@ func (api unsplash) Search(ctx context.Context, query string) (ImageMetadataList
 
 	body, err := api.Get(queryURL)
 	if err != nil {
-		return ImageMetadataList{}, err
+		api.logger.Error("Search", zap.String("query", query), zap.Error(err))
+		return MetadataList{}, ErrProviderUnsplashError
 	}
 
 	var res ImageSearchResponse
 	err = json.Unmarshal(body, &res)
 	if err != nil {
-		return ImageMetadataList{}, err
+		api.logger.Error("Search", zap.String("query", query), zap.Error(err))
+		return MetadataList{}, ErrProviderUnsplashError
 	}
 
 	return res.Results, nil
