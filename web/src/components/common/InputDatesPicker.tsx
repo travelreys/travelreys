@@ -1,8 +1,7 @@
 import React, { FC, useState } from 'react';
-import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 
-import { DayPicker, DateRange, SelectRangeEventHandler } from 'react-day-picker';
+import { DateRange } from 'react-day-picker';
 import { CalendarDaysIcon } from '@heroicons/react/24/outline'
 import { InputDatesPickerCss } from '../../assets/styles/global';
 import { printFromDateFromRange, printToDateFromRange } from '../../lib/dates';

@@ -279,6 +279,7 @@ const FlightCard: FC<FlightCardProps> = (props: FlightCardProps) => {
         href={props.bookingMetadata.bookingURL}
         target="_blank"
         referrerPolicy="no-referrer"
+        rel="noreferrer"
       >
         {pill}
       </a>

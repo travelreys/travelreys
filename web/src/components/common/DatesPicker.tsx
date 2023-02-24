@@ -1,7 +1,7 @@
 import React, { FC } from 'react';
 import { useMediaQuery } from 'usehooks-ts';
-import _get from 'lodash/get';
-import _isEmpty from 'lodash/isEmpty';
+
+
 import {
   DayPicker,
   DateRange,

@@ -1,6 +1,5 @@
 import React, { FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
-import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import {
   SelectRangeEventHandler,
@@ -148,6 +147,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
         className='flex items-center'
         href={place.website}
         target="_blank"
+        rel="noreferrer"
       >
         <GlobeAltIcon className='h-4 w-4' />&nbsp;
         <span className={LodgingCardCss.WebsiteTxt}>Website</span>

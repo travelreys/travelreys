@@ -1,9 +1,5 @@
-import axios from 'axios';
-import _get from 'lodash/get';
 import _filter from 'lodash/filter';
-
-import { BASE_URL, makeCommonAxios } from './common';
-
+import { makeCommonAxios } from './common';
 import airports from '../data/airports.json';
 
 const FlightsAPI = {

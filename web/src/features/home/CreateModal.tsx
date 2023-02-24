@@ -1,6 +1,4 @@
 import React, { FC } from 'react';
-import _get from "lodash/get";
-import _isEmpty from "lodash/isEmpty";
 
 import { CreateModalCss, ModalCss } from '../../assets/styles/global';
 import InputDatesPicker from '../../components/common/InputDatesPicker';

@@ -1,4 +1,3 @@
-import i18n from 'i18next';
 import * as Locales from 'date-fns/locale';
 import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";

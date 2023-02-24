@@ -1,7 +1,5 @@
 import React, { FC, useState } from 'react';
 import _get from "lodash/get";
-import _sortBy from "lodash/sortBy";
-import _isEmpty from "lodash/isEmpty";
 import { formatDuration, intervalToDuration } from 'date-fns';
 
 import {

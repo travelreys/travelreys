@@ -1,8 +1,4 @@
 import React, { FC, useState } from 'react';
-import _get from "lodash/get";
-import _sortBy from "lodash/sortBy";
-import _isEmpty from "lodash/isEmpty";
-import { v4 as uuidv4 } from 'uuid';
 
 import {
   ChevronDownIcon,
@@ -14,12 +10,10 @@ import LodgingsModal from './LodgingsModal';
 import LodgingCard from './LodgingCard';
 
 import { Trips } from '../../lib/trips';
-import TripsSyncAPI from '../../apis/tripsSync';
 import TransitFlightCard from './TransitFlightCard';
 
 import { TripLogisticsCss } from '../../assets/styles/global';
 import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
-
 
 
 // FlightsSection

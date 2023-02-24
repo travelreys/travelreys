@@ -25,15 +25,12 @@ const LandingPage: FC = () => {
             Join our beta
           </button>
         </div>
-
         <div className="w-full xl:w-3/5  overflow-y-hidden">
           <HeroSVG  className="w-5/6 mx-auto lg:mr-0" />
         </div>
-
         <div className="w-full pt-16 pb-6 text-sm text-center md:text-left fade-in">
-          <a className="text-gray-500 no-underline hover:no-underline" href="#">&copy; tiinyplanet 2023</a>
+          <a className="text-gray-500 no-underline hover:no-underline" href="/">&copy; tiinyplanet 2023</a>
         </div>
-
       </div>
     </main>
   );

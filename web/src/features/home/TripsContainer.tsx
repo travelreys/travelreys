@@ -1,6 +1,5 @@
 import React, { FC } from 'react';
 import { Link } from 'react-router-dom';
-import _get from 'lodash/get';
 import { useTranslation } from 'react-i18next';
 
 import ImagesAPI from '../../apis/images';
@@ -48,6 +47,7 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
         srcSet={ImagesAPI.makeSrcSet(props.trip.coverImage)}
         src={ImagesAPI.makeSrc(props.trip.coverImage)}
         className={TripContainerCss.TripCardImg}
+        alt={"cover"}
       />
       <div className="p-5">
         <h5 className={TripContainerCss.TripCardName}>

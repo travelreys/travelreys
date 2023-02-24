@@ -4,14 +4,12 @@ import React, {
   useMemo,
   useCallback,
   useRef,
-  useState
 } from 'react';
 import ReactDOM from 'react-dom';
 import {
   Editor,
   Text,
   Transforms,
-  Descendant,
   Point,
   Range,
   Element as SlateElement,
@@ -77,7 +75,7 @@ const NotesEditor: FC<NotesEditorProps> = (props: NotesEditorProps) => {
     const nodes = _isEmpty(props.base64Notes)
       ? defaultEditorValues : JSON.parse(decode(props.base64Notes))
     Transforms.insertNodes(editor, nodes, {})
-  }, [props.base64Notes])
+  }, [props.base64Notes, editor])
 
   // Event Handlers
   const editorOnBlur = () => {

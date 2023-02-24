@@ -1,7 +1,6 @@
 import React, { FC, useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
-import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import {
   DateRange,
@@ -68,7 +67,7 @@ const HomePage: FC = () => {
           status: "error"
         });
       })
-  }, [])
+  }, [t])
 
   // Event Handlers
 

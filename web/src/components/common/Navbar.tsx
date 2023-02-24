@@ -324,7 +324,7 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
     return (
       <img className={NavbarCss.ProfileImg}
         src={profileImgURL}
-        alt="profile image"
+        alt="profile"
         referrerPolicy="no-referrer"
       />
     );

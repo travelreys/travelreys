@@ -1,7 +1,4 @@
 import React, { FC, useState } from 'react';
-import _get from "lodash/get";
-import _sortBy from "lodash/sortBy";
-import _isEmpty from "lodash/isEmpty";
 import { ChevronUpIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { DropdownCss } from '../../assets/styles/global';
