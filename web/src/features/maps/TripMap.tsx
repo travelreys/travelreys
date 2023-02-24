@@ -8,7 +8,6 @@ import _get from "lodash/get";
 import _flatten from "lodash/flatten";
 import _isEmpty from "lodash/isEmpty";
 import _find from "lodash/find";
-import { i18n } from 'i18next';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 import {
   ClockIcon,
@@ -406,6 +405,7 @@ const PlaceDetailsCard: FC<PlaceDetailsCardProps> = (props: PlaceDetailsCardProp
       <a
         href={`tel:${placeDetails.international_phone_number.replace(/\s/, "-")}`}
         target="_blank"
+        rel='noreferrer'
         className={TripMapCss.PhoneBtn}
       >
         <PhoneIcon className={TripMapCss.PhoneIcon} />
@@ -420,6 +420,7 @@ const PlaceDetailsCard: FC<PlaceDetailsCardProps> = (props: PlaceDetailsCardProp
       <a
         href={placeDetails.website}
         target="_blank"
+        rel='noreferrer'
         className={TripMapCss.PhoneBtn}
       >
         <GlobeAltIcon className={TripMapCss.PhoneIcon} />
@@ -625,7 +626,7 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
     Object.values(_get(props.trip, "itinerary", {}))
       .forEach((itinList: any) =>  {vis[itinList.id] = true});
     setLayersViz(vis);
-  }, [props.trip])
+  }, [props.trip, layersViz])
 
 
   useEffect(() => {

@@ -6,7 +6,6 @@ import React, {
   useCallback,
 } from 'react';
 import { useParams } from "react-router-dom";
-import _get from "lodash/get";
 import _isEmpty from "lodash/isEmpty";
 import { applyPatch, } from 'json-joy/es6/json-patch';
 import { WebsocketEvents } from 'websocket-ts/lib';
@@ -192,7 +191,7 @@ const TripPage: FC = () => {
     if (_isEmpty(title)) {
       return;
     }
-    if (title == UpdateTitleAddNewMember) {
+    if (title === UpdateTitleAddNewMember) {
       TripsAPI.readMembers(id as string)
         .then((data: ReadMembersResponse) => {
           setTripMembers(data.members);
@@ -276,7 +275,7 @@ const TripPage: FC = () => {
         }
       })
     }
-  }, [id])
+  }, [id, pq])
 
   ////////////////////
   // Event Handlers //

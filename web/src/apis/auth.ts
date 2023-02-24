@@ -1,6 +1,5 @@
 import axios from 'axios';
 import _get from 'lodash/get';
-import _isEmpty from 'lodash/isEmpty';
 import { Auth } from '../lib/auth';
 
 import { BASE_URL, makeCommonAxios } from './common';

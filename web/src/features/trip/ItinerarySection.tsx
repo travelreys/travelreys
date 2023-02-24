@@ -5,7 +5,6 @@ import React, {
   useState,
 } from 'react';
 import _get from "lodash/get";
-import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import _find from "lodash/find";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
@@ -32,7 +31,6 @@ import NotesEditor from '../../components/common/NotesEditor';
 import PlaneIcon from '../../components/icons/PlaneIcon';
 import ToggleChevron from '../../components/common/ToggleChevron';
 
-import TripsSyncAPI from '../../apis/tripsSync';
 import {
   ContentColorOpts,
   ContentIconOpts,
@@ -105,7 +103,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 
   // Event Handles - DnD
 
-  const [{ }, drag] = useDrag(
+  const [_, drag] = useDrag(
     () => ({
       type: ItineraryContentCard,
       item: { id: props.itineraryContent.id, origCardIdx },
@@ -303,7 +301,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   const dropCard = useCallback((id: string) => {
     updateItinContents(itinContents);
-  }, [findCard, itinContents, setItinContents])
+  }, [findCard, itinContents, setItinContents, updateItinContents])
 
   const [, drop] = useDrop(() => ({ accept: ItineraryContentCard }))
 

@@ -44,7 +44,7 @@ const router = createBrowserRouter([
   },
 ]);
 
-const _App: React.FC = () => {
+const RouterApp: React.FC = () => {
   const {state, dispatch} = useUser();
   useEffect(() => {
     if (state.user === null) {
@@ -62,7 +62,7 @@ const App: React.FC = () => {
         clientId="697392212622-m3mcs1396bu9tuc8joqolrj6uid0u374.apps.googleusercontent.com"
       >
         <UserProvider>
-          <_App />
+          <RouterApp />
         </UserProvider>
       </GoogleOAuthProvider>
     </div>

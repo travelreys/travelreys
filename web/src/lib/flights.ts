@@ -1,6 +1,4 @@
 import _get from 'lodash/get';
-import _filter from 'lodash/filter';
-
 import { Common } from './common';
 
 export namespace Flights {

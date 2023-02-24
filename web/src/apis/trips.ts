@@ -1,8 +1,6 @@
-import axios from 'axios';
-import _find from "lodash/find";
 import _get from "lodash/get";
 
-import { BASE_URL, makeCommonAxios } from './common';
+import { makeCommonAxios } from './common';
 
 export interface CreateResponse {
   id: string

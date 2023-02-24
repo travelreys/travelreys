@@ -28,7 +28,7 @@ const Avatar: FC<AvatarProps> = (props: AvatarProps) => {
     return (
       <img className="h-full w-full rounded-full"
         src={props.imgUrl}
-        alt="profile image"
+        alt="profile"
         referrerPolicy="no-referrer"
       />
     );

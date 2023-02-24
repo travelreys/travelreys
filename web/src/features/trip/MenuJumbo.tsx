@@ -1,6 +1,5 @@
 import React, { FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
-import _isEmpty from "lodash/isEmpty";
 import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
 import { useTranslation } from 'react-i18next';
 import {
@@ -66,26 +65,28 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
             key={image.id}
             className={TripMenuJumboCss.Figure}
           >
-            <a href="#">
+            <button type="button">
               <img
                 srcSet={ImagesAPI.makeSrcSet(image)}
                 src={ImagesAPI.makeSrc(image)}
+                alt={"cover"}
                 className={TripMenuJumboCss.FigureImg}
               />
               <div className={TripMenuJumboCss.FigureBtnCtn}>
-                <a
+                <button
+                  type="button"
                   className={TripMenuJumboCss.FigureBtn}
                   onClick={() => {props.onCoverImageSelect(image)}}
-                  href="#"
                 >
                   Select
-                </a>
+                </button>
               </div>
-            </a>
+            </button>
             <figcaption className={TripMenuJumboCss.FigureCaption}>
               <a
                 target="_blank"
                 href={ImagesAPI.makeUserURL(_get(image, "user.username"))}
+                rel="noreferrer"
               >
                 @{_get(image, "user.username")}, Unsplash
               </a>
@@ -144,7 +145,7 @@ interface MenuJumboProps {
 
 const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
 
-  const {t} = useTranslation();
+  // const {t} = useTranslation();
 
   // State
   const [tripName, setTripName] = useState<string>("");

@@ -1,6 +1,5 @@
-import React, { FC, useState, useEffect } from 'react';
+import React, { FC } from 'react';
 import _get from "lodash/get";
-import _isEmpty from "lodash/isEmpty";
 
 import { useUser } from '../../context/user-context';
 import { LabelUserGoogleImage } from '../../lib/auth';
@@ -9,7 +8,6 @@ const ProfilePage: FC = () => {
 
   // UI State
   const { state } = useUser();
-  const [isLoading, setIsLoading] = useState(false);
 
   // Event Handlers
 
@@ -23,7 +21,7 @@ const ProfilePage: FC = () => {
         <div className='mr-4'>
           <img className="w-24 h-24 rounded-full"
             src={profileImgURL}
-            alt="profile image"
+            alt="profile"
             referrerPolicy="no-referrer"
           />
         </div>

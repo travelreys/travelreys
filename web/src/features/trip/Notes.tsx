@@ -1,15 +1,4 @@
 import React, { FC, useState } from 'react';
-import _get from "lodash/get";
-import _sortBy from "lodash/sortBy";
-import _isEmpty from "lodash/isEmpty";
-
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  FolderArrowDownIcon
-} from '@heroicons/react/24/outline'
-
-import TripsSyncAPI from '../../apis/tripsSync';
 import { TripNotesCss } from '../../assets/styles/global';
 import NotesEditor from '../../components/common/NotesEditor';
 import ToggleChevron from '../../components/common/ToggleChevron';

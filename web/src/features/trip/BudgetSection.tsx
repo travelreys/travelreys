@@ -4,9 +4,7 @@ import React, {
   useState,
 } from 'react';
 import _flatten from "lodash/flatten";
-
 import _get from "lodash/get";
-import _isEmpty from "lodash/isEmpty";
 import {
   ArrowLongRightIcon,
   ChatBubbleLeftEllipsisIcon,

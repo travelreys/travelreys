@@ -35,6 +35,7 @@ const PlacePicturesCarousel: FC<PlacePicturesCarouselProps> = (props: PlacePictu
         <SwiperSlide key={photo.photo_reference}>
           <img
             className="rounded h-72 w-full"
+            alt={"place"}
             src={gMapsPlaceImageSrcURL(photo.photo_reference)} />
         </SwiperSlide>
       ))}

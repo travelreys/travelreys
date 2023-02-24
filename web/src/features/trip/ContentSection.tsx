@@ -31,7 +31,6 @@ import ToggleChevron from '../../components/common/ToggleChevron';
 import ColorIconModal from './ColorIconModal';
 import ContentListPin from '../maps/ContentListPin';
 
-import TripsSyncAPI from '../../apis/tripsSync';
 import MapsAPI, { ModeDriving, placeFields } from '../../apis/maps';
 import {
   Trips,
@@ -89,8 +88,8 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
   const [sessionToken, setSessionToken] = useState<string>("");
 
   const debouncedValue = useDebounce<string>(searchPlaceQuery, 500);
-
   const { dispatch } = useMap();
+
 
   useEffect(() => {
     setTitle(props.content.title);
@@ -115,6 +114,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
       });
   }
 
+
   // Event Handlers - Header
   const titleInputOnBlur = () => {
     props.onUpdateContentName(title, props.contentIdx);
@@ -138,7 +138,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
   }
 
   const placeOnClick = (e: React.MouseEvent) => {
-    if (e.detail == 1) {
+    if (e.detail === 1) {
       dispatch({
         type: ActionSetSelectedPlace,
         value: props.content.place
@@ -148,7 +148,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
       return;
     }
 
-    if (e.detail == 2) {
+    if (e.detail === 2) {
       setIsAddingPlace(true);
       return;
     }
@@ -290,6 +290,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
         className={TripContentCss.WebsiteLink}
         href={website}
         target="_blank"
+        rel="noreferrer"
       >
         <GlobeAltIcon className={CommonCss.LeftIcon} />
         <span className={TripContentCss.WebsiteTxt}>Website</span>
@@ -683,7 +684,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
         const lastItinCtn = _last(itinListCtnt);
         const lastCtnt = _find(
           _get(props.trip, `contents[${lastItinCtn?.tripContentListId}].contents`),
-          (ctnt: Trips.Content) => ctnt.id == lastItinCtn?.tripContentId,
+          (ctnt: Trips.Content) => ctnt.id === lastItinCtn?.tripContentId,
         );
 
         const lastCtntPlaceID = _get(lastCtnt, "place.place_id");

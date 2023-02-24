@@ -1,6 +1,5 @@
 import React, { FC, useState, useEffect } from 'react';
 import _get from "lodash/get";
-import _sortBy from "lodash/sortBy";
 import _isEmpty from "lodash/isEmpty";
 import { useDebounce } from 'usehooks-ts';
 import { v4 as uuidv4 } from 'uuid';
@@ -39,7 +38,7 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
   const [selectedPlace, setSelectedPlace] = useState(null as any);
   const [checkinDates, setCheckinDates] = useState<DateRange>();
 
-  const [alertMsg, setAlertMsg] = useState("");
+  const [alertMsg] = useState("");
   const debouncedValue = useDebounce<string>(searchQuery, 500);
 
   useEffect(() => {
@@ -55,7 +54,6 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
     });
   }, [props.trip])
 
-
   // API
   const autocomplete = (query: string) => {
     let token = sessionToken;
@@ -68,6 +66,7 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
       setPredictions(_get(res, "data.predictions", []))
     });
   }
+
 
   const getPlaceDetails = (placeID: string) => {
     MapsAPI.placeDetails(placeID, placeFields, sessionToken)
@@ -131,6 +130,7 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
     return (
       <div className='flex flex-col pb-2'>
         <iframe
+          title="lodging-map"
           className="w-full mb-2"
           style={{border: "0"}}
           referrerPolicy="no-referrer-when-downgrade"
