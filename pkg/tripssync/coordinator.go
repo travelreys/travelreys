@@ -66,6 +66,18 @@ func NewCoordinator(
 	}
 }
 
+func (crd *Coordinator) sendMsgToQueue(msg Message) {
+	// 3.2. Give each message a counter
+	msg.Counter = crd.counter
+
+	// 3.3. Sends each ordered message back to the FIFO queue
+	crd.queue <- msg
+
+	// Need to update the counter
+	crd.counter++
+	crd.logger.Debug("next counter", zap.Uint64("counter", crd.counter))
+}
+
 func (crd *Coordinator) Init() error {
 	crd.logger.Info("new coordinator", zap.String("tripID", crd.tripID))
 
@@ -77,7 +89,7 @@ func (crd *Coordinator) Init() error {
 	planBytes, _ := json.Marshal(plan)
 	crd.plan = planBytes
 
-	// 2.Subscribe to updates from clients
+	// 2. Subscribe to updates from clients
 	msgCh, done, err := crd.msgStore.SubscribeQueue(crd.tripID, GroupCoordinators)
 	if err != nil {
 		crd.logger.Error("subscribe fail", zap.Error(err))
@@ -120,16 +132,7 @@ func (crd *Coordinator) Run() error {
 				// Replace with member update msg
 				msg = NewMsgMemberUpdate(msg.TripID, sess.Members)
 			}
-
-			// 3.2. Give each message a counter
-			msg.Counter = crd.counter
-
-			// 3.3. Sends each ordered message back to the FIFO queue
-			crd.queue <- msg
-
-			// Need to update the counter
-			crd.counter++
-			crd.logger.Debug("next counter", zap.Uint64("counter", crd.counter))
+			crd.sendMsgToQueue(msg)
 		}
 	}()
 
@@ -140,7 +143,7 @@ func (crd *Coordinator) Run() error {
 			case OpUpdateTrip:
 				// 4.2 Update local plan and persist the data (if required)
 				// Update local copy of plan + validate if the op is valid
-				crd.HandleTOBOpUpdateTrip(msg)
+				crd.HandleOpUpdateTrip(msg)
 			case OpMemberUpdate:
 				crd.store.ResetCounter(context.Background(), msg.TripID)
 			}
@@ -151,16 +154,14 @@ func (crd *Coordinator) Run() error {
 	return nil
 }
 
-func (crd *Coordinator) HandleFirstMember(ctx context.Context) {
-	sess, _ := crd.store.Read(ctx, crd.tripID)
+// HandleFirstMember sends a memberUpdate message to the very first member
+func (crd *Coordinator) HandleFirstMember(ctx context.Context, sess Session) {
 	msg := NewMsgMemberUpdate(crd.tripID, sess.Members)
-	msg.Counter = crd.counter
-	crd.queue <- msg
-	crd.counter++
+	crd.sendMsgToQueue(msg)
 }
 
-// HandleOpUpdateTrip handles OpUpdateTrip messages
-func (crd *Coordinator) HandleTOBOpUpdateTrip(msg Message) {
+// HandleOpUpdateTrip handles OpUpdateTrip messages on crd.queue
+func (crd *Coordinator) HandleOpUpdateTrip(msg Message) {
 	patchOps, _ := json.Marshal(msg.Data.UpdateTrip.Ops)
 	patch, _ := jsonpatch.DecodePatch(patchOps)
 	modified, err := patch.Apply(crd.plan)
@@ -238,12 +239,7 @@ func (spwn *CoordinatorSpawner) Run() error {
 			continue
 		}
 		coord := NewCoordinator(
-			msg.TripID,
-			spwn.store,
-			spwn.msgStore,
-			spwn.tobStore,
-			spwn.tripStore,
-			spwn.logger,
+			msg.TripID, spwn.store, spwn.msgStore, spwn.tobStore, spwn.tripStore, spwn.logger,
 		)
 		if err := coord.Init(); err != nil {
 			spwn.logger.Error("unable to init coordinator", zap.Error(err))
@@ -251,8 +247,9 @@ func (spwn *CoordinatorSpawner) Run() error {
 		}
 		if err := coord.Run(); err != nil {
 			spwn.logger.Error("unable to run coordinator", zap.Error(err))
+			continue
 		}
-		coord.HandleFirstMember(ctx)
+		coord.HandleFirstMember(ctx, sess)
 	}
 	return nil
 }
