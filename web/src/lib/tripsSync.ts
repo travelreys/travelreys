@@ -46,11 +46,11 @@ export namespace TripSync {
   }
 
   interface MsgDataJoinSession {
-    memberID: string
+    ID: string
   }
 
   interface MsgDataLeaveSession {
-    memberID: string
+    ID: string
   }
 
   interface MsgDataMemberUpdate {
@@ -69,7 +69,7 @@ export const makeMsgJoinSession = (tripID: string, memberID: string): TripSync.M
   return {
     tripID,
     op: OpJoinSession,
-    data: { joinSession: {memberID}}
+    data: { joinSession: {ID: memberID}}
   }
 }
 
@@ -77,7 +77,7 @@ export const makeMsgLeaveSession = (tripID: string, memberID: string): TripSync.
   return {
     tripID,
     op: OpLeaveSession,
-    data: { leaveSession: {memberID}}
+    data: { leaveSession: {ID: memberID}}
   }
 }
 

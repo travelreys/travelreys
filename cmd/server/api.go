@@ -38,7 +38,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	ctx := context.Background()
 
 	// Auth
-	gp, err := auth.NewGoogleProvider(auth.GetOAuthGoogleSecretFile())
+	gp, err := auth.NewDefaultGoogleProvider()
 	if err != nil {
 		return nil, err
 	}

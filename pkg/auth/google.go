@@ -15,7 +15,7 @@ import (
 
 const (
 	envOAuthGoolgeSecretFile = "TIINYPLANET_OAUTH_GOOGLE_SECRET_FILE"
-	googleUserInfoURL        = "https://www.googleapis.com/oauth2/v2/userinfo?access_token="
+	userInfoURL              = "https://www.googleapis.com/oauth2/v2/userinfo?access_token"
 )
 
 // GetOAuthGoogleSecretFile retrieves the file path to Google OAuth2 secrets
@@ -55,6 +55,10 @@ type GoogleProvider struct {
 	cfg *oauth2.Config
 }
 
+func NewDefaultGoogleProvider() (GoogleProvider, error) {
+	return NewGoogleProvider(GetOAuthGoogleSecretFile())
+}
+
 // NewGoogleProvider returns a new Google OAuth2 provider
 func NewGoogleProvider(cfgFile string) (GoogleProvider, error) {
 	cfg, err := NewGoogleOAuth2ConfigFromFile(cfgFile)
@@ -79,26 +83,24 @@ func NewGoogleProvider(cfgFile string) (GoogleProvider, error) {
 	}, nil
 }
 
-func (gp *GoogleProvider) AuthCodeToToken(ctx context.Context, code string) (*oauth2.Token, error) {
-	return gp.cfg.Exchange(ctx, code)
-}
-
-func (gp *GoogleProvider) TokenToUserInfo(ctx context.Context, token *oauth2.Token) (GoogleUser, error) {
-	gusr := GoogleUser{}
+func (gp *GoogleProvider) TokenToUserInfo(ctx context.Context, code string) (GoogleUser, error) {
+	token, err := gp.cfg.Exchange(ctx, code)
+	if err != nil {
+		return GoogleUser{}, err
+	}
 
 	client := gp.cfg.Client(ctx, token)
-	resp, err := client.Get(fmt.Sprintf(
-		"%s=%s", googleUserInfoURL, url.QueryEscape(token.AccessToken),
-	))
+	resp, err := client.Get(fmt.Sprintf("%s=%s", userInfoURL, url.QueryEscape(token.AccessToken)))
 	if err != nil {
-		return gusr, err
+		return GoogleUser{}, err
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return gusr, err
+		return GoogleUser{}, err
 	}
+	gusr := GoogleUser{}
 	err = json.Unmarshal(data, &gusr)
 	return gusr, err
 }

@@ -42,11 +42,7 @@ func NewService(gp GoogleProvider, store Store, logger *zap.Logger) Service {
 }
 
 func (svc service) googleLogin(ctx context.Context, authCode string) (User, error) {
-	tkn, err := svc.google.AuthCodeToToken(ctx, authCode)
-	if err != nil {
-		return User{}, ErrProviderGoogleError
-	}
-	gusr, err := svc.google.TokenToUserInfo(ctx, tkn)
+	gusr, err := svc.google.TokenToUserInfo(ctx, authCode)
 	if err != nil {
 		return User{}, ErrProviderGoogleError
 	}
@@ -61,12 +57,12 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (string
 	)
 	if provider == OIDCProviderGoogle {
 		usr, err = svc.googleLogin(ctx, authCode)
-		svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
+		if err != nil {
+			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
+			return "", err
+		}
 	} else {
-		err = ErrProviderNotSupported
-	}
-	if err != nil {
-		return "", err
+		return "", ErrProviderNotSupported
 	}
 
 	existUsr, err := svc.store.Read(ctx, ReadFilter{Email: usr.Email})

@@ -22,6 +22,8 @@ import {
 } from '../../lib/dates';
 import { makeReplaceOp } from '../../lib/tripsSync';
 import { TripMenuJumboCss } from '../../assets/styles/global';
+import { Trips, userFromMemberID } from '../../lib/trips';
+import { Auth, LabelUserGoogleImage } from '../../lib/auth';
 
 
 
@@ -140,6 +142,8 @@ const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) 
 ///////////////
 interface MenuJumboProps {
   trip: any
+  tripMembers: {[key: string]: Auth.User}
+  onlineMembers: Array<Trips.Member>
   tripStateOnUpdate: any
 }
 
@@ -217,7 +221,7 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
     const range = {from: startDt, to: endDt};
     const dateFmt = "MMM d, yy"
     return (
-      <div onBlur={tripDatesOnBlur}>
+      <div className='flex-1' onBlur={tripDatesOnBlur}>
         <button
           type="button"
           className={TripMenuJumboCss.TripDatesBtn}
@@ -240,6 +244,39 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
     );
   }
 
+
+  const renderOnlineMembers = () => {
+    const imgs = [];
+    props.onlineMembers.slice(0, 5).forEach((om: Trips.Member) => {
+      const usr = userFromMemberID(om, props.tripMembers);
+      imgs.push(
+        <img
+          key={om.id}
+          className="w-8 h-8 border-2 border-white rounded-full"
+          src={_get(usr, `labels.${LabelUserGoogleImage}`)}
+          alt={_get(usr, "name", "")}
+          referrerPolicy="no-referrer"
+        />
+      );
+    });
+
+    if (props.onlineMembers.length > 5) {
+      imgs.push(
+        <button
+          type='button'
+          className="flex items-center justify-center w-8 h-8 text-xs font-medium text-white bg-gray-700 border-2 border-white rounded-full hover:bg-gray-600"
+        >
+          {props.onlineMembers.length - 5}
+        </button>)
+    }
+    return (
+      <div className="flex -space-x-4">
+        {imgs}
+      </div>
+    );
+  }
+
+
   const renderTripNameInput = () => {
     return (
       <div className={TripMenuJumboCss.TripNameInputCtn}>
@@ -253,7 +290,10 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
               className={TripMenuJumboCss.TripNameInput}
             />
           </div>
-          {renderDatesButton()}
+          <div className='flex items-center'>
+            {renderDatesButton()}
+            {renderOnlineMembers()}
+          </div>
         </div>
       </div>
     );
