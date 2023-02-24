@@ -241,6 +241,7 @@ const TripPage: FC = () => {
 
       ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
         const msg = JSON.parse(e.data) as TripSync.Message;
+        console.log(msg)
         switch (msg.op) {
           case OpMemberUpdate:
             handleOpMemberUpdate(msg.data.memberUpdate?.members)

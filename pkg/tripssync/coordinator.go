@@ -102,16 +102,16 @@ func (crd *Coordinator) Run() error {
 		// 3.1. Takes in op msg indicating changes from clients
 		for msg := range crd.msgCh {
 			crd.logger.Debug("recv msg", zap.String("msg", common.FmtString(msg)))
-
+			ctx := context.Background()
 			switch msg.Op {
 			case OpJoinSession:
 				// Got new player, reset counter
 				crd.counter = 0
-				sess, _ := crd.store.Read(context.Background(), crd.tripID)
+				sess, _ := crd.store.Read(ctx, crd.tripID)
 				msg = NewMsgMemberUpdate(msg.TripID, sess.Members)
 			case OpLeaveSession:
 				// stop coordinator if no users left in session
-				sess, _ := crd.store.Read(context.Background(), crd.tripID)
+				sess, _ := crd.store.Read(ctx, crd.tripID)
 				if len(sess.Members) == 0 {
 					crd.logger.Info("stopping coordinator", zap.String("tripID", crd.tripID))
 					crd.Stop()
@@ -149,6 +149,14 @@ func (crd *Coordinator) Run() error {
 		}
 	}()
 	return nil
+}
+
+func (crd *Coordinator) HandleFirstMember(ctx context.Context) {
+	sess, _ := crd.store.Read(ctx, crd.tripID)
+	msg := NewMsgMemberUpdate(crd.tripID, sess.Members)
+	msg.Counter = crd.counter
+	crd.queue <- msg
+	crd.counter++
 }
 
 // HandleOpUpdateTrip handles OpUpdateTrip messages
@@ -201,7 +209,7 @@ func NewCoordinatorSpawner(
 	}
 }
 
-// Run listens to SynOpJoinSession requests and spawn a
+// Run listens to OpJoinSession requests and spawn a
 // coordinator if there is only 1 member in the session (i.e new session)
 func (spwn *CoordinatorSpawner) Run() error {
 	msgCh, done, err := spwn.msgStore.Subscribe("*")
@@ -217,14 +225,16 @@ func (spwn *CoordinatorSpawner) Run() error {
 		if msg.Op != OpJoinSession {
 			continue
 		}
-		sess, err := spwn.store.Read(context.Background(), msg.TripID)
+
+		ctx := context.Background()
+		sess, err := spwn.store.Read(ctx, msg.TripID)
 		if err != nil {
 			// TODO: handle error here
 			spwn.logger.Error("unable to read session", zap.Error(err))
 			continue
 		}
 		if len(sess.Members) > 1 {
-			// First member would have joined!
+			// First member would have joined and coordinator is created.
 			continue
 		}
 		coord := NewCoordinator(
@@ -242,6 +252,7 @@ func (spwn *CoordinatorSpawner) Run() error {
 		if err := coord.Run(); err != nil {
 			spwn.logger.Error("unable to run coordinator", zap.Error(err))
 		}
+		coord.HandleFirstMember(ctx)
 	}
 	return nil
 }

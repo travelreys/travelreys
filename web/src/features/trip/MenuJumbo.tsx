@@ -24,6 +24,7 @@ import { makeReplaceOp } from '../../lib/tripsSync';
 import { TripMenuJumboCss } from '../../assets/styles/global';
 import { Trips, userFromMemberID } from '../../lib/trips';
 import { Auth, LabelUserGoogleImage } from '../../lib/auth';
+import Avatar from '../../components/common/Avatar';
 
 
 
@@ -250,13 +251,14 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
     props.onlineMembers.slice(0, 5).forEach((om: Trips.Member) => {
       const usr = userFromMemberID(om, props.tripMembers);
       imgs.push(
-        <img
-          key={om.id}
-          className="w-8 h-8 border-2 border-white rounded-full"
-          src={_get(usr, `labels.${LabelUserGoogleImage}`)}
-          alt={_get(usr, "name", "")}
-          referrerPolicy="no-referrer"
-        />
+        <div className='w-8 h-8'>
+          <Avatar
+            key={om.id}
+            imgUrl={_get(usr, `labels.${LabelUserGoogleImage}`)}
+            name={_get(usr, "name", "")}
+            placement="top"
+          />
+        </div>
       );
     });
 
@@ -270,7 +272,7 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
         </button>)
     }
     return (
-      <div className="flex -space-x-4">
+      <div className="flex -space-x-3">
         {imgs}
       </div>
     );
