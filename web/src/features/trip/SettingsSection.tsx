@@ -15,19 +15,18 @@ import AuthAPI, { SearchUsersResponse } from '../../apis/auth';
 import {
   DefaultTransportModePref,
   LabelTransportModePref,
+  Member,
   MemberRoleCollaborator,
   MemberRoleCreator,
   MemberRoleParticipant,
-  userFromMemberID
+  userFromMember,
 } from '../../lib/trips';
-import { Auth, LabelUserGoogleImage } from '../../lib/auth';
-import { Trips } from '../../lib/trips';
+import { LabelUserGoogleImage, User } from '../../lib/auth';
+import { UpdateTitleAddNewMember } from '../../lib/tripSync';
 import {
   makeAddOp,
   makeRemoveOp,
-  makeReplaceOp,
-  UpdateTitleAddNewMember
-} from '../../lib/tripsSync';
+  makeReplaceOp } from '../../lib/jsonpatch'
 import { capitaliseWords } from '../../lib/strings';
 import { CommonCss, TripSettingsCss } from '../../assets/styles/global';
 
@@ -96,7 +95,7 @@ const TransportationSection: FC<TransportSection> = (props: TransportSection) =>
 
 interface AddMembersModalProps {
   isOpen: boolean
-  tripMembers: { [key: string]: Auth.User }
+  tripMembers: { [key: string]: User }
   onClose: () => void
   onSelect: (id: string, role: string) => void
 }
@@ -106,7 +105,7 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
 
   const [searchEmail, setSearchEmail] = useState("");
   const [selectedMemberRole, setSelectedMemberRole] = useState(MemberRoleCollaborator);
-  const [foundUsers, setFoundUsers] = useState<Array<Auth.User>>([]);
+  const [foundUsers, setFoundUsers] = useState<Array<User>>([]);
   const debouncedValue = useDebounce<string>(searchEmail, 600);
 
   // API
@@ -193,7 +192,7 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
     if (_isEmpty(foundUsers)) {
       return <div>{t('tripPage.settings.noUsersFound')}</div>;
     }
-    return foundUsers.map((usr: Auth.User) => {
+    return foundUsers.map((usr: User) => {
       const isMember = Object.hasOwn(props.tripMembers, usr.id);
       return (
         <button
@@ -207,7 +206,7 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
             <Avatar
               placement="top"
               name={_get(usr, "name", "")}
-              imgUrl={_get(usr, `labels.${LabelUserGoogleImage}`)}
+              imgurl={_get(usr, `labels.${LabelUserGoogleImage}`)}
             />
           </div>
           <div>
@@ -241,7 +240,7 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
 
 interface MembersSectionProps {
   trip: any
-  tripMembers: { [key: string]: Auth.User }
+  tripMembers: { [key: string]: User }
   onAddMember: (id: string, role: string) => void
   onDeleteMember: (id: string) => void
 }
@@ -260,7 +259,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
     let members = { [props.trip.creator.id]: props.trip.creator } as any;
     members = Object.assign(members, props.trip.members);
     return Object.values(members).map((mem: any) => {
-      const usr = userFromMemberID(mem, props.tripMembers);
+      const usr = userFromMember(mem, props.tripMembers);
 
       const renderDropdown = () => {
         const opts = [
@@ -286,7 +285,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
               <Avatar
                 placement="top"
                 name={`${_get(usr, "name", "")} (${capitaliseWords(mem.role)}})`}
-                imgUrl={_get(usr, `labels.${LabelUserGoogleImage}`)}
+                imgurl={_get(usr, `labels.${LabelUserGoogleImage}`)}
               />
             </div>
             <div>
@@ -340,7 +339,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
 
 interface SettingsSectionProps {
   trip: any
-  tripMembers: { [key: string]: Auth.User }
+  tripMembers: { [key: string]: User }
   tripStateOnUpdate: any
 }
 
@@ -355,15 +354,14 @@ const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) 
   }
 
   const addMember = (id: string, role: string) => {
-    const member = { id, role, labels: {} } as Trips.Member;
+    const member = { id, role, labels: {} } as Member;
     props.tripStateOnUpdate([makeAddOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
   }
 
   const deleteMember = (id: string) => {
-    const member = { id } as Trips.Member;
+    const member = { id } as Member;
     props.tripStateOnUpdate([makeRemoveOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
   }
-
 
   return (
     <div className='p-5 px-8'>

@@ -11,15 +11,15 @@ import (
 )
 
 const (
-	LabelDelimeter                     = "|"
-	LabelContentItineraryDates         = "itinerary|dates"
-	LabelContentItineraryDatesJSONPath = "labels/itinerary|dates"
-	LabelContentListColor              = "ui|color"
-	LabelContentListColorJSONPath      = "labels/ui|color"
-	LabelContentListIcon               = "ui|icon"
-	LabelContentListIconJSONPath       = "labels/ui|icon"
-	LabelTransportModePref             = "transportationPreference"
-	LabelFractionalIndex               = "fIndex"
+	LabelDelimeter              = "|"
+	LabelItineraryDates         = "itinerary|dates"
+	LabelItineraryDatesJSONPath = "labels/itinerary|dates"
+	LabelUiColor                = "ui|color"
+	JSONPathLabelUiColor        = "labels/ui|color"
+	LabelUiIcon                 = "ui|icon"
+	JSONPathLabelUiIcon         = "labels/ui|icon"
+	LabelTransportModePref      = "transportationPreference"
+	LabelFractionalIndex        = "fIndex"
 )
 
 type Trip struct {

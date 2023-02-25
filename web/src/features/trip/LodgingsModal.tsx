@@ -16,8 +16,8 @@ import Modal from '../../components/common/Modal';
 
 import MapsAPI, { EMBED_MAPS_APIKEY, placeFields } from '../../apis/maps';
 import { LodgingsModalCss } from '../../assets/styles/global';
-import { Trips } from '../../lib/trips';
 import { parseTripDate } from '../../lib/dates';
+import { Lodging } from '../../lib/trips';
 import PlaceAutocomplete from '../maps/PlaceAutocomplete';
 
 // TripLodgingsModal
@@ -87,7 +87,7 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
   }
 
   const addLodgingBtnOnClick = () => {
-    const tripLodging: Trips.Lodging = {
+    const tripLodging: Lodging = {
       id: uuidv4(),
       checkinTime: checkinDates?.from,
       checkoutTime: checkinDates?.to,

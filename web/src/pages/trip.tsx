@@ -16,40 +16,40 @@ import {
 } from '@heroicons/react/24/outline';
 import { Cog6ToothIcon } from '@heroicons/react/24/solid';
 
-import BudgetSection from '../../features/trip/BudgetSection';
-import ItinerarySection from '../../features/trip/ItinerarySection';
-import NotesSection from '../../features/trip/Notes';
-import Spinner from '../../components/common/Spinner';
-import { NavbarLogo } from '../../components/common/Navbar';
-import TripContentSection from '../../features/trip/ContentSection';
-import TripLogisticsSection from '../../features/trip/LogisticsSection';
-import TripMap from '../../features/maps/TripMap';
-import TripMenuJumbo from '../../features/trip/MenuJumbo';
-import SettingsSection from '../../features/trip/SettingsSection';
+import { NavbarLogo } from '../components/common/Navbar';
+import BudgetSection from '../features/trip/BudgetSection';
+import ContentSection from '../features/trip/ContentSection';
+import ItinerarySection from '../features/trip/ItinerarySection';
+import NotesSection from '../features/trip/Notes';
+import SettingsSection from '../features/trip/SettingsSection';
+import Spinner from '../components/common/Spinner';
+import LogisticsSection from '../features/trip/LogisticsSection';
+import TripMap from '../features/maps/TripMap';
+import TripMenuJumbo from '../features/trip/MenuJumbo';
 
-import TripsAPI, { ReadMembersResponse, ReadResponse } from '../../apis/trips';
-import TripsSyncAPI from '../../apis/tripsSync';
-import { NewSyncMessageHeap } from '../../lib/heap';
+import TripsAPI, { ReadMembersResponse, ReadResponse } from '../apis/trips';
+import TripsSyncAPI from '../apis/tripSync';
+import { NewMessageHeap } from '../lib/heap';
 import {
-  JSONPatchOp,
   makeMsgUpdateTrip,
   makeMsgJoinSession,
   OpUpdateTrip,
   OpMemberUpdate,
   UpdateTitleAddNewMember,
-  TripSync
-} from '../../lib/tripsSync';
-import { Trips } from '../../lib/trips';
-import { Auth, readAuthUser } from '../../lib/auth';
-import { CommonCss, TripMenuCss } from '../../assets/styles/global';
-import { MapsProvider } from '../../context/maps-context';
+  Message,
+} from '../lib/tripSync';
+import { Op } from '../lib/jsonpatch';
+import { readAuthUser, User } from '../lib/auth';
+import { CommonCss, TripMenuCss } from '../assets/styles/global';
+import { MapsProvider } from '../context/maps-context';
+import { Member } from '../lib/trips';
 
 // TripPlanningMenu
 
 interface TripPlanningMenuProps {
   trip: any
-  tripMembers: {[key: string]: Auth.User}
-  onlineMembers: Array<Trips.Member>
+  tripMembers: {[key: string]: User}
+  onlineMembers: Array<Member>
   tripStateOnUpdate: any
 }
 
@@ -95,12 +95,12 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
-        <TripLogisticsSection
+        <LogisticsSection
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
         <hr className={CommonCss.HrShort} />
-        <TripContentSection
+        <ContentSection
           trip={props.trip}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
@@ -158,11 +158,11 @@ const TripPage: FC = () => {
   const tripRef = useRef(null as any);
   const [trip, setTrip] = useState(tripRef.current);
   const [tripMembers, setTripMembers] = useState({});
-  const [onlineMembers, setOnlineMembers] = useState<Array<Trips.Member>>([]);
+  const [onlineMembers, setOnlineMembers] = useState<Array<Member>>([]);
 
   // Sync Session State
   const wsRef = useRef(null as any);
-  const pq = NewSyncMessageHeap();
+  const pq = NewMessageHeap();
   const nextTobCounter = useRef(0);
 
   // Map UI State
@@ -192,7 +192,7 @@ const TripPage: FC = () => {
     return (wsRef.current === null && !_isEmpty(id))
   }
 
-  const handleOpMemberUpdate = (members: Array<Trips.Member>) => {
+  const handleOpMemberUpdate = (members: Array<Member>) => {
     setOnlineMembers(members);
   }
 
@@ -230,7 +230,7 @@ const TripPage: FC = () => {
     }
     // Set up WS Connection
     if (shouldSetWs(id)) {
-      const ws = TripsSyncAPI.startTripSyncSession();
+      const ws = TripsSyncAPI.startSession();
       wsRef.current = ws;
 
       ws.addEventListener(WebsocketEvents.open, () => {
@@ -240,7 +240,7 @@ const TripPage: FC = () => {
       });
 
       ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
-        const msg = JSON.parse(e.data) as TripSync.Message;
+        const msg = JSON.parse(e.data) as Message;
         console.log(msg)
         switch (msg.op) {
           case OpMemberUpdate:
@@ -292,7 +292,7 @@ const TripPage: FC = () => {
   // Event Handlers //
   ////////////////////
 
-  const tripStateOnUpdate = (ops: Array<JSONPatchOp>, title: string) => {
+  const tripStateOnUpdate = (ops: Array<Op>, title: string) => {
     const msg = makeMsgUpdateTrip(id!, title, ops);
     wsRef.current.send(JSON.stringify(msg));
   }

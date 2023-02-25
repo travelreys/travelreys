@@ -7,30 +7,30 @@ import {
   SelectRangeEventHandler
 } from 'react-day-picker';
 
-import TripsAPI, { CreateResponse, ReadsResponse } from '../../apis/trips';
+import TripsAPI, { CreateResponse, ReadsResponse } from '../apis/trips';
 
-import Alert from '../../components/common/Alert';
-import CreateModal from '../../features/home/CreateModal';
-import Spinner from '../../components/common/Spinner';
-import TripsContainer from '../../features/home/TripsContainer';
-import { HomeCss } from '../../assets/styles/global';
-
+import Alert from '../components/common/Alert';
+import CreateModal from '../features/home/CreateModal';
+import Spinner from '../components/common/Spinner';
+import TripsContainer from '../features/home/TripsContainer';
 
 interface TripsJumboProps {
   onCreateBtnClick: any,
 }
 
 const TripsJumbo: FC<TripsJumboProps> = (props: TripsJumboProps) => {
-
   const {t} = useTranslation();
-
+  const css = {
+    title: "text-4xl font-bold text-slate-700 mb-5",
+    createBtn: "bg-indigo-500 font-bold px-5 py-2.5 rounded-md text-white hover:bg-indigo-70",
+  }
   return (
     <div>
-      <h1 className={HomeCss.TripJumboTitle}>
+      <h1 className={css.title}>
         {t("home.tripJumbo.title")}
       </h1>
       <button type="button"
-        className={HomeCss.CreateNewTripBtn}
+        className={css.createBtn}
         onClick={props.onCreateBtnClick}
       >
         + {t("home.tripJumbo.createBtn")}

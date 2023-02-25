@@ -2,7 +2,7 @@ import React, { FC, useState } from 'react';
 import { TripNotesCss } from '../../assets/styles/global';
 import NotesEditor from '../../components/common/NotesEditor';
 import ToggleChevron from '../../components/common/ToggleChevron';
-import { makeReplaceOp } from '../../lib/tripsSync';
+import { makeReplaceOp } from '../../lib/jsonpatch';
 
 interface NotesSectionProps {
   trip: any

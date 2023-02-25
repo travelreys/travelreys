@@ -14,21 +14,21 @@ import Dropdown from '../../components/common/Dropdown';
 import { CommonCss, TripLogisticsCss } from '../../assets/styles/global';
 
 import {
-  flightArrivalTime,
-  flightDepartureTime,
+  airlineLogoURL,
+  Flight,
   FlightDirectionDepart,
   FlightItineraryTypeRoundtrip,
-  flightLegOpAirline,
-  flightLegs,
-  flightLogoUrl,
-  Flights,
-  logoFallbackImg
+  getArrivalTime,
+  getDepartureTime,
+  getLegOpAirline,
+  getLegs,
+  logoFallbackImg,
 } from '../../lib/flights';
-import { flightItineraryType } from '../../lib/trips';
+import { getFlightItineraryType } from '../../lib/trips';
 import {
   parseISO,
-  printFmt,
-  prettyPrintMins,
+  fmt,
+  fmtMins,
 } from '../../lib/dates';
 import {capitaliseWords} from '../../lib/strings';
 
@@ -46,8 +46,8 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
   // Renderers
   const renderNumStops = () => {
     const departFlight = _get(props.flight, FlightDirectionDepart, {});
-    const numStops =  flightLegs(departFlight).length === 1
-    ? "Non-stop" : `${flightLegs(departFlight).length - 1} stops`;
+    const numStops =  getLegs(departFlight).length === 1
+    ? "Non-stop" : `${getLegs(departFlight).length - 1} stops`;
 
     return (
       <span
@@ -80,13 +80,13 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
             <li className="mb-4 ml-6">
               <div className={TripLogisticsCss.FlightStopTimelineIcon} />
               <h3 className={TripLogisticsCss.FlightStopTimelineTime}>
-                {printFmt(parseISO(leg.departure.datetime), timeFmt)}
+                {fmt(parseISO(leg.departure.datetime), timeFmt)}
               </h3>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.departure.airport.code} ({leg.departure.airport.name})
               </p>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
-                Travel time: {prettyPrintMins(leg.duration)}
+                Travel time: {fmtMins(leg.duration)}
               </p>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.operatingAirline.name} {leg.operatingAirline.code} {leg.flightNo}
@@ -95,7 +95,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
             <li className="mb-4 ml-6">
               <div className={TripLogisticsCss.FlightStopTimelineIcon} />
               <h3 className={TripLogisticsCss.FlightStopTimelineTime}>
-                {printFmt(parseISO(leg.arrival.datetime), timeFmt)}
+                {fmt(parseISO(leg.arrival.datetime), timeFmt)}
               </h3>
               <p className={TripLogisticsCss.FlightsStopTimelineText}>
                 {leg.arrival.airport.code} ({leg.arrival.airport.name})
@@ -113,13 +113,12 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
   }
 
   const renderAirlineLogo = (flight: any) => {
-    const airline: any = flightLegOpAirline(_get(flight.legs, "0", {}));
+    const airline: any = getLegOpAirline(_get(flight.legs, "0", {}));
     return (
       <div className={TripLogisticsCss.FlightTransitLogoImgWrapper}>
         <object
           className={TripLogisticsCss.FlightTransitLogoImg}
-          data={flightLogoUrl(airline.code)}
-          type="image/png"
+          data={airlineLogoURL(airline.code)}
         >
           <img
             className={TripLogisticsCss.FlightTransitLogoImg}
@@ -161,13 +160,13 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
     )
   }
 
-  const renderFlight = (flight: Flights.Flight, direction: string) => {
-    const airline: any = flightLegOpAirline(flight.legs[0]);
+  const renderFlight = (flight: Flight, direction: string) => {
+    const airline: any = getLegOpAirline(flight.legs[0]);
     const timeFmt = "hh:mm aa";
     const dateFmt = "eee, MMM d";
 
-    const departTime = flightDepartureTime(flight) as string;
-    const arrTime = flightArrivalTime(flight) as string;
+    const departTime = getDepartureTime(flight) as string;
+    const arrTime = getArrivalTime(flight) as string;
 
     return (
       <div className={TripLogisticsCss.FlightTransit}>
@@ -175,12 +174,12 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
         <div className='flex-1'>
           <p className={TripLogisticsCss.FlightTransitDatetime}>
             {capitaliseWords(direction)} Flight&nbsp;&#x2022;&nbsp;
-            {printFmt(parseISO(departTime), dateFmt)}
+            {fmt(parseISO(departTime), dateFmt)}
           </p>
           <div className="flex">
             <span>
               <p className={TripLogisticsCss.FlightTransitTime}>
-                {printFmt(parseISO(departTime), timeFmt)}
+                {fmt(parseISO(departTime), timeFmt)}
               </p>
               <p className={TripLogisticsCss.FlightTransitAirportCode}>
                 {flight.departure.airport.code}
@@ -191,7 +190,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
             />
             <span className='mb-1'>
               <p className={TripLogisticsCss.FlightTransitTime}>
-                {printFmt(parseISO(arrTime), timeFmt)}
+                {fmt(parseISO(arrTime), timeFmt)}
               </p>
               <p className={TripLogisticsCss.FlightTransitAirportCode}>
                 {flight.arrival.airport.code}
@@ -199,7 +198,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
             </span>
           </div>
           <span className={TripLogisticsCss.FlightTransitDuration}>
-            {prettyPrintMins(flight.duration)}
+            {fmtMins(flight.duration)}
           </span>
           <span className={TripLogisticsCss.FlightTransitDuration}>
             {airline.name} | {renderNumStops()}
@@ -222,7 +221,7 @@ const TransitFlightCard: FC<TransitFlightCardProps> = (props: TransitFlightCardP
   }
 
   const renderReturnFlight = () => {
-    if (flightItineraryType(props.flight) !== FlightItineraryTypeRoundtrip) {
+    if (getFlightItineraryType(props.flight) !== FlightItineraryTypeRoundtrip) {
       return null;
     }
     return renderFlight(_get(props.flight, "return", {}), "returning");

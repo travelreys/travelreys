@@ -1,8 +1,8 @@
 import React, { FC } from 'react';
 import _get from "lodash/get";
 
-import { useUser } from '../../context/user-context';
-import { LabelUserGoogleImage } from '../../lib/auth';
+import { useUser } from '../context/user-context';
+import { LabelUserGoogleImage } from '../lib/auth';
 
 const ProfilePage: FC = () => {
 

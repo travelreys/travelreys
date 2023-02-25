@@ -1,13 +1,17 @@
 import React, { FC } from 'react';
 import _get from 'lodash/get';
 import { usePopperTooltip } from 'react-popper-tooltip';
-
 import { stringToColor } from '../../lib/strings';
-import { AvatarCss } from '../../assets/styles/global';
+
+export const css = {
+  ctn: "relative inline-flex items-center justify-center h-full w-full overflow-hidden rounded-full",
+  text: "text-white font-semibold text-xl uppercase",
+  tooltip: "absolute z-10 inline-block p-2 text-sm font-medium text-white bg-gray-900 rounded-lg",
+}
 
 interface AvatarProps {
   name: string
-  imgUrl?: string
+  imgurl?: string
   placement: string
 }
 
@@ -25,18 +29,17 @@ const Avatar: FC<AvatarProps> = (props: AvatarProps) => {
 
   // Renderers
   const renderImg = () => {
+    if (props.imgurl) {
+      return (
+        <img className="h-full w-full rounded-full"
+          src={props.imgurl}
+          alt="profile"
+          referrerPolicy="no-referrer"
+        />
+      );
+    }
     return (
-      <img className="h-full w-full rounded-full"
-        src={props.imgUrl}
-        alt="profile"
-        referrerPolicy="no-referrer"
-      />
-    );
-  }
-
-  const renderName = () => {
-    return (
-      <span className={AvatarCss.InitialsTxt}>
+      <span className={css.text}>
         {_get(props.name, "0")}
       </span>
     );
@@ -44,15 +47,11 @@ const Avatar: FC<AvatarProps> = (props: AvatarProps) => {
 
   return (
     <>
-      <div ref={setTriggerRef} style={style} className={AvatarCss.Ctn}>
-        {props.imgUrl ? renderImg() : renderName()}
+      <div ref={setTriggerRef} style={style} className={css.ctn}>
+        {renderImg()}
       </div>
       {visible && (
-        <div
-          ref={setTooltipRef}
-          className={AvatarCss.Tooltip}
-          {...getTooltipProps()}
-        >
+        <div ref={setTooltipRef} className={css.tooltip} {...getTooltipProps()}>
           {props.name}
         </div>
       )}

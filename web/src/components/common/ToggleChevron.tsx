@@ -3,6 +3,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
 } from '@heroicons/react/24/solid'
+import { CommonCss } from '../../assets/styles/global';
 
 interface ToggleChevronProps {
   onClick: () => void
@@ -16,8 +17,8 @@ const ToggleChevron: FC<ToggleChevronProps> = (props: ToggleChevronProps) => {
       className="mr-2"
       onClick={() => {props.onClick()}}
     >
-    {props.isHidden ? <ChevronUpIcon className='h-4 w-4' />
-      : <ChevronDownIcon className='h-4 w-4'/>}
+    {props.isHidden ? <ChevronUpIcon className={CommonCss.Icon} />
+      : <ChevronDownIcon className={CommonCss.Icon}/>}
     </button>
   );
 }

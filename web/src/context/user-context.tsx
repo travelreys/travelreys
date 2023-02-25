@@ -1,14 +1,14 @@
 import * as React from 'react'
-import { Auth, persistAuthUser } from '../lib/auth';
+import { User, persistAuthUser } from '../lib/auth';
 
 export const ActionSetUser = "setUser";
-type Action = {type: 'setUser', value: Auth.User | null}
+type Action = {type: 'setUser', value: User | null}
 type Dispatch = (action: Action) => void
-type State = {user: Auth.User | null }
+type State = {user: User | null }
 type UserProviderProps = {children: React.ReactNode}
 
 
-export const makeSetUserAction = (user: Auth.User|null): Action => {
+export const makeSetUserAction = (user: User|null): Action => {
   return {type: 'setUser', value: user}
 }
 

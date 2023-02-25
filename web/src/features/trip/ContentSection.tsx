@@ -33,31 +33,30 @@ import ContentListPin from '../maps/ContentListPin';
 
 import MapsAPI, { ModeDriving, placeFields } from '../../apis/maps';
 import {
-  Trips,
-  LabelContentItineraryDates,
-  LabelContentItineraryDatesJSONPath,
-  LabelDelimiter,
+  Content,
   ContentColorOpts,
   ContentIconOpts,
-  LabelContentListColor,
-  LabelContentListColorJSONPath,
-  LabelContentListIconJSONPath,
-  LabelContentListIcon,
+  ContentList as TripContentList,
   DefaultContentColor,
+  ItineraryContent,
+  ItineraryList,
+  JSONPathLabelUiColor,
+  JSONPathLabelUiIcon,
+  LabelDelimiter,
+  LabelItineraryDates,
+  LabelUiColor,
+  LabelUiIcon,
 } from '../../lib/trips';
-import {
-  ActionSetSelectedPlace,
-  useMap,
-} from '../../context/maps-context';
+import { ActionSetSelectedPlace, useMap } from '../../context/maps-context';
 import {
   CommonCss,
   TripContentCss,
   TripContentListCss,
   TripContentSectionCss,
 } from '../../assets/styles/global';
-import { parseISO, printFmt } from '../../lib/dates';
-import { MapElementID, newEventMarkerClick } from '../maps/common';
-import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
+import { parseISO, fmt } from '../../lib/dates';
+import { MapElementID, newEventMarkerClick } from '../../lib/maps';
+import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/jsonpatch';
 import { generateKeyBetween } from '../../lib/fractional';
 
 
@@ -66,9 +65,9 @@ import { generateKeyBetween } from '../../lib/fractional';
 /////////////
 
 interface TripContentProps {
-  content: Trips.Content
+  content: Content
   contentIdx: number
-  itinerary: Array<Trips.ItineraryList>
+  itinerary: Array<ItineraryList>
 
   onUpdateContentName: (title: string, idx: number) => void
   onDeleteContent: (idx: number) => void
@@ -187,19 +186,19 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 
   const renderItineraryDropdown = () => {
     // Format of itinerary dates label:
-    // content.labels[LabelContentItineraryDatesJSONPath] = "d1|d2|d3"
+    // content.labels[LabelItineraryDatesJSONPath] = "d1|d2|d3"
 
-    const dates = _get(props.content, `labels.${LabelContentItineraryDates}`, "")
+    const dates = _get(props.content, `labels.${LabelItineraryDates}`, "")
       .split(LabelDelimiter)
       .filter((dt: string) => !_isEmpty(dt));
 
-    const opts = props.itinerary.map((l: Trips.ItineraryList, idx: number) => (
+    const opts = props.itinerary.map((l: ItineraryList, idx: number) => (
       <button
         type='button'
         className={TripContentCss.ItineraryDateBtn}
         onClick={() => { itinOptOnClick(idx) }}
       >
-        {printFmt(parseISO(l.date as string), ItineraryDateFmt)}
+        {fmt(parseISO(l.date as string), ItineraryDateFmt)}
         {dates.includes(l.date as string) ?
           <CheckIcon className={CommonCss.Icon} /> : null}
       </button>
@@ -208,7 +207,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     const datesBadges = dates
       .map((dt: string) => (
         <span key={dt} className={TripContentCss.ItineraryBadge}>
-          {printFmt(parseISO(dt), ItineraryBadgeDateFmt)}
+          {fmt(parseISO(dt), ItineraryBadgeDateFmt)}
         </span>
       ));
 
@@ -335,7 +334,7 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
 
 interface ContentListProps {
   itinerary: any
-  contentList: Trips.ContentList
+  contentList: TripContentList
 
   onDeleteList: (contentListID: string) => void
   onUpdateName: (name: string, contentListID: string) => void
@@ -429,8 +428,8 @@ const ContentList: FC<ContentListProps> = (props: ContentListProps) => {
   }
 
   const renderHeader = () => {
-    const color = _get(props.contentList, `labels.${LabelContentListColor}`, DefaultContentColor)
-    const icon = _get(props.contentList, `labels.${LabelContentListIcon}`, "")
+    const color = _get(props.contentList, `labels.${LabelUiColor}`, DefaultContentColor)
+    const icon = _get(props.contentList, `labels.${LabelUiIcon}`, "")
     return (
       <div className='flex mb-2 w-full justify-between items-center'>
         <div className='flex flex-1'>
@@ -526,10 +525,10 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
 
   // Event Handlers -- Content List
   const addContentListBtnOnClick = () => {
-    let list: Trips.ContentList = {
+    let list: TripContentList = {
       id: uuidv4(),
       name: "",
-      contents: new Array<Trips.Content>(),
+      contents: new Array<Content>(),
       labels: {},
     }
     props.tripStateOnUpdate([makeAddOp(`/contents/${list.id}`, list)]);
@@ -542,7 +541,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   }
 
   const contentListAddContent = (title: string, contentListID: string) => {
-    const content: Trips.Content = {
+    const content: Content = {
       id: uuidv4(),
       title: title,
       notes: "",
@@ -560,9 +559,9 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       makeRemoveOp(`/contents/${contentListID}`, "")
     ]
     _get(props.trip, "itinerary", [])
-      .forEach((itinList: Trips.ItineraryList, itinListIdx: number) => {
+      .forEach((itinList: ItineraryList, itinListIdx: number) => {
         itinList.contents
-          .filter((itinCtnt: Trips.ItineraryContent) => itinCtnt.tripContentListId === contentListID)
+          .filter((itinCtnt: ItineraryContent) => itinCtnt.tripContentListId === contentListID)
           .forEach((_: any, itinCtntIdx: number) => {
             ops.unshift(
               makeRemoveOp(`/itinerary/${itinListIdx}/contents/${itinCtntIdx}`, "")
@@ -574,29 +573,29 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
 
   const updateContentListColorIcon = (contentListID: string, color?: string, icon?: string) => {
     const ctntList = _get(props.trip, `contents.${contentListID}`);
-    const colorLabel = _get(ctntList, `labels.${LabelContentListColor}`);
-    const iconLabel = _get(ctntList, `labels.${LabelContentListIcon}`);
+    const colorLabel = _get(ctntList, `labels.${LabelUiColor}`);
+    const iconLabel = _get(ctntList, `labels.${LabelUiIcon}`);
 
     const ops = [];
     if (_isEmpty(color) && !_isEmpty(colorLabel)) {
-      ops.push(makeRemoveOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, ""));
+      ops.push(makeRemoveOp(`/contents/${contentListID}/${JSONPathLabelUiColor}`, ""));
     }
     if (!_isEmpty(color)) {
       if (_isEmpty(colorLabel)) {
-        ops.push(makeAddOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
+        ops.push(makeAddOp(`/contents/${contentListID}/${JSONPathLabelUiColor}`, color));
       } else {
-        ops.push(makeReplaceOp(`/contents/${contentListID}/${LabelContentListColorJSONPath}`, color));
+        ops.push(makeReplaceOp(`/contents/${contentListID}/${JSONPathLabelUiColor}`, color));
       }
     }
 
     if (_isEmpty(icon) && !_isEmpty(iconLabel)) {
-      ops.push(makeRemoveOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, ""));
+      ops.push(makeRemoveOp(`/contents/${contentListID}/${JSONPathLabelUiIcon}`, ""));
     }
     if (!_isEmpty(icon)) {
       if (_isEmpty(colorLabel)) {
-        ops.push(makeAddOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
+        ops.push(makeAddOp(`/contents/${contentListID}/${JSONPathLabelUiIcon}`, icon));
       } else {
-        ops.push(makeReplaceOp(`/contents/${contentListID}/${LabelContentListIconJSONPath}`, icon));
+        ops.push(makeReplaceOp(`/contents/${contentListID}/${JSONPathLabelUiIcon}`, icon));
       }
     }
     props.tripStateOnUpdate(ops);
@@ -629,16 +628,16 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   }
 
   const onUpdateContentItineraryDate = async (idx: number, itinListIdx: number, contentListID: string) => {
-    const content = _get(props.trip, `contents.${contentListID}.contents[${idx}]`, {}) as Trips.Content;
-    const itinList = _get(props.trip, `itinerary[${itinListIdx}]`, {}) as Trips.ItineraryList;
+    const content = _get(props.trip, `contents.${contentListID}.contents[${idx}]`, {}) as Content;
+    const itinList = _get(props.trip, `itinerary[${itinListIdx}]`, {}) as ItineraryList;
     const itinListCtnts = itinList.contents;
     const itinListDt = itinList.date as string;
 
     const ops = [];
 
     // Update content labels, Format of itinerary dates label:
-    // content.labels[LabelContentItineraryDates] = "d1|d2|d3"
-    let currentItinDts = _get(content, `labels.${LabelContentItineraryDates}`, "")
+    // content.labels[LabelItineraryDates] = "d1|d2|d3"
+    let currentItinDts = _get(content, `labels.${LabelItineraryDates}`, "")
       .split(LabelDelimiter)
       .filter((dt: string) => !_isEmpty(dt));
 
@@ -663,7 +662,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       const fIndex = generateKeyBetween(start, null)
       console.log(fIndex)
 
-      const itinCtn: Trips.ItineraryContent = {
+      const itinCtn: ItineraryContent = {
         id: uuidv4(),
         tripContentId: content.id,
         tripContentListId: contentListID,
@@ -677,11 +676,11 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
     // Update content's itinerary dates
     if (currentItinDts.length !== 0) {
       ops.unshift(makeReplaceOp(
-        `/contents/${contentListID}/contents/${idx}/labels/${LabelContentItineraryDates}`,
+        `/contents/${contentListID}/contents/${idx}/labels/${LabelItineraryDates}`,
         newItinDts.join(LabelDelimiter)));
     } else {
       ops.unshift(makeAddOp(
-        `/contents/${contentListID}/contents/${idx}/labels/${LabelContentItineraryDates}`,
+        `/contents/${contentListID}/contents/${idx}/labels/${LabelItineraryDates}`,
         newItinDts.join(LabelDelimiter)));
     }
 
@@ -753,7 +752,7 @@ export default ContentSection;
 //   const lastItinCtn = _last(itinListCtnt);
 //   const lastCtnt = _find(
 //     _get(props.trip, `contents[${lastItinCtn?.tripContentListId}].contents`),
-//     (ctnt: Trips.Content) => ctnt.id === lastItinCtn?.tripContentId,
+//     (ctnt: Content) => ctnt.id === lastItinCtn?.tripContentId,
 //   );
 
 //   const lastCtntPlaceID = _get(lastCtnt, "place.place_id");

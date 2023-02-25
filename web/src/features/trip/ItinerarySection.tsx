@@ -22,7 +22,7 @@ import {
 import {
   MapElementID,
   newEventMarkerClick
-} from '../maps/common';
+} from '../../lib/maps';
 
 import ColorIconModal from './ColorIconModal';
 import Dropdown from '../../components/common/Dropdown';
@@ -35,53 +35,60 @@ import {
   ContentColorOpts,
   ContentIconOpts,
   DefaultContentColor,
-  LabelContentListColor,
-  LabelContentListIcon,
-  PriceAmountJSONPath,
-  LabelContentListColorJSONPath,
-  LabelContentListIconJSONPath,
-  Trips
+  LabelUiColor,
+  LabelUiIcon,
+  JSONPathPriceAmount,
+  JSONPathLabelUiColor,
+  JSONPathLabelUiIcon,
+  Content,
+  ItineraryList,
+  ItineraryContent,
+  Flight as TripFlight,
+  Lodging
 } from '../../lib/trips';
 import {
   areYMDEqual,
+  fmt,
   isEmptyDate,
   parseFlightDateZ,
   parseISO,
-  printFmt
 } from '../../lib/dates'
 import {
-  flightArrivalTime,
-  flightDepartureTime,
+  getArrivalTime,
+  getDepartureTime,
   FlightItineraryTypeRoundtrip,
-  Flights
+  Flight,
 } from '../../lib/flights';
-
+import {
+  makeAddOp,
+  makeRemoveOp,
+  makeReplaceOp
+} from '../../lib/jsonpatch';
 import {
   ActionSetSelectedPlace,
   useMap
 } from '../../context/maps-context';
 import {
-  InputDatesPickerCss,
+  InputCss,
   TripItinerarySectionCss,
   TripItineraryListCss,
   TripItineraryCss,
   CommonCss,
   TripLogisticsCss,
 } from '../../assets/styles/global';
-import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
 
 
 const ItineraryDateFmt = "eeee, do MMMM"
-const ItineraryContentCard = "ItineraryContentCard";
+const DropdownItineraryContentCard = "ItineraryContentCard";
 
 
-// ItineraryContent
-interface ItineraryContentProps {
-  content: Trips.Content
+// ItineraryContentCard
+interface ItineraryContentCardProps {
+  content: Content
   itineraryListIdx: number
-  itineraryList: Trips.ItineraryList
+  itineraryList: ItineraryList
   itineraryContentIdx: number
-  itineraryContent: Trips.ItineraryContent
+  itineraryContent: ItineraryContent
   tripStateOnUpdate: any
 
   moveCard: (id: string, to: number) => void
@@ -89,7 +96,7 @@ interface ItineraryContentProps {
   dropCard: (id: string) => void
 }
 
-const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProps) => {
+const ItineraryContentCard: FC<ItineraryContentCardProps> = (props: ItineraryContentCardProps) => {
 
   const [isUpdatingPrice, setIsUpdatingPrice] = useState<Boolean>(false);
   const [priceAmount, setPriceAmount] = useState<Number>();
@@ -105,7 +112,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 
   const [_, drag] = useDrag(
     () => ({
-      type: ItineraryContentCard,
+      type: DropdownItineraryContentCard,
       item: { id: props.itineraryContent.id, origCardIdx },
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
@@ -124,7 +131,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 
   const [, drop] = useDrop(
     () => ({
-      accept: ItineraryContentCard,
+      accept: DropdownItineraryContentCard,
       hover({ id: draggedId }: any) {
         if (draggedId !== props.itineraryContent.id) {
           const { index: overIndex } = props.findCard(props.itineraryContent.id)
@@ -160,7 +167,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     const { itineraryListIdx, itineraryContentIdx } = props;
     props.tripStateOnUpdate([
       makeReplaceOp(
-        `/itinerary/${itineraryListIdx}/contents/${itineraryContentIdx}/${PriceAmountJSONPath}`,
+        `/itinerary/${itineraryListIdx}/contents/${itineraryContentIdx}/${JSONPathPriceAmount}`,
         priceAmount,
       )
     ]);
@@ -192,7 +199,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     }
     return (
       <p className='text-slate-600 text-sm flex items-center mb-1 hover:text-indigo-500'>
-        <MapPinIcon className='h-4 w-4 mr-1' />
+        <MapPinIcon className='h-4 w-4' />
         {placeNode}
       </p>
     );
@@ -202,8 +209,8 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
     if (isUpdatingPrice) {
       return (
         <div className={TripItineraryCss.PriceInputCtn}>
-          <span className={InputDatesPickerCss.Label}>
-            <CurrencyDollarIcon className={InputDatesPickerCss.Icon} />
+          <span className={InputCss.Label}>
+            <CurrencyDollarIcon className={InputCss.Icon} />
             &nbsp;Amount
           </span>
           <input
@@ -212,7 +219,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
             value={priceAmount as any}
             onChange={priceOnChange}
             onBlur={priceOnBlur}
-            className={InputDatesPickerCss.Input}
+            className={InputCss.Input}
           />
         </div>
       );
@@ -255,7 +262,7 @@ const ItineraryContent: FC<ItineraryContentProps> = (props: ItineraryContentProp
 interface TripItineraryListProps {
   trip: any
   itineraryListIdx: number
-  itineraryList: Trips.ItineraryList
+  itineraryList: ItineraryList
   tripStateOnUpdate: any
 
   onUpdateColorIcon: (itinListIdx: number, color?: string, icon?: string) => void
@@ -271,14 +278,13 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     setItinContents(props.itineraryList.contents)
   }, [props.itineraryList])
 
-
   // Event Handlers
 
   const colorIconOnSubmit = (color?: string, icon?: string) => {
     props.onUpdateColorIcon(props.itineraryListIdx, color, icon)
   }
 
-  const updateItinContents = (newItinContents: Array<Trips.ItineraryContent>) => {
+  const updateItinContents = (newItinContents: Array<ItineraryContent>) => {
     props.tripStateOnUpdate([
       makeReplaceOp(`/itinerary/${props.itineraryListIdx}/contents`, newItinContents),
     ]);
@@ -287,7 +293,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   // DnD Helpers
 
   const findCard = useCallback((id: string) => {
-    const itinContent = _find(itinContents, (cont: Trips.ItineraryContent) => cont.id === id);
+    const itinContent = _find(itinContents, (cont: ItineraryContent) => cont.id === id);
     return { itinContent, index: itinContents.indexOf(itinContent!) }
   }, [itinContents]);
 
@@ -303,9 +309,16 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     updateItinContents(itinContents);
   }, [findCard, itinContents, setItinContents, updateItinContents])
 
-  const [, drop] = useDrop(() => ({ accept: ItineraryContentCard }))
+  const [, drop] = useDrop(() => ({ accept: DropdownItineraryContentCard }))
 
   // Renderers
+  const css = {
+    ctn: "w-full mb-2",
+    flightCtn: "flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow",
+    iconCtn: "bg-green-200 p-2 rounded-full",
+  }
+
+
   const renderSettingsDropdown = () => {
     const opts = [
       <button
@@ -333,7 +346,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
             onClick={() => { setIsHidden(!isHidden) }}
           />
           <p className='text-xl font-bold'>
-            {printFmt(parseISO(props.itineraryList.date as string), ItineraryDateFmt)}
+            {fmt(parseISO(props.itineraryList.date as string), ItineraryDateFmt)}
           </p>
         </div>
         {renderSettingsDropdown()}
@@ -345,21 +358,37 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   const renderFlights = () => {
     const flights = Object.values(_get(props.trip, "flights", {}));
     const today = parseISO(props.itineraryList.date as string);
+    const departs = [] as Array<Flight>;
 
-    const render = (flight: Flights.Flight) => {
-      const departTime = flightDepartureTime(flight) as string;
-      const arrTime = flightArrivalTime(flight) as string;
+    flights.forEach((item: any) => {
+      const departFlightDtb = parseFlightDateZ(getDepartureTime(item) as string);
+      if (!isEmptyDate(departFlightDtb)
+          && areYMDEqual(today, departFlightDtb)) {
+        departs.push(item);
+      }
+      if (item.itineraryType === FlightItineraryTypeRoundtrip) {
+        const returnFlightDt = parseFlightDateZ(getDepartureTime(item.return) as any);
+        if (!isEmptyDate(returnFlightDt)
+          && areYMDEqual(today, returnFlightDt)) {
+          departs.push(item.return);
+        }
+      }
+    });
+
+    const render = (flight: Flight) => {
+      const departTime = getDepartureTime(flight) as string;
+      const arrTime = getArrivalTime(flight) as string;
       const timeFmt = "hh:mm aa";
 
       return (
-        <div className="flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow">
-          <span className='bg-green-200 p-2 rounded-full'>
-            <FlightIcon className='w-4 h-4' />
+        <div className={css.flightCtn}>
+          <span className={css.iconCtn}>
+            <FlightIcon className={CommonCss.Icon} />
           </span>
           <div className="flex pl-4">
             <span>
               <p className={TripLogisticsCss.FlightTransitTime}>
-                {printFmt(parseFlightDateZ(departTime), timeFmt)}
+                {fmt(parseFlightDateZ(departTime), timeFmt)}
               </p>
               <p className={TripLogisticsCss.FlightTransitAirportCode}>
                 {flight.departure.airport.code}
@@ -370,7 +399,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
             />
             <span className='mb-1'>
               <p className={TripLogisticsCss.FlightTransitTime}>
-                {printFmt(parseFlightDateZ(arrTime), timeFmt)}
+                {fmt(parseFlightDateZ(arrTime), timeFmt)}
               </p>
               <p className={TripLogisticsCss.FlightTransitAirportCode}>
                 {flight.arrival.airport.code}
@@ -381,31 +410,9 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
       );
     }
 
-    const departs = [] as Array<Flights.Flight>;
-
-    flights.forEach((item: any) => {
-      let flight = item as Trips.Flight;
-
-      const onewayDepartFlightDt = parseFlightDateZ(
-        flightDepartureTime(flight.depart) as any);
-      if (!isEmptyDate(onewayDepartFlightDt)
-        && areYMDEqual(today, onewayDepartFlightDt)) {
-        departs.push(flight.depart);
-      }
-
-      if (flight.itineraryType === FlightItineraryTypeRoundtrip) {
-        const returnDepartFlightDt = parseFlightDateZ(
-          flightDepartureTime(flight.return) as any);
-        if (!isEmptyDate(returnDepartFlightDt)
-          && areYMDEqual(today, returnDepartFlightDt)) {
-          departs.push(flight.return);
-        }
-      }
-    });
-
     return (
-      <div className='w-full mb-2'>
-        {departs.map((flight: Flights.Flight) => render(flight))}
+      <div className={css.ctn}>
+        {departs.map((flight: Flight) => render(flight))}
       </div>
     );
   }
@@ -428,11 +435,11 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
       );
     }
 
-    const checkins = [] as Array<Trips.Lodging>;
-    const checkouts = [] as Array<Trips.Lodging>;
+    const checkins = [] as Array<Lodging>;
+    const checkouts = [] as Array<Lodging>;
 
     lodgings.forEach((item: any) => {
-      let lod = item as Trips.Lodging;
+      let lod = item as Lodging;
       if (!_isEmpty(lod.checkinTime)) {
         const checkinTime = parseISO(lod.checkinTime as string);
         if (areYMDEqual(today, checkinTime)) {
@@ -461,12 +468,12 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
         </p>
       );
     }
-    const listItems = itinContents.map((itinCtn: Trips.ItineraryContent, idx: number) => {
+    const listItems = itinContents.map((itinCtn: ItineraryContent, idx: number) => {
       const content = _find(
         _get(props.trip, `contents.${itinCtn.tripContentListId}.contents`, []),
-        (ctn: Trips.Content) => ctn.id === itinCtn.tripContentId
+        (ctn: Content) => ctn.id === itinCtn.tripContentId
       );
-      const color = _get(props.itineraryList, `labels.${LabelContentListColor}`, DefaultContentColor);
+      const color = _get(props.itineraryList, `labels.${LabelUiColor}`, DefaultContentColor);
       return (
         <li key={idx} className={TripItineraryListCss.ItinItem}>
           <span
@@ -475,7 +482,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
           >
             {idx + 1}
           </span>
-          <ItineraryContent
+          <ItineraryContentCard
             content={content}
             itineraryListIdx={props.itineraryListIdx}
             itineraryList={props.itineraryList}
@@ -492,10 +499,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
     return (
       <div className={TripItineraryListCss.ContentsCtn}>
-        <ol
-          ref={drop}
-          className={TripItineraryListCss.ContentsWrapper}
-        >
+        <ol ref={drop} className={TripItineraryListCss.ContentsWrapper}>
           {listItems}
         </ol>
       </div>
@@ -536,29 +540,29 @@ const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProp
 
   const updateItineraryListColorIcon = (itinListIdx: number, color?: string, icon?: string) => {
     const ctntList = _get(props.trip, `itinerary.${itinListIdx}`);
-    const colorLabel = _get(ctntList, `labels.${LabelContentListColor}`);
-    const iconLabel = _get(ctntList, `labels.${LabelContentListIcon}`);
+    const colorLabel = _get(ctntList, `labels.${LabelUiColor}`);
+    const iconLabel = _get(ctntList, `labels.${LabelUiIcon}`);
 
     const ops = [];
     if (_isEmpty(color) && !_isEmpty(colorLabel)) {
-      ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, ""));
+      ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/${JSONPathLabelUiColor}`, ""));
     }
     if (!_isEmpty(color)) {
       if (_isEmpty(colorLabel)) {
-        ops.push(makeAddOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, color));
+        ops.push(makeAddOp(`/itinerary/${itinListIdx}/${JSONPathLabelUiColor}`, color));
       } else {
-        ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/${LabelContentListColorJSONPath}`, color));
+        ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/${JSONPathLabelUiColor}`, color));
       }
     }
 
     if (_isEmpty(icon) && !_isEmpty(iconLabel)) {
-      ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, ""));
+      ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/${JSONPathLabelUiIcon}`, ""));
     }
     if (!_isEmpty(icon)) {
       if (_isEmpty(colorLabel)) {
-        ops.push(makeAddOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, icon));
+        ops.push(makeAddOp(`/itinerary/${itinListIdx}/${JSONPathLabelUiIcon}`, icon));
       } else {
-        ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/${LabelContentListIconJSONPath}`, icon));
+        ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/${JSONPathLabelUiIcon}`, icon));
       }
     }
     props.tripStateOnUpdate(ops);

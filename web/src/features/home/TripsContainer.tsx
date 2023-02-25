@@ -3,20 +3,21 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import ImagesAPI from '../../apis/images';
-import {
-  isEmptyDate,
-  parseISO,
-  printFromDateFromRange,
-  printToDateFromRange,
-} from '../../lib/dates';
-import { TripContainerCss } from '../../assets/styles/global';
-
+import { fmt, isEmptyDate, parseISO } from '../../lib/dates';
 
 interface TripCardProps {
   trip: any
 }
 
 const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
+
+  const css = {
+    dateTxt: "text-slate-500 text-sm md:text-sm align-base",
+    tripCardCtn: "bg-white rounded-lg shadow-md h-fit",
+    tripCardImg: "rounded-t-lg",
+    tripCardName: "mb-2 text-xl font-bold tracking-tight text-slate-700 truncate",
+    tripCardFooter: "flex justify-between items-center",
+  }
 
   // Renderers
   const renderTripDates = () => {
@@ -27,13 +28,13 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
     const dateFmt = "MMM d, yy"
 
     if (isEmptyDate(dateRange.from)) {
-      return <div className='text-slate-500'>-</div>;
+      return null;
     }
     return (
-      <p className={TripContainerCss.DateTxt}>
-        {printFromDateFromRange(dateRange, dateFmt)}
+      <p className={css.dateTxt}>
+        {fmt(dateRange.from, dateFmt)}
         &nbsp;-&nbsp;
-        {printToDateFromRange(dateRange, dateFmt)}
+        {fmt(dateRange.to, dateFmt)}
       </p>
     );
   }
@@ -41,19 +42,20 @@ const TripCard: FC<TripCardProps> = (props: TripCardProps) => {
   return (
     <Link
       to={`/trips/${props.trip.id}`}
-      className={TripContainerCss.TripCardCtn}
+      className={css.tripCardCtn}
     >
       <img
         srcSet={ImagesAPI.makeSrcSet(props.trip.coverImage)}
         src={ImagesAPI.makeSrc(props.trip.coverImage)}
-        className={TripContainerCss.TripCardImg}
-        alt={"cover"}
+        className={css.tripCardImg}
+        alt="cover"
+        referrerPolicy='no-referrer'
       />
       <div className="p-5">
-        <h5 className={TripContainerCss.TripCardName}>
+        <h5 className={css.tripCardName}>
           {props.trip.name}
         </h5>
-        <div className={TripContainerCss.TripCardFooter}>
+        <div className={css.tripCardFooter}>
           {renderTripDates()}
         </div>
       </div>
@@ -72,26 +74,32 @@ const TripsContainer: FC<TripsContainerProps> = (props: TripsContainerProps) => 
 
   const { t } = useTranslation();
 
-  // Renderers
+  const css = {
+    headerCtn: "flex justify-between flex-col sm:flex-row items-center mb-8",
+    header: "text-3xl sm:text-5x font-bold text-slate-800",
+    createBtn: "bg-indigo-400 hover:bg-indigo-800 font-bold px-5 py-2.5 mt-5 sm:mt-0 rounded-md text-center text-sm text-white",
+    tableCtn: "grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 gap-4",
+  }
+
   return (
-    <>
-      <div className={TripContainerCss.HeaderCtn}>
-        <span className={TripContainerCss.Header}>
+    <div>
+      <div className={css.headerCtn}>
+        <span className={css.header}>
           {t('home.upcomingTrips')}
         </span>
         <button type="button"
-          className={TripContainerCss.CreateBtn}
+          className={css.createBtn}
           onClick={props.onCreateBtnClick}
         >
           + Create new trip
         </button>
       </div>
-      <div className={TripContainerCss.TableCtn}>
+      <div className={css.tableCtn}>
         {props.trips.map((trip: any) => {
           return <TripCard trip={trip} key={trip.id} />
         })}
       </div>
-    </>
+    </div>
   );
 }
 

@@ -1,5 +1,4 @@
 import React, { FC, useState } from 'react';
-
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -8,13 +7,16 @@ import {
 import FlightsModal from './FlightsModal';
 import LodgingsModal from './LodgingsModal';
 import LodgingCard from './LodgingCard';
-
-import { Trips } from '../../lib/trips';
 import TransitFlightCard from './TransitFlightCard';
 
-import { TripLogisticsCss } from '../../assets/styles/global';
-import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
-
+import {
+  makeAddOp,
+  makeRemoveOp,
+  makeReplaceOp
+} from '../../lib/jsonpatch';
+import {  CommonCss } from '../../assets/styles/global';
+import { Flight, Lodging } from '../../lib/trips';
+import ToggleChevron from '../../components/common/ToggleChevron';
 
 // FlightsSection
 
@@ -36,49 +38,42 @@ const FlightsSection: FC<FlightsSectionProps> = (props: FlightsSectionProps) => 
   }
 
   // Renderers
-  const renderHiddenToggle = () => {
-    return (
-      <button
-        type="button"
-        className={TripLogisticsCss.FlightsToggleBtn}
-        onClick={() => {setIsHidden(!isHidden)}}
-      >
-      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
-        : <ChevronDownIcon className='h-4 w-4'/> }
-      </button>
-    );
-  }
 
-  const renderItineraries = () => {
+  const css = {
+    titleCtn: "flex justify-between mb-4",
+    headerCtn: "text-2xl sm:text-3xl font-bold text-slate-700",
+    searchBtn: "text-slate-500 text-sm mt-1 font-bold",
+  };
+
+  const renderFlights = () => {
     if (isHidden) {
       return null;
     }
-
-    const flights = Object.values(props.trip.flights);
-    return flights.map((flight: any, idx: number) =>
-      <TransitFlightCard
-        key={idx}
-        flight={flight}
-        onDelete={props.onFlightDelete}
-      />
-    )
+    return Object.values(props.trip.flights)
+      .map((flight: any, idx: number) =>
+        <TransitFlightCard
+          key={idx}
+          flight={flight}
+          onDelete={props.onFlightDelete}
+        />
+      );
   }
 
   return (
     <div className='p-5'>
-      <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <div className={TripLogisticsCss.FlightsHeaderCtn}>
-          {renderHiddenToggle()}
+      <div className={css.titleCtn}>
+        <div className={css.headerCtn}>
+          <ToggleChevron isHidden={isHidden} onClick={() => setIsHidden(!isHidden)} />
           <span>Flights</span>
         </div>
         <button
-          className={TripLogisticsCss.SearchFlightBtn}
+          className={css.searchBtn}
           onClick={() => {setIsTripFlightsModalOpen(true)}}
         >
           +&nbsp;&nbsp;Search for a flight
         </button>
       </div>
-      {renderItineraries()}
+      {renderFlights()}
       <FlightsModal
         trip={props.trip}
         isOpen={isTripFlightsModalOpen}
@@ -111,18 +106,12 @@ const LodgingSection: FC<LodgingSectionProps> = (props: LodgingSectionProps) => 
   }
 
   // Renderers
-  const renderHiddenToggle = () => {
-    return (
-      <button
-        type="button"
-        className={TripLogisticsCss.FlightsToggleBtn}
-        onClick={() => {setIsHidden(!isHidden)}}
-      >
-      {isHidden ? <ChevronUpIcon className='h-4 w-4' />
-        : <ChevronDownIcon className='h-4 w-4'/>}
-      </button>
-    );
-  }
+
+  const css = {
+    titleCtn: "flex justify-between mb-4",
+    headerCtn: "text-2xl sm:text-3xl font-bold text-slate-700",
+    searchBtn: "text-slate-500 text-sm mt-1 font-bold",
+  };
 
   const renderLodgings = () => {
     if (isHidden) {
@@ -141,14 +130,14 @@ const LodgingSection: FC<LodgingSectionProps> = (props: LodgingSectionProps) => 
 
   return (
     <div className='p-5'>
-      <div className={TripLogisticsCss.FlightsTitleCtn}>
-        <div className={TripLogisticsCss.FlightsHeaderCtn}>
-          {renderHiddenToggle()}
+      <div className={css.titleCtn}>
+        <div className={css.headerCtn}>
+          <ToggleChevron isHidden={isHidden} onClick={() => setIsHidden(!isHidden)} />
           <span>Hotels and Lodgings</span>
         </div>
 
         <button
-          className={TripLogisticsCss.SearchFlightBtn}
+          className={css.searchBtn}
           onClick={() => {setIsLogdingModalOpen(true)}}
         >
           +&nbsp;&nbsp;Add a lodging
@@ -167,33 +156,25 @@ const LodgingSection: FC<LodgingSectionProps> = (props: LodgingSectionProps) => 
 
 // Trip Logistics
 
-interface TripLogisticsSectionProps {
+interface LogisticsSectionProps {
   trip: any
   tripStateOnUpdate: any
 }
 
-const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogisticsSectionProps) => {
+const LogisticsSection: FC<LogisticsSectionProps> = (props: LogisticsSectionProps) => {
 
-  // Event Handlers - Flights
+  // Event Handlers
 
-  const flightOnSelect = (flight: Trips.Flight) => {
-    props.tripStateOnUpdate([
-      makeAddOp(`/flights/${flight.id}`, flight)
-    ]);
+  const flightOnSelect = (flight: Flight) => {
+    props.tripStateOnUpdate([makeAddOp(`/flights/${flight.id}`, flight)]);
   }
 
-  const flightOnDelete = (flight: Trips.Flight) => {
-    props.tripStateOnUpdate([
-      makeRemoveOp(`/flights/${flight.id}`, flight)
-    ]);
+  const flightOnDelete = (flight: Flight) => {
+    props.tripStateOnUpdate([makeRemoveOp(`/flights/${flight.id}`, flight)]);
   }
 
-  // Event Handlers - Lodging
-
-  const lodgingOnSelect = (lodging: Trips.Lodging) => {
-    props.tripStateOnUpdate([
-      makeAddOp(`/lodgings/${lodging.id}`, lodging)
-    ]);
+  const lodgingOnSelect = (lodging: Lodging) => {
+    props.tripStateOnUpdate([makeAddOp(`/lodgings/${lodging.id}`, lodging)]);
   }
 
   const lodgingOnUpdate = (lodging: any, updates: any) => {
@@ -205,13 +186,9 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
     props.tripStateOnUpdate(ops);
   }
 
-  const lodgingOnDelete = (lodging: Trips.Lodging) => {
-    props.tripStateOnUpdate([
-      makeRemoveOp(`/lodgings/${lodging.id}`, lodging)
-    ]);
+  const lodgingOnDelete = (lodging: Lodging) => {
+    props.tripStateOnUpdate([makeRemoveOp(`/lodgings/${lodging.id}`, lodging)]);
   }
-
-  // Renderers
 
   return (
     <div>
@@ -231,4 +208,4 @@ const TripLogisticsSection: FC<TripLogisticsSectionProps> = (props: TripLogistic
 
 }
 
-export default TripLogisticsSection;
+export default LogisticsSection;

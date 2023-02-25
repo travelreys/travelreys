@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-import { ReactComponent as HeroSVG } from '../../assets/images/undraw_floating_re_xtcj.svg'
+import { ReactComponent as HeroSVG } from '../assets/images/undraw_floating_re_xtcj.svg'
 
 const LandingPage: FC = () => {
 

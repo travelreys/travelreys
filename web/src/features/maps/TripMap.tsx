@@ -22,35 +22,32 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline'
 
+
+import ContentListPin from './ContentListPin';
+import { makeNumberPin, makePinWithTooltip } from './mapsPinIcons';
+import Spinner from '../../components/common/Spinner';
+import GoogleIcon from '../../components/icons/GoogleIcon';
+
 import MapsAPI, {
   placeAtmosphereFields,
   PLACE_IMAGE_APIKEY
 } from '../../apis/maps';
 import {
+  Content,
   ContentIconOpts,
   DefaultContentColor,
-  LabelContentListColor,
-  LabelContentListIcon,
-  Trips
+  LabelUiColor,
+  LabelUiIcon,
 } from '../../lib/trips';
-
-import Spinner from '../../components/common/Spinner';
-import ContentListPin from './ContentListPin';
-
 import {
   EventMarkerClickName,
   EventZoomMarkerClick,
   MapElementID,
   newZoomMarkerClick,
-} from './common';
-import GoogleIcon from '../../components/icons/GoogleIcon';
-import { makeNumberPin, makePinWithTooltip } from './mapsPinIcons';
+} from '../../lib/maps';
 import { ActionSetSelectedPlace, useMap } from '../../context/maps-context';
 import { CommonCss, TripMapCss } from '../../assets/styles/global';
-import {
-  parseISO,
-  printFmt
-} from '../../lib/dates'
+import { parseISO, fmt } from '../../lib/dates'
 
 
 const defaultMapCenter = { lat: 1.290969, lng: 103.8560011 }
@@ -517,8 +514,8 @@ const MapLayersMenu: FC<MapLayersMenuProps> = (props: MapLayersMenuProps) => {
 
     const contentLayers = contents
       .map((l: any) => {
-        const color = _get(l, `labels.${LabelContentListColor}`, DefaultContentColor);
-        const icon = ContentIconOpts[_get(l, `labels.${LabelContentListIcon}`, "")];
+        const color = _get(l, `labels.${LabelUiColor}`, DefaultContentColor);
+        const icon = ContentIconOpts[_get(l, `labels.${LabelUiIcon}`, "")];
         return (
           <div key={l.id} className='flex justify-between items-center mb-1'>
             <div className='flex items-center flex-1 text-gray-700'>
@@ -547,12 +544,12 @@ const MapLayersMenu: FC<MapLayersMenuProps> = (props: MapLayersMenuProps) => {
   const renderItineraryOpts = () => {
     const itinLayers = _get(props.trip, "itinerary", [])
       .map((l: any) => {
-        const color = _get(l, `labels.${LabelContentListColor}`, DefaultContentColor);
+        const color = _get(l, `labels.${LabelUiColor}`, DefaultContentColor);
         return (
           <div key={l.id} className='flex justify-between items-center mb-1'>
             <div className='flex items-center flex-1 text-gray-700'>
               <ContentListPin icon={""} color={color}/>
-              { printFmt(parseISO(l.date), "eee, MM/dd")  }
+              { fmt(parseISO(l.date), "eee, MM/dd")  }
             </div>
             <input
               type="checkbox"
@@ -665,8 +662,8 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
     const ctntLists = Object.values(_get(props.trip, "contents", {}));
     drawings = drawings.concat(
       ctntLists.map((l: any) => {
-        const color = _get(l, `labels.${LabelContentListColor}`, DefaultContentColor)
-        const icon = _get(l, `labels.${LabelContentListIcon}`, "")
+        const color = _get(l, `labels.${LabelUiColor}`, DefaultContentColor)
+        const icon = _get(l, `labels.${LabelUiIcon}`, "")
         const markers = l.contents
           .filter((ct: any) => {
             const latlng = _get(ct, "place.geometry.location")
@@ -690,12 +687,12 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
     const itntCtntList = _get(props.trip, "itinerary", []);
 
     return itntCtntList.map((l: any) => {
-      const color = _get(l, `labels.${LabelContentListColor}`, DefaultContentColor)
+      const color = _get(l, `labels.${LabelUiColor}`, DefaultContentColor)
 
       const markers = l.contents.map((itinCtnt: any, idx: number) => {
         const ctnt = _find(
           _get(props.trip, `contents.${itinCtnt.tripContentListId}.contents`, []),
-          (ctn: Trips.Content) => ctn.id === itinCtnt.tripContentId
+          (ctn: Content) => ctn.id === itinCtnt.tripContentId
         );
         const latlng = _get(ctnt, "place.geometry.location")
         if (latlng === undefined || (latlng.lat === 0 && latlng.lng === 0)) {

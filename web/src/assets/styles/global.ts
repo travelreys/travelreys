@@ -13,39 +13,13 @@ export const CommonCss = {
   HrShort: 'w-48 h-1 m-5 mx-auto bg-gray-300 border-0 rounded',
 }
 
-////////////
-// Avatar //
-////////////
-
-export const AvatarCss = {
-  Ctn: "relative inline-flex items-center justify-center h-full w-full overflow-hidden rounded-full",
-  InitialsTxt: "text-white font-semibold text-xl uppercase",
-  Tooltip: "absolute z-10 inline-block p-2 text-sm font-medium text-white bg-gray-900 rounded-lg",
-}
-
-
-//////////////////////
-// InputDatesPicker //
-//////////////////////
-
-export const InputDatesPickerCss = {
+export const InputCss = {
   Ctn: "flex w-full border border-slate-200 rounded-lg mr-2",
   Icon: "inline align-bottom h-5 w-5 text-gray-500",
   Label: "inline-flex bg-gray-200 font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   Input: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
 }
 
-///////////
-// Modal //
-///////////
-
-export const ModalCss = {
-  Container: "relative z-20",
-  Inset: "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity",
-  Content: "fixed inset-0 z-10 overflow-y-auto",
-  ContentContainer: "flex min-h-full flex-col p-4 text-center sm:items-center sm:p-0",
-  ContentCard: "bg-white relative transform rounded-lg text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl",
-}
 
 ////////////////////////
 // Place Autocomplete //
@@ -58,77 +32,6 @@ export const PlaceAutocompleteCss = {
   IconCtn: "p-1 group-hover:text-indigo-500",
   PrimaryTxt : "text-slate-900 group-hover:text-indigo-500 text-sm font-medium",
   SecondaryTxt: "text-slate-400 group-hover:text-indigo-500 text-xs",
-}
-
-
-//////////////
-// Dropdown //
-//////////////
-
-export const DropdownCss = {
-  OptsCtn: "z-10 w-44 rounded-lg bg-white shadow block absolute right-0",
-  OptsList: "z-10 w-44 rounded-lg bg-white shadow",
-  OptItem: "block rounded-lg py-2 px-4",
-}
-
-export const CurrencyDropdownCss = {
-  Ctn: "absolute z-10 rounded-lg bg-white shadow block right-0",
-  Wrapper: "p-4 max-h-96 overflow-y-auto",
-}
-
-
-/////////////
-// Navbar  //
-/////////////
-
-export const NavbarCss = {
-  Ctn: "container py-5 flex justify-between items-center",
-  Link: "text-2xl sm:text-3xl font-bold text-indigo-500",
-  LogoIcon: "inline align-bottom h-8 w-8 mr-2",
-  LogoTxt: "inline-block",
-  ProfileImg: "h-8 w-8 rounded-full",
-  LogoutBtn: "flex items-center w-full hover:text-indigo-500"
-}
-
-//////////
-// Home //
-//////////
-
-export const HomeCss = {
-  TripJumboTitle: "text-4xl font-bold text-slate-700 mb-5",
-  CreateNewTripBtn: "bg-indigo-500 font-bold px-5 py-2.5 rounded-md text-white hover:bg-indigo-70"
-}
-
-
-///////////
-// Trips //
-///////////
-
-export const TripContainerCss = {
-  HeaderCtn: "flex justify-between flex-col sm:flex-row items-center mb-8",
-  Header: "text-3xl sm:text-5x font-bold text-slate-800",
-  CreateBtn: "bg-indigo-400 hover:bg-indigo-800 font-bold px-5 py-2.5 mt-5 sm:mt-0 rounded-md text-center text-sm text-white",
-  TableCtn: "grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 gap-4",
-  DateTxt: "text-slate-500 text-sm md:text-sm align-base",
-  TripCardCtn: "bg-white rounded-lg shadow-md h-fit",
-  TripCardImg: "rounded-t-lg",
-  TripCardName: "mb-2 text-xl font-bold tracking-tight text-slate-700 truncate",
-  TripCardFooter: "flex justify-between items-center",
-}
-
-export const CreateModalCss = {
-  CreateModalCard: "bg-white rounded-lg px-4 pt-5 pb-4 sm:p-8 sm:pb-4",
-  CreateTitle: "text-2xl font-bold text-center leading-6 text-slate-900 mb-6",
-  TripNameCtn: "flex mb-4 border border-slate-200 rounded-lg",
-  TripNameLabel: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
-  TripNameInput: "block flex-1 border-0 rounded-r-lg min-w-0 p-2.5 text-gray-900 text-sm w-full",
-  TripDatesCtn: "flex w-full border border-slate-200 rounded-lg",
-  TripDatesIcon: "inline align-bottom h-5 w-5 text-gray-500",
-  TripDatesLabel: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
-  TripDatesInput: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
-  CreateBtnsCtn: "bg-gray-50 px-4 pt-3 pb-5 rounded-b-lg sm:flex sm:flex-row-reverse sm:px-6",
-  CreateBtn: "inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm",
-  CreateCancelBtn: "mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm",
 }
 
 ///////////////
@@ -145,32 +48,6 @@ export const TripMenuCss = {
   TabItemBtnTxt: "text-slate-400 text-sm",
 }
 
-///////////
-// Jumbo //
-///////////
-
-export const TripMenuJumboCss = {
-  TripDatesBtn: "font-medium text-md text-slate-500",
-  TripDatesBtnIcon: "inline h-5 w-5 align-sub mr-2",
-  TripCoverImage: "block sm:max-h-96 w-full",
-  TripImageEditIconCtn: "absolute top-4 right-4 h-10 w-10 bg-gray-800/70 p-2 text-center rounded-full",
-  TripImageEditIcon: "h-6 w-6 text-white",
-  TripNameInputCtn: "h-16 relative -top-24",
-  TripNameInputWrapper: "bg-white rounded-lg shadow p-5 mx-4 mb-4",
-  TripNamInputHeader: "flex items-center mb-12",
-  TripNameInput: "text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0",
-  Figure: "relative max-w-sm transition-all rounded-lg duration-300 mb-2 group",
-  FigureImg: "block rounded-lg max-w-full group-hover:grayscale",
-  FigureBtn: "text-white m-2 py-2 px-3 rounded-full bg-green-500 hover:bg-green-700",
-  FigureBtnCtn: "absolute group-hover:opacity-100 opacity-0 top-2 right-0",
-  FigureCaption: "absolute px-1 text-sm text-white rounded-b-lg bg-slate-800/50 w-full bottom-0",
-  SearchImageCard: "bg-white px-4 pt-5 pb-4 sm:p-8 sm:pb-4 rounded-lg",
-  SearchImageTitle: "text-lg sm:text-2xl font-bold leading-6 text-slate-900",
-  SearchImageWebTitle: "text-sm font-medium text-indigo-500 sm:text-xl text-slate-700 mb-2 ml-1",
-  SearchImageInput: "bg-gray-50 block border-gray-300 border focus:border-blue-500 focus:ring-blue-500 min-w-0 p-2.5 rounded-lg text-gray-900 text-sm w-5/6 mr-2",
-  SearchImageBtn: "flex-1 inline-flex text-white bg-indigo-500 hover:bg-indigo-800 rounded-2xl p-2.5 text-center items-center justify-around",
-  SearchImageIcon: "h-5 w-5 stroke-2 stroke-white",
-}
 
 ///////////
 // Notes //
@@ -189,15 +66,15 @@ export const TripNotesCss = {
 export const TripLogisticsCss = {
   FlightDatesCtn: "flex w-full border border-slate-400 rounded-lg",
   FlightDatesIcon: "inline align-bottom h-5 w-5 text-gray-500",
-  SearchFlightBtn: "text-slate-500 text-sm mt-1 font-bold",
+
   FlightDatesInput: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
   FlightDatesLabel: "inline-flex font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   FlightPricePill: "bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full",
-  FlightsHeaderCtn: "text-2xl sm:text-3xl font-bold text-slate-700",
+
   FlightsStopHR: "w-48 h-1 mx-auto my-4 bg-gray-100 border-0 rounded md:my-10",
   FlightsStopLayoverText: "mb-1 text-sm font-normal leading-none text-red-700",
   FlightsStopTimelineText: "mb-2 text-sm font-normal leading-none text-slate-400",
-  FlightsTitleCtn: "flex justify-between mb-4",
+
   FlightsToggleBtn: "mr-2",
   FlightStopIcon: "inline h-2 w-2 text-slate-700",
   FlightStopTimelineCtn: "relative border-l border-dashed border-slate-300 mt-4 ml-2",
@@ -238,11 +115,6 @@ export const FlightsModalCss = {
   FlightFromIcon: "h-6 w-6 text-slate-700",
   FlightFromInput: "border border-slate-200 text-gray-900 text-sm rounded block w-full pl-10 p-4",
   FlightSearchHR: "h-px my-8 bg-gray-200 border-0",
-  FlightSearchResultsTitle: "text-lg sm:text-2xl mb-2 font-medium text-slate-900",
-  RoundTripStepperCtn: "flex items-center w-full mb-4 space-x-2 text-sm font-medium text-center text-gray-500 bg-white rounded-lg sm:p-4 sm:space-x-4",
-  RoundTripStepperActive: "flex items-center text-blue-600 dark:text-blue-500",
-  RoundTripStepper: "flex items-center",
-  RoundTripStepperText: "flex items-center",
   FlightTripCard: "flex p-4 rounded shadow-md hover:shadow-lg hover:shadow-indigo-100",
   FlightPlusIcon: "h-6 w-6 text-green-500 cursor-pointer stroke-2",
   FlightPricePill: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full",

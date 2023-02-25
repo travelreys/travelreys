@@ -1,12 +1,11 @@
 import * as React from 'react'
 
-type Action = {type: 'setSelectedPlace', value: any}
-
 export const ActionSetSelectedPlace = "setSelectedPlace";
-
+type Action = {type: 'setSelectedPlace', value: any}
 type Dispatch = (action: Action) => void
 type State = {center: any, selectedPlace: any}
 type MapsProviderProps = {children: React.ReactNode}
+
 
 interface _MapsContext {
   state: State
