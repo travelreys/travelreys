@@ -14,9 +14,9 @@ var (
 
 // Service handles the control & data updates made by users in the collaboration session.
 type Service interface {
-	JoinSession(context.Context, string, Message) (Session, error)
-	LeaveSession(context.Context, string, Message) error
-	UpdateTrip(context.Context, string, Message) error
+	JoinSession(context.Context, Message) (Session, error)
+	LeaveSession(context.Context, Message) error
+	UpdateTrip(context.Context, Message) error
 	SubscribeTOBUpdates(context.Context, string) (<-chan Message, chan<- bool, error)
 }
 
@@ -36,32 +36,32 @@ func NewService(
 	return &service{store, msgStore, tobStore, tripStore}
 }
 
-func (p *service) JoinSession(ctx context.Context, tripID string, msg Message) (Session, error) {
+func (p *service) JoinSession(ctx context.Context, msg Message) (Session, error) {
 	conn := Connection{
 		ID:     msg.ConnID,
-		TripID: tripID,
+		TripID: msg.TripID,
 		Member: msg.Data.JoinSession.Member,
 	}
 	if err := p.store.AddConn(ctx, conn); err != nil {
 		return Session{}, err
 	}
-	p.msgStore.Publish(tripID, msg)
-	return p.store.Read(ctx, tripID)
+	p.msgStore.Publish(msg.TripID, msg)
+	return p.store.Read(ctx, msg.TripID)
 }
 
-func (p *service) LeaveSession(ctx context.Context, tripID string, msg Message) error {
+func (p *service) LeaveSession(ctx context.Context, msg Message) error {
 	conn := Connection{
 		ID:     msg.ConnID,
-		TripID: tripID,
+		TripID: msg.TripID,
 		Member: msg.Data.JoinSession.Member,
 	}
 	p.store.RemoveConn(ctx, conn)
-	p.msgStore.Publish(tripID, msg)
+	p.msgStore.Publish(msg.TripID, msg)
 	return nil
 }
 
-func (p *service) UpdateTrip(ctx context.Context, tripID string, msg Message) error {
-	return p.msgStore.Publish(tripID, msg)
+func (p *service) UpdateTrip(ctx context.Context, msg Message) error {
+	return p.msgStore.Publish(msg.TripID, msg)
 }
 
 func (p *service) SubscribeTOBUpdates(ctx context.Context, tripID string) (<-chan Message, chan<- bool, error) {

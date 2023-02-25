@@ -24,8 +24,8 @@ var (
 )
 
 type ReadFilter struct {
-	ID    string `json:"id" bson:"id"`
-	Email string `json:"email" bson:"email"`
+	ID    string `json:"id" bson:"id,omitempty"`
+	Email string `json:"email" bson:"email,omitempty"`
 }
 
 type UpdateFilter struct {

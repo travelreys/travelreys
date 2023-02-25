@@ -75,7 +75,7 @@ func NewMsgLeaveSession(connID, tripID string) Message {
 }
 
 type MsgDataMemberUpdate struct {
-	trips.MembersList
+	trips.MembersList `json:"members"`
 }
 
 func NewMsgMemberUpdate(tripID string, members trips.MembersList) Message {

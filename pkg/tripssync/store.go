@@ -9,6 +9,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"go.uber.org/zap"
 )
 
 // Pub/Sub Subjects
@@ -16,6 +17,10 @@ import (
 const (
 	GroupSpawners     = "spawners"
 	GroupCoordinators = "coordinators"
+
+	sessStoreLogger   = "coordinator.sessStore"
+	msgStoreLogger    = "coordinator.msgStore"
+	tobMsgStoreLogger = "coordinator.tobStore"
 )
 
 // sessConnectionsKey is the Redis key for maintaining session connections
@@ -28,17 +33,15 @@ func sessCounterKey(tripID string) string {
 	return fmt.Sprintf("sync-session:%s:counter", tripID)
 }
 
-// sessRequestSub is the NATS.io subj for client -> coordinator communication
-func sessRequestSubj(tripID string) string {
+// SubjRequest is the NATS.io subj for client -> coordinator communication
+func SubjRequest(tripID string) string {
 	return fmt.Sprintf("sync-session.requests.%s", tripID)
 }
 
-// sessTOBSubj is the NATS.io subj for coordinator -> client communication
-func sessTOBSubj(tripID string) string {
+// SubjTOB is the NATS.io subj for coordinator -> client communication
+func SubjTOB(tripID string) string {
 	return fmt.Sprintf("sync-session.tob.%s", tripID)
 }
-
-// Session Store
 
 type Store interface {
 	Read(ctx context.Context, tripID string) (Session, error)
@@ -52,17 +55,17 @@ type Store interface {
 }
 
 type store struct {
-	rdb redis.UniversalClient
+	rdb    redis.UniversalClient
+	logger *zap.Logger
 }
 
-func NewStore(rdb redis.UniversalClient) Store {
-	return &store{rdb}
+func NewStore(rdb redis.UniversalClient, logger *zap.Logger) Store {
+	return &store{rdb, logger.Named(sessStoreLogger)}
 }
 
 func (s *store) Read(ctx context.Context, tripID string) (Session, error) {
 	var strSlice []string
-	key := sessConnectionsKey(tripID)
-	cmd := s.rdb.HVals(ctx, key)
+	cmd := s.rdb.HVals(ctx, sessConnectionsKey(tripID))
 	err := cmd.ScanSlice(&strSlice)
 	if err != nil {
 		return Session{}, err
@@ -121,43 +124,72 @@ func (s *store) DeleteCounter(ctx context.Context, tripID string) error {
 	return cmd.Err()
 }
 
-// Sync Message Store
-
 type MessageStore interface {
 	Publish(tripID string, msg Message) error
 	Subscribe(tripID string) (<-chan Message, chan<- bool, error)
 	SubscribeQueue(tripID, groupName string) (<-chan Message, chan<- bool, error)
 }
 
-type syncMsgStore struct {
+type msgStore struct {
 	nc  *nats.Conn
 	rdb redis.UniversalClient
+
+	logger *zap.Logger
 }
 
-func NewMessageStore(nc *nats.Conn, rdb redis.UniversalClient) MessageStore {
-	return &syncMsgStore{nc, rdb}
+func NewMessageStore(nc *nats.Conn, rdb redis.UniversalClient, logger *zap.Logger) MessageStore {
+	return &msgStore{nc, rdb, logger.Named(msgStoreLogger)}
 }
 
-func (sms *syncMsgStore) Publish(tripID string, msg Message) error {
-	subj := sessRequestSubj(tripID)
+func (s *msgStore) Publish(tripID string, msg Message) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Error("json.Marshal(msg)", zap.Error(err))
 	}
-	if err = sms.nc.Publish(subj, data); err != nil {
+	if err = s.nc.Publish(SubjRequest(tripID), data); err != nil {
 		return err
 	}
-	return sms.nc.Flush()
+	return s.nc.Flush()
 }
 
-func (sms *syncMsgStore) Subscribe(tripID string) (<-chan Message, chan<- bool, error) {
-	subj := sessRequestSubj(tripID)
+func (s *msgStore) Subscribe(tripID string) (<-chan Message, chan<- bool, error) {
+	natsCh := make(chan *nats.Msg, common.DefaultChSize)
+	msgCh := make(chan Message, common.DefaultChSize)
+	done := make(chan bool)
+
+	sub, err := s.nc.ChanSubscribe(SubjRequest(tripID), natsCh)
+	if err != nil {
+		s.logger.Error("s.nc.ChanSubscribe", zap.Error(err))
+		return nil, nil, err
+	}
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				sub.Unsubscribe()
+				close(msgCh)
+				return
+			case natsMsg := <-natsCh:
+				var msg Message
+				if err := json.Unmarshal(natsMsg.Data, &msg); err != nil {
+					s.logger.Error("json.Unmarshal(natsMsg.Data)", zap.Error(err))
+					continue
+				}
+				msgCh <- msg
+			}
+		}
+	}()
+	return msgCh, done, nil
+}
+
+func (s *msgStore) SubscribeQueue(tripID, groupName string) (<-chan Message, chan<- bool, error) {
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
 	msgCh := make(chan Message, common.DefaultChSize)
 
 	done := make(chan bool)
 
-	sub, err := sms.nc.ChanSubscribe(subj, natsCh)
+	sub, err := s.nc.QueueSubscribeSyncWithChan(SubjRequest(tripID), groupName, natsCh)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -171,50 +203,15 @@ func (sms *syncMsgStore) Subscribe(tripID string) (<-chan Message, chan<- bool, 
 				return
 			case natsMsg := <-natsCh:
 				var msg Message
-				err := json.Unmarshal(natsMsg.Data, &msg)
-				if err == nil {
-					msgCh <- msg
+				if err := json.Unmarshal(natsMsg.Data, &msg); err != nil {
+					s.logger.Error("json.Unmarshal(natsMsg.Data)", zap.Error(err))
 				}
-
+				msgCh <- msg
 			}
 		}
 	}()
 	return msgCh, done, nil
 }
-
-func (sms *syncMsgStore) SubscribeQueue(tripID, groupName string) (<-chan Message, chan<- bool, error) {
-	subj := sessRequestSubj(tripID)
-	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan Message, common.DefaultChSize)
-
-	done := make(chan bool)
-
-	sub, err := sms.nc.QueueSubscribeSyncWithChan(subj, groupName, natsCh)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				sub.Unsubscribe()
-				close(msgCh)
-				return
-			case natsMsg := <-natsCh:
-				var msg Message
-				err := json.Unmarshal(natsMsg.Data, &msg)
-				if err == nil {
-					msgCh <- msg
-				}
-
-			}
-		}
-	}()
-	return msgCh, done, nil
-}
-
-// TOB Message Store
 
 type TOBMessageStore interface {
 	Publish(tripID string, msg Message) error
@@ -224,30 +221,32 @@ type TOBMessageStore interface {
 type tobMsgStore struct {
 	nc  *nats.Conn
 	rdb redis.UniversalClient
+
+	logger *zap.Logger
 }
 
-func NewTOBMessageStore(nc *nats.Conn, rdb redis.UniversalClient) TOBMessageStore {
-	return &tobMsgStore{nc, rdb}
+func NewTOBMessageStore(nc *nats.Conn, rdb redis.UniversalClient, logger *zap.Logger) TOBMessageStore {
+	return &tobMsgStore{nc, rdb, logger.Named(tobMsgStoreLogger)}
 }
 
-func (tms *tobMsgStore) Publish(tripID string, msg Message) error {
-	subj := sessTOBSubj(tripID)
+func (s *tobMsgStore) Publish(tripID string, msg Message) error {
+	subj := SubjTOB(tripID)
 	data, _ := json.Marshal(msg)
 
-	if err := tms.nc.Publish(subj, data); err != nil {
+	if err := s.nc.Publish(subj, data); err != nil {
+		s.logger.Error("s.nc.Publish(subj, data)", zap.Error(err))
 		return err
 	}
-	return tms.nc.Flush()
+	return s.nc.Flush()
 }
 
-func (tms *tobMsgStore) Subscribe(tripID string) (<-chan Message, chan<- bool, error) {
-	subj := sessTOBSubj(tripID)
+func (s *tobMsgStore) Subscribe(tripID string) (<-chan Message, chan<- bool, error) {
+	subj := SubjTOB(tripID)
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
 	msgCh := make(chan Message, common.DefaultChSize)
-
 	done := make(chan bool)
 
-	sub, err := tms.nc.ChanSubscribe(subj, natsCh)
+	sub, err := s.nc.ChanSubscribe(subj, natsCh)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -261,10 +260,10 @@ func (tms *tobMsgStore) Subscribe(tripID string) (<-chan Message, chan<- bool, e
 				return
 			case natsMsg := <-natsCh:
 				var msg Message
-				err := json.Unmarshal(natsMsg.Data, &msg)
-				if err == nil {
-					msgCh <- msg
+				if err := json.Unmarshal(natsMsg.Data, &msg); err != nil {
+					s.logger.Error("json.Unmarshal(natsMsg.Data, &msg)", zap.Error(err))
 				}
+				msgCh <- msg
 			}
 		}
 	}()

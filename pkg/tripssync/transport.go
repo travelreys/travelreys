@@ -133,7 +133,7 @@ func (h *ConnHandler) HandleMessage(msg Message) error {
 		h.tripID = msg.TripID
 		h.doneCh = doneCh
 
-		if _, err = h.svc.JoinSession(ctx, msg.TripID, msg); err != nil {
+		if _, err = h.svc.JoinSession(ctx, msg); err != nil {
 			return err
 		}
 		go func() {
@@ -145,9 +145,9 @@ func (h *ConnHandler) HandleMessage(msg Message) error {
 		return nil
 	case OpLeaveSession:
 		h.doneCh <- true
-		return h.svc.LeaveSession(ctx, msg.TripID, msg)
+		return h.svc.LeaveSession(ctx, msg)
 	case OpUpdateTrip:
-		return h.svc.UpdateTrip(ctx, msg.TripID, msg)
+		return h.svc.UpdateTrip(ctx, msg)
 	default:
 		return nil
 	}

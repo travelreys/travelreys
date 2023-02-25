@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -94,7 +93,5 @@ func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) 
 	if r.URL.Query().Has(bsonKeyEmail) {
 		req.FF.Email = common.StringPtr(r.URL.Query().Get(bsonKeyEmail))
 	}
-
-	fmt.Println(r.URL.Query(), req)
 	return req, nil
 }

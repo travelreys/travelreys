@@ -36,9 +36,9 @@ const authUserPathPrefix = "/api/v1/auth/users";
 
 const AuthAPI = {
 
-  login: async (authCode: string): Promise<LoginResponse> => {
+  login: async (code: string): Promise<LoginResponse> => {
     const url = `${BASE_URL}${authLoginPathPrefix}`;
-    return axios.post(url, { code: authCode })
+    return axios.post(url, { code })
       .then((res) => {
         const token = _get(res, "data.jwtToken", "");
         return {jwtToken:token};

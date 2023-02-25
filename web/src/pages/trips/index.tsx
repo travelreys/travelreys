@@ -39,6 +39,7 @@ import {
   UpdateTitleAddNewMember,
   TripSync
 } from '../../lib/tripsSync';
+import { Trips } from '../../lib/trips';
 import { Auth, readAuthUser } from '../../lib/auth';
 import { CommonCss, TripMenuCss } from '../../assets/styles/global';
 import { MapsProvider } from '../../context/maps-context';
@@ -48,6 +49,7 @@ import { MapsProvider } from '../../context/maps-context';
 interface TripPlanningMenuProps {
   trip: any
   tripMembers: {[key: string]: Auth.User}
+  onlineMembers: Array<Trips.Member>
   tripStateOnUpdate: any
 }
 
@@ -114,6 +116,8 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
         </nav>
         <TripMenuJumbo
           trip={props.trip}
+          tripMembers={props.tripMembers}
+          onlineMembers={props.onlineMembers}
           tripStateOnUpdate={props.tripStateOnUpdate}
         />
         {renderTabs()}
@@ -154,6 +158,7 @@ const TripPage: FC = () => {
   const tripRef = useRef(null as any);
   const [trip, setTrip] = useState(tripRef.current);
   const [tripMembers, setTripMembers] = useState({});
+  const [onlineMembers, setOnlineMembers] = useState<Array<Trips.Member>>([]);
 
   // Sync Session State
   const wsRef = useRef(null as any);
@@ -185,6 +190,10 @@ const TripPage: FC = () => {
 
   const shouldSetWs = (id: string|undefined): boolean => {
     return (wsRef.current === null && !_isEmpty(id))
+  }
+
+  const handleOpMemberUpdate = (members: Array<Trips.Member>) => {
+    setOnlineMembers(members);
   }
 
   const handleUpdateMsgTitle = (title?: string) => {
@@ -232,8 +241,10 @@ const TripPage: FC = () => {
 
       ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
         const msg = JSON.parse(e.data) as TripSync.Message;
+        console.log(msg)
         switch (msg.op) {
           case OpMemberUpdate:
+            handleOpMemberUpdate(msg.data.memberUpdate?.members)
             nextTobCounter.current = 1
             return;
           case OpUpdateTrip:
@@ -275,7 +286,7 @@ const TripPage: FC = () => {
         }
       })
     }
-  }, [id, pq])
+  }, [id])
 
   ////////////////////
   // Event Handlers //
@@ -299,6 +310,7 @@ const TripPage: FC = () => {
           <TripPlanningMenu
             trip={tripRef.current}
             tripMembers={tripMembers}
+            onlineMembers={onlineMembers}
             tripStateOnUpdate={tripStateOnUpdate}
           />
           <div className='flex-1' ref={measuredRef}>
