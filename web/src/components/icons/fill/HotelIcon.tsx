@@ -1,4 +1,4 @@
-import { IconProps } from "./common";
+import { IconProps } from "../common";
 
 export default function HotelIcon(props: IconProps) {
   return (

@@ -1,6 +1,6 @@
-import { IconProps } from "./common";
+import { IconProps } from "../common";
 
-export default function FlightIconFill(props: IconProps) {
+export default function FlightIcon(props: IconProps) {
   return (
     <svg
       className={props.className}

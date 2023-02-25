@@ -1,25 +1,26 @@
 import _find from "lodash/find";
 import _get from "lodash/get";
 
+import { Auth } from "./auth";
 import { Common } from './common';
 import { Flights } from './flights';
 import { Maps } from './maps';
 
-import NatureIconFill from '../components/icons/NatureIconFill';
-import CupIconFill from '../components/icons/CupIconFill';
-import DiningIconFill from '../components/icons/DiningIconFill';
-import ShoppingIconFill from '../components/icons/ShoppingIconFill';
-import CameraIconFill from '../components/icons/CameraIconFill';
-import MapPinIconFill from '../components/icons/MapPinIconFill';
-import HotelIcon from '../components/icons/HotelIcon';
-import FlightIconFill from '../components/icons/FlightIconFill';
-import { Auth } from "./auth";
+import CameraIcon from '../components/icons/fill/CameraIcon';
+import CupIcon from '../components/icons/fill/CupIcon';
+import DiningIcon from '../components/icons/fill/DiningIcon';
+import FlightIcon from '../components/icons/fill/FlightIcon';
+import HotelIcon from '../components/icons/fill/HotelIcon';
+import MapPinIcon from '../components/icons/fill/MapPinIcon';
+import NatureIcon from '../components/icons/fill/NatureIcon';
+import ShoppingIcon from '../components/icons/fill/ShoppingIcon';
+
 
 export namespace Trips {
   export interface Member {
     id: string
     role: "creator" | "collaborator" | "participant"
-    labels: Map<string, string>
+    labels: {[key: string]: string}
   }
 
   interface BaseTransit {
@@ -29,8 +30,8 @@ export namespace Trips {
     confirmationID?: string
     notes?: string
     price?: Common.Price
-    tags: Map<string, string>
-    labels: Map<string, string>
+    tags: {[key: string]: string}
+    labels: {[key: string]: string}
   }
 
   export interface Flight extends BaseTransit {
@@ -48,8 +49,8 @@ export namespace Trips {
     confirmationID?: string
     notes?: string
     place: Maps.Place
-    tags: Map<string, string>
-    labels: Map<string, string>
+    tags: {[key: string]: string}
+    labels: {[key: string]: string}
   }
 
   export interface Content {
@@ -57,7 +58,7 @@ export namespace Trips {
     title: string
     place: Maps.Place
     notes: string
-    labels: Map<string, string>
+    labels: {[key: string]: string}
     comments: any
   }
 
@@ -65,7 +66,7 @@ export namespace Trips {
     id: string
     name?: string
     contents: Array<Content>
-    labels: Map<string, string>
+    labels: {[key: string]: string}
   }
 
   export interface ItineraryContent {
@@ -75,7 +76,7 @@ export namespace Trips {
     price: Common.Price
     startTime?: string | Date
     endTime?: string | Date
-    labels: Map<string, string>
+    labels: {[key: string]: string}
   }
 
   export interface ItineraryList {
@@ -84,14 +85,14 @@ export namespace Trips {
     date: string | Date
     contents: Array<ItineraryContent>
     routes: Array<any>,
-    labels: Map<string, string>
+    labels: {[key: string]: string}
   }
 
   export interface Budget {
     amount: Common.Price
     items: Array<BudgetItem>
-    labels: Map<string, string>
-    tags: Map<string, string>
+    labels: {[key: string]: string}
+    tags: {[key: string]: string}
   }
 
   export interface BudgetItem {
@@ -99,8 +100,8 @@ export namespace Trips {
     title: string
     desc: string
     price: Common.Price
-    labels: Map<string, string>
-    tags: Map<string, string>
+    labels: {[key: string]: string}
+    tags: {[key: string]: string}
   }
 }
 
@@ -114,22 +115,23 @@ export const BudgetAmountJSONPath = "amount/amount";
 export const PriceAmountJSONPath = "price/amount";
 export const LabelContentItineraryDates = "itinerary|dates";
 export const LabelContentItineraryDatesJSONPath = "labels/itinerary|dates";
-export const LabelContentItineraryDatesDelimeter = "|";
+export const LabelDelimiter = "|";
 export const LabelContentListColor = "ui|color";
 export const LabelContentListColorJSONPath = "labels/ui|color";
 export const LabelContentListIcon = "ui|icon";
 export const LabelContentListIconJSONPath = "labels/ui|icon";
+export const LabelFractionalIndex = "fIndex";
 export const DefaultContentColor = "rgb(203 213 225)";
 export const ContentColorOpts = ["rgb(74 222 128)", "rgb(34 211 238)",  "rgb(96 165 250)","rgb(129 140 248)",  "rgb(232 121 249)","rgb(244 114 182)", "rgb(248 113 113)", "rgb(251 146 60)", "rgb(253 224 71)", "rgb(161 98 7)"];
 export const ContentIconOpts = {
-  "flight": FlightIconFill,
+  "flight": FlightIcon,
   "hotel": HotelIcon,
-  "camera": CameraIconFill,
-  "coffee": CupIconFill,
-  "forkspoon": DiningIconFill,
-  "nature": NatureIconFill,
-  "pin": MapPinIconFill,
-  "shopping": ShoppingIconFill,
+  "camera": CameraIcon,
+  "coffee": CupIcon,
+  "forkspoon": DiningIcon,
+  "nature": NatureIcon,
+  "pin": MapPinIcon,
+  "shopping": ShoppingIcon,
 } as {[key: string]: any}
 
 

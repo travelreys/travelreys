@@ -36,7 +36,7 @@ import {
   Trips,
   LabelContentItineraryDates,
   LabelContentItineraryDatesJSONPath,
-  LabelContentItineraryDatesDelimeter,
+  LabelDelimiter,
   ContentColorOpts,
   ContentIconOpts,
   LabelContentListColor,
@@ -58,6 +58,7 @@ import {
 import { parseISO, printFmt } from '../../lib/dates';
 import { MapElementID, newEventMarkerClick } from '../maps/common';
 import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
+import { generateKeyBetween } from '../../lib/fractional';
 
 
 /////////////
@@ -188,8 +189,8 @@ const TripContent: FC<TripContentProps> = (props: TripContentProps) => {
     // Format of itinerary dates label:
     // content.labels[LabelContentItineraryDatesJSONPath] = "d1|d2|d3"
 
-    const dates = _get(props.content, LabelContentItineraryDatesJSONPath, "")
-      .split(LabelContentItineraryDatesDelimeter)
+    const dates = _get(props.content, `labels.${LabelContentItineraryDates}`, "")
+      .split(LabelDelimiter)
       .filter((dt: string) => !_isEmpty(dt));
 
     const opts = props.itinerary.map((l: Trips.ItineraryList, idx: number) => (
@@ -529,7 +530,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       id: uuidv4(),
       name: "",
       contents: new Array<Trips.Content>(),
-      labels: new Map<string, string>(),
+      labels: {},
     }
     props.tripStateOnUpdate([makeAddOp(`/contents/${list.id}`, list)]);
   }
@@ -546,7 +547,7 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
       title: title,
       notes: "",
       place: {},
-      labels: new Map<string, string>(),
+      labels: {},
       comments: [],
     }
     props.tripStateOnUpdate([
@@ -630,83 +631,58 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
   const onUpdateContentItineraryDate = async (idx: number, itinListIdx: number, contentListID: string) => {
     const content = _get(props.trip, `contents.${contentListID}.contents[${idx}]`, {}) as Trips.Content;
     const itinList = _get(props.trip, `itinerary[${itinListIdx}]`, {}) as Trips.ItineraryList;
-    const itinListCtnt = itinList.contents;
-    const listDt = itinList.date as string;
+    const itinListCtnts = itinList.contents;
+    const itinListDt = itinList.date as string;
 
     const ops = [];
+
     // Update content labels, Format of itinerary dates label:
     // content.labels[LabelContentItineraryDates] = "d1|d2|d3"
-
-    let currentItinDts = _get(content, LabelContentItineraryDatesJSONPath, "")
-      .split(LabelContentItineraryDatesDelimeter)
+    let currentItinDts = _get(content, `labels.${LabelContentItineraryDates}`, "")
+      .split(LabelDelimiter)
       .filter((dt: string) => !_isEmpty(dt));
 
+    const isRemove = currentItinDts.includes(itinListDt);
+
     let newItinDts;
-    if (currentItinDts.includes(listDt)) {
+    if (isRemove) {
       // 1. Remove from content label if it exists
-      newItinDts = currentItinDts.filter((dt: string) => dt !== listDt);
+      newItinDts = currentItinDts.filter((dt: string) => dt !== itinListDt);
 
       // 2. Remove ItineraryContent from ItineraryList
-      let itinCtnIdx = _findIndex(itinListCtnt, (ct) => ct.tripContentId === content.id);
+      let itinCtnIdx = _findIndex(itinListCtnts, (ct) => ct.tripContentId === content.id);
       ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/contents/${itinCtnIdx}`, "",));
 
-      // 3. Remove ItineraryContentRoute from ItineraryList
-      // ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/routes`, []));
-      // if (itinCtnIdx === 0) {
-      //   const routeIdx = itinCtnIdx + 1;
-      //   if (routeIdx < itinList.routes.length) {
-      //     ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
-      //   }
-      // } else if (itinCtnIdx === itinListCtnt.length - 1) {
-      //   const routeIdx = itinCtnIdx - 1;
-      //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
-      // } else {
-      //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinCtnIdx}`, ""));
-      //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinCtnIdx - 1}`, ""));
-      // }
     } else {
-      // 1. Add to content label if its a new date
-      newItinDts = _sortBy(currentItinDts.concat([listDt]));
+      // 1. Add to content label if its a new itinerary date
+      newItinDts = _sortBy(currentItinDts.concat([itinListDt]));
 
       // 2. Add ItineraryContent to ItineraryList
+      const start = _get(itinListCtnts.slice(-1), "0.labels.fIndex", null);
+      console.log(itinListCtnts.slice(-1), start)
+      const fIndex = generateKeyBetween(start, null)
+      console.log(fIndex)
+
       const itinCtn: Trips.ItineraryContent = {
         id: uuidv4(),
         tripContentId: content.id,
         tripContentListId: contentListID,
         price: {} as any,
-        labels: new Map<string, string>(),
+        labels: {fIndex} as any,
       };
+      console.log(itinCtn)
       ops.push(makeAddOp(`/itinerary/${itinListIdx}/contents/-`, itinCtn))
-
-
-      // 3. Add ItineraryContentRoute to ItineraryList
-      if (itinListCtnt.length > 0) {
-        const lastItinCtn = _last(itinListCtnt);
-        const lastCtnt = _find(
-          _get(props.trip, `contents[${lastItinCtn?.tripContentListId}].contents`),
-          (ctnt: Trips.Content) => ctnt.id === lastItinCtn?.tripContentId,
-        );
-
-        const lastCtntPlaceID = _get(lastCtnt, "place.place_id");
-        const ctntPlaceID = _get(content, "place.place_id");
-
-        if (lastCtntPlaceID && ctntPlaceID) {
-          const resp = await MapsAPI.directions(lastCtntPlaceID, ctntPlaceID, ModeDriving);
-          if (resp.data.routeList.length > 0) {
-            ops.push(makeAddOp(`/itinerary/${itinListIdx}/routes/-`, resp.data.routeList[0]));
-          }
-        }
-      }
     }
 
+    // Update content's itinerary dates
     if (currentItinDts.length !== 0) {
       ops.unshift(makeReplaceOp(
         `/contents/${contentListID}/contents/${idx}/labels/${LabelContentItineraryDates}`,
-        newItinDts.join(LabelContentItineraryDatesDelimeter)));
+        newItinDts.join(LabelDelimiter)));
     } else {
       ops.unshift(makeAddOp(
         `/contents/${contentListID}/contents/${idx}/labels/${LabelContentItineraryDates}`,
-        newItinDts.join(LabelContentItineraryDatesDelimeter)));
+        newItinDts.join(LabelDelimiter)));
     }
 
     props.tripStateOnUpdate(ops);
@@ -769,3 +745,39 @@ const ContentSection: FC<ContentSectionProps> = (props: ContentSectionProps) => 
 }
 
 export default ContentSection;
+
+
+
+// // 3. Add ItineraryContentRoute to ItineraryList
+// if (itinListCtnt.length > 0) {
+//   const lastItinCtn = _last(itinListCtnt);
+//   const lastCtnt = _find(
+//     _get(props.trip, `contents[${lastItinCtn?.tripContentListId}].contents`),
+//     (ctnt: Trips.Content) => ctnt.id === lastItinCtn?.tripContentId,
+//   );
+
+//   const lastCtntPlaceID = _get(lastCtnt, "place.place_id");
+//   const ctntPlaceID = _get(content, "place.place_id");
+
+//   if (lastCtntPlaceID && ctntPlaceID) {
+//     const resp = await MapsAPI.directions(lastCtntPlaceID, ctntPlaceID, ModeDriving);
+//     if (resp.data.routeList.length > 0) {
+//       ops.push(makeAddOp(`/itinerary/${itinListIdx}/routes/-`, resp.data.routeList[0]));
+//     }
+//   }
+// }
+
+  // 3. Remove ItineraryContentRoute from ItineraryList
+  // ops.push(makeReplaceOp(`/itinerary/${itinListIdx}/routes`, []));
+  // if (itinCtnIdx === 0) {
+  //   const routeIdx = itinCtnIdx + 1;
+  //   if (routeIdx < itinList.routes.length) {
+  //     ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
+  //   }
+  // } else if (itinCtnIdx === itinListCtnt.length - 1) {
+  //   const routeIdx = itinCtnIdx - 1;
+  //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
+  // } else {
+  //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinCtnIdx}`, ""));
+  //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinCtnIdx - 1}`, ""));
+  // }

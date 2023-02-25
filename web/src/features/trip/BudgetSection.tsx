@@ -272,8 +272,8 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
         title: title,
         desc: desc,
         price: { amount, currency: ""} as Common.Price,
-        labels: new Map<string, string>(),
-        tags: new Map<string, string>(),
+        labels: {},
+        tags: {},
       } as Trips.BudgetItem)
     ]);
   }

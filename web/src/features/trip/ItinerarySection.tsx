@@ -26,9 +26,9 @@ import {
 
 import ColorIconModal from './ColorIconModal';
 import Dropdown from '../../components/common/Dropdown';
-import HotelIcon from '../../components/icons/HotelIcon';
+import HotelIcon from '../../components/icons/fill/HotelIcon';
 import NotesEditor from '../../components/common/NotesEditor';
-import PlaneIcon from '../../components/icons/PlaneIcon';
+import FlightIcon from '../../components/icons/fill/FlightIcon';
 import ToggleChevron from '../../components/common/ToggleChevron';
 
 import {
@@ -354,7 +354,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
       return (
         <div className="flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow">
           <span className='bg-green-200 p-2 rounded-full'>
-            <PlaneIcon className='w-4 h-4' />
+            <FlightIcon className='w-4 h-4' />
           </span>
           <div className="flex pl-4">
             <span>

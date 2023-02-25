@@ -568,8 +568,8 @@ const FlightsModal: FC<FlightsModalProps> = (props: FlightsModalProps) => {
     const tripFlight: Trips.Flight = {
       id: uuidv4(),
       type: "flight",
-      tags: new Map<string, string>(),
-      labels: new Map<string, string>(),
+      tags: {},
+      labels: {},
       itineraryType: "oneway",
       depart,
       return: {} as any,
@@ -582,8 +582,8 @@ const FlightsModal: FC<FlightsModalProps> = (props: FlightsModalProps) => {
     const tripFlight: Trips.Flight = {
       id: uuidv4(),
       type: "flight",
-      tags: new Map<string, string>(),
-      labels: new Map<string, string>(),
+      tags: {},
+      labels: {},
       itineraryType: "roundtrip",
       depart: departFlight,
       return: returnFlight,

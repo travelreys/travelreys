@@ -10,7 +10,17 @@ import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 )
 
-// Trip
+const (
+	LabelDelimeter                     = "|"
+	LabelContentItineraryDates         = "itinerary|dates"
+	LabelContentItineraryDatesJSONPath = "labels/itinerary|dates"
+	LabelContentListColor              = "ui|color"
+	LabelContentListColorJSONPath      = "labels/ui|color"
+	LabelContentListIcon               = "ui|icon"
+	LabelContentListIconJSONPath       = "labels/ui|icon"
+	LabelTransportModePref             = "transportationPreference"
+	LabelFractionalIndex               = "fIndex"
+)
 
 type Trip struct {
 	ID   string `json:"id" bson:"id"`

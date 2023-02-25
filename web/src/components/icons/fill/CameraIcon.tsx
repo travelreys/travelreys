@@ -1,6 +1,6 @@
-import { IconProps } from "./common";
+import { IconProps } from "../common";
 
-export default function CameraIconFill(props: IconProps) {
+export default function CameraIcon(props: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg"
       className={props.className}

@@ -29,9 +29,9 @@ func MakeCoordinatorSpanwer(cfg ServerConfig, logger *zap.Logger) (*tripssync.Co
 	}
 
 	tripStore := trips.NewStore(context.Background(), db, logger)
-	store := tripssync.NewStore(rdb)
-	msgStore := tripssync.NewMessageStore(nc, rdb)
-	tobStore := tripssync.NewTOBMessageStore(nc, rdb)
+	store := tripssync.NewStore(rdb, logger)
+	msgStore := tripssync.NewMessageStore(nc, rdb, logger)
+	tobStore := tripssync.NewTOBMessageStore(nc, rdb, logger)
 
 	return tripssync.NewCoordinatorSpawner(store, msgStore, tobStore, tripStore, logger), nil
 }

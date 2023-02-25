@@ -1,6 +1,6 @@
-import { IconProps } from "./common";
+import { IconProps } from "../common";
 
-export default function ShoppingIconFill(props: IconProps) {
+export default function ShoppingIcon(props: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg"
       className={props.className}

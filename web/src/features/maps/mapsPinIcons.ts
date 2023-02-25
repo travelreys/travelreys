@@ -1,20 +1,20 @@
 import _get from "lodash/get";
 
-import { svgWithStyle as svgWithStyleCameraIconFill } from '../../components/icons/CameraIconFill';
-import { svgWithStyle as svgWithStyleCupIconFill } from '../../components/icons/CupIconFill';
-import { svgWithStyle as svgWithStyleDiningIconFill } from '../../components/icons/DiningIconFill';
-import { svgWithStyle as svgWithStyleMapPinIconFill } from '../../components/icons/MapPinIconFill';
-import { svgWithStyle as svgWithStyleNatureIconFill } from '../../components/icons/NatureIconFill';
-import { svgWithStyle as svgWithStyleShoppingIconFill } from '../../components/icons/ShoppingIconFill';
-import { svgWithStyle as svgWithStyleHotelIcon } from '../../components/icons/HotelIcon';
+import { svgWithStyle as svgWithStyleCameraIcon } from '../../components/icons/fill/CameraIcon';
+import { svgWithStyle as svgWithStyleCupIcon } from '../../components/icons/fill/CupIcon';
+import { svgWithStyle as svgWithStyleDiningIcon } from '../../components/icons/fill/DiningIcon';
+import { svgWithStyle as svgWithStyleMapPinIcon } from '../../components/icons/fill/MapPinIcon';
+import { svgWithStyle as svgWithStyleNatureIcon } from '../../components/icons/fill/NatureIcon';
+import { svgWithStyle as svgWithStyleShoppingIcon } from '../../components/icons/fill/ShoppingIcon';
+import { svgWithStyle as svgWithStyleHotelIcon } from '../../components/icons/fill/HotelIcon';
 
 const iconSvgMap = {
-  "camera": svgWithStyleCameraIconFill,
-  "coffee": svgWithStyleCupIconFill,
-  "forkspoon": svgWithStyleDiningIconFill,
-  "pin": svgWithStyleMapPinIconFill,
-  "nature": svgWithStyleNatureIconFill,
-  "shopping": svgWithStyleShoppingIconFill,
+  "camera": svgWithStyleCameraIcon,
+  "coffee": svgWithStyleCupIcon,
+  "forkspoon": svgWithStyleDiningIcon,
+  "pin": svgWithStyleMapPinIcon,
+  "nature": svgWithStyleNatureIcon,
+  "shopping": svgWithStyleShoppingIcon,
   "hotel": svgWithStyleHotelIcon,
 }
 

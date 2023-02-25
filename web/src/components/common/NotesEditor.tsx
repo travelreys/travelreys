@@ -31,14 +31,14 @@ import { encode, decode } from 'js-base64';
 
 import {  ListBulletIcon } from '@heroicons/react/24/outline';
 
-import BoldIcon from '../icons/BoldIcon';
-import ItalicIcon from '../icons/ItalicIcon';
-import UnderlineIcon from '../icons/UnderlineIcon';
-import HeaderOneIcon from '../icons/HeaderOneIcon';
-import NumberlistIcon from '../icons/NumberlistIcon';
-import HeaderTwoIcon from '../icons/HeaderTwoIcon';
-import StrikethroughIcon from '../icons/StrikethroughIcon';
-import ChecklistIcon from '../icons/ChecklistIcon';
+import BoldIcon from '../icons/outline/BoldIcon';
+import ItalicIcon from '../icons/outline/ItalicIcon';
+import UnderlineIcon from '../icons/outline/UnderlineIcon';
+import HeaderOneIcon from '../icons/outline/HeaderOneIcon';
+import NumberlistIcon from '../icons/outline/NumberlistIcon';
+import HeaderTwoIcon from '../icons/outline/HeaderTwoIcon';
+import StrikethroughIcon from '../icons/outline/StrikethroughIcon';
+import ChecklistIcon from '../icons/outline/ChecklistIcon';
 
 
 const LIST_TYPES = ['numbered-list', 'bulleted-list']
@@ -432,11 +432,10 @@ const BlockButton: FC<BlockButtonProps> = (props: BlockButtonProps) => {
       onClick={onMouseDown}
     >
       <props.icon
-        className='h-4 w-4  stroke-white'
+        className='h-4 w-4 fill-white stroke-white'
       />
     </button>
   )
-
 }
 
 
@@ -478,7 +477,7 @@ const FormatButton: FC<FormatButtonProps> = (props: FormatButtonProps) => {
       onClick={() => toggleFormat(editor, props.format)}
     >
       <props.icon
-        className='h-4 w-4 rounded stroke-white'
+        className='h-4 w-4 rounded fill-white stroke-white'
       />
     </button>
   )
