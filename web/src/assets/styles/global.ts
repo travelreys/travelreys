@@ -225,8 +225,6 @@ export const TripItineraryCss = {
   AutocompleteCtn: "p-1 bg-white absolute left-0 z-30 w-full border border-slate-200 rounded-lg",
   PredictionWrapper: "flex items-center mb-4 cursor-pointer group",
   WebsiteTxt: "text-indigo-500 text-sm flex items-center",
-  PriceInputCtn: "flex w-full rounded mb-2",
-  PricePill: "bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2 w-fit cursor-pointer",
 }
 
 

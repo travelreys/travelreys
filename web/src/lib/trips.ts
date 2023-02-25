@@ -155,6 +155,17 @@ export interface Content {
   comments: any
 }
 
+export const makeContent = (title: string) => {
+  return {
+      id: uuidv4(),
+      title: title,
+      notes: "",
+      place: {},
+      labels: {},
+      comments: [],
+    }
+}
+
 export interface ContentList {
   id: string
   name?: string
@@ -172,6 +183,20 @@ export interface ItineraryContent {
   labels: {[key: string]: string}
 }
 
+export const makeItineraryContent = (ctnId: string, ctnListId: string, fIndex: string) => {
+  return {
+    id: uuidv4(),
+    tripContentId: ctnId,
+    tripContentListId: ctnListId,
+    price: {} as any,
+    labels: {fIndex} as any,
+  }
+}
+
+export const getfIndex = (ctn: ItineraryContent) => {
+  return _get(ctn, `labels.${LabelFractionalIndex}`);
+}
+
 export interface ItineraryList {
   id: string
   desc: string
@@ -185,8 +210,8 @@ export const getContentColor = (l: ContentList | ItineraryList) => {
   return _get(l, jsonPathToPath(JSONPathLabelUiIcon), DefaultContentColor);
 }
 
-export const getItineraryContentPriceAmt = (ctnt: ItineraryContent) => {
-  return _get(ctnt, jsonPathToPath(JSONPathPriceAmount), 0);
+export const getItineraryContentPriceAmt = (ctn: ItineraryContent) => {
+  return _get(ctn, jsonPathToPath(JSONPathPriceAmount), 0);
 }
 
 export const getTripContentForItineraryContent = (trip: any, contentListID: string, contentID: string) => {

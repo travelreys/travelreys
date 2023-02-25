@@ -7,7 +7,7 @@ export interface Op {
 /**
  * Should avoid replacing entire list
  */
-export const makeReplaceOp = (path: string, value: any): Op => {
+export const makeRepOp = (path: string, value: any): Op => {
   return { op: "replace", path, value }
 };
 

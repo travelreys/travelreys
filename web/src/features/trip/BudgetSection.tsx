@@ -53,7 +53,7 @@ import {
 import {
   makeAddOp,
   makeRemoveOp,
-  makeReplaceOp
+  makeRepOp
 } from '../../lib/jsonpatch';
 import { Price } from '../../lib/common';
 
@@ -232,7 +232,7 @@ const EditBudgetModal: FC<EditBudgetModalProps> = (props: EditBudgetModalProps) 
 
 interface BudgetSectionProps {
   trip: any
-  tripStateOnUpdate: any
+  tripOnUpdate: any
 }
 
 const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
@@ -276,7 +276,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   // Event Handlers
 
   const addNewBudgetItem = (amount: Number|undefined, title: string, desc: string) => {
-    props.tripStateOnUpdate([
+    props.tripOnUpdate([
       makeAddOp("/budget/items/-", {
         title: title,
         desc: desc,
@@ -288,14 +288,14 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   }
 
   const deleteBudgetItem = (idx: number) => {
-    props.tripStateOnUpdate([makeRemoveOp(`/budget/items/${idx}`, "")]);
+    props.tripOnUpdate([makeRemoveOp(`/budget/items/${idx}`, "")]);
   }
 
   const updateBudgetItem = (amount: Number|undefined, title: string, desc: string) => {
-    props.tripStateOnUpdate([
-      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/title`, title),
-      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/desc`, desc),
-      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/${JSONPathPriceAmount}`, amount),
+    props.tripOnUpdate([
+      makeRepOp(`/budget/items/${selectedBudgetItemIdx}/title`, title),
+      makeRepOp(`/budget/items/${selectedBudgetItemIdx}/desc`, desc),
+      makeRepOp(`/budget/items/${selectedBudgetItemIdx}/${JSONPathPriceAmount}`, amount),
     ]);
   }
 
@@ -306,8 +306,8 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   }
 
   const updateBudgetAmount = (amount: number) => {
-    props.tripStateOnUpdate([
-      makeReplaceOp(`/budget/${JSONPathBudgetAmount}`, amount),
+    props.tripOnUpdate([
+      makeRepOp(`/budget/${JSONPathBudgetAmount}`, amount),
     ]);
   }
 

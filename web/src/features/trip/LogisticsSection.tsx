@@ -12,7 +12,7 @@ import TransitFlightCard from './TransitFlightCard';
 import {
   makeAddOp,
   makeRemoveOp,
-  makeReplaceOp
+  makeRepOp
 } from '../../lib/jsonpatch';
 import {  CommonCss } from '../../assets/styles/global';
 import { Flight, Lodging } from '../../lib/trips';
@@ -158,7 +158,7 @@ const LodgingSection: FC<LodgingSectionProps> = (props: LodgingSectionProps) => 
 
 interface LogisticsSectionProps {
   trip: any
-  tripStateOnUpdate: any
+  tripOnUpdate: any
 }
 
 const LogisticsSection: FC<LogisticsSectionProps> = (props: LogisticsSectionProps) => {
@@ -166,28 +166,28 @@ const LogisticsSection: FC<LogisticsSectionProps> = (props: LogisticsSectionProp
   // Event Handlers
 
   const flightOnSelect = (flight: Flight) => {
-    props.tripStateOnUpdate([makeAddOp(`/flights/${flight.id}`, flight)]);
+    props.tripOnUpdate([makeAddOp(`/flights/${flight.id}`, flight)]);
   }
 
   const flightOnDelete = (flight: Flight) => {
-    props.tripStateOnUpdate([makeRemoveOp(`/flights/${flight.id}`, flight)]);
+    props.tripOnUpdate([makeRemoveOp(`/flights/${flight.id}`, flight)]);
   }
 
   const lodgingOnSelect = (lodging: Lodging) => {
-    props.tripStateOnUpdate([makeAddOp(`/lodgings/${lodging.id}`, lodging)]);
+    props.tripOnUpdate([makeAddOp(`/lodgings/${lodging.id}`, lodging)]);
   }
 
   const lodgingOnUpdate = (lodging: any, updates: any) => {
     const ops = [] as any;
     Object.entries(updates).forEach(([key, value]) => {
       const fullpath = `/lodgings/${lodging.id}/${key}`;
-      ops.push(makeReplaceOp(fullpath, value));
+      ops.push(makeRepOp(fullpath, value));
     });
-    props.tripStateOnUpdate(ops);
+    props.tripOnUpdate(ops);
   }
 
   const lodgingOnDelete = (lodging: Lodging) => {
-    props.tripStateOnUpdate([makeRemoveOp(`/lodgings/${lodging.id}`, lodging)]);
+    props.tripOnUpdate([makeRemoveOp(`/lodgings/${lodging.id}`, lodging)]);
   }
 
   return (

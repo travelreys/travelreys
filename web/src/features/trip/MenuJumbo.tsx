@@ -13,7 +13,7 @@ import {
   nullDate,
   parseTripDate
 } from '../../lib/dates';
-import { makeReplaceOp } from '../../lib/jsonpatch';
+import { makeRepOp } from '../../lib/jsonpatch';
 import { Member, userFromMember } from '../../lib/trips';
 import { LabelUserGoogleImage, User } from '../../lib/auth';
 import { CommonCss } from '../../assets/styles/global';
@@ -24,7 +24,7 @@ interface MenuJumboProps {
   trip: any
   tripMembers: {[key: string]: User}
   onlineMembers: Array<Member>
-  tripStateOnUpdate: any
+  tripOnUpdate: any
 }
 
 const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
@@ -49,12 +49,12 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
 
   // Event Handlers - Trip Name
   const tripNameOnBlur = () => {
-    props.tripStateOnUpdate([makeReplaceOp("/name", tripName)])
+    props.tripOnUpdate([makeRepOp("/name", tripName)])
   }
 
   // Event Handlers - Cover Image
   const coverImageOnSelect = (image: any) => {
-    props.tripStateOnUpdate([makeReplaceOp("/coverImage", image)]);
+    props.tripOnUpdate([makeRepOp("/coverImage", image)]);
   }
 
   // Event Handlers - Trip Dates
@@ -69,9 +69,9 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
       const ops = [];
       const from = range.from || nullDate;
       const to = range.to || nullDate;
-      ops.push(makeReplaceOp("/startDate", from));
-      ops.push(makeReplaceOp("/endDate", to));
-      props.tripStateOnUpdate(ops);
+      ops.push(makeRepOp("/startDate", from));
+      ops.push(makeRepOp("/endDate", to));
+      props.tripOnUpdate(ops);
       setIsCalendarOpen(false);
       return;
     }

@@ -42,7 +42,7 @@ type Trip struct {
 
 	// Contents
 	Contents  map[string]TripContentList `json:"contents" bson:"contents"`
-	Itinerary []ItineraryList            `json:"itinerary" bson:"itinerary"`
+	Itinerary map[string]ItineraryList   `json:"itinerary" bson:"itinerary"`
 
 	// Budget
 	Budget Budget `json:"budget" bson:"budget"`
@@ -75,7 +75,7 @@ func NewTrip(creator Member, name string) Trip {
 		Lodgings: map[string]Lodging{},
 
 		Contents:  map[string]TripContentList{},
-		Itinerary: []ItineraryList{},
+		Itinerary: map[string]ItineraryList{},
 		Budget:    NewBudget(),
 
 		UpdatedAt: time.Now(),
@@ -218,14 +218,12 @@ type ItineraryContent struct {
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
-type ItineraryContentList []ItineraryContent
-
 type ItineraryList struct {
-	ID          string               `json:"id" bson:"id"`
-	Date        time.Time            `json:"date" bson:"date"`
-	Description string               `json:"desc" bson:"desc"`
-	Contents    ItineraryContentList `json:"contents" bson:"contents"`
-	Route       maps.RouteList       `json:"routes" bson:"routes"`
+	ID          string                      `json:"id" bson:"id"`
+	Date        time.Time                   `json:"date" bson:"date"`
+	Description string                      `json:"desc" bson:"desc"`
+	Contents    map[string]ItineraryContent `json:"contents" bson:"contents"`
+	Route       maps.RouteList              `json:"routes" bson:"routes"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 }

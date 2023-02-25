@@ -50,7 +50,7 @@ interface TripPlanningMenuProps {
   trip: any
   tripMembers: {[key: string]: User}
   onlineMembers: Array<Member>
-  tripStateOnUpdate: any
+  tripOnUpdate: any
 }
 
 const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProps) => {
@@ -93,16 +93,16 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
       <div>
         <NotesSection
           trip={props.trip}
-          tripStateOnUpdate={props.tripStateOnUpdate}
+          tripOnUpdate={props.tripOnUpdate}
         />
         <LogisticsSection
           trip={props.trip}
-          tripStateOnUpdate={props.tripStateOnUpdate}
+          tripOnUpdate={props.tripOnUpdate}
         />
         <hr className={CommonCss.HrShort} />
         <ContentSection
           trip={props.trip}
-          tripStateOnUpdate={props.tripStateOnUpdate}
+          tripOnUpdate={props.tripOnUpdate}
         />
       </div>
     );
@@ -118,7 +118,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           trip={props.trip}
           tripMembers={props.tripMembers}
           onlineMembers={props.onlineMembers}
-          tripStateOnUpdate={props.tripStateOnUpdate}
+          tripOnUpdate={props.tripOnUpdate}
         />
         {renderTabs()}
         {tab === "home" ? renderHome() : null}
@@ -126,14 +126,14 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           ?
           <ItinerarySection
             trip={props.trip}
-            tripStateOnUpdate={props.tripStateOnUpdate}
+            tripOnUpdate={props.tripOnUpdate}
           />
           : null}
         {tab === "budget"
           ?
           <BudgetSection
             trip={props.trip}
-            tripStateOnUpdate={props.tripStateOnUpdate}
+            tripOnUpdate={props.tripOnUpdate}
           />
           : null}
         {tab === "settings"
@@ -141,7 +141,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           <SettingsSection
             trip={props.trip}
             tripMembers={props.tripMembers}
-            tripStateOnUpdate={props.tripStateOnUpdate}
+            tripOnUpdate={props.tripOnUpdate}
           />
           : null}
       </div>
@@ -292,7 +292,7 @@ const TripPage: FC = () => {
   // Event Handlers //
   ////////////////////
 
-  const tripStateOnUpdate = (ops: Array<Op>, title: string) => {
+  const tripOnUpdate = (ops: Array<Op>, title: string) => {
     const msg = makeMsgUpdateTrip(id!, title, ops);
     wsRef.current.send(JSON.stringify(msg));
   }
@@ -311,7 +311,7 @@ const TripPage: FC = () => {
             trip={tripRef.current}
             tripMembers={tripMembers}
             onlineMembers={onlineMembers}
-            tripStateOnUpdate={tripStateOnUpdate}
+            tripOnUpdate={tripOnUpdate}
           />
           <div className='flex-1' ref={measuredRef}>
             <TripMap

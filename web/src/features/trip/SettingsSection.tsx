@@ -26,7 +26,7 @@ import { UpdateTitleAddNewMember } from '../../lib/tripSync';
 import {
   makeAddOp,
   makeRemoveOp,
-  makeReplaceOp } from '../../lib/jsonpatch'
+  makeRepOp } from '../../lib/jsonpatch'
 import { capitaliseWords } from '../../lib/strings';
 import { CommonCss, TripSettingsCss } from '../../assets/styles/global';
 
@@ -340,7 +340,7 @@ const MembersSection: FC<MembersSectionProps> = (props: MembersSectionProps) => 
 interface SettingsSectionProps {
   trip: any
   tripMembers: { [key: string]: User }
-  tripStateOnUpdate: any
+  tripOnUpdate: any
 }
 
 const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) => {
@@ -349,18 +349,18 @@ const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) 
 
   const transportPrefOnChange = (mode: string) => {
     const opFn = _get(props.trip, `/labels.${LabelTransportModePref}`)
-      ? makeReplaceOp : makeAddOp;
-    props.tripStateOnUpdate([opFn(`/labels/${LabelTransportModePref}`, mode)]);
+      ? makeRepOp : makeAddOp;
+    props.tripOnUpdate([opFn(`/labels/${LabelTransportModePref}`, mode)]);
   }
 
   const addMember = (id: string, role: string) => {
     const member = { id, role, labels: {} } as Member;
-    props.tripStateOnUpdate([makeAddOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
+    props.tripOnUpdate([makeAddOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
   }
 
   const deleteMember = (id: string) => {
     const member = { id } as Member;
-    props.tripStateOnUpdate([makeRemoveOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
+    props.tripOnUpdate([makeRemoveOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
   }
 
   return (
