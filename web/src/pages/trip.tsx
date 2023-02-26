@@ -204,12 +204,11 @@ const TripPage: FC = () => {
   }
 
   const handleJoinSessionMsg = (msg: Message) => {
-    // setOnlineMembers(msg.data.joinSession?.members);
-
+    setOnlineMembers(msg.data.joinSession?.members || []);
   }
 
   const handleLeaveSessionMsg = (msg: Message) => {
-    // setOnlineMembers(msg.data.leaveSession?.members);
+    setOnlineMembers(msg.data.leaveSession?.members || []);
   }
 
   const handleUpdateMsg = (msg: Message) => {
@@ -262,6 +261,7 @@ const TripPage: FC = () => {
         if (msg.op === OpJoinSession) {
           if (msg.data.joinSession?.id === readAuthUser()?.id) {
             tobCounter.current = msg.counter!
+            handleJoinSessionMsg(msg)
             return;
           }
         }

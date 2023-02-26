@@ -26,7 +26,6 @@ interface MessageData {
 
 interface MsgDataJoinSession {
   id: string
-  counter: number
   members: any
 }
 
@@ -50,7 +49,7 @@ export const makeMsgJoinSession = (tripID: string, memberID: string): Message =>
   return {
     tripID,
     op: OpJoinSession,
-    data: { joinSession: {id: memberID, counter:0, members: []}}
+    data: { joinSession: {id: memberID, members: []}}
   }
 }
 

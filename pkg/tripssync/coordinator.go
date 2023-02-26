@@ -107,7 +107,6 @@ func (crd *Coordinator) Run() error {
 			case OpJoinSession:
 				sess, _ := crd.store.Read(ctx, crd.tripID)
 				msg.Data.JoinSession.Members = sess.Members
-				msg.Data.JoinSession.Counter = crd.counter
 			case OpLeaveSession:
 				// stop coordinator if no users left in session
 				sess, _ := crd.store.Read(ctx, crd.tripID)
@@ -116,7 +115,7 @@ func (crd *Coordinator) Run() error {
 					crd.Stop()
 					return
 				}
-				msg.Data.JoinSession.Members = sess.Members
+				msg.Data.LeaveSession.Members = sess.Members
 			}
 			// 3.2. Give each message a counter
 			msg.Counter = crd.counter
@@ -145,10 +144,12 @@ func (crd *Coordinator) Run() error {
 }
 
 // HandleFirstMember sends a memberUpdate message to the very first member
-// func (crd *Coordinator) HandleFirstMember(ctx context.Context, sess Session) {
-// 	msg := NewMsgMemberUpdate(crd.tripID, sess.Members)
-// 	crd.sendMsgToQueue(msg)
-// }
+func (crd *Coordinator) HandleFirstMember(ctx context.Context, sess Session) {
+	msg := NewMsgJoinSession(crd.tripID, sess.Members)
+	msg.Counter = crd.counter
+	crd.counter++
+	crd.queue <- msg
+}
 
 // HandleOpUpdateTrip handles OpUpdateTrip messages on crd.queue
 func (crd *Coordinator) HandleOpUpdateTrip(msg Message) {
@@ -239,7 +240,7 @@ func (spwn *CoordinatorSpawner) Run() error {
 			spwn.logger.Error("unable to run coordinator", zap.Error(err))
 			continue
 		}
-		// coord.HandleFirstMember(ctx, sess)
+		coord.HandleFirstMember(ctx, sess)
 	}
 	return nil
 }

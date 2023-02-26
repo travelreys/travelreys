@@ -58,8 +58,17 @@ type MessageData struct {
 // MsgDataJoinSession contains the member that joins the session
 type MsgDataJoinSession struct {
 	trips.Member
-	Counter uint64            `json:"counter"`
 	Members trips.MembersList `json:"members"`
+}
+
+func NewMsgJoinSession(tripID string, members trips.MembersList) Message {
+	return Message{
+		TripID: tripID,
+		Op:     OpJoinSession,
+		Data: MessageData{
+			JoinSession: MsgDataJoinSession{Members: members},
+		},
+	}
 }
 
 // MsgDataLeaveSession contains the member that left the session
