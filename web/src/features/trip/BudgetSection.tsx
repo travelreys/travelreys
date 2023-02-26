@@ -28,16 +28,16 @@ import {
   JSONPathBudgetAmount,
   getBudgetAmt,
   getBudgetItemPriceAmt,
-  ContentIconOpts,
+  ActivityIconOpts,
   getFlilghtPriceAmt,
-  getItineraryContentPriceAmt,
+  getItineraryActivityPriceAmt,
   getLodgingPriceAmt,
   JSONPathPriceAmount,
-  getContentColor,
-  getTripContentForItineraryContent,
+  getActivityColor,
+  getTripActivityForItineraryActivity,
   BudgetItem,
   ItineraryList,
-  ItineraryContent,
+  ItineraryActivity,
 } from '../../lib/trips';
 import {
   fmt,
@@ -255,8 +255,8 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
 
     _get(props.trip, "itinerary", [])
       .forEach((l: ItineraryList) => {
-        l.contents.forEach((ctnt: ItineraryContent) => {
-          total += getItineraryContentPriceAmt(ctnt)
+        l.activities.forEach((act: ItineraryActivity) => {
+          total += getItineraryActivityPriceAmt(act)
         })
       })
 
@@ -376,7 +376,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
         {
           Object.values(_get(props.trip, "flights", {}))
           .map((flight: any) => {
-            const Icon = ContentIconOpts["flight"];
+            const Icon = ActivityIconOpts["flight"];
             return (
               <div key={flight.id} className={TripBudgetCss.ItemCtn}>
                 <div className={TripBudgetCss.ItemDescCtn}>
@@ -416,7 +416,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
         {
           Object.values(_get(props.trip, "lodgings", {}))
           .map((lod: any) => {
-            const Icon = ContentIconOpts["hotel"];
+            const Icon = ActivityIconOpts["hotel"];
             return (
               <div key={lod.id} className={TripBudgetCss.ItemCtn}>
                 <div className={TripBudgetCss.ItemDescCtn}>
@@ -449,17 +449,15 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   const renderItinerary = () => {
     const itinerary = _flatten(_get(props.trip, "itinerary", [])
       .map((l: ItineraryList) => {
-        return l.contents.map((itinCtnt: ItineraryContent, idx: number) => {
-          const amt = getItineraryContentPriceAmt(itinCtnt);
+        return l.activities.map((itinAct: ItineraryActivity, idx: number) => {
+          const amt = getItineraryActivityPriceAmt(itinAct);
           if (amt === 0) {
             return null;
           }
-          const ctnt = getTripContentForItineraryContent(
-            props.trip, itinCtnt.tripContentListId, itinCtnt.tripContentId
-          );
-          const color = getContentColor(l);
+          const act = getTripActivityForItineraryActivity(props.trip, itinAct);
+          const color = getActivityColor(l);
           return (
-            <div key={itinCtnt.id} className={TripBudgetCss.ItemCtn}>
+            <div key={act.id} className={TripBudgetCss.ItemCtn}>
               <div className={TripBudgetCss.ItemDescCtn}>
                 <div
                   className={TripBudgetCss.ItinItemIcon}
@@ -468,7 +466,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
                   {idx + 1}
                 </div>
                 <div>
-                  <p className={TripBudgetCss.ItemNameTxt}>{ctnt.title}</p>
+                  <p className={TripBudgetCss.ItemNameTxt}>{act.title}</p>
                   <p className={TripBudgetCss.ItemDescTxt}>
                     {fmt(parseISO(l.date as string), "eee, MM/dd")}
                   </p>

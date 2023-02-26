@@ -9,51 +9,38 @@ import _flatten from "lodash/flatten";
 import _isEmpty from "lodash/isEmpty";
 import _find from "lodash/find";
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
-import {
-  ClockIcon,
-  StarIcon,
-  MapPinIcon,
-  PhoneIcon,
-  GlobeAltIcon,
-  Square3Stack3DIcon,
-} from '@heroicons/react/24/solid'
-import {
-  MagnifyingGlassCircleIcon,
-  XMarkIcon
-} from '@heroicons/react/24/outline'
+import { Square3Stack3DIcon } from '@heroicons/react/24/solid'
 
-
-import ContentListPin from './ContentListPin';
 import { makeNumberPin, makePinWithTooltip } from './mapsPinIcons';
 import Spinner from '../../components/common/Spinner';
-import GoogleIcon from '../../components/icons/GoogleIcon';
 
 import MapsAPI, {
   placeAtmosphereFields,
+  PlaceDetailsResponse,
   PLACE_IMAGE_APIKEY
 } from '../../apis/maps';
 import {
-  Content,
-  ContentIconOpts,
-  DefaultContentColor,
+  Activity,
+  DefaultActivityColor,
+  getActivityColor,
+  getActivityIcon,
   LabelUiColor,
-  LabelUiIcon,
 } from '../../lib/trips';
 import {
   EventMarkerClickName,
   EventZoomMarkerClick,
   MapElementID,
-  newZoomMarkerClick,
 } from '../../lib/maps';
 import { ActionSetSelectedPlace, useMap } from '../../context/maps-context';
-import { CommonCss, TripMapCss } from '../../assets/styles/global';
-import { parseISO, fmt } from '../../lib/dates'
+import { TripMapCss } from '../../assets/styles/global';
+import MapLayersMenu from './MapLayersMenu';
+import PlaceDetailsCard from './PlaceDetailsCard';
 
 
 const defaultMapCenter = { lat: 1.290969, lng: 103.8560011 }
 const defaultMapOpts = {
   center: defaultMapCenter,
-  zoom: 14,
+  zoom: 12,
   mapTypeControl: false,
   streetViewControl: false,
   fullscreenControl: false,
@@ -67,7 +54,7 @@ interface PlaceMarker {
   place: any
 }
 
-interface ContentListMapDrawings {
+interface ActivityListMapDrawings {
   id: string
   markers: Array<PlaceMarker>
   visible: boolean
@@ -81,7 +68,7 @@ interface ItineraryMapDrawings {
 }
 
 interface InnerMapProps {
-  contentListMapDrawings: Array<ContentListMapDrawings>
+  contentListMapDrawings: Array<ActivityListMapDrawings>
   itineraryMapDrawings: Array<ItineraryMapDrawings>
   width: any
 }
@@ -187,7 +174,7 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
   }
 
   const makeDrawingsMarkers = (drawings: any, popupList: any, bounds: any) => {
-    drawings.forEach((draw: ContentListMapDrawings) => {
+    drawings.forEach((draw: ActivityListMapDrawings) => {
       if (!draw.visible) {
         return;
       }
@@ -286,7 +273,7 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
 
     const bounds = new google.maps.LatLngBounds();
 
-    // Content List Markers
+    // Activity List Markers
     makeDrawingsMarkers(props.contentListMapDrawings, contentListMapPopups, bounds);
     makeDrawingsMarkers(props.itineraryMapDrawings, itineraryListMapPopups, bounds);
     makeDrawingsPolylines(props.itineraryMapDrawings, itineraryListMapPolylines)
@@ -299,10 +286,6 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
 
   }, [props.contentListMapDrawings, props.itineraryMapDrawings])
 
-
-
-  // Renderers
-
   return (
     <div ref={ref}
       id={MapElementID}
@@ -312,294 +295,6 @@ const InnerMap: FC<InnerMapProps> = (props: InnerMapProps) => {
   );
 }
 
-
-//////////////////////
-// PlaceDetailsCard //
-//////////////////////
-
-interface PlaceDetailsCardProps {
-  placeDetails: any
-  width: string
-  onClose: () => void
-}
-
-const PlaceDetailsCard: FC<PlaceDetailsCardProps> = (props: PlaceDetailsCardProps) => {
-  const { placeDetails } = props;
-
-  const renderHeader = () => {
-    return (
-      <p className={TripMapCss.HeaderCtn}>
-        <span className={TripMapCss.TitleCtn}>
-          <button type="button" onClick={() => {
-            const event = newZoomMarkerClick(placeDetails);
-            document.getElementById(MapElementID)?.dispatchEvent(event)
-          }}>
-            <MagnifyingGlassCircleIcon className={CommonCss.LeftIcon} />
-          </button>
-          {placeDetails.name}
-        </span>
-        <button type="button" onClick={props.onClose}>
-          <XMarkIcon className={CommonCss.Icon} />
-        </button>
-      </p>
-    );
-  }
-
-  const renderSummary = () => {
-    return (
-      <p className={TripMapCss.SummaryTxt}>
-        {_get(placeDetails, "editorial_summary.overview", "")}
-      </p>
-    );
-  }
-
-  const renderAddr = () => {
-    return (
-      <p className={TripMapCss.AddrTxt}>
-        <MapPinIcon className={CommonCss.LeftIcon} />
-        {placeDetails.formatted_address}
-      </p>
-    );
-  }
-
-  const renderRatings = () => {
-    if (placeDetails.user_ratings_total === 0) {
-      return null;
-    }
-    return (
-      <p className={TripMapCss.RatingsStar}>
-        <StarIcon className={CommonCss.LeftIcon} />
-        {placeDetails.rating}&nbsp;&nbsp;
-        <span className={TripMapCss.RatingsTxt}>
-          ({placeDetails.user_ratings_total})
-        </span>
-        &nbsp;&nbsp;
-        <GoogleIcon className={CommonCss.DropdownIcon} />
-      </p>
-    );
-  }
-
-  const renderOpeningHours = () => {
-    const weekdayTexts = _get(placeDetails, "opening_hours.weekday_text", []);
-    if (_isEmpty(weekdayTexts)) {
-      return null;
-    }
-    return (
-      <div>
-        <p className={TripMapCss.OpeningHrsTxt}>
-          <ClockIcon className={CommonCss.LeftIcon} />Opening hours
-        </p>
-        {weekdayTexts.map((txt: string, idx: number) =>
-          (<p key={idx} className={TripMapCss.WeekdayTxt}>{txt}</p>)
-        )}
-      </div>
-    );
-  }
-
-  const renderPhone = () => {
-    return placeDetails.international_phone_number
-      ?
-      <a
-        href={`tel:${placeDetails.international_phone_number.replace(/\s/, "-")}`}
-        target="_blank"
-        rel='noreferrer'
-        className={TripMapCss.PhoneBtn}
-      >
-        <PhoneIcon className={TripMapCss.PhoneIcon} />
-        Call
-      </a>
-      : null
-  }
-
-  const renderWebsite = () => {
-    return placeDetails.website
-      ?
-      <a
-        href={placeDetails.website}
-        target="_blank"
-        rel='noreferrer'
-        className={TripMapCss.PhoneBtn}
-      >
-        <GlobeAltIcon className={TripMapCss.PhoneIcon} />
-        Web
-      </a>
-      : null
-  }
-
-  const renderGmapBtn = () => {
-    return (
-      <a
-        href={placeDetails.url}
-        className={TripMapCss.GmapBtn}
-      >
-        <GoogleIcon className={CommonCss.LeftIcon} /> Google Maps
-      </a>
-    );
-  }
-
-  if (placeDetails === null) {
-    return null;
-  }
-
-  return (
-    <div
-      className={TripMapCss.DetailsWrapper}
-      style={{ width: props.width }}
-    >
-      <div className={TripMapCss.DetailsCard}>
-        {renderHeader()}
-        {renderSummary()}
-        {renderAddr()}
-        {renderRatings()}
-        {renderOpeningHours()}
-        <div className={TripMapCss.BtnCtn}>
-          {renderPhone()}
-          {renderWebsite()}
-          {renderGmapBtn()}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-///////////////////
-// MapLayersMenu //
-///////////////////
-
-interface MapLayersMenuProps {
-  trip: any
-  layersViz: any
-  onSelect: (layersSelected: any) => void
-}
-
-const MapLayersMenu: FC<MapLayersMenuProps> = (props: MapLayersMenuProps) => {
-
-
-
-  // Event Handlers
-
-  const selectAllOnClick = () => {
-    const newLayersViz = Object.assign({}, props.layersViz);
-    Object.keys(newLayersViz).forEach((k: string) => {
-      newLayersViz[k] = true;
-    });
-    props.onSelect(newLayersViz);
-  }
-
-  const deselectAllOnClick = () => {
-    const newLayersViz = Object.assign({}, props.layersViz);
-    Object.keys(newLayersViz).forEach((k: string) => {
-      newLayersViz[k] = false;
-    });
-    props.onSelect(newLayersViz);
-  }
-
-  const onSelectLayer = (id: string) => {
-    const newLayersViz = Object.assign({}, props.layersViz);
-    newLayersViz[id] = !newLayersViz[id];
-    props.onSelect(newLayersViz);
-  }
-
-  // Renderers
-
-  const renderHomeOpts = () => {
-    const contents = [
-      {
-        id: "lodgings",
-        name: "Hotels and Lodgings",
-        labels: { "ui|color": "rgb(249 115 22)", "ui|icon": "hotel"}
-      }
-    ].concat(Object.values(_get(props.trip, "contents", [])))
-
-    const contentLayers = contents
-      .map((l: any) => {
-        const color = _get(l, `labels.${LabelUiColor}`, DefaultContentColor);
-        const icon = ContentIconOpts[_get(l, `labels.${LabelUiIcon}`, "")];
-        return (
-          <div key={l.id} className='flex justify-between items-center mb-1'>
-            <div className='flex items-center flex-1 text-gray-700'>
-              <ContentListPin icon={icon} color={color}/>
-              {l.name}
-            </div>
-            <input
-              type="checkbox"
-              checked={props.layersViz[l.id]}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-              onChange={() => {onSelectLayer(l.id)}}
-            />
-          </div>
-        )
-      });
-    return (
-      <div className='w-full'>
-        <div className='mb-1'>
-          <h4 className='text-sm font-bold mb-1'>Overview</h4>
-          {contentLayers}
-        </div>
-      </div>
-    );
-  }
-
-  const renderItineraryOpts = () => {
-    const itinLayers = _get(props.trip, "itinerary", [])
-      .map((l: any) => {
-        const color = _get(l, `labels.${LabelUiColor}`, DefaultContentColor);
-        return (
-          <div key={l.id} className='flex justify-between items-center mb-1'>
-            <div className='flex items-center flex-1 text-gray-700'>
-              <ContentListPin icon={""} color={color}/>
-              { fmt(parseISO(l.date), "eee, MM/dd")  }
-            </div>
-            <input
-              type="checkbox"
-              checked={props.layersViz[l.id]}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-              onChange={() => {onSelectLayer(l.id)}}
-            />
-          </div>
-        )
-      });
-    return (
-      <div className='w-full'>
-        <div className='mb-1'>
-          <h4 className='text-sm font-bold mb-1'>Itinerary</h4>
-          {itinLayers}
-        </div>
-      </div>
-    );
-  }
-
-
-  return (
-    <div className='absolute mt-8 ml-12 bg-white p-4 rounded-xl z-10 w-96'>
-      <h4 className='font-bold text-base mb-2'>Map Drawings</h4>
-      <div className='flex mb-1 text-sm'>
-        <button
-          className='font-semibold text-indigo-500 mr-2 hover:text-indigo-700'
-          onClick={selectAllOnClick}
-        >
-          Select all
-        </button>
-        <button
-          className='font-semibold text-gray-500 hover:text-indigo-700'
-          onClick={deselectAllOnClick}
-        >
-          Deselect all
-        </button>
-      </div>
-      <hr className='my-2' />
-      {renderHomeOpts()}
-      {renderItineraryOpts()}
-    </div>
-  );
-}
-
-
-
-/////////////
-// TripMap //
-/////////////
 interface TripMapProps {
   trip: any
   width: any
@@ -618,10 +313,10 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
       return;
     }
     const vis = {"lodgings": true} as any;
-    Object.values(_get(props.trip, "contents", {}))
-      .forEach((ctntList: any) =>  {vis[ctntList.id] = true});
+    Object.values(_get(props.trip, "activities", {}))
+      .forEach((l: any) =>  {vis[l.id] = true});
     Object.values(_get(props.trip, "itinerary", {}))
-      .forEach((itinList: any) =>  {vis[itinList.id] = true});
+      .forEach((l: any) =>  {vis[l.id] = true});
     setLayersViz(vis);
   }, [props.trip, layersViz])
 
@@ -632,8 +327,8 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
     }
     const placeID = state.selectedPlace.place_id;
     MapsAPI.placeDetails(placeID, placeAtmosphereFields, "")
-    .then((res) => {
-      setPlaceDetails(_get(res, "data.place", null));
+    .then((res: PlaceDetailsResponse) => {
+      setPlaceDetails(res.place);
     })
   }, [state.selectedPlace]);
 
@@ -645,7 +340,7 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
 
   // Map Markers
 
-  const makeContentListsMapDrawings = () => {
+  const makeActivityListsMapDrawings = () => {
     // Lodging
     const lodgings = _get(props.trip, "lodgings", {});
     const markers = Object.values(lodgings).map((lodge: any) => ({
@@ -656,51 +351,49 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
       id: "lodgings",
       markers,
       visible: _get(layersViz, "lodgings", true),
-    } as ContentListMapDrawings]
+    } as ActivityListMapDrawings]
 
-    // Content Lists
-    const ctntLists = Object.values(_get(props.trip, "contents", {}));
-    drawings = drawings.concat(
-      ctntLists.map((l: any) => {
-        const color = _get(l, `labels.${LabelUiColor}`, DefaultContentColor)
-        const icon = _get(l, `labels.${LabelUiIcon}`, "")
-        const markers = l.contents
+    // Activity Lists
+    const actLists = Object.values(_get(props.trip, "activities", {}));
+    return drawings.concat(
+      actLists.map((l: any) => {
+        const markers = Object.values(l.activities)
           .filter((ct: any) => {
             const latlng = _get(ct, "place.geometry.location")
             return latlng !== undefined && !(latlng.lat === 0 && latlng.lng === 0)
           })
           .map((ct: any) => ({
-            elem: makePinWithTooltip(ct.place.name, color, icon),
+            elem: makePinWithTooltip(
+              ct.place.name,
+              getActivityColor(l) || DefaultActivityColor,
+              getActivityIcon(l)),
             place: ct.place
           }));
         return {
           id: l.id,
           markers,
           visible: _get(layersViz, l.id, true),
-        } as ContentListMapDrawings
+        } as ActivityListMapDrawings
       })
     );
-    return drawings;
   }
 
   const makeItineraryListsMapDrawings = () => {
-    const itntCtntList = _get(props.trip, "itinerary", []);
-
-    return itntCtntList.map((l: any) => {
-      const color = _get(l, `labels.${LabelUiColor}`, DefaultContentColor)
-
-      const markers = l.contents.map((itinCtnt: any, idx: number) => {
-        const ctnt = _find(
-          _get(props.trip, `contents.${itinCtnt.tripContentListId}.contents`, []),
-          (ctn: Content) => ctn.id === itinCtnt.tripContentId
+    const itinList = _get(props.trip, "itinerary", []);
+    return itinList.map((l: any) => {
+      const color = _get(l, `labels.${LabelUiColor}`, DefaultActivityColor);
+      const markers = Object.values(l.activities).map((itinAct: any, idx: number) => {
+        const act = _find(
+          _get(props.trip, `activities.${itinAct.activityListId}.activities`, []),
+          (ctn: Activity) => ctn.id === itinAct.activityId
         );
-        const latlng = _get(ctnt, "place.geometry.location")
+        const latlng = _get(act, "place.geometry.location")
         if (latlng === undefined || (latlng.lat === 0 && latlng.lng === 0)) {
           return null;
         }
         return {
-          elem: makeNumberPin(ctnt.place.name, color, `${idx}`),
-          place: ctnt.place
+          elem: makeNumberPin(act.place.name, color, `${idx}`),
+          place: act.place
         };
       })
       .filter((item: any) => item !== null);
@@ -713,7 +406,6 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
       }
     });
   }
-
 
   // Renderers
   const renderLayersBtn = () => {
@@ -761,7 +453,7 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
       >
         <InnerMap
           width={props.width}
-          contentListMapDrawings={makeContentListsMapDrawings()}
+          contentListMapDrawings={makeActivityListsMapDrawings()}
           itineraryMapDrawings={makeItineraryListsMapDrawings()}
         />
       </Wrapper>

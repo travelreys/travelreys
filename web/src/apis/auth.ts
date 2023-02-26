@@ -5,7 +5,7 @@ import { Labels } from '../lib/common';
 
 import { BASE_URL, makeCommonAxios } from './common';
 
-export interface  LoginResponse {
+export interface LoginResponse {
   jwtToken?: string
   error?: string
 }

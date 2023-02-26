@@ -41,7 +41,7 @@ func (svc *service) Create(ctx context.Context, creator Member, name string, sta
 	for i := 0; i <= int(numDays); i++ {
 		dt := trip.StartDate.Add(time.Duration(i*24) * time.Hour)
 		itinList := NewItineraryList(dt)
-		trip.Itinerary[itinList.ID] = itinList
+		trip.Itinerary = append(trip.Itinerary, itinList)
 	}
 	err := svc.store.Save(ctx, trip)
 	return trip, err

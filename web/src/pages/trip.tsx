@@ -18,7 +18,7 @@ import { Cog6ToothIcon } from '@heroicons/react/24/solid';
 
 import { NavbarLogo } from '../components/common/Navbar';
 import BudgetSection from '../features/trip/BudgetSection';
-import ContentSection from '../features/trip/ContentSection';
+import ActivitySection from '../features/trip/ActivitySection';
 import ItinerarySection from '../features/trip/ItinerarySection';
 import NotesSection from '../features/trip/Notes';
 import SettingsSection from '../features/trip/SettingsSection';
@@ -100,7 +100,7 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
           tripOnUpdate={props.tripOnUpdate}
         />
         <hr className={CommonCss.HrShort} />
-        <ContentSection
+        <ActivitySection
           trip={props.trip}
           tripOnUpdate={props.tripOnUpdate}
         />
@@ -241,7 +241,6 @@ const TripPage: FC = () => {
 
       ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
         const msg = JSON.parse(e.data) as Message;
-        console.log(msg)
         switch (msg.op) {
           case OpMemberUpdate:
             handleOpMemberUpdate(msg.data.memberUpdate?.members)

@@ -1,16 +1,16 @@
 import React, { FC } from 'react';
 
 ////////////////////
-// ContentListPin //
+// ListPin //
 ////////////////////
 
 
-interface ContentListPinProps {
+interface ListPinProps {
   icon?: any
   color: string
 }
 
-const ContentListPin: FC<ContentListPinProps> = (props: ContentListPinProps) => {
+const ListPin: FC<ListPinProps> = (props: ListPinProps) => {
   return (
     <div className='relative -ml-2'>
       <span className='absolute right-2.5 top-2 text-base font-bold pointer-events-none'>
@@ -27,4 +27,4 @@ const ContentListPin: FC<ContentListPinProps> = (props: ContentListPinProps) => 
   );
 }
 
-export default ContentListPin;
+export default ListPin;

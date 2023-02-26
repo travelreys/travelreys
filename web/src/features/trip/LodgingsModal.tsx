@@ -14,7 +14,7 @@ import Alert from '../../components/common/Alert';
 import InputDatesPicker from '../../components/common/InputDatesPicker';
 import Modal from '../../components/common/Modal';
 
-import MapsAPI, { EMBED_MAPS_APIKEY, placeFields } from '../../apis/maps';
+import MapsAPI, { AutocompleteResponse, EMBED_MAPS_APIKEY, PlaceDetailsResponse, placeFields } from '../../apis/maps';
 import { LodgingsModalCss } from '../../assets/styles/global';
 import { parseTripDate } from '../../lib/dates';
 import { Lodging } from '../../lib/trips';
@@ -62,18 +62,18 @@ const TripLodgingsModal: FC<TripLodgingsModalProps> = (props: TripLodgingsModalP
       setSessionToken(token);
     }
     MapsAPI.placeAutocomplete(query, ["lodging"], token)
-    .then((res) => {
-      setPredictions(_get(res, "data.predictions", []))
+    .then((res: AutocompleteResponse) => {
+      setPredictions(res.predictions || [])
     });
   }
 
 
   const getPlaceDetails = (placeID: string) => {
     MapsAPI.placeDetails(placeID, placeFields, sessionToken)
-    .then((res) => {
+    .then((res: PlaceDetailsResponse) => {
       setPredictions([]);
       setSelectedPlaceID(placeID);
-      setSelectedPlace(_get(res, "data.place", null));
+      setSelectedPlace(res.place);
     })
     .finally(() => {
       setSessionToken("");

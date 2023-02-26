@@ -22,7 +22,7 @@ export const MemberRoleCollaborator = "collaborator";
 export const MemberRoleParticipant = "participant";
 
 export const DefaultTransportModePref = "walk+drive";
-export const DefaultContentColor = "rgb(203 213 225)";
+export const DefaultActivityColor = "rgb(203 213 225)";
 
 export const LabelDelimiter = "|";
 export const LabelTransportModePref = "transportationPreference";
@@ -38,7 +38,7 @@ export const JSONPathLabelUiColor = "labels/ui|color";
 export const JSONPathLabelUiIcon = "labels/ui|icon";
 
 
-export const ContentColorOpts = [
+export const ActivityColorOpts = [
   "rgb(74 222 128)",
   "rgb(34 211 238)",
   "rgb(96 165 250)",
@@ -50,7 +50,7 @@ export const ContentColorOpts = [
   "rgb(253 224 71)",
   "rgb(161 98 7)"
 ];
-export const ContentIconOpts = {
+export const ActivityIconOpts = {
   "flight": FlightIcon,
   "hotel": HotelIcon,
   "camera": CameraIcon,
@@ -146,7 +146,7 @@ export const getLodgingPriceAmt = (l: Lodging) => {
 }
 
 
-export interface Content {
+export interface Activity {
   id: string
   title: string
   place: Place
@@ -155,7 +155,7 @@ export interface Content {
   comments: any
 }
 
-export const makeContent = (title: string) => {
+export const makeActivity = (title: string) => {
   return {
       id: uuidv4(),
       title: title,
@@ -166,56 +166,64 @@ export const makeContent = (title: string) => {
     }
 }
 
-export interface ContentList {
+export interface ActivityList {
   id: string
   name?: string
-  contents: Array<Content>
+  activities: Array<Activity>
   labels: {[key: string]: string}
 }
 
-export interface ItineraryContent {
+export const makeActivityList = () => {
+  return { id: uuidv4(), name: "", activities: [], labels: {}}
+}
+
+export interface ItineraryActivity {
   id: string
-  tripContentListId: string
-  tripContentId: string
+  activityListId: string
+  activityId: string
   price: Price
   startTime?: string | Date
   endTime?: string | Date
   labels: {[key: string]: string}
 }
 
-export const makeItineraryContent = (ctnId: string, ctnListId: string, fIndex: string) => {
+export const makeItineraryActivity = (actId: string, actListId: string, fIndex: string) => {
   return {
     id: uuidv4(),
-    tripContentId: ctnId,
-    tripContentListId: ctnListId,
+    activityId: actId,
+    activityListId: actListId,
     price: {} as any,
     labels: {fIndex} as any,
   }
 }
 
-export const getfIndex = (ctn: ItineraryContent) => {
-  return _get(ctn, `labels.${LabelFractionalIndex}`);
+export const getfIndex = (act: ItineraryActivity) => {
+  return _get(act, `labels.${LabelFractionalIndex}`);
 }
 
 export interface ItineraryList {
   id: string
   desc: string
   date: string | Date
-  contents: Array<ItineraryContent>
+  activities: Array<ItineraryActivity>
   routes: Array<any>,
   labels: {[key: string]: string}
 }
 
-export const getContentColor = (l: ContentList | ItineraryList) => {
-  return _get(l, jsonPathToPath(JSONPathLabelUiIcon), DefaultContentColor);
+export const getActivityColor = (l: ActivityList | ItineraryList) => {
+  return _get(l, jsonPathToPath(JSONPathLabelUiColor), DefaultActivityColor);
 }
 
-export const getItineraryContentPriceAmt = (ctn: ItineraryContent) => {
-  return _get(ctn, jsonPathToPath(JSONPathPriceAmount), 0);
+export const getActivityIcon = (l: ActivityList | ItineraryList) => {
+  return _get(l, jsonPathToPath(JSONPathLabelUiIcon));
 }
 
-export const getTripContentForItineraryContent = (trip: any, contentListID: string, contentID: string) => {
-  return _find(trip.contents[contentListID].contents, (c: any) => c.id === contentID);
+export const getItineraryActivityPriceAmt = (act: ItineraryActivity) => {
+  return _get(act, jsonPathToPath(JSONPathPriceAmount), 0);
+}
+
+export const getTripActivityForItineraryActivity = (trip: any, itinAct: ItineraryActivity) => {
+  return trip.activities[itinAct.activityListId].activities[itinAct.activityId];
 }
 
 export interface Budget {
