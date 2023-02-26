@@ -255,7 +255,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
 
     _get(props.trip, "itinerary", [])
       .forEach((l: ItineraryList) => {
-        l.activities.forEach((act: ItineraryActivity) => {
+        Object.values(l.activities).forEach((act: ItineraryActivity) => {
           total += getItineraryActivityPriceAmt(act)
         })
       })
@@ -449,7 +449,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   const renderItinerary = () => {
     const itinerary = _flatten(_get(props.trip, "itinerary", [])
       .map((l: ItineraryList) => {
-        return l.activities.map((itinAct: ItineraryActivity, idx: number) => {
+        return Object.values(l.activities).map((itinAct: ItineraryActivity, idx: number) => {
           const amt = getItineraryActivityPriceAmt(itinAct);
           if (amt === 0) {
             return null;
@@ -565,9 +565,9 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
         onClose={() => {setIsAddBudgetModalOpen(false)}}
       />
       <BudgetItemModal
-        header='Edit expense'
+        header='Edit Expense'
         isOpen={isEditBudgetItemModalOpen}
-
+        defaultAmount={_get(selectedBudgetItem, "price.amount")}
         defaultTitle={_get(selectedBudgetItem, "title")}
         defaultDesc={_get(selectedBudgetItem, "desc")}
         onSubmit={updateBudgetItem}

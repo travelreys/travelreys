@@ -521,15 +521,6 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   );
 }
 
-
-
-
-
-
-
-
-
-
 interface ItinerarySectionProps {
   trip: any
   tripOnUpdate: any
