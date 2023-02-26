@@ -3,15 +3,15 @@ import { Op } from "./jsonpatch";
 export const OpJoinSession = "OpJoinSession";
 export const OpLeaveSession = "OpLeaveSession";
 export const OpPingSession = "OpPingSession";
-export const OpMemberUpdate = "OpMemberUpdate";
 export const OpUpdateTrip = "OpUpdateTrip";
 
-export const UpdateTitleAddNewMember = "AddNewMember";
+export const MsgUpdateTripTitleAddNewMember = "AddNewMember";
+export const MsgUpdateTripTitleModifyItinerary = "ModifyItinerary";
 
 export interface Message {
   connID?: string
   tripID: string
-  op: "OpJoinSession" | "OpLeaveSession" | "OpPingSession"| "OpMemberUpdate" |"OpUpdateTrip"
+  op: "OpJoinSession" | "OpLeaveSession" | "OpPingSession" | "OpUpdateTrip"
   counter?: number
   data: MessageData
 }
@@ -25,11 +25,13 @@ interface MessageData {
 }
 
 interface MsgDataJoinSession {
-  ID: string
+  id: string
+  members: any
 }
 
 interface MsgDataLeaveSession {
-  ID: string
+  id: string
+  members: any
 }
 
 interface MsgDataMemberUpdate {
@@ -47,7 +49,7 @@ export const makeMsgJoinSession = (tripID: string, memberID: string): Message =>
   return {
     tripID,
     op: OpJoinSession,
-    data: { joinSession: {ID: memberID}}
+    data: { joinSession: {id: memberID, members: []}}
   }
 }
 
@@ -55,7 +57,7 @@ export const makeMsgLeaveSession = (tripID: string, memberID: string): Message =
   return {
     tripID,
     op: OpLeaveSession,
-    data: { leaveSession: {ID: memberID}}
+    data: { leaveSession: {id: memberID, members: []}}
   }
 }
 

@@ -56,7 +56,7 @@ func NewCoordinator(
 		ID:        uuid.New().String(),
 		tripID:    tripID,
 		plan:      []byte{},
-		counter:   0,
+		counter:   1,
 		queue:     make(chan Message, common.DefaultChSize),
 		store:     store,
 		msgStore:  msgStore,
@@ -64,18 +64,6 @@ func NewCoordinator(
 		tripStore: tripStore,
 		logger:    logger.Named("sync.coordinator"),
 	}
-}
-
-func (crd *Coordinator) sendMsgToQueue(msg Message) {
-	// 3.2. Give each message a counter
-	msg.Counter = crd.counter
-
-	// 3.3. Sends each ordered message back to the FIFO queue
-	crd.queue <- msg
-
-	// Need to update the counter
-	crd.counter++
-	crd.logger.Debug("next counter", zap.Uint64("counter", crd.counter))
 }
 
 func (crd *Coordinator) Init() error {
@@ -117,10 +105,8 @@ func (crd *Coordinator) Run() error {
 			ctx := context.Background()
 			switch msg.Op {
 			case OpJoinSession:
-				// Got new player, reset counter
-				crd.counter = 0
 				sess, _ := crd.store.Read(ctx, crd.tripID)
-				msg = NewMsgMemberUpdate(msg.TripID, sess.Members)
+				msg.Data.JoinSession.Members = sess.Members
 			case OpLeaveSession:
 				// stop coordinator if no users left in session
 				sess, _ := crd.store.Read(ctx, crd.tripID)
@@ -129,10 +115,15 @@ func (crd *Coordinator) Run() error {
 					crd.Stop()
 					return
 				}
-				// Replace with member update msg
-				msg = NewMsgMemberUpdate(msg.TripID, sess.Members)
+				msg.Data.LeaveSession.Members = sess.Members
 			}
-			crd.sendMsgToQueue(msg)
+			// 3.2. Give each message a counter
+			msg.Counter = crd.counter
+			crd.counter++
+			crd.logger.Debug("next counter", zap.Uint64("counter", crd.counter))
+
+			// 3.3. Sends each ordered message back to the FIFO queue
+			crd.queue <- msg
 		}
 	}()
 
@@ -144,8 +135,6 @@ func (crd *Coordinator) Run() error {
 				// 4.2 Update local plan and persist the data (if required)
 				// Update local copy of plan + validate if the op is valid
 				crd.HandleOpUpdateTrip(msg)
-			case OpMemberUpdate:
-				crd.store.ResetCounter(context.Background(), msg.TripID)
 			}
 			// 4.3 Broadcasts the tob msg to all other connected clients
 			crd.tobStore.Publish(crd.tripID, msg)
@@ -156,8 +145,10 @@ func (crd *Coordinator) Run() error {
 
 // HandleFirstMember sends a memberUpdate message to the very first member
 func (crd *Coordinator) HandleFirstMember(ctx context.Context, sess Session) {
-	msg := NewMsgMemberUpdate(crd.tripID, sess.Members)
-	crd.sendMsgToQueue(msg)
+	msg := NewMsgJoinSession(crd.tripID, sess.Members)
+	msg.Counter = crd.counter
+	crd.counter++
+	crd.queue <- msg
 }
 
 // HandleOpUpdateTrip handles OpUpdateTrip messages on crd.queue

@@ -397,7 +397,7 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
         };
       })
       .filter((item: any) => item !== null);
-      const polylines = l.routes.map((r: any) => r.overview_polyline.points);
+      const polylines = [] as any //l.routes.map((r: any) => r.overview_polyline.points);
       return {
         id: l.id,
         markers,

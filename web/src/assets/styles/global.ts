@@ -34,20 +34,6 @@ export const PlaceAutocompleteCss = {
   SecondaryTxt: "text-slate-400 group-hover:text-indigo-500 text-xs",
 }
 
-///////////////
-// Trip Page //
-///////////////
-
-export const TripMenuCss = {
-  TripMenuCtn: "min-h-screen w-full z-50 sm:w-1/2  sm:max-w-lg sm:shadow-xl sm:shadow-slate-900",
-  TripMenu: "pb-40 w-full",
-  TabsCtn: "sticky top-0 z-10 bg-indigo-100 py-8 pb-4 mb-4",
-  TabsWrapper: "bg-white rounded-lg p-5 mx-4 mb-4",
-  TabItemCtn: "flex flex-row justify-around mx-2",
-  TabItemBtn: "mx-4 my-2 flex flex-col items-center",
-  TabItemBtnTxt: "text-slate-400 text-sm",
-}
-
 
 ///////////
 // Notes //
@@ -193,7 +179,7 @@ export const TripBudgetCss = {
   ItemDescTxt: "text-sm text-gray-500",
   ItemPriceTxt: "font-bold",
   PriceInputCtn: "flex w-full rounded-lg mb-3 border border-gray-200",
-  PriceInputLabel: "inline-flex bg-gray-200 font-bold items-center px-3 text-sm text-slate-500 rounded-l-md w-1/5",
+  PriceInputLabel: "inline-flex bg-gray-200 font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
   BudgetItemIcon: "flex items-center justify-center w-8 h-8 p-2 rounded-full mr-2 text-white font-bold bg-indigo-500"
 }
 

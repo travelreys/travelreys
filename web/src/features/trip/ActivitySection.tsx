@@ -707,38 +707,3 @@ const ActivitySection: FC<ActivitySectionProps> = (props: ActivitySectionProps) 
 
 
 export default ActivitySection;
-
-
-// // 3. Add ItineraryActivityRoute to ItineraryList
-// if (itinListCtnt.length > 0) {
-//   const lastItinCtn = _last(itinListCtnt);
-//   const lastCtnt = _find(
-//     _get(props.trip, `activities[${lastItinCtn?.activityListId}].activities`),
-//     (ctn: Activity) => ctn.id === lastItinCtn?.activityId,
-//   );
-
-//   const lastCtntPlaceID = _get(lastCtnt, "place.place_id");
-//   const ctnPlaceID = _get(activity, "place.place_id");
-
-//   if (lastCtntPlaceID && ctnPlaceID) {
-//     const resp = await MapsAPI.directions(lastCtntPlaceID, ctnPlaceID, ModeDriving);
-//     if (resp.data.routeList.length > 0) {
-//       ops.push(makeAddOp(`/itinerary/${itinListIdx}/routes/-`, resp.data.routeList[0]));
-//     }
-//   }
-// }
-
-  // 3. Remove ItineraryActivityRoute from ItineraryList
-  // ops.push(makeRepOp(`/itinerary/${itinListIdx}/routes`, []));
-  // if (itinActIdx === 0) {
-  //   const routeIdx = itinActIdx + 1;
-  //   if (routeIdx < itinList.routes.length) {
-  //     ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
-  //   }
-  // } else if (itinActIdx === itinListCtnt.length - 1) {
-  //   const routeIdx = itinActIdx - 1;
-  //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${routeIdx}`, ""));
-  // } else {
-  //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinActIdx}`, ""));
-  //   ops.push(makeRemoveOp(`/itinerary/${itinListIdx}/routes/${itinActIdx - 1}`, ""));
-  // }

@@ -34,15 +34,16 @@ import {
   makeMsgUpdateTrip,
   makeMsgJoinSession,
   OpUpdateTrip,
-  OpMemberUpdate,
-  UpdateTitleAddNewMember,
+  OpJoinSession,
+  OpLeaveSession,
+  MsgUpdateTripTitleAddNewMember,
   Message,
 } from '../lib/tripSync';
 import { Op } from '../lib/jsonpatch';
 import { readAuthUser, User } from '../lib/auth';
-import { CommonCss, TripMenuCss } from '../assets/styles/global';
-import { MapsProvider } from '../context/maps-context';
 import { Member } from '../lib/trips';
+import { CommonCss } from '../assets/styles/global';
+import { MapsProvider } from '../context/maps-context';
 
 // TripPlanningMenu
 
@@ -57,6 +58,16 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
   const [tab, setTab] = useState("home");
 
   // Renderers
+  const css = {
+    ctn: "min-h-screen w-full z-50 sm:w-1/2  sm:max-w-lg sm:shadow-xl sm:shadow-slate-900",
+    wrapper: "pb-40 w-full",
+    tabsCtn: "sticky top-0 z-10 bg-indigo-100 py-8 pb-4 mb-4",
+    tabsWrapper: "bg-white rounded-lg p-5 mx-4 mb-4",
+    tabItemCtn: "flex flex-row justify-around mx-2",
+    tabItemBtn: "mx-4 my-2 flex flex-col items-center",
+    tabItemBtnTxt: "text-slate-400 text-sm",
+  }
+
   const renderTabs = () => {
     const tabs = [
       { title: "Home", icon: HomeIcon },
@@ -67,17 +78,17 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
     ];
 
     return (
-      <div className={TripMenuCss.TabsCtn}>
-        <div className={TripMenuCss.TabsWrapper}>
-          <div className={TripMenuCss.TabItemCtn}>
+      <div className={css.tabsCtn}>
+        <div className={css.tabsWrapper}>
+          <div className={css.tabItemCtn}>
             {tabs.map((tab: any, idx: number) => (
               <button
                 key={idx} type="button"
-                className={TripMenuCss.TabItemBtn}
+                className={css.tabItemBtn}
                 onClick={() => { setTab(tab.title.toLowerCase()) }}
               >
                 <tab.icon className='h-6 w-6 mb-1' />
-                <span className={TripMenuCss.TabItemBtnTxt}>
+                <span className={css.tabItemBtnTxt}>
                   {tab.title}
                 </span>
               </button>
@@ -109,8 +120,8 @@ const TripPlanningMenu: FC<TripPlanningMenuProps> = (props: TripPlanningMenuProp
   }
 
   return (
-    <aside className={TripMenuCss.TripMenuCtn}>
-      <div className={TripMenuCss.TripMenu}>
+    <aside className={css.ctn}>
+      <div className={css.wrapper}>
         <nav className={CommonCss.Navbar}>
           <NavbarLogo href='/home' />
         </nav>
@@ -163,7 +174,7 @@ const TripPage: FC = () => {
   // Sync Session State
   const wsRef = useRef(null as any);
   const pq = NewMessageHeap();
-  const nextTobCounter = useRef(0);
+  const tobCounter = useRef(0);
 
   // Map UI State
   const [mapNode, setMapNode] = useState(null) as any;
@@ -192,15 +203,20 @@ const TripPage: FC = () => {
     return (wsRef.current === null && !_isEmpty(id))
   }
 
-  const handleOpMemberUpdate = (members: Array<Member>) => {
-    setOnlineMembers(members);
+  const handleJoinSessionMsg = (msg: Message) => {
+    setOnlineMembers(msg.data.joinSession?.members || []);
   }
 
-  const handleUpdateMsgTitle = (title?: string) => {
+  const handleLeaveSessionMsg = (msg: Message) => {
+    setOnlineMembers(msg.data.leaveSession?.members || []);
+  }
+
+  const handleUpdateMsg = (msg: Message) => {
+    const title = msg.data.updateTrip?.title;
     if (_isEmpty(title)) {
       return;
     }
-    if (title === UpdateTitleAddNewMember) {
+    if (title === MsgUpdateTripTitleAddNewMember) {
       TripsAPI.readMembers(id as string)
         .then((data: ReadMembersResponse) => {
           setTripMembers(data.members);
@@ -241,47 +257,52 @@ const TripPage: FC = () => {
 
       ws.addEventListener(WebsocketEvents.message, (_: any, e: any) => {
         const msg = JSON.parse(e.data) as Message;
-        switch (msg.op) {
-          case OpMemberUpdate:
-            handleOpMemberUpdate(msg.data.memberUpdate?.members)
-            nextTobCounter.current = 1
-            return;
-          case OpUpdateTrip:
-            break
-          default:
-            nextTobCounter.current += 1
-            return;
-        }
 
-        // Add OpUpdateTrip message to min-heap
+        if (msg.op === OpJoinSession) {
+          if (msg.data.joinSession?.id === readAuthUser()?.id) {
+            tobCounter.current = msg.counter!
+            handleJoinSessionMsg(msg)
+            return;
+          }
+        }
         pq.push(msg);
 
-        let nxtCtr = nextTobCounter.current
+        let nxtCtr = tobCounter.current + 1;
         while (true) {
           if (pq.length === 0) {
-            nextTobCounter.current = nxtCtr
             break;
           }
           let minMsg = pq.peek()!;
-
+          // console.log("min", minMsg.counter, "nxt", nxtCtr)
           // Messages in the heap are further up in the TOB,
           // waiting for the next in-order TOB msg
           if (minMsg.counter !== nxtCtr) {
-            nextTobCounter.current = nxtCtr;
             break;
           }
 
           // Process this message
           minMsg = pq.pop()!;
-          const newTrip = applyPatch(
-            tripRef.current,
-            minMsg.data.updateTrip!.ops as any,
-            { mutate: false },
-          );
-          nxtCtr += 1
-          tripRef.current = newTrip.doc
-          setTrip(tripRef.current);
-          handleUpdateMsgTitle(minMsg.data.updateTrip?.title)
+
+          switch (minMsg.op) {
+            case OpJoinSession:
+              handleJoinSessionMsg(minMsg);
+              break;
+            case OpLeaveSession:
+              handleLeaveSessionMsg(minMsg);
+              break;
+            case OpUpdateTrip:
+              const newTrip = applyPatch(
+                tripRef.current,
+                minMsg.data.updateTrip!.ops as any,
+                { mutate: false },
+              );
+              tripRef.current = newTrip.doc
+              setTrip(tripRef.current);
+              handleUpdateMsg(minMsg)
+              break;
+          }
+          tobCounter.current = nxtCtr
+          nxtCtr = nxtCtr + 1
         }
       })
     }

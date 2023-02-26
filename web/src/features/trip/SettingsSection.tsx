@@ -22,7 +22,7 @@ import {
   userFromMember,
 } from '../../lib/trips';
 import { LabelUserGoogleImage, User } from '../../lib/auth';
-import { UpdateTitleAddNewMember } from '../../lib/tripSync';
+import { MsgUpdateTripTitleAddNewMember } from '../../lib/tripSync';
 import {
   makeAddOp,
   makeRemoveOp,
@@ -193,7 +193,7 @@ const AddMembersModal: FC<AddMembersModalProps> = (props: AddMembersModalProps) 
       return <div>{t('tripPage.settings.noUsersFound')}</div>;
     }
     return foundUsers.map((usr: User) => {
-      const isMember = Object.hasOwn(props.tripMembers, usr.id);
+      const isMember = props.tripMembers.hasOwnProperty(usr.id);
       return (
         <button
           key={usr.id}
@@ -355,12 +355,12 @@ const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) 
 
   const addMember = (id: string, role: string) => {
     const member = { id, role, labels: {} } as Member;
-    props.tripOnUpdate([makeAddOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
+    props.tripOnUpdate([makeAddOp(`/members/${id}`, member)], MsgUpdateTripTitleAddNewMember);
   }
 
   const deleteMember = (id: string) => {
     const member = { id } as Member;
-    props.tripOnUpdate([makeRemoveOp(`/members/${id}`, member)], UpdateTitleAddNewMember);
+    props.tripOnUpdate([makeRemoveOp(`/members/${id}`, member)], MsgUpdateTripTitleAddNewMember);
   }
 
   return (
