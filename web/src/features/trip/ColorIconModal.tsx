@@ -1,14 +1,11 @@
-import React, {
-  FC,
-  useState,
-} from 'react';
+import React, { FC, useState } from 'react';
 import {
   CheckIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
 import Modal from '../../components/common/Modal';
-import { ContentIconOpts } from '../../lib/trips';
+import { ActivityIconOpts } from '../../lib/trips';
 import { CommonCss } from '../../assets/styles/global';
 
 interface IconProps {
@@ -71,7 +68,9 @@ const ColorIconModal: FC<ColorIconModalProps> = (props: ColorIconModalProps) => 
   const renderColorOpts = () => {
     return (
       <div>
-        <div className='text-gray-800 font-bold text-sm'>Choose Color</div>
+        <div className='text-gray-800 font-bold text-sm'>
+          Choose Color
+        </div>
         <div className='w-full p-2 pl-0 mb-2'>
           {props.colors.map((c) => (
             <button
@@ -100,7 +99,7 @@ const ColorIconModal: FC<ColorIconModalProps> = (props: ColorIconModalProps) => 
           {props.icons.map((icon: string) => (
             <Icon
               key={icon}
-              icon={ContentIconOpts[icon]}
+              icon={ActivityIconOpts[icon]}
               selected={selectedIcon === icon}
               onClick={() => {setSelectedIcon(icon)}}
             />

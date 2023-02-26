@@ -73,9 +73,9 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	metricsMW := api.NewMetricsMiddleware()
 
 	// TripSync
-	store := tripssync.NewStore(rdb)
-	msgStore := tripssync.NewMessageStore(nc, rdb)
-	tobStore := tripssync.NewTOBMessageStore(nc, rdb)
+	store := tripssync.NewStore(rdb, logger)
+	msgStore := tripssync.NewMessageStore(nc, rdb, logger)
+	tobStore := tripssync.NewTOBMessageStore(nc, rdb, logger)
 
 	svc := tripssync.NewService(store, msgStore, tobStore, tripStore)
 	wsSvr := tripssync.NewWebsocketServer(svc, logger)

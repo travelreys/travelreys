@@ -1,29 +1,29 @@
-import axios from 'axios';
 import _get from 'lodash/get';
+import { makeCommonAxios } from './common';
 
-import { BASE_URL } from './common';
+const search = (query: string) => {
+  return makeCommonAxios().get("/api/v1/images/search", { params: { query } });
+}
 
-const ImagesAPI = {
-  search: (query: string) => {
-    const url = `${BASE_URL}/api/v1/images/search`;
-    return axios.get(url, { params: { query } });
-  },
+const makeUserURL = (username: string) => {
+  return `https://unsplash.com/@${username}?utm_source=tiinyplanet&utm_medium=referral`;
+}
 
-  makeUserURL: (username: string) => {
-    return `https://unsplash.com/@${username}?utm_source=tiinyplanet&utm_medium=referral`;
-  },
+const makeSrc = (image: any) => {
+  return _get(image, "urls.full");
+}
 
-  makeSrcSet: (image: any) => {
-    return [
-      `${_get(image, "urls.thumb")} 200w`,
-      `${_get(image, "urls.small")} 400w`,
-      `${_get(image, "urls.regular")} 1080w`
-    ].join(", ")
-  },
+const makeSrcSet = (image: any) => {
+  return [
+    `${_get(image, "urls.thumb")} 200w`,
+    `${_get(image, "urls.small")} 400w`,
+    `${_get(image, "urls.regular")} 1080w`
+  ].join(", ")
+}
 
-  makeSrc: (image: any) => {
-    return _get(image, "urls.full");
-  },
+export default {
+  search,
+  makeUserURL,
+  makeSrcSet,
+  makeSrc,
 };
-
-export default ImagesAPI;

@@ -40,6 +40,10 @@
       "transportationModePreferenceWalk+Drive": "Walk short distances + Drive",
       "transportationModePreferenceWalk+Transit": "Walk short distances + Public Transport",
       "membersTitle": "Members"
+    },
+    "activitySection": {
+      "header": "Activities",
+      "addBtn": "+  New List"
     }
   }
 }

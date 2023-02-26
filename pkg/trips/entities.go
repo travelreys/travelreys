@@ -10,7 +10,17 @@ import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 )
 
-// Trip
+const (
+	LabelDelimeter              = "|"
+	LabelItineraryDates         = "itinerary|dates"
+	LabelItineraryDatesJSONPath = "labels/itinerary|dates"
+	LabelUiColor                = "ui|color"
+	JSONPathLabelUiColor        = "labels/ui|color"
+	LabelUiIcon                 = "ui|icon"
+	JSONPathLabelUiIcon         = "labels/ui|icon"
+	LabelTransportModePref      = "transportationPreference"
+	LabelFractionalIndex        = "fIndex"
+)
 
 type Trip struct {
 	ID   string `json:"id" bson:"id"`
@@ -30,9 +40,9 @@ type Trip struct {
 	Transits map[string]BaseTransit `json:"transits" bson:"transits"`
 	Lodgings map[string]Lodging     `json:"lodgings" bson:"lodgings"`
 
-	// Contents
-	Contents  map[string]TripContentList `json:"contents" bson:"contents"`
-	Itinerary []ItineraryList            `json:"itinerary" bson:"itinerary"`
+	// Activities
+	Activities map[string]ActivityList `json:"activities" bson:"activities"`
+	Itinerary  []ItineraryList         `json:"itinerary" bson:"itinerary"`
 
 	// Budget
 	Budget Budget `json:"budget" bson:"budget"`
@@ -64,9 +74,9 @@ func NewTrip(creator Member, name string) Trip {
 		Transits: map[string]BaseTransit{},
 		Lodgings: map[string]Lodging{},
 
-		Contents:  map[string]TripContentList{},
-		Itinerary: []ItineraryList{},
-		Budget:    NewBudget(),
+		Activities: map[string]ActivityList{},
+		Itinerary:  []ItineraryList{},
+		Budget:     NewBudget(),
 
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
@@ -109,8 +119,6 @@ func NewMember(id, role string) Member {
 	}
 }
 
-// Transit
-
 const (
 	TransitTypeFlight = "flight"
 )
@@ -128,16 +136,12 @@ type BaseTransit struct {
 	Attachments []common.FileObject `json:"attachments" bson:"attachments"`
 }
 
-// Flights
-
 type Flight struct {
 	BaseTransit
 	ItineraryType string         `json:"itineraryType" bson:"itineraryType"`
 	Depart        flights.Flight `json:"depart" bson:"depart"`
 	Return        flights.Flight `json:"return" bson:"return"`
 }
-
-// Lodging
 
 type Lodging struct {
 	ID string `json:"id" bson:"id"`
@@ -155,67 +159,57 @@ type Lodging struct {
 	Attachments []common.FileObject `json:"attachments" bson:"attachments"`
 }
 
-// Trip Content
-
-type TripContent struct {
+type Activity struct {
 	ID    string `json:"id" bson:"id"`
 	Title string `json:"title" bson:"title"`
 
 	Place maps.Place `json:"place" bson:"place"`
 	Notes string     `json:"notes" bson:"notes"`
 
-	Comments []TripContentComment `json:"comments" bson:"comments"`
-	Labels   common.Labels        `json:"labels" bson:"labels"`
+	Comments []ActivityComment `json:"comments" bson:"comments"`
+	Labels   common.Labels     `json:"labels" bson:"labels"`
 }
 
-type TripContentList struct {
-	ID       string        `json:"id" bson:"id"`
-	Name     string        `json:"name" bson:"name"`
-	Contents []TripContent `json:"contents" bson:"contents"`
-	Labels   common.Labels `json:"labels" bson:"labels"`
+type ActivityList struct {
+	ID         string              `json:"id" bson:"id"`
+	Name       string              `json:"name" bson:"name"`
+	Activities map[string]Activity `json:"activities" bson:"activities"`
+	Labels     common.Labels       `json:"labels" bson:"labels"`
 }
 
-func NewTripContentList(name string) TripContentList {
-	return TripContentList{
-		ID:       uuid.New().String(),
-		Name:     name,
-		Contents: []TripContent{},
-		Labels:   common.Labels{},
+func NewActivityList(name string) ActivityList {
+	return ActivityList{
+		ID:         uuid.New().String(),
+		Name:       name,
+		Activities: map[string]Activity{},
+		Labels:     common.Labels{},
 	}
 }
 
-type TripContentComment struct {
-	ID      string `json:"id" bson:"id"`
-	Comment string `json:"comment" bson:"comment"`
-
-	Member Member `json:"member" bson:"member"`
-
+type ActivityComment struct {
+	ID        string    `json:"id" bson:"id"`
+	Comment   string    `json:"comment" bson:"comment"`
+	Member    Member    `json:"member" bson:"member"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
-// Itinerary
-
-type ItineraryContent struct {
-	ID                string `json:"id" bson:"id"`
-	TripContentListID string `json:"tripContentListId" bson:"tripContentListId"`
-	TripContentID     string `json:"tripContentId" bson:"tripContentId"`
-
-	Price     common.Price `json:"price" bson:"price"`
-	StartTime time.Time    `json:"startTime" bson:"startTime"`
-	EndTime   time.Time    `json:"endTime" bson:"endTime"`
-
-	Labels common.Labels `json:"labels" bson:"labels"`
+type ItineraryActivity struct {
+	ID             string        `json:"id" bson:"id"`
+	ActivityListID string        `json:"activityListId" bson:"activityListId"`
+	ActivityID     string        `json:"activityId" bson:"activityId"`
+	Price          common.Price  `json:"price" bson:"price"`
+	StartTime      time.Time     `json:"startTime" bson:"startTime"`
+	EndTime        time.Time     `json:"endTime" bson:"endTime"`
+	Labels         common.Labels `json:"labels" bson:"labels"`
 }
 
-type ItineraryContentList []ItineraryContent
-
 type ItineraryList struct {
-	ID          string               `json:"id" bson:"id"`
-	Date        time.Time            `json:"date" bson:"date"`
-	Description string               `json:"desc" bson:"desc"`
-	Contents    ItineraryContentList `json:"contents" bson:"contents"`
-	Route       maps.RouteList       `json:"routes" bson:"routes"`
+	ID          string                       `json:"id" bson:"id"`
+	Date        time.Time                    `json:"date" bson:"date"`
+	Description string                       `json:"desc" bson:"desc"`
+	Activities  map[string]ItineraryActivity `json:"activities" bson:"activities"`
+	// Route       maps.RouteList               `json:"routes" bson:"routes"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
@@ -225,13 +219,11 @@ func NewItineraryList(date time.Time) ItineraryList {
 		ID:          uuid.New().String(),
 		Date:        date,
 		Description: "",
-		Contents:    ItineraryContentList{},
-		Route:       maps.RouteList{},
-		Labels:      common.Labels{},
+		Activities:  map[string]ItineraryActivity{},
+		// Route:       maps.RouteList{},
+		Labels: common.Labels{},
 	}
 }
-
-// Budget
 
 type Budget struct {
 	ID     string          `json:"id" bson:"id"`

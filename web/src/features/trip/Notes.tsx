@@ -2,11 +2,11 @@ import React, { FC, useState } from 'react';
 import { TripNotesCss } from '../../assets/styles/global';
 import NotesEditor from '../../components/common/NotesEditor';
 import ToggleChevron from '../../components/common/ToggleChevron';
-import { makeReplaceOp } from '../../lib/tripsSync';
+import { makeRepOp } from '../../lib/jsonpatch';
 
 interface NotesSectionProps {
   trip: any
-  tripStateOnUpdate: any
+  tripOnUpdate: any
 }
 
 const NotesSection: FC<NotesSectionProps> = (props: NotesSectionProps) => {
@@ -15,7 +15,7 @@ const NotesSection: FC<NotesSectionProps> = (props: NotesSectionProps) => {
 
   // Event Handlers
   const notesOnChange = (content: string) => {
-    props.tripStateOnUpdate([makeReplaceOp(`/notes`, content)]);
+    props.tripOnUpdate([makeRepOp(`/notes`, content)]);
   }
 
   // Renderers

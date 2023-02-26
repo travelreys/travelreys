@@ -20,21 +20,21 @@ import {
 import Dropdown from '../../components/common/Dropdown';
 import InputDatesPicker from '../../components/common/InputDatesPicker';
 import PlacePicturesCarousel from './PlacePicturesCarousel';
-import { Trips } from '../../lib/trips';
-import { CommonCss, InputDatesPickerCss, LodgingCardCss } from '../../assets/styles/global';
 import {
-  printFmt,
+  fmt,
   isEmptyDate,
   parseISO,
   parseTripDate
 } from '../../lib/dates';
 import { capitaliseWords } from '../../lib/strings';
+import { Lodging } from '../../lib/trips';
 import { useMap } from '../../context/maps-context';
+import { CommonCss, InputCss, LodgingCardCss } from '../../assets/styles/global';
 
 // TripLodgingCard
 
 interface TripLodgingCardProps {
-  lodging: Trips.Lodging
+  lodging: Lodging
   onUpdate: any
   onDelete: any
 }
@@ -158,8 +158,8 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
     if (isUpdatingPrice) {
       return (
         <div className={LodgingCardCss.PriceInputCtn}>
-          <span className={InputDatesPickerCss.Label}>
-            <CurrencyDollarIcon className={InputDatesPickerCss.Icon} />
+          <span className={InputCss.Label}>
+            <CurrencyDollarIcon className={InputCss.Icon} />
             &nbsp;Amount
           </span>
           <input
@@ -168,7 +168,7 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
             value={priceAmount as any}
             onChange={priceOnChange}
             onBlur={priceOnBlur}
-            className={InputDatesPickerCss.Input}
+            className={InputCss.Input}
           />
         </div>
       );
@@ -202,9 +202,9 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
       >
         <CalendarDaysIcon className={CommonCss.Icon} />&nbsp;
         {isEmptyDate(props.lodging.checkinTime) ? null
-          : printFmt(parseISO(props.lodging.checkinTime as string), dateFmt)}
+          : fmt(parseISO(props.lodging.checkinTime as string), dateFmt)}
         {isEmptyDate(props.lodging.checkoutTime) ? null :
-          " - " + printFmt(parseISO(props.lodging.checkoutTime as string), dateFmt)}
+          " - " + fmt(parseISO(props.lodging.checkoutTime as string), dateFmt)}
       </p>
     );
   }

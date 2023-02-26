@@ -1,23 +1,6 @@
 import _isEmpty from 'lodash/isEmpty';
 import jwt_decode from "jwt-decode";
 
-export namespace Auth {
-
-  export interface Metadata {
-    iss: string
-    sub: string
-    email: string
-    iat: number
-  }
-
-  export interface User {
-    id: string
-    email: string
-    name: string
-    labels: {[key: string]: string}
-  }
-
-}
 
 export const LabelCurrency = "currency";
 export const LabelLocale = "locale";
@@ -25,6 +8,20 @@ export const LabelUserGoogleImage = "google|picture";
 
 const AuthTokenKey = "tiinyplanet.com:auth:token"
 const UserTokenKey = "tiinyplanet.com:auth:user"
+
+export interface Claims {
+  iss: string
+  sub: string
+  email: string
+  iat: number
+}
+
+export interface User {
+  id: string
+  email: string
+  name: string
+  labels: {[key: string]: string}
+}
 
 export const persistAuthToken = (tkn: string) => {
   localStorage.setItem(AuthTokenKey, tkn);
@@ -38,7 +35,7 @@ export const deleteAuthToken = () => {
   localStorage.removeItem(AuthTokenKey);
 }
 
-export const readAuthMetadata = (): Auth.Metadata | undefined => {
+export const readAuthMetadata = (): Claims | undefined => {
   const tkn = readAuthToken();
   if (_isEmpty(tkn)) {
     return undefined;
@@ -46,7 +43,7 @@ export const readAuthMetadata = (): Auth.Metadata | undefined => {
   return jwt_decode(tkn);
 }
 
-export const persistAuthUser = (user: Auth.User) => {
+export const persistAuthUser = (user: User) => {
   localStorage.setItem(UserTokenKey, JSON.stringify(user));
 }
 
@@ -54,7 +51,7 @@ export const deleteAuthUser = () => {
   localStorage.removeItem(UserTokenKey)
 }
 
-export const readAuthUser = (): Auth.User|null => {
+export const readAuthUser = (): User|null => {
   const json = localStorage.getItem(UserTokenKey);
   if (json) {
     return JSON.parse(json);

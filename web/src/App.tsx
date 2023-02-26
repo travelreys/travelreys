@@ -8,10 +8,15 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import HomePage from './pages/home';
 import LandingPage from './pages/landing';
 import Layout from './layouts/Layout';
-import TripPage from './pages/trips';
+import TripPage from './pages/trip';
 import ProfilePage from './pages/profile';
+
 import { readAuthUser } from './lib/auth';
-import { makeSetUserAction, UserProvider, useUser } from './context/user-context';
+import {
+  makeSetUserAction,
+  UserProvider,
+  useUser
+} from './context/user-context';
 
 const router = createBrowserRouter([
   {

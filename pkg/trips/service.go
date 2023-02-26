@@ -29,23 +29,22 @@ func NewService(store Store, authSvc auth.Service, imageSvc images.Service) Serv
 }
 
 func (svc *service) Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error) {
-	plan := NewTripWithDates(creator, name, start, end)
-	plan.CoverImage = images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))]
+	trip := NewTripWithDates(creator, name, start, end)
+	trip.CoverImage = images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))]
 
-	// bootstrap 1 content list
-	contentList := NewTripContentList("")
-	plan.Contents[contentList.ID] = contentList
+	// bootstrap 1 activity list
+	activityList := NewActivityList("")
+	trip.Activities[activityList.ID] = activityList
 
 	// bootstrap itinerary dates
-	numDays := plan.EndDate.Sub(plan.StartDate).Hours() / 24
+	numDays := trip.EndDate.Sub(trip.StartDate).Hours() / 24
 	for i := 0; i <= int(numDays); i++ {
-		dt := plan.StartDate.Add(time.Duration(i*24) * time.Hour)
+		dt := trip.StartDate.Add(time.Duration(i*24) * time.Hour)
 		itinList := NewItineraryList(dt)
-		plan.Itinerary = append(plan.Itinerary, itinList)
+		trip.Itinerary = append(trip.Itinerary, itinList)
 	}
-
-	err := svc.store.Save(ctx, plan)
-	return plan, err
+	err := svc.store.Save(ctx, trip)
+	return trip, err
 }
 
 func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {

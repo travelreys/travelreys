@@ -1,151 +1,30 @@
 import React, { FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
-import { useTranslation } from 'react-i18next';
-import {
-  CalendarDaysIcon,
-  MagnifyingGlassIcon,
-  PencilIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, PencilIcon } from '@heroicons/react/24/outline'
 
-import Modal from '../../components/common/Modal';
+import Avatar from '../../components/common/Avatar';
 import DatesPicker from '../../components/common/DatesPicker';
-import Spinner from '../../components/common/Spinner';
+import CoverImageModal from './CoverImageModal';
 
 import ImagesAPI from '../../apis/images';
 import {
+  fmt,
   nullDate,
-  printFromDateFromRange,
-  printToDateFromRange,
   parseTripDate
 } from '../../lib/dates';
-import { makeReplaceOp } from '../../lib/tripsSync';
-import { TripMenuJumboCss } from '../../assets/styles/global';
-import { Trips, userFromMemberID } from '../../lib/trips';
-import { Auth, LabelUserGoogleImage } from '../../lib/auth';
-import Avatar from '../../components/common/Avatar';
+import { makeRepOp } from '../../lib/jsonpatch';
+import { Member, userFromMember } from '../../lib/trips';
+import { LabelUserGoogleImage, User } from '../../lib/auth';
+import { CommonCss } from '../../assets/styles/global';
 
 
 
-/////////////////////
-// CoverImageModal //
-/////////////////////
-interface CoverImageModalProps {
-  isOpen: boolean
-  onClose: any
-  onCoverImageSelect: any
-}
-
-const CoverImageModal: FC<CoverImageModalProps> = (props: CoverImageModalProps) => {
-
-  const [query, setQuery] = useState("");
-  const [imageList, setImageList] = useState([] as any);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // API
-  const searchImage = () => {
-    setIsLoading(true);
-    ImagesAPI.search(query)
-    .then(res => {
-      const images = _get(res, "data.images", []);
-      setImageList(images);
-      setIsLoading(false);
-    });
-  }
-
-  // Event Handlers
-
-  // Renderers
-  const renderImageThumbnails = () => {
-    if (isLoading) {
-      return <Spinner />
-    }
-    return (
-      <div className='columns-2 md:columns-3'>
-        { imageList.map((image: any) => (
-          <figure
-            key={image.id}
-            className={TripMenuJumboCss.Figure}
-          >
-            <button type="button">
-              <img
-                srcSet={ImagesAPI.makeSrcSet(image)}
-                src={ImagesAPI.makeSrc(image)}
-                alt={"cover"}
-                className={TripMenuJumboCss.FigureImg}
-              />
-              <div className={TripMenuJumboCss.FigureBtnCtn}>
-                <button
-                  type="button"
-                  className={TripMenuJumboCss.FigureBtn}
-                  onClick={() => {props.onCoverImageSelect(image)}}
-                >
-                  Select
-                </button>
-              </div>
-            </button>
-            <figcaption className={TripMenuJumboCss.FigureCaption}>
-              <a
-                target="_blank"
-                href={ImagesAPI.makeUserURL(_get(image, "user.username"))}
-                rel="noreferrer"
-              >
-                @{_get(image, "user.username")}, Unsplash
-              </a>
-            </figcaption>
-          </figure>
-        ))}
-      </div>);
-  }
-
-  return (
-    <Modal isOpen={props.isOpen}>
-      <div className={TripMenuJumboCss.SearchImageCard}>
-        <div className='flex justify-between mb-6'>
-          <h2 className={TripMenuJumboCss.SearchImageTitle}>
-            Change cover image
-          </h2>
-          <button type="button" onClick={props.onClose}>
-            <XMarkIcon className='h-6 w-6 text-slate-700' />
-          </button>
-        </div>
-        <h2 className={TripMenuJumboCss.SearchImageWebTitle}>
-          Search the web
-        </h2>
-        <div className="flex mb-4 justify-between">
-          <input
-            type="text"
-            className={TripMenuJumboCss.SearchImageInput}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" ? searchImage() : ""}
-            placeholder="destination, theme ..."
-          />
-          <button
-            type='button'
-            className={TripMenuJumboCss.SearchImageBtn}
-            onClick={searchImage}
-          >
-            <MagnifyingGlassIcon className={TripMenuJumboCss.SearchImageIcon} />
-          </button>
-        </div>
-        {renderImageThumbnails()}
-      </div>
-    </Modal>
-  );
-
-}
-
-
-///////////////
-// MenuJumbo //
-///////////////
 interface MenuJumboProps {
   trip: any
-  tripMembers: {[key: string]: Auth.User}
-  onlineMembers: Array<Trips.Member>
-  tripStateOnUpdate: any
+  tripMembers: {[key: string]: User}
+  onlineMembers: Array<Member>
+  tripOnUpdate: any
 }
 
 const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
@@ -170,12 +49,12 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
 
   // Event Handlers - Trip Name
   const tripNameOnBlur = () => {
-    props.tripStateOnUpdate([makeReplaceOp("/name", tripName)])
+    props.tripOnUpdate([makeRepOp("/name", tripName)])
   }
 
   // Event Handlers - Cover Image
   const coverImageOnSelect = (image: any) => {
-    props.tripStateOnUpdate([makeReplaceOp("/coverImage", image)]);
+    props.tripOnUpdate([makeRepOp("/coverImage", image)]);
   }
 
   // Event Handlers - Trip Dates
@@ -190,51 +69,60 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
       const ops = [];
       const from = range.from || nullDate;
       const to = range.to || nullDate;
-      ops.push(makeReplaceOp("/startDate", from));
-      ops.push(makeReplaceOp("/endDate", to));
-      props.tripStateOnUpdate(ops);
+      ops.push(makeRepOp("/startDate", from));
+      ops.push(makeRepOp("/endDate", to));
+      props.tripOnUpdate(ops);
       setIsCalendarOpen(false);
       return;
     }
   }
 
   // Renderers
+  const css = {
+      datesBtn: "font-medium text-md text-slate-500",
+      datesBtnIcon: "inline h-5 w-5 align-sub mr-2",
+      coverImage: "block sm:max-h-96 w-full",
+      imageEditIconCtn: "absolute top-4 right-4 h-10 w-10 bg-gray-800/70 p-2 text-center rounded-full",
+      imageEditIcon: "h-6 w-6 text-white",
+      nameInputCtn: "h-16 relative -top-24",
+      nameInputWrapper: "bg-white rounded-lg shadow p-5 mx-4 mb-4",
+      namInputHeader: "flex items-center mb-12",
+      nameInput: "text-2xl sm:text-4xl font-bold text-slate-700 w-full rounded-lg p-1 border-0 hover:bg-slate-300 hover:border-0 hover:bg-slate-100 focus:ring-0",
+      onlineBtn: "flex items-center justify-center w-8 h-8 text-xs font-medium text-white bg-gray-700 border-2 border-white rounded-full hover:bg-gray-600",
+  }
+
+
   const renderCoverImage = () => {
     return (
       <div className="relative">
         <img
           srcSet={ImagesAPI.makeSrcSet(props.trip.coverImage)}
           src={ImagesAPI.makeSrc(props.trip.coverImage)}
-          className={TripMenuJumboCss.TripCoverImage}
+          className={css.coverImage}
         />
         <button
           type='button'
-          className={TripMenuJumboCss.TripImageEditIconCtn}
+          className={css.imageEditIconCtn}
           onClick={() => { setIsCoverImageModalOpen(true) }}
         >
-          <PencilIcon className={TripMenuJumboCss.TripImageEditIcon} />
+          <PencilIcon className={css.imageEditIcon} />
         </button>
       </div>
     );
   }
 
   const renderDatesButton = () => {
-    const range = {from: startDt, to: endDt};
     const dateFmt = "MMM d, yy"
     return (
       <div className='flex-1' onBlur={tripDatesOnBlur}>
         <button
           type="button"
-          className={TripMenuJumboCss.TripDatesBtn}
+          className={css.datesBtn}
           onClick={() => { setIsCalendarOpen(true) }}
         >
-          <CalendarDaysIcon className={TripMenuJumboCss.TripDatesBtnIcon} />
-          {startDt ?
-            <span>
-              {printFromDateFromRange(range, dateFmt)}
-              &nbsp;-&nbsp;
-              {printToDateFromRange(range, dateFmt)}
-            </span> : null}
+          <CalendarDaysIcon className={css.datesBtnIcon} />
+          {startDt ? <span>{fmt(startDt, dateFmt)}</span> : null }
+          {endDt ? <span>&nbsp;-&nbsp;{fmt(endDt, dateFmt)}</span> : null}
         </button>
         <DatesPicker
           onSelect={tripDatesOnChange}
@@ -245,18 +133,17 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
     );
   }
 
-
   const renderOnlineMembers = () => {
     const imgs = [];
-    props.onlineMembers.slice(0, 5).forEach((om: Trips.Member) => {
-      const usr = userFromMemberID(om, props.tripMembers);
+    props.onlineMembers.slice(0, 5).forEach((om: Member) => {
+      const usr = userFromMember(om, props.tripMembers);
       imgs.push(
-        <div className='w-8 h-8'>
+        <div key={om.id} className={CommonCss.IconLarge}>
           <Avatar
             key={om.id}
-            imgUrl={_get(usr, `labels.${LabelUserGoogleImage}`)}
-            name={_get(usr, "name", "")}
             placement="top"
+            imgurl={_get(usr, `labels.${LabelUserGoogleImage}`)}
+            name={_get(usr, "name", "")}
           />
         </div>
       );
@@ -264,10 +151,7 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
 
     if (props.onlineMembers.length > 5) {
       imgs.push(
-        <button
-          type='button'
-          className="flex items-center justify-center w-8 h-8 text-xs font-medium text-white bg-gray-700 border-2 border-white rounded-full hover:bg-gray-600"
-        >
+        <button type='button' className={css.onlineBtn}>
           {props.onlineMembers.length - 5}
         </button>)
     }
@@ -278,18 +162,17 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
     );
   }
 
-
   const renderTripNameInput = () => {
     return (
-      <div className={TripMenuJumboCss.TripNameInputCtn}>
-        <div className={TripMenuJumboCss.TripNameInputWrapper}>
-          <div className={TripMenuJumboCss.TripNamInputHeader}>
+      <div className={css.nameInputCtn}>
+        <div className={css.nameInputWrapper}>
+          <div className={css.namInputHeader}>
             <input
               type="text"
               value={tripName}
               onChange={(e) => setTripName(e.target.value)}
               onBlur={tripNameOnBlur}
-              className={TripMenuJumboCss.TripNameInput}
+              className={css.nameInput}
             />
           </div>
           <div className='flex items-center'>

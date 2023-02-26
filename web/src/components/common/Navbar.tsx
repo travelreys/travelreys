@@ -15,14 +15,12 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/solid';
 
-
 import Modal from './Modal';
 import Dropdown from './Dropdown';
 import GoogleIcon from '../icons/GoogleIcon';
 
 import AuthAPI, {
   LoginResponse,
-  makeUpdateFilter,
   ReadResponse
 } from '../../apis/auth';
 import {
@@ -34,30 +32,30 @@ import {
   LabelCurrency,
   LabelLocale
 } from '../../lib/auth';
-import {
-  NavbarCss,
-  CommonCss,
-  CurrencyDropdownCss
-} from '../../assets/styles/global';
+import { CommonCss } from '../../assets/styles/global';
 import { makeSetUserAction, useUser } from '../../context/user-context';
 import useOutsideAlerter from '../../hooks/useOutsideAlerter';
 import currencies from '../../data/currency.json';
 import locales from '../../data/locales.json';
 
-////////////////
-// LoginModal //
-////////////////
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-
 const LoginModal: FC<LoginModalProps> = (props: LoginModalProps) => {
   const history = useNavigate();
   const { dispatch } = useUser();
   const { t } = useTranslation();
+
+  const css = {
+    ctn: 'p-5 py-8 flex flex-col',
+    wrapper: "flex flex-row-reverse mb-2",
+    title: 'font-bold text-2xl text-center mb-8',
+    btnCtn: "flex justify-around mb-4",
+    googleLoginBtn: 'inline-flex items-center rounded-full bg-white border border-gray-200 p-2 px-4 font-semibold',
+  }
 
   // Event Handlers
   const googleLoginOnClick = useGoogleLogin({
@@ -73,7 +71,7 @@ const LoginModal: FC<LoginModalProps> = (props: LoginModalProps) => {
           return readAuthMetadata();
         })
         .then((metadata) => {
-          return AuthAPI.readUser(metadata!.sub)
+          return AuthAPI.read(metadata!.sub)
         })
         .then((res: ReadResponse) => {
           if (res.error) {
@@ -89,10 +87,7 @@ const LoginModal: FC<LoginModalProps> = (props: LoginModalProps) => {
   // Renderers
   const renderGoogleLoginBtn = () => {
     return (
-      <button
-        className='inline-flex items-center rounded-full bg-white border border-gray-200 p-2 px-4 font-semibold'
-        onClick={googleLoginOnClick}
-      >
+      <button className={css.googleLoginBtn} onClick={googleLoginOnClick}>
         <GoogleIcon className={CommonCss.LeftIcon} />
         {t('navbar.loginModal.googleSignIn')}
       </button>
@@ -101,31 +96,22 @@ const LoginModal: FC<LoginModalProps> = (props: LoginModalProps) => {
 
   return (
     <Modal isOpen={props.isOpen}>
-      <div className='p-5 py-8 flex flex-col'>
-        <div className='flex flex-row-reverse mb-2'>
-          <button
-            type="button"
-            className=''
-            onClick={props.onClose}
-          >
+      <div className={css.ctn}>
+        <div className={css.wrapper}>
+          <button type="button" onClick={props.onClose}>
             <XMarkIcon className={CommonCss.Icon} />
           </button>
         </div>
-        <h1 className='font-bold text-2xl text-center mb-8'>
+        <h1 className={css.title}>
           {t('navbar.loginModal.title')}
         </h1>
-        <div className='flex justify-around mb-4'>
+        <div className={css.btnCtn}>
           {renderGoogleLoginBtn()}
         </div>
       </div>
     </Modal>
   );
 }
-
-
-//////////////////////
-// CurrencySelector //
-//////////////////////
 
 interface CurrencySelectorProps {
   currency?: string
@@ -137,8 +123,20 @@ const CurrencySelector: FC<CurrencySelectorProps> = (props: CurrencySelectorProp
   const [isActive, setIsActive] = useState(false);
   const wrapperRef = useRef(null);
   useOutsideAlerter(wrapperRef, () => {setIsActive(false)});
+
   const { t } = useTranslation();
 
+  const css = {
+    ctn: "absolute z-10 rounded-lg bg-white shadow block right-0",
+    wrapper: "p-4 max-h-96 overflow-y-auto",
+    title: 'font-bold mb-2',
+    btnCtn: "columns-2 sm:columns-4 smgap-4",
+    ddBtn: "flex items-center p-2 rounded-lg gap-1 hover:bg-gray-200",
+    currency: "font-semibold text-sm",
+    btn: "flex rounded-lg p-1 text-sm hover:bg-indigo-100",
+    btnCode: "text-gray-400 mr-2",
+    btnName: "text-gray-700 text-left",
+  }
 
   // Renderers
   const renderSelection = () => {
@@ -146,26 +144,21 @@ const CurrencySelector: FC<CurrencySelectorProps> = (props: CurrencySelectorProp
       <button
         key={loc.code}
         type="button"
-        className='flex rounded-lg p-1 text-sm hover:bg-indigo-100'
+        className={css.btn}
         onClick={() => {props.onSelect(loc.code)}}
       >
-        <div className='text-gray-400 mr-2'>{loc.code}</div>
-        <div className='text-gray-700 text-left '>{loc.name}</div>
+        <div className={css.btnCode}>{loc.code}</div>
+        <div className={css.btnName}>{loc.name}</div>
       </button>
     ))
 
     return (
-      <div
-        ref={wrapperRef}
-        className={CurrencyDropdownCss.Ctn}
-      >
-        <div className={CurrencyDropdownCss.Wrapper}>
-          <h3 className='font-bold mb-2'>
+      <div ref={wrapperRef} className={css.ctn}>
+        <div className={css.wrapper}>
+          <h3 className={css.title}>
             {t("navbar.currencySelector.title")}
           </h3>
-          <div className='columns-2 sm:columns-4 smgap-4'>
-            {opts}
-          </div>
+          <div className={css.btnCtn}>{opts}</div>
         </div>
       </div>
     );
@@ -174,21 +167,16 @@ const CurrencySelector: FC<CurrencySelectorProps> = (props: CurrencySelectorProp
   return (
     <div className='relative'>
       <button
-        type="button"
-        className='flex items-center p-2 rounded-lg gap-1 hover:bg-gray-200'
+        type="button" className={css.ddBtn}
         onClick={() => { setIsActive(!isActive) }}
       >
-        <span className='font-semibold text-sm'>{props.currency}</span>
+        <span className={css.currency}>{props.currency}</span>
         <ChevronDownIcon className={CommonCss.Icon} />
       </button>
       {isActive ? renderSelection() : null}
     </div>
   );
 }
-
-////////////////////
-// LocaleSelector //
-////////////////////
 
 interface LocaleSelctorProps {
   locale?: string
@@ -198,9 +186,18 @@ interface LocaleSelctorProps {
 const LocaleSelector: FC<LocaleSelctorProps> = (props: LocaleSelctorProps) => {
   const [isActive, setIsActive] = useState(false);
   const wrapperRef = useRef(null);
+  useOutsideAlerter(wrapperRef, () => {setIsActive(false)});
+
   const { t } = useTranslation();
 
-  useOutsideAlerter(wrapperRef, () => {setIsActive(false)});
+  const css = {
+    ctn: "absolute z-10 rounded-lg bg-white shadow block right-0",
+    wrapper: "p-4 max-h-96 overflow-y-auto",
+    ddBtn: "flex items-center p-2 rounded-lg gap-1 hover:bg-gray-200",
+    ddBtnText: "font-semibold text-sm",
+    btn: "flex rounded-lg p-2 text-sm hover:bg-indigo-100",
+    btnText: "text-gray-700 text-left"
+  }
 
   // Renderers
   const renderSelection = () => {
@@ -208,19 +205,19 @@ const LocaleSelector: FC<LocaleSelctorProps> = (props: LocaleSelctorProps) => {
       <button
         key={loc.locale}
         type="button"
-        className='flex rounded-lg p-2 text-sm hover:bg-indigo-100'
+        className={css.btn}
         onClick={() => {props.onSelect(loc.locale)}}
       >
-        <div className='text-gray-700 text-left '>{loc.name}</div>
+        <div className={css.btnText}>{loc.name}</div>
       </button>
     ))
 
     return (
       <div
         ref={wrapperRef}
-        className={CurrencyDropdownCss.Ctn}
+        className={css.ctn}
       >
-        <div className={CurrencyDropdownCss.Wrapper}>
+        <div className={css.wrapper}>
           <h3 className='font-bold mb-2'>
             {t('navbar.localeSelector.title')}
           </h3>
@@ -233,21 +230,17 @@ const LocaleSelector: FC<LocaleSelctorProps> = (props: LocaleSelctorProps) => {
   }
 
   const renderSelectedLocale = () => {
-    return _get(
-      _find(locales, (loc) => loc.locale === props.locale),
-      "name",
-      props.locale
-    );
+    const loc = _find(locales, (loc) => loc.locale === props.locale);
+    return _get(loc, "name", props.locale);
   }
 
   return (
     <div className='relative'>
       <button
-        type="button"
-        className='flex items-center p-2 rounded-lg gap-1 hover:bg-gray-200'
+        type="button" className={css.ddBtn}
         onClick={() => { setIsActive(!isActive) }}
       >
-        <span className='font-semibold text-sm'>
+        <span className={css.ddBtnText}>
           {renderSelectedLocale()}
         </span>
         <ChevronDownIcon className={CommonCss.Icon} />
@@ -257,23 +250,22 @@ const LocaleSelector: FC<LocaleSelctorProps> = (props: LocaleSelctorProps) => {
   );
 }
 
-
-////////////
-// Navbar //
-////////////
-
-
 interface LandingPageActionsProps {
   onLoginClick: () => void
 }
 
 const LandingPageActions: FC<LandingPageActionsProps> = (props: LandingPageActionsProps) => {
   const {t} = useTranslation();
+
+  const css = {
+    btn: "font-bold py-2 px-6 rounded-full hover:text-indigo-500"
+  }
+
   return (
     <div>
       <button
         type="button"
-        className='font-bold py-2 px-6 rounded-full hover:text-indigo-500'
+        className={css.btn}
         onClick={props.onLoginClick}
       >
         {t('navbar.landingPageActions.login')}
@@ -283,12 +275,18 @@ const LandingPageActions: FC<LandingPageActionsProps> = (props: LandingPageActio
 }
 
 
-interface AppPageActionProps { }
+interface AppPageActionProps {}
 
 const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
   const history = useNavigate();
   const { state, dispatch } = useUser();
   const { t, i18n } = useTranslation();
+
+  const css = {
+    ctn: "flex items-center gap-2",
+    profileImg: "h-8 w-8 rounded-full",
+    logoutBtn: "flex items-center w-full hover:text-indigo-500",
+  }
 
   // Event Handlers
   const logoutOnClick = () => {
@@ -302,8 +300,7 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
     newUser.labels[LabelCurrency] = cur;
     dispatch(makeSetUserAction(newUser));
 
-    AuthAPI.updateUser(
-      state.user?.id || "", makeUpdateFilter(newUser.labels));
+    AuthAPI.update(state.user?.id || "", newUser.labels);
   }
 
   const localeOnSelect = (loc: string) => {
@@ -311,8 +308,8 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
     newUser.labels[LabelLocale] = loc;
     dispatch(makeSetUserAction(newUser));
 
-    AuthAPI.updateUser(
-      state.user?.id || "", makeUpdateFilter(newUser.labels))
+    AuthAPI.update(
+      state.user?.id || "", newUser.labels)
     .then(() => {
       i18n.changeLanguage(loc);
     })
@@ -322,7 +319,7 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
   const renderProfileImage = () => {
     const profileImgURL = _get(state.user, `labels.${LabelUserGoogleImage}`);
     return (
-      <img className={NavbarCss.ProfileImg}
+      <img className={css.profileImg}
         src={profileImgURL}
         alt="profile"
         referrerPolicy="no-referrer"
@@ -334,7 +331,7 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
     const opts = [
       <button
         type='button'
-        className={NavbarCss.LogoutBtn}
+        className={css.logoutBtn}
         onClick={logoutOnClick}
       >
         <ArrowLeftOnRectangleIcon className={CommonCss.LeftIcon} />
@@ -349,7 +346,7 @@ const AppPageActions: FC<AppPageActionProps> = (props: AppPageActionProps) => {
   const locale = _get(state.user, `labels.${LabelLocale}`, "en");
 
   return (
-    <div className='flex items-center gap-2'>
+    <div className={css.ctn}>
       <LocaleSelector
         locale={locale}
         onSelect={localeOnSelect}
@@ -368,10 +365,16 @@ interface NavbarLogoProps {
 }
 
 export const NavbarLogo: FC<NavbarLogoProps> = (props:NavbarLogoProps) => {
+  const css = {
+    link: "text-2xl sm:text-3xl font-bold text-indigo-500",
+    logoIcon: "inline align-bottom h-8 w-8 mr-2",
+    logoTxt: "inline-block",
+  }
+
   return (
-    <Link to={props.href} className={NavbarCss.Link}>
-      <GlobeAmericasIcon className={NavbarCss.LogoIcon} />
-      <span className={NavbarCss.LogoTxt}>
+    <Link to={props.href} className={css.link}>
+      <GlobeAmericasIcon className={css.logoIcon} />
+      <span className={css.logoTxt}>
         tiinyplanet
       </span>
     </Link>
@@ -379,10 +382,8 @@ export const NavbarLogo: FC<NavbarLogoProps> = (props:NavbarLogoProps) => {
 }
 
 const NavBar: FC = () => {
-  const location = useLocation()
-
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-
+  const location = useLocation();
 
   const isLandingPage = () => {
     return location.pathname === "/";
@@ -397,6 +398,10 @@ const NavBar: FC = () => {
   }
 
   // Renderers
+  const css = {
+    ctn: "container py-5 flex justify-between items-center",
+  }
+
   const renderNavbarActions = () => {
     if (isLandingPage()) {
       return (<LandingPageActions onLoginClick={() => setIsLoginModalOpen(true)} />);
@@ -408,14 +413,13 @@ const NavBar: FC = () => {
   }
 
   return (
-    <nav className={NavbarCss.Ctn}>
+    <nav className={css.ctn}>
       <NavbarLogo href={logoHref()} />
       {renderNavbarActions()}
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
-
     </nav>
   );
 }

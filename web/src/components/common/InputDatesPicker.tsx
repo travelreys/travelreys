@@ -1,11 +1,18 @@
 import React, { FC, useState } from 'react';
 import _isEmpty from 'lodash/isEmpty';
-
 import { DateRange } from 'react-day-picker';
 import { CalendarDaysIcon } from '@heroicons/react/24/outline'
-import { InputDatesPickerCss } from '../../assets/styles/global';
-import { printFromDateFromRange, printToDateFromRange } from '../../lib/dates';
+
 import DatesPicker from './DatesPicker';
+import { fmt } from '../../lib/dates';
+
+
+const css = {
+  ctn: "flex w-full border border-slate-200 rounded-lg mr-2",
+  icon: "inline align-bottom h-5 w-5 text-gray-500",
+  label: "inline-flex bg-gray-200 font-bold items-center px-3 text-sm text-slate-500 rounded-l-md",
+  input: "block flex-1 min-w-0 p-2.5 border-0 rounded-none rounded-r-lg text-gray-900 text-sm w-full",
+}
 
 interface InputDatesPicketProps {
   dates?: DateRange
@@ -18,15 +25,13 @@ const InputDatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProp
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const startInputValue = printFromDateFromRange(props.dates, "y-MM-dd");
-  const endInputValue = printToDateFromRange(props.dates, "y-MM-dd");
+  const start = props.dates?.from ? fmt(props.dates?.from, "y-MM-dd"): undefined;
+  const end = props.dates?.to ? fmt(props.dates.to, "y-MM-dd"): undefined;
 
-  let value = startInputValue;
-  if (!_isEmpty(endInputValue)) {
-    value = `${startInputValue} - ${endInputValue}`
+  let value = start;
+  if (!_isEmpty(end)) {
+    value = `${start} - ${end}`
   }
-
-  // Renderers
 
   return (
     <div
@@ -37,17 +42,16 @@ const InputDatesPicker: FC<InputDatesPicketProps> = (props: InputDatesPicketProp
         }
       }}
     >
-      <div className={props.CtnCss || InputDatesPickerCss.Ctn}>
-        <span className={InputDatesPickerCss.Label}>
-          <CalendarDaysIcon className={InputDatesPickerCss.Icon} />
+      <div className={props.CtnCss || css.ctn}>
+        <span className={css.label}>
+          <CalendarDaysIcon className={css.icon} />
           &nbsp;Dates
         </span>
         <input
           onClick={() => {setIsOpen(true)}}
           type="text"
           value={value}
-          onChange={() => { }}
-          className={InputDatesPickerCss.Input}
+          className={css.input}
         />
       </div>
       <DatesPicker

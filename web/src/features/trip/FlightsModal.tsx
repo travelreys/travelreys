@@ -2,10 +2,9 @@ import React, { FC, useEffect, useState } from 'react';
 import _get from "lodash/get";
 import _sortBy from "lodash/sortBy";
 import _minBy from "lodash/minBy";
-
 import _isEmpty from "lodash/isEmpty";
 import { DateRange, SelectRangeEventHandler } from 'react-day-picker';
-import { v4 as uuidv4 } from 'uuid';
+
 import { formatDuration, intervalToDuration } from 'date-fns';
 
 import {
@@ -24,21 +23,17 @@ import InputDatesPicker from '../../components/common/InputDatesPicker';
 import Spinner from '../../components/common/Spinner';
 
 import FlightsAPI from '../../apis/flights';
-import { Trips } from '../../lib/trips';
 import {
   parseISO,
-  printFmt,
-  prettyPrintMins,
-  printFromDateFromRange,
-  printToDateFromRange,
+  fmt,
+  fmtMins,
   parseTripDate
 } from '../../lib/dates';
 import { capitaliseWords } from '../../lib/strings';
 import { CommonCss, FlightsModalCss } from '../../assets/styles/global';
+import { makeOnewayFlight, makeRoundTripFlight } from '../../lib/trips';
 
-////////////////////////////
-// OnewayFlightsContainer //
-////////////////////////////
+
 
 interface OnewayFlightsContainerProps {
   oneways: any
@@ -46,10 +41,13 @@ interface OnewayFlightsContainerProps {
 }
 
 const OnewayFlightsContainer: FC<OnewayFlightsContainerProps> = (props: OnewayFlightsContainerProps) => {
+  const css = {
+    title: "text-lg sm:text-2xl mb-2 font-medium text-slate-900",
+  }
 
   return (
     <div>
-      <p className={FlightsModalCss.FlightSearchResultsTitle}>
+      <p className={css.title}>
         One-way Flights
       </p>
       {props.oneways.map((flight: any, idx: number) =>
@@ -63,10 +61,6 @@ const OnewayFlightsContainer: FC<OnewayFlightsContainerProps> = (props: OnewayFl
     </div>
   );
 }
-
-///////////////////////////////
-// RoundtripFlightsContainer //
-///////////////////////////////
 
 interface RoundtripFlightsContainerProps {
   roundtrips: any
@@ -100,6 +94,12 @@ const RoundtripFlightsContainer: FC<RoundtripFlightsContainerProps> = (props: Ro
   }
 
   // Renderers
+  const css = {
+    rtStepperCtn: "flex items-center w-full mb-4 space-x-2 text-sm font-medium text-center text-gray-500 bg-white rounded-lg sm:p-4 sm:space-x-4",
+    rtStepperActive: "flex items-center text-blue-600 dark:text-blue-500",
+    rtStepper: "flex items-center",
+    rtStepperText: "flex items-center",
+  }
 
   const renderStepper = () => {
     const texts = [
@@ -112,11 +112,12 @@ const RoundtripFlightsContainer: FC<RoundtripFlightsContainerProps> = (props: Ro
       <span>Select Return Flights</span>
     ]
     return (
-      <ol className={FlightsModalCss.RoundTripStepperCtn}>
+      <ol className={css.rtStepperCtn}>
         {texts.map((text: any, idx: number) => {
-          const css = idx === stepperStep
-            ? FlightsModalCss.RoundTripStepperActive: FlightsModalCss.RoundTripStepper
-          return (<li className={css}>{text}</li>);
+          return (
+          <li className={idx === stepperStep ? css.rtStepperActive: css.rtStepper}>
+            {text}
+          </li>);
         })}
       </ol>
     );
@@ -218,13 +219,13 @@ const FlightCard: FC<FlightCardProps> = (props: FlightCardProps) => {
             <li className="mb-4 ml-6">
               <div className={FlightsModalCss.FlightStopTimelineIcon} />
               <h3 className={FlightsModalCss.FlightStopTimelineTime}>
-                {printFmt(parseISO(leg.departure.datetime), "hh:mm aa")}
+                {fmt(parseISO(leg.departure.datetime), "hh:mm aa")}
               </h3>
               <p className={FlightsModalCss.FlightsStopTimelineText}>
                 {leg.departure.airport.code} ({leg.departure.airport.name})
               </p>
               <p className={FlightsModalCss.FlightsStopTimelineText}>
-                Travel time: {prettyPrintMins(leg.duration)}
+                Travel time: {fmtMins(leg.duration)}
               </p>
               <p className={FlightsModalCss.FlightsStopTimelineText}>
                 {leg.operatingAirline.name} {leg.operatingAirline.code} {leg.flightNo}
@@ -233,7 +234,7 @@ const FlightCard: FC<FlightCardProps> = (props: FlightCardProps) => {
             <li className="mb-4 ml-6">
               <div className={FlightsModalCss.FlightStopTimelineIcon} />
               <h3 className={FlightsModalCss.FlightStopTimelineTime}>
-                {printFmt(parseISO(leg.arrival.datetime), "hh:mm aa")}
+                {fmt(parseISO(leg.arrival.datetime), "hh:mm aa")}
               </h3>
               <p className={FlightsModalCss.FlightsStopTimelineText}>
                 {leg.arrival.airport.code} ({leg.arrival.airport.name})
@@ -293,20 +294,20 @@ const FlightCard: FC<FlightCardProps> = (props: FlightCardProps) => {
         <div className="flex">
           <span className=''>
             <p className='font-medium'>
-              {printFmt(parseISO(props.flight.departure.datetime), "hh:mm aa")}
+              {fmt(parseISO(props.flight.departure.datetime), "hh:mm aa")}
             </p>
             <p className="text-xs text-slate-400">{props.flight.departure.airport.code}</p>
           </span>
           <ArrowLongRightIcon className='h-6 w-8' />
           <span className='mb-1'>
             <p className='font-medium'>
-              {printFmt(parseISO(props.flight.arrival.datetime), "hh:mm aa")}
+              {fmt(parseISO(props.flight.arrival.datetime), "hh:mm aa")}
             </p>
             <p className="text-xs text-slate-400">{props.flight.arrival.airport.code}</p>
           </span>
         </div>
         <span className="text-xs text-slate-400 block mb-1">
-          {prettyPrintMins(props.flight.duration)}
+          {fmtMins(props.flight.duration)}
         </span>
         <span className="text-xs text-slate-400 block mb-1">
           {airline.name} | {renderNumStops()}
@@ -368,8 +369,9 @@ const FlightsSearchForm: FC<FlightsSearchFormProps> = (props: FlightsSearchFormP
 
   // Event Handlers
   const searchBtnOnClick = () => {
-    const departDate = printFromDateFromRange(flightDates, 'y-MM-dd');
-    const arrDate = printToDateFromRange(flightDates, 'y-MM-dd');
+    const dtFmt = 'y-MM-dd'
+    const departDate = flightDates?.from ? fmt(flightDates?.from, dtFmt) : undefined;
+    const arrDate = flightDates?.to ? fmt(flightDates.to, dtFmt) : undefined;
     props.onSearch(origin, destination, departDate, arrDate, cabinClass.value);
   }
 
@@ -439,7 +441,7 @@ const FlightsSearchForm: FC<FlightsSearchFormProps> = (props: FlightsSearchFormP
     return (
       <div className={FlightsModalCss.AirportSearchOptCts}>
         <ul className={FlightsModalCss.AirportSearchOptList}>
-          {FlightsAPI.airportAutocomplete(query).map((ap: any) => (
+          {FlightsAPI.searchAirport(query).map((ap: any) => (
             <li
               key={ap.iata}
               className={FlightsModalCss.AirportSearchOpt}
@@ -565,31 +567,11 @@ const FlightsModal: FC<FlightsModalProps> = (props: FlightsModalProps) => {
   }
 
   const onSelectOnewayFlight = (depart: any, bookingMetadata: any) => {
-    const tripFlight: Trips.Flight = {
-      id: uuidv4(),
-      type: "flight",
-      tags: new Map<string, string>(),
-      labels: new Map<string, string>(),
-      itineraryType: "oneway",
-      depart,
-      return: {} as any,
-      price: bookingMetadata.price,
-    };
-    props.onFlightSelect(tripFlight);
+    props.onFlightSelect(makeOnewayFlight(depart, bookingMetadata));
   }
 
   const onSelectRoundTripFlight = (departFlight: any, returnFlight: any, bookingMetadata: any) => {
-    const tripFlight: Trips.Flight = {
-      id: uuidv4(),
-      type: "flight",
-      tags: new Map<string, string>(),
-      labels: new Map<string, string>(),
-      itineraryType: "roundtrip",
-      depart: departFlight,
-      return: returnFlight,
-      price: bookingMetadata.price,
-    };
-    props.onFlightSelect(tripFlight);
+    props.onFlightSelect(makeRoundTripFlight(departFlight, returnFlight, bookingMetadata));
   }
 
   // Renderers

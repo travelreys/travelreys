@@ -25,28 +25,37 @@ import Modal from '../../components/common/Modal';
 import Dropdown from '../../components/common/Dropdown';
 
 import {
-  BudgetAmountJSONPath,
-  budgetAmt,
-  budgetItemPriceAmt,
-  ContentIconOpts,
-  flilghtPriceAmt,
-  itineraryContentPriceAmt,
-  lodgingPriceAmt,
-  PriceAmountJSONPath,
-  PriceAmountPath,
-  tripContentColor,
-  tripContentForItineraryContent,
-  Trips
+  JSONPathBudgetAmount,
+  getBudgetAmt,
+  getBudgetItemPriceAmt,
+  ActivityIconOpts,
+  getFlilghtPriceAmt,
+  getItineraryActivityPriceAmt,
+  getLodgingPriceAmt,
+  JSONPathPriceAmount,
+  getActivityColor,
+  getTripActivityForItineraryActivity,
+  BudgetItem,
+  ItineraryList,
+  ItineraryActivity,
 } from '../../lib/trips';
-import { Common } from '../../lib/common';
-import { isEmptyDate, parseISO, printFmt } from '../../lib/dates';
+import {
+  fmt,
+  isEmptyDate,
+  parseISO,
+} from '../../lib/dates';
 import {
   CommonCss,
-  InputDatesPickerCss,
+  InputCss,
   TripBudgetCss,
   TripLogisticsCss
 } from '../../assets/styles/global';
-import { makeAddOp, makeRemoveOp, makeReplaceOp } from '../../lib/tripsSync';
+import {
+  makeAddOp,
+  makeRemoveOp,
+  makeRepOp
+} from '../../lib/jsonpatch';
+import { Price } from '../../lib/common';
 
 
 
@@ -108,7 +117,7 @@ const BudgetItemModal: FC<BudgetItemModalProps> = (props: BudgetItemModalProps) 
             type="number"
             value={amount as any}
             onChange={(e) => setAmount(Number(e.target.value))}
-            className={InputDatesPickerCss.Input}
+            className={InputCss.Input}
           />
         </div>
         <div className={TripBudgetCss.PriceInputCtn}>
@@ -120,7 +129,7 @@ const BudgetItemModal: FC<BudgetItemModalProps> = (props: BudgetItemModalProps) 
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className={InputDatesPickerCss.Input}
+            className={InputCss.Input}
           />
         </div>
         <div className={TripBudgetCss.PriceInputCtn}>
@@ -132,7 +141,7 @@ const BudgetItemModal: FC<BudgetItemModalProps> = (props: BudgetItemModalProps) 
             type="text"
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            className={InputDatesPickerCss.Input}
+            className={InputCss.Input}
           />
         </div>
         <div className='flex justify-around'>
@@ -197,7 +206,7 @@ const EditBudgetModal: FC<EditBudgetModalProps> = (props: EditBudgetModalProps) 
             type="number"
             value={amount as any}
             onChange={(e) => setAmount(Number(e.target.value))}
-            className={InputDatesPickerCss.Input}
+            className={InputCss.Input}
           />
         </div>
         <div className='flex justify-around'>
@@ -223,7 +232,7 @@ const EditBudgetModal: FC<EditBudgetModalProps> = (props: EditBudgetModalProps) 
 
 interface BudgetSectionProps {
   trip: any
-  tripStateOnUpdate: any
+  tripOnUpdate: any
 }
 
 const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
@@ -233,27 +242,27 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   const [isEditBudgetModalOpen, setIsEditBudgetModalOpen] = useState(false);
   const [totalAmount, setTotalAmount] = useState(0);
   const [selectedBudgetItemIdx, setSelectedBudgetItemIdx] = useState<number|undefined>();
-  const [selectedBudgetItem, setSelectedBudgetItem] = useState<Trips.BudgetItem|undefined>();
+  const [selectedBudgetItem, setSelectedBudgetItem] = useState<BudgetItem|undefined>();
 
   const calculateTotalAmount = () => {
     let total = 0;
 
     Object.values(_get(props.trip, "flights", {}))
-      .forEach((lod: any) => { total += flilghtPriceAmt(lod)});
+      .forEach((lod: any) => { total += getFlilghtPriceAmt(lod)});
 
     Object.values(_get(props.trip, "lodgings", {}))
-      .forEach((lod: any) => { total += lodgingPriceAmt(lod)});
+      .forEach((lod: any) => { total += getLodgingPriceAmt(lod)});
 
     _get(props.trip, "itinerary", [])
-      .forEach((l: Trips.ItineraryList) => {
-        l.contents.forEach((ctnt: Trips.ItineraryContent) => {
-          total += itineraryContentPriceAmt(ctnt)
+      .forEach((l: ItineraryList) => {
+        l.activities.forEach((act: ItineraryActivity) => {
+          total += getItineraryActivityPriceAmt(act)
         })
       })
 
     _get(props.trip, "budget.items", [])
-      .forEach((i: Trips.BudgetItem) => {
-        total += budgetItemPriceAmt(i);
+      .forEach((i: BudgetItem) => {
+        total += getBudgetItemPriceAmt(i);
       })
 
     return total;
@@ -267,38 +276,38 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
   // Event Handlers
 
   const addNewBudgetItem = (amount: Number|undefined, title: string, desc: string) => {
-    props.tripStateOnUpdate([
+    props.tripOnUpdate([
       makeAddOp("/budget/items/-", {
         title: title,
         desc: desc,
-        price: { amount, currency: ""} as Common.Price,
-        labels: new Map<string, string>(),
-        tags: new Map<string, string>(),
-      } as Trips.BudgetItem)
+        price: { amount, currency: ""} as Price,
+        labels: {},
+        tags: {},
+      } as BudgetItem)
     ]);
   }
 
   const deleteBudgetItem = (idx: number) => {
-    props.tripStateOnUpdate([makeRemoveOp(`/budget/items/${idx}`, "")]);
+    props.tripOnUpdate([makeRemoveOp(`/budget/items/${idx}`, "")]);
   }
 
   const updateBudgetItem = (amount: Number|undefined, title: string, desc: string) => {
-    props.tripStateOnUpdate([
-      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/title`, title),
-      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/desc`, desc),
-      makeReplaceOp(`/budget/items/${selectedBudgetItemIdx}/${PriceAmountJSONPath}`, amount),
+    props.tripOnUpdate([
+      makeRepOp(`/budget/items/${selectedBudgetItemIdx}/title`, title),
+      makeRepOp(`/budget/items/${selectedBudgetItemIdx}/desc`, desc),
+      makeRepOp(`/budget/items/${selectedBudgetItemIdx}/${JSONPathPriceAmount}`, amount),
     ]);
   }
 
-  const editBudgetItemOnClick = (bi: Trips.BudgetItem, idx: number) => {
+  const editBudgetItemOnClick = (bi: BudgetItem, idx: number) => {
     setSelectedBudgetItem(bi);
     setSelectedBudgetItemIdx(idx);
     setIsEditBudgetItemModalOpen(true);
   }
 
   const updateBudgetAmount = (amount: number) => {
-    props.tripStateOnUpdate([
-      makeReplaceOp(`/budget/${BudgetAmountJSONPath}`, amount),
+    props.tripOnUpdate([
+      makeRepOp(`/budget/${JSONPathBudgetAmount}`, amount),
     ]);
   }
 
@@ -308,7 +317,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
     // Progress Bar
     const renderProgressBar = () => {
       let pbstyle = { width: "100%" }
-      const budgetAmount = budgetAmt(props.trip.budget);
+      const budgetAmount = getBudgetAmt(props.trip.budget);
       if (budgetAmount !== 0) {
         const width = Math.floor((totalAmount / budgetAmount) * 100);
         pbstyle.width = `${width}%`
@@ -367,7 +376,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
         {
           Object.values(_get(props.trip, "flights", {}))
           .map((flight: any) => {
-            const Icon = ContentIconOpts["flight"];
+            const Icon = ActivityIconOpts["flight"];
             return (
               <div key={flight.id} className={TripBudgetCss.ItemCtn}>
                 <div className={TripBudgetCss.ItemDescCtn}>
@@ -387,7 +396,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
                   </div>
                 </div>
                 <span className={TripBudgetCss.ItemPriceTxt}>
-                  ${flilghtPriceAmt(flight)}
+                  ${getFlilghtPriceAmt(flight)}
                 </span>
               </div>
             );
@@ -407,7 +416,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
         {
           Object.values(_get(props.trip, "lodgings", {}))
           .map((lod: any) => {
-            const Icon = ContentIconOpts["hotel"];
+            const Icon = ActivityIconOpts["hotel"];
             return (
               <div key={lod.id} className={TripBudgetCss.ItemCtn}>
                 <div className={TripBudgetCss.ItemDescCtn}>
@@ -420,14 +429,14 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
                     </p>
                     <p className={TripBudgetCss.LodgingDatesTxt}>
                       {isEmptyDate(lod.checkinTime) ? null
-                        : printFmt(parseISO(lod.checkinTime as string), dateFmt)}
+                        : fmt(parseISO(lod.checkinTime as string), dateFmt)}
                       {isEmptyDate(lod.checkoutTime) ? null :
-                        " - " + printFmt(parseISO(lod.checkoutTime as string), dateFmt)}
+                        " - " + fmt(parseISO(lod.checkoutTime as string), dateFmt)}
                     </p>
                   </div>
                 </div>
                 <span className={TripBudgetCss.ItemPriceTxt}>
-                  ${lodgingPriceAmt(lod)}
+                  ${getLodgingPriceAmt(lod)}
                 </span>
               </div>
             );
@@ -439,18 +448,16 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
 
   const renderItinerary = () => {
     const itinerary = _flatten(_get(props.trip, "itinerary", [])
-      .map((l: Trips.ItineraryList) => {
-        return l.contents.map((itinCtnt: Trips.ItineraryContent, idx: number) => {
-          const amt = itineraryContentPriceAmt(itinCtnt);
+      .map((l: ItineraryList) => {
+        return l.activities.map((itinAct: ItineraryActivity, idx: number) => {
+          const amt = getItineraryActivityPriceAmt(itinAct);
           if (amt === 0) {
             return null;
           }
-          const ctnt = tripContentForItineraryContent(
-            props.trip, itinCtnt.tripContentListId, itinCtnt.tripContentId
-          );
-          const color = tripContentColor(l);
+          const act = getTripActivityForItineraryActivity(props.trip, itinAct);
+          const color = getActivityColor(l);
           return (
-            <div key={itinCtnt.id} className={TripBudgetCss.ItemCtn}>
+            <div key={act.id} className={TripBudgetCss.ItemCtn}>
               <div className={TripBudgetCss.ItemDescCtn}>
                 <div
                   className={TripBudgetCss.ItinItemIcon}
@@ -459,9 +466,9 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
                   {idx + 1}
                 </div>
                 <div>
-                  <p className={TripBudgetCss.ItemNameTxt}>{ctnt.title}</p>
+                  <p className={TripBudgetCss.ItemNameTxt}>{act.title}</p>
                   <p className={TripBudgetCss.ItemDescTxt}>
-                    {printFmt(parseISO(l.date as string), "eee, MM/dd")}
+                    {fmt(parseISO(l.date as string), "eee, MM/dd")}
                   </p>
                 </div>
               </div>
@@ -484,7 +491,7 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
     );
   }
 
-  const renderBudgetItemSettingsDropdown = (bi: Trips.BudgetItem, idx: number) => {
+  const renderBudgetItemSettingsDropdown = (bi: BudgetItem, idx: number) => {
     const opts = [
       <button
         type='button'
@@ -515,8 +522,8 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
         </h4>
         {
           _get(props.trip, "budget.items", [])
-          .map((bi: Trips.BudgetItem, idx: number) => {
-            const amt = budgetItemPriceAmt(bi);
+          .map((bi: BudgetItem, idx: number) => {
+            const amt = getBudgetItemPriceAmt(bi);
             return (
               <div key={bi.id}
                 className={TripBudgetCss.ItemCtn}
@@ -560,14 +567,14 @@ const BudgetSection: FC<BudgetSectionProps> = (props: BudgetSectionProps) => {
       <BudgetItemModal
         header='Edit expense'
         isOpen={isEditBudgetItemModalOpen}
-        defaultAmount={_get(selectedBudgetItem, PriceAmountPath)}
+
         defaultTitle={_get(selectedBudgetItem, "title")}
         defaultDesc={_get(selectedBudgetItem, "desc")}
         onSubmit={updateBudgetItem}
         onClose={() => {setIsEditBudgetItemModalOpen(false)}}
       />
       <EditBudgetModal
-        budgetAmount={budgetAmt(props.trip.budget)}
+        budgetAmount={getBudgetAmt(props.trip.budget)}
         isOpen={isEditBudgetModalOpen}
         onClose={() => setIsEditBudgetModalOpen(false)}
         onSubmit={updateBudgetAmount}
