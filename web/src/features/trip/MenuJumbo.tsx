@@ -138,7 +138,7 @@ const MenuJumbo: FC<MenuJumboProps> = (props: MenuJumboProps) => {
     props.onlineMembers.slice(0, 5).forEach((om: Member) => {
       const usr = userFromMember(om, props.tripMembers);
       imgs.push(
-        <div className={CommonCss.IconLarge}>
+        <div key={om.id} className={CommonCss.IconLarge}>
           <Avatar
             key={om.id}
             placement="top"

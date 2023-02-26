@@ -40,6 +40,7 @@ import {
   DefaultActivityColor,
   getActivityColor,
   getActivityIcon,
+  getfIndex,
   ItineraryActivity,
   ItineraryList,
   JSONPathLabelUiColor,
@@ -621,7 +622,8 @@ const ActivitySection: FC<ActivitySectionProps> = (props: ActivitySectionProps) 
       newItinDts = _sortBy(currItinDts.concat([itinListDt]));
 
       // 2. Add ItineraryActivity to ItineraryList
-      const start = _get(itinList.activities.slice(-1), "0.labels.fIndex", null);
+      const sortedActivites = _sortBy(itinList.activities, (act) => getfIndex(act))
+      const start = _get(sortedActivites.slice(-1), "0.labels.fIndex", null);
       const fIndex = generateKeyBetween(start, null)
 
       const itinAct = makeItineraryActivity(activity.id, actListId, fIndex);

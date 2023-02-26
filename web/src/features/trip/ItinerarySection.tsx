@@ -282,9 +282,9 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   const moveCard = useCallback((id: string, origIdx: number) => {
     const { act, index } = findCard(id);
-    let newSortedList = sortedActivites.splice(index, 1);
-    newSortedList = newSortedList.concat(sortedActivites.splice(origIdx, 0, act))
-    setSortedActivies(newSortedList);
+    sortedActivites.splice(index, 1);
+    sortedActivites.splice(origIdx, 0, act!);
+    setSortedActivies(sortedActivites.map((x:any) => x));
   }, [findCard, sortedActivites, setSortedActivies])
 
   const dropCard = useCallback((id: string) => {
@@ -314,7 +314,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     lodgingName: "flex-1 pl-4 text-sm font-normal",
     lodgingStatus: "pl-2 font-semibold text-sm",
     lodgingWrapper: "flex items-center w-full p-3 space-x-4 text-gray-800 divide-x divide-gray-200 rounded-lg shadow",
-    noActivityTxt: "text-gray-500",
+    noActivityTxt: "text-gray-500 mb-4",
   }
 
   const renderSettingsDropdown = () => {

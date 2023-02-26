@@ -209,7 +209,7 @@ type ItineraryList struct {
 	Date        time.Time                    `json:"date" bson:"date"`
 	Description string                       `json:"desc" bson:"desc"`
 	Activities  map[string]ItineraryActivity `json:"activities" bson:"activities"`
-	Route       maps.RouteList               `json:"routes" bson:"routes"`
+	// Route       maps.RouteList               `json:"routes" bson:"routes"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
@@ -220,8 +220,8 @@ func NewItineraryList(date time.Time) ItineraryList {
 		Date:        date,
 		Description: "",
 		Activities:  map[string]ItineraryActivity{},
-		Route:       maps.RouteList{},
-		Labels:      common.Labels{},
+		// Route:       maps.RouteList{},
+		Labels: common.Labels{},
 	}
 }
 
