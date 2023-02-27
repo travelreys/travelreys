@@ -43,7 +43,8 @@ import {
   getActivityColor,
   getfIndex,
   LabelFractionalIndex,
-  getTripActivityForItineraryActivity
+  getTripActivityForItineraryActivity,
+  getSortedActivies
 } from '../../lib/trips';
 import {
   areYMDEqual,
@@ -77,6 +78,7 @@ import {
   TripLogisticsCss,
 } from '../../assets/styles/global';
 import { generateKeyBetween } from '../../lib/fractional';
+import { MsgUpdateTripTitleReorderItinerary } from '../../lib/tripSync';
 
 
 const ItineraryDateFmt = "eeee, do MMMM"
@@ -263,8 +265,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   const [isColorIconModalOpen, setIsColorIconModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    const activities = Object.values(_get(props.list, "activities", {}));
-    setSortedActivies(_sortBy(activities, (act) => getfIndex(act)));
+    setSortedActivies(getSortedActivies(props.list));
   }, [props.list])
 
 
@@ -294,7 +295,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     const fIndex = generateKeyBetween(start, end);
     props.tripOnUpdate([
       makeRepOp(`/itinerary/${props.idx}/activities/${id}/labels/${LabelFractionalIndex}`, fIndex)
-    ]);
+    ], MsgUpdateTripTitleReorderItinerary);
   }, [findCard, sortedActivites, setSortedActivies])
 
   const [, drop] = useDrop(() => ({ accept: DnDName }))
@@ -550,13 +551,6 @@ const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProp
     }
     props.tripOnUpdate(ops);
   }
-
-  // const updateItinActivity = () => {
-  //   props.tripOnUpdate([
-  //     makeReplaceOp(`/itinerary/${props.itineraryListIdx}/activities`, newItinActivities),
-  //   ]);
-  // }
-
 
   // Renderers
   const renderItineray = () => {

@@ -2,12 +2,14 @@ package tripssync
 
 import (
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/jsonpatch"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 )
 
 const (
-	MsgUpdateTripTitleAddNewMember    = "AddNewMember"
-	MsgUpdateTripTitleModifyItinerary = "ModifyItinerary"
+	MsgUpdateTripTitleAddNewMember           = "AddNewMember"
+	MsgUpdateTripTitleAddActivityToItinerary = "AddActivityToItinerary"
+	MsgUpdateTripTitleReorderItinerary       = "ReorderItinerary"
 )
 
 // Connection represents a user's participation
@@ -91,6 +93,6 @@ func NewMsgLeaveSession(connID, tripID string) Message {
 type MsgDataPing struct{}
 
 type MsgDataUpdateTrip struct {
-	Title string               `json:"title"`
-	Ops   []common.JSONPatchOp `json:"ops"`
+	Title string         `json:"title"`
+	Ops   []jsonpatch.Op `json:"ops"`
 }

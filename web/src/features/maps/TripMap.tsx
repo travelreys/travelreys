@@ -24,6 +24,7 @@ import {
   DefaultActivityColor,
   getActivityColor,
   getActivityIcon,
+  getSortedActivies,
   LabelUiColor,
 } from '../../lib/trips';
 import {
@@ -382,11 +383,12 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
     const itinList = _get(props.trip, "itinerary", []);
     return itinList.map((l: any) => {
       const color = _get(l, `labels.${LabelUiColor}`, DefaultActivityColor);
-      const markers = Object.values(l.activities).map((itinAct: any, idx: number) => {
-        const act = _find(
-          _get(props.trip, `activities.${itinAct.activityListId}.activities`, []),
-          (ctn: Activity) => ctn.id === itinAct.activityId
-        );
+
+      const sortedActivites = getSortedActivies(l);
+      const markers = sortedActivites
+      .map((itinAct: any, idx: number) => {
+        const actList = _get(props.trip, `activities.${itinAct.activityListId}.activities`, []);
+        const act = _find(actList, (act: Activity) => act.id === itinAct.activityId);
         const latlng = _get(act, "place.geometry.location")
         if (latlng === undefined || (latlng.lat === 0 && latlng.lng === 0)) {
           return null;
@@ -397,7 +399,8 @@ const TripMap: FC<TripMapProps> = (props: TripMapProps) => {
         };
       })
       .filter((item: any) => item !== null);
-      const polylines = [] as any //l.routes.map((r: any) => r.overview_polyline.points);
+      const polylines = Object.values(l.routes)
+        .map((pairing: any) => (pairing[0].overview_polyline.points))
       return {
         id: l.id,
         markers,

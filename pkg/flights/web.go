@@ -362,7 +362,7 @@ func GetApiKey() string {
 }
 
 func NewDefaultWebAPI(logger *zap.Logger) WebAPI {
-	return NewWebAPI(GetApiHost(), GetApiKey(), logger)
+	return NewWebAPI(GetApiKey(), GetApiHost(), logger)
 }
 
 func NewWebAPI(key, host string, logger *zap.Logger) WebAPI {

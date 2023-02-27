@@ -41,6 +41,7 @@ import {
   getActivityColor,
   getActivityIcon,
   getfIndex,
+  getSortedActivies,
   ItineraryActivity,
   ItineraryList,
   JSONPathLabelUiColor,
@@ -60,6 +61,7 @@ import { MapElementID, newEventMarkerClick } from '../../lib/maps';
 import { makeAddOp, makeRemoveOp, makeRepOp } from '../../lib/jsonpatch';
 import { generateKeyBetween } from '../../lib/fractional';
 import { useTranslation } from 'react-i18next';
+import { MsgUpdateTripTitleReorderItinerary } from '../../lib/tripSync';
 
 interface TripActivityProps {
   activity: Activity
@@ -539,7 +541,7 @@ const ActivitySection: FC<ActivitySectionProps> = (props: ActivitySectionProps) 
     const ops = [makeRemoveOp(`/activities/${id}`, "")]
     _get(props.trip, "itinerary", [])
       .forEach((itinList: ItineraryList) => {
-        itinList.activities
+        Object.values(itinList.activities)
           .filter((itinAct: ItineraryActivity) => itinAct.activityListId === id)
           .forEach((itinAct: ItineraryActivity) => {
             ops.unshift(
@@ -552,8 +554,8 @@ const ActivitySection: FC<ActivitySectionProps> = (props: ActivitySectionProps) 
 
   const updateActivityListColorIcon = (id: string, color?: string, icon?: string) => {
     const actList = _get(props.trip, `activities.${id}`);
-    const currColor = _get(actList, `labels.${LabelUiColor}`);
-    const currIcon = _get(actList, `labels.${LabelUiIcon}`);
+    const currColor = getActivityColor(actList);
+    const currIcon = getActivityIcon(actList);
 
     const ops = [];
     if (_isEmpty(color) && !_isEmpty(currColor)) {
@@ -561,7 +563,6 @@ const ActivitySection: FC<ActivitySectionProps> = (props: ActivitySectionProps) 
     }
     if (!_isEmpty(color)) {
       const op = _isEmpty(currColor) ? makeAddOp : makeRepOp;
-      ops.push(op(`/activities/${id}/${JSONPathLabelUiColor}`, color));
       ops.push(op(`/activities/${id}/${JSONPathLabelUiColor}`, color));
     }
 
@@ -614,15 +615,18 @@ const ActivitySection: FC<ActivitySectionProps> = (props: ActivitySectionProps) 
       newItinDts = currItinDts.filter((dt: string) => dt !== itinListDt);
 
       // 2. Remove ItineraryActivity from ItineraryList
-      let itinActId = _findIndex(itinList.activities, (act) => act.activityId === activity.id);
-      ops.push(makeRemoveOp(`/itinerary/${itinListId}/activities/${itinActId}`, "",));
-
+      Object.values(itinList.activities)
+      .forEach((itinAct: ItineraryActivity) => {
+        if (itinAct.activityId === activity.id) {
+          ops.push(makeRemoveOp(`/itinerary/${itinListId}/activities/${itinAct.id}`, "",));
+        }
+      });
     } else {
       // 1. Add to activity label if its a new itinerary date
       newItinDts = _sortBy(currItinDts.concat([itinListDt]));
 
       // 2. Add ItineraryActivity to ItineraryList
-      const sortedActivites = _sortBy(itinList.activities, (act) => getfIndex(act))
+      const sortedActivites = getSortedActivies(itinList);
       const start = _get(sortedActivites.slice(-1), "0.labels.fIndex", null);
       const fIndex = generateKeyBetween(start, null)
 
@@ -641,7 +645,7 @@ const ActivitySection: FC<ActivitySectionProps> = (props: ActivitySectionProps) 
         newItinDts.join(LabelDelimiter)));
     }
 
-    props.tripOnUpdate(ops);
+    props.tripOnUpdate(ops, MsgUpdateTripTitleReorderItinerary);
   }
 
   // Renderers

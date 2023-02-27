@@ -6,7 +6,7 @@ export const OpPingSession = "OpPingSession";
 export const OpUpdateTrip = "OpUpdateTrip";
 
 export const MsgUpdateTripTitleAddNewMember = "AddNewMember";
-export const MsgUpdateTripTitleModifyItinerary = "ModifyItinerary";
+export const MsgUpdateTripTitleReorderItinerary = "ReorderItinerary";
 
 export interface Message {
   connID?: string
