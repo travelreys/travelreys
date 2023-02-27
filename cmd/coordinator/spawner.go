@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
 	"go.uber.org/zap"
@@ -27,11 +28,17 @@ func MakeCoordinatorSpanwer(cfg ServerConfig, logger *zap.Logger) (*tripssync.Co
 		logger.Error("cannot connect to redi", zap.Error(err))
 		return nil, err
 	}
+	// Maps
+	mapsSvc, err := maps.NewDefaulService(logger)
+	if err != nil {
+		logger.Error("unable to connect map service", zap.Error(err))
+		return nil, err
+	}
 
 	tripStore := trips.NewStore(context.Background(), db, logger)
 	store := tripssync.NewStore(rdb, logger)
 	msgStore := tripssync.NewMessageStore(nc, rdb, logger)
 	tobStore := tripssync.NewTOBMessageStore(nc, rdb, logger)
 
-	return tripssync.NewCoordinatorSpawner(store, msgStore, tobStore, tripStore, logger), nil
+	return tripssync.NewCoordinatorSpawner(mapsSvc, store, msgStore, tobStore, tripStore, logger), nil
 }

@@ -1,6 +1,8 @@
 package trips
 
 import (
+	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -170,6 +172,10 @@ type Activity struct {
 	Labels   common.Labels     `json:"labels" bson:"labels"`
 }
 
+func (a Activity) HasPlace() bool {
+	return a.Place.Name != ""
+}
+
 type ActivityList struct {
 	ID         string              `json:"id" bson:"id"`
 	Name       string              `json:"name" bson:"name"`
@@ -204,14 +210,25 @@ type ItineraryActivity struct {
 	Labels         common.Labels `json:"labels" bson:"labels"`
 }
 
+type ItineraryActivityList []ItineraryActivity
+
+func (l ItineraryActivityList) Len() int {
+	return len(l)
+}
+func (l ItineraryActivityList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+func (l ItineraryActivityList) Less(i, j int) bool {
+	return l[i].Labels[LabelFractionalIndex] < l[j].Labels[LabelFractionalIndex]
+}
+
 type ItineraryList struct {
 	ID          string                       `json:"id" bson:"id"`
 	Date        time.Time                    `json:"date" bson:"date"`
 	Description string                       `json:"desc" bson:"desc"`
 	Activities  map[string]ItineraryActivity `json:"activities" bson:"activities"`
-	// Route       maps.RouteList               `json:"routes" bson:"routes"`
-
-	Labels common.Labels `json:"labels" bson:"labels"`
+	Routes      map[string]maps.RouteList    `json:"routes" bson:"routes"`
+	Labels      common.Labels                `json:"labels" bson:"labels"`
 }
 
 func NewItineraryList(date time.Time) ItineraryList {
@@ -220,9 +237,29 @@ func NewItineraryList(date time.Time) ItineraryList {
 		Date:        date,
 		Description: "",
 		Activities:  map[string]ItineraryActivity{},
-		// Route:       maps.RouteList{},
-		Labels: common.Labels{},
+		Routes:      map[string]maps.RouteList{},
+		Labels:      common.Labels{},
 	}
+}
+
+func (l ItineraryList) SortActivities() []ItineraryActivity {
+	sorted := ItineraryActivityList{}
+	for _, act := range l.Activities {
+		sorted = append(sorted, act)
+	}
+	sort.Sort(sorted)
+	return sorted
+}
+
+func (l ItineraryList) MakeRoutePairings() map[string]bool {
+	pairings := map[string]bool{}
+	sortedActs := l.SortActivities()
+	for i := 1; i < len(sortedActs); i++ {
+		prev := sortedActs[i-1].ID
+		curr := sortedActs[i].ID
+		pairings[fmt.Sprintf("%s|%s", prev, curr)] = true
+	}
+	return pairings
 }
 
 type Budget struct {

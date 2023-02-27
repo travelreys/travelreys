@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	MsgUpdateTripTitleAddNewMember    = "AddNewMember"
-	MsgUpdateTripTitleModifyItinerary = "ModifyItinerary"
+	MsgUpdateTripTitleAddNewMember           = "AddNewMember"
+	MsgUpdateTripTitleAddActivityToItinerary = "AddActivityToItinerary"
+	MsgUpdateTripTitleReorderItinerary       = "ReorderItinerary"
 )
 
 // Connection represents a user's participation

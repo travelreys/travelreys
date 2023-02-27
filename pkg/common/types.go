@@ -15,6 +15,18 @@ type JSONPatchOp struct {
 	Value interface{} `json:"value"`
 }
 
+func MakeJSONPatchAddOp(path string, val interface{}) JSONPatchOp {
+	return JSONPatchOp{"add", path, val}
+}
+
+func MakeJSONPatchRemoveOp(path string, val interface{}) JSONPatchOp {
+	return JSONPatchOp{"remove", path, val}
+}
+
+func MakeJSONPatchRepOp(path string, val interface{}) JSONPatchOp {
+	return JSONPatchOp{"replace", path, val}
+}
+
 func UInt64Ptr(i uint64) *uint64 { return &i }
 func Int64Ptr(i int64) *int64    { return &i }
 func StringPtr(i string) *string { return &i }

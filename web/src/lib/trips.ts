@@ -1,5 +1,6 @@
 import _find from "lodash/find";
 import _get from "lodash/get";
+import _sortBy from 'lodash/sortBy';
 import { v4 as uuidv4 } from 'uuid';
 
 import { jsonPathToPath } from "./jsonpatch";
@@ -201,11 +202,16 @@ export const getfIndex = (act: ItineraryActivity) => {
   return _get(act, `labels.${LabelFractionalIndex}`);
 }
 
+export const getSortedActivies = (l: ItineraryList) => {
+  const activities = Object.values(_get(l, "activities", {}));
+  return _sortBy(activities, (act: ItineraryActivity) => getfIndex(act))
+}
+
 export interface ItineraryList {
   id: string
   desc: string
   date: string | Date
-  activities: Array<ItineraryActivity>
+  activities: {[key: string]: ItineraryActivity}
   routes: Array<any>,
   labels: {[key: string]: string}
 }

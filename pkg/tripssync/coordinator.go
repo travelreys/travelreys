@@ -3,10 +3,14 @@ package tripssync
 import (
 	context "context"
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/google/uuid"
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
 	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
 	"go.uber.org/zap"
 )
@@ -19,8 +23,8 @@ type Coordinator struct {
 	ID     string
 	tripID string
 
-	// plan is the coordinators' local copy of the trip plan
-	plan []byte
+	// trip is the coordinators' local copy of the trip trip
+	trip []byte
 
 	// counter is a monotonically increasing integer
 	// for maintaining total order broadcast. All clients
@@ -35,6 +39,7 @@ type Coordinator struct {
 	msgCh  <-chan Message
 	doneCh chan<- bool
 
+	mapsSvc   maps.Service
 	store     Store
 	msgStore  MessageStore
 	tobStore  TOBMessageStore
@@ -45,6 +50,7 @@ type Coordinator struct {
 
 func NewCoordinator(
 	tripID string,
+	mapsSvc maps.Service,
 	store Store,
 	msgStore MessageStore,
 	tobStore TOBMessageStore,
@@ -55,9 +61,10 @@ func NewCoordinator(
 	return &Coordinator{
 		ID:        uuid.New().String(),
 		tripID:    tripID,
-		plan:      []byte{},
+		trip:      []byte{},
 		counter:   1,
 		queue:     make(chan Message, common.DefaultChSize),
+		mapsSvc:   mapsSvc,
 		store:     store,
 		msgStore:  msgStore,
 		tobStore:  tobStore,
@@ -69,13 +76,13 @@ func NewCoordinator(
 func (crd *Coordinator) Init() error {
 	crd.logger.Info("new coordinator", zap.String("tripID", crd.tripID))
 
-	// 1. Initialise plan for coordinator
-	plan, err := crd.tripStore.Read(context.Background(), crd.tripID)
+	// 1. Initialise trip for coordinator
+	trip, err := crd.tripStore.Read(context.Background(), crd.tripID)
 	if err != nil {
 		return err
 	}
-	planBytes, _ := json.Marshal(plan)
-	crd.plan = planBytes
+	tripBytes, _ := json.Marshal(trip)
+	crd.trip = tripBytes
 
 	// 2. Subscribe to updates from clients
 	msgCh, done, err := crd.msgStore.SubscribeQueue(crd.tripID, GroupCoordinators)
@@ -130,11 +137,12 @@ func (crd *Coordinator) Run() error {
 	go func() {
 		// 4.1 Read message from FIFO Queue
 		for msg := range crd.queue {
+			ctx := context.Background()
 			switch msg.Op {
 			case OpUpdateTrip:
-				// 4.2 Update local plan and persist the data (if required)
-				// Update local copy of plan + validate if the op is valid
-				crd.HandleOpUpdateTrip(msg)
+				// 4.2 Update local trip and persist the data (if required)
+				// Update local copy of trip + validate if the op is valid
+				crd.HandleOpUpdateTrip(ctx, &msg)
 			}
 			// 4.3 Broadcasts the tob msg to all other connected clients
 			crd.tobStore.Publish(crd.tripID, msg)
@@ -152,24 +160,96 @@ func (crd *Coordinator) HandleFirstMember(ctx context.Context, sess Session) {
 }
 
 // HandleOpUpdateTrip handles OpUpdateTrip messages on crd.queue
-func (crd *Coordinator) HandleOpUpdateTrip(msg Message) {
+func (crd *Coordinator) HandleOpUpdateTrip(ctx context.Context, msg *Message) {
 	patchOps, _ := json.Marshal(msg.Data.UpdateTrip.Ops)
 	patch, _ := jsonpatch.DecodePatch(patchOps)
-	modified, err := patch.Apply(crd.plan)
+	modified, err := patch.Apply(crd.trip)
 	if err != nil {
 		crd.logger.Error("json patch apply", zap.Error(err))
 		return
 	}
-	crd.plan = modified
+	crd.trip = modified
 
 	var toSave trips.Trip
-	if err = json.Unmarshal(crd.plan, &toSave); err != nil {
+	if err = json.Unmarshal(crd.trip, &toSave); err != nil {
 		crd.logger.Error("json unmarshall fails", zap.Error(err))
 	}
-	if err = crd.tripStore.Save(context.Background(), toSave); err != nil {
+
+	fmt.Println("msg title", msg.Data.UpdateTrip.Title)
+
+	if msg.Data.UpdateTrip.Title == MsgUpdateTripTitleReorderItinerary {
+		// /itinerary/<id>/...
+
+		for _, op := range msg.Data.UpdateTrip.Ops {
+			if !strings.HasPrefix(op.Path, "/itinerary/") {
+				continue
+			}
+			pathTokens := strings.Split(op.Path, "/")
+			if len(pathTokens) < 3 {
+				continue
+			}
+			idx, _ := strconv.Atoi(pathTokens[2])
+			itinList := toSave.Itinerary[idx]
+			pairings := itinList.MakeRoutePairings()
+			routesToRemove := []string{}
+			fmt.Println("here", pathTokens, idx)
+
+			for pair := range pairings {
+				if _, ok := itinList.Routes[pair]; ok {
+					continue
+				}
+				actIds := strings.Split(pair, "|")
+				orig := itinList.Activities[actIds[0]]
+				dest := itinList.Activities[actIds[1]]
+				origAct := toSave.Activities[orig.ActivityListID].Activities[orig.ActivityID]
+				destAct := toSave.Activities[dest.ActivityListID].Activities[dest.ActivityID]
+				if !(origAct.HasPlace() && destAct.HasPlace()) {
+					continue
+				}
+				routes, err := crd.mapsSvc.Directions(ctx, origAct.Place.PlaceID, destAct.Place.PlaceID, "")
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				fmt.Println(routes)
+
+				toSave.Itinerary[idx].Routes[pair] = routes
+				msg.Data.UpdateTrip.Ops = append(
+					msg.Data.UpdateTrip.Ops, common.MakeJSONPatchAddOp(
+						fmt.Sprintf("/itinerary/%d/routes/%s", idx, pair),
+						routes,
+					),
+				)
+			}
+			fmt.Println(pairings)
+
+			for pair := range itinList.Routes {
+				if _, ok := pairings[pair]; !ok {
+					routesToRemove = append(routesToRemove, pair)
+					msg.Data.UpdateTrip.Ops = append(
+						msg.Data.UpdateTrip.Ops, common.MakeJSONPatchRemoveOp(
+							fmt.Sprintf("/itinerary/%d/routes/%s", idx, pair), "",
+						),
+					)
+				}
+			}
+			for _, pair := range routesToRemove {
+				delete(toSave.Itinerary[idx].Routes, pair)
+			}
+
+			fmt.Println(msg.Data.UpdateTrip.Ops)
+
+		}
+
+		crd.trip, _ = json.Marshal(toSave)
+	}
+
+	// Persist trip state to database
+	if err = crd.tripStore.Save(ctx, toSave); err != nil {
 		crd.logger.Error("tripStore save fails", zap.Error(err))
 	}
-	crd.store.IncrCounter(context.Background(), crd.tripID)
+
+	crd.store.IncrCounter(ctx, crd.tripID)
 }
 
 /***********
@@ -177,6 +257,7 @@ func (crd *Coordinator) HandleOpUpdateTrip(msg Message) {
 /***********/
 
 type CoordinatorSpawner struct {
+	mapsSvc   maps.Service
 	store     Store
 	msgStore  MessageStore
 	tobStore  TOBMessageStore
@@ -186,6 +267,7 @@ type CoordinatorSpawner struct {
 }
 
 func NewCoordinatorSpawner(
+	mapsSvc maps.Service,
 	store Store,
 	msgStore MessageStore,
 	tobStore TOBMessageStore,
@@ -193,6 +275,7 @@ func NewCoordinatorSpawner(
 	logger *zap.Logger,
 ) *CoordinatorSpawner {
 	return &CoordinatorSpawner{
+		mapsSvc:   mapsSvc,
 		store:     store,
 		msgStore:  msgStore,
 		tobStore:  tobStore,
@@ -217,7 +300,6 @@ func (spwn *CoordinatorSpawner) Run() error {
 		if msg.Op != OpJoinSession {
 			continue
 		}
-
 		ctx := context.Background()
 		sess, err := spwn.store.Read(ctx, msg.TripID)
 		if err != nil {
@@ -230,7 +312,13 @@ func (spwn *CoordinatorSpawner) Run() error {
 			continue
 		}
 		coord := NewCoordinator(
-			msg.TripID, spwn.store, spwn.msgStore, spwn.tobStore, spwn.tripStore, spwn.logger,
+			msg.TripID,
+			spwn.mapsSvc,
+			spwn.store,
+			spwn.msgStore,
+			spwn.tobStore,
+			spwn.tripStore,
+			spwn.logger,
 		)
 		if err := coord.Init(); err != nil {
 			spwn.logger.Error("unable to init coordinator", zap.Error(err))
