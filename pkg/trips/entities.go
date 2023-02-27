@@ -13,15 +13,16 @@ import (
 )
 
 const (
+	JSONPathLabelUiColor = "labels/ui|color"
+	JSONPathLabelUiIcon  = "labels/ui|icon"
+
 	LabelDelimeter              = "|"
+	LabelFractionalIndex        = "fIndex"
 	LabelItineraryDates         = "itinerary|dates"
 	LabelItineraryDatesJSONPath = "labels/itinerary|dates"
-	LabelUiColor                = "ui|color"
-	JSONPathLabelUiColor        = "labels/ui|color"
-	LabelUiIcon                 = "ui|icon"
-	JSONPathLabelUiIcon         = "labels/ui|icon"
 	LabelTransportModePref      = "transportationPreference"
-	LabelFractionalIndex        = "fIndex"
+	LabelUiColor                = "ui|color"
+	LabelUiIcon                 = "ui|icon"
 )
 
 type Trip struct {
@@ -242,6 +243,8 @@ func NewItineraryList(date time.Time) ItineraryList {
 	}
 }
 
+// SortActivities returns a list of ItineraryActivities sorted
+// by their fractional index
 func (l ItineraryList) SortActivities() []ItineraryActivity {
 	sorted := ItineraryActivityList{}
 	for _, act := range l.Activities {
@@ -251,13 +254,15 @@ func (l ItineraryList) SortActivities() []ItineraryActivity {
 	return sorted
 }
 
+func (l ItineraryList) routePairingKey(a1 ItineraryActivity, a2 ItineraryActivity) string {
+	return fmt.Sprintf("%s%s%s", a1.ID, LabelDelimeter, a2.ID)
+}
+
 func (l ItineraryList) MakeRoutePairings() map[string]bool {
 	pairings := map[string]bool{}
-	sortedActs := l.SortActivities()
-	for i := 1; i < len(sortedActs); i++ {
-		prev := sortedActs[i-1].ID
-		curr := sortedActs[i].ID
-		pairings[fmt.Sprintf("%s|%s", prev, curr)] = true
+	sorted := l.SortActivities()
+	for i := 1; i < len(sorted); i++ {
+		pairings[l.routePairingKey(sorted[i-1], sorted[i])] = true
 	}
 	return pairings
 }

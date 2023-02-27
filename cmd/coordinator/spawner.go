@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func MakeCoordinatorSpanwer(cfg ServerConfig, logger *zap.Logger) (*tripssync.CoordinatorSpawner, error) {
+func MakeCoordinatorSpanwer(cfg ServerConfig, logger *zap.Logger) (*tripssync.Spawner, error) {
 	db, err := common.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
 	if err != nil {
 		logger.Error("cannot connect to mongo", zap.Error(err))
@@ -40,5 +40,5 @@ func MakeCoordinatorSpanwer(cfg ServerConfig, logger *zap.Logger) (*tripssync.Co
 	msgStore := tripssync.NewMessageStore(nc, rdb, logger)
 	tobStore := tripssync.NewTOBMessageStore(nc, rdb, logger)
 
-	return tripssync.NewCoordinatorSpawner(mapsSvc, store, msgStore, tobStore, tripStore, logger), nil
+	return tripssync.NewSpawner(mapsSvc, store, msgStore, tobStore, tripStore, logger), nil
 }
