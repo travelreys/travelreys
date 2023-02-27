@@ -13,6 +13,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
   ArrowLongRightIcon,
   CurrencyDollarIcon,
+  LockClosedIcon,
   MapPinIcon,
   SwatchIcon,
 } from '@heroicons/react/24/solid';
@@ -78,7 +79,8 @@ import {
   TripLogisticsCss,
 } from '../../assets/styles/global';
 import { generateKeyBetween } from '../../lib/fractional';
-import { MsgUpdateTripTitleReorderItinerary } from '../../lib/tripSync';
+import { MsgUpdateTripOptimizeItineraryRoute, MsgUpdateTripTitleReorderItinerary } from '../../lib/tripSync';
+import RouteIcon from '../../components/icons/fill/RouteIcon';
 
 
 const ItineraryDateFmt = "eeee, do MMMM"
@@ -256,6 +258,8 @@ interface TripItineraryListProps {
   tripOnUpdate: any
 
   onUpdateColorIcon: (idx: number, color?: string, icon?: string) => void
+  onReorderItinerary: (idx: number, id: string, fIndex: string) => void
+  onOptimizeItineraryRoute: (idx: number, id: string) => void
 }
 
 const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListProps) => {
@@ -272,6 +276,10 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
   // Event Handlers
   const colorIconOnSubmit = (color?: string, icon?: string) => {
     props.onUpdateColorIcon(props.idx, color, icon)
+  }
+
+  const optimizeRouteOnClick = () => {
+    props.onOptimizeItineraryRoute(props.idx, props.list.id)
   }
 
   // DnD Helpers
@@ -293,9 +301,7 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
     const start = _get(sortedActivites[newIdx-1], "labels.fIndex", null);
     const end = _get(sortedActivites[newIdx+1], "labels.fIndex", null);
     const fIndex = generateKeyBetween(start, end);
-    props.tripOnUpdate([
-      makeRepOp(`/itinerary/${props.idx}/activities/${id}/labels/${LabelFractionalIndex}`, fIndex)
-    ], MsgUpdateTripTitleReorderItinerary);
+    props.onReorderItinerary(props.idx, id, fIndex)
   }, [findCard, sortedActivites, setSortedActivies])
 
   const [, drop] = useDrop(() => ({ accept: DnDName }))
@@ -320,14 +326,26 @@ const TripItineraryList: FC<TripItineraryListProps> = (props: TripItineraryListP
 
   const renderSettingsDropdown = () => {
     const opts = [
-      <button
-        type='button'
-        className={CommonCss.DropdownBtn}
-        onClick={() => setIsColorIconModalOpen(true)}
-      >
-        <SwatchIcon className={CommonCss.LeftIcon} />
-        Change Color & Icon
-      </button>
+      (
+        <button
+          type='button'
+          className={CommonCss.DropdownBtn}
+          onClick={() => setIsColorIconModalOpen(true)}
+        >
+          <SwatchIcon className={CommonCss.LeftIcon} />
+          Change Color & Icon
+        </button>
+      ),
+      (
+        <button
+          type='button'
+          className={CommonCss.DropdownBtn}
+          onClick={optimizeRouteOnClick}
+        >
+          <RouteIcon className={CommonCss.LeftIcon} />
+          Optimize route
+        </button>
+      ),
     ];
     const menu = (
       <EllipsisHorizontalCircleIcon className={CommonCss.DropdownIcon} />
@@ -552,6 +570,16 @@ const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProp
     props.tripOnUpdate(ops);
   }
 
+  const reorderItinerary = (idx: number, id: string, fIndex: string) => {
+    props.tripOnUpdate([
+      makeRepOp(`/itinerary/${idx}/activities/${id}/labels/${LabelFractionalIndex}`, fIndex)
+    ], MsgUpdateTripTitleReorderItinerary);
+  }
+
+  const optimizeItineraryRoute = (idx: number, id: string) => {
+    props.tripOnUpdate([makeRepOp(`/itinerary/${idx}/id`, id)], MsgUpdateTripOptimizeItineraryRoute);
+  }
+
   // Renderers
   const renderItineray = () => {
     return _get(props.trip, "itinerary", {})
@@ -563,6 +591,8 @@ const ItinerarySection: FC<ItinerarySectionProps> = (props: ItinerarySectionProp
           trip={props.trip}
           tripOnUpdate={props.tripOnUpdate}
           onUpdateColorIcon={updateItineraryListColorIcon}
+          onReorderItinerary={reorderItinerary}
+          onOptimizeItineraryRoute={optimizeItineraryRoute}
         />
       </DndProvider>
     ));

@@ -185,7 +185,12 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 		crd.logger.Error("json unmarshall fails", zap.Error(err))
 	}
 
-	crd.HandleTobOpUpdateTripReorderItinerary(ctx, msg, &toSave)
+	switch msg.Data.UpdateTrip.Title {
+	case MsgUpdateTripTitleReorderItinerary:
+		crd.HandleTobOpUpdateTripReorderItinerary(ctx, msg, &toSave)
+	case MsgUpdateTripOptimizeItineraryRoute:
+		crd.HandleTobOpUpdateTripOptimizeItineraryRoute(ctx, msg, &toSave)
+	}
 
 	// Persist trip state to database
 	if err = crd.tripStore.Save(ctx, toSave); err != nil {
@@ -196,10 +201,6 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 }
 
 func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Context, msg *Message, toSave *trips.Trip) {
-	if msg.Data.UpdateTrip.Title != MsgUpdateTripTitleReorderItinerary {
-		return
-	}
-
 	for _, op := range msg.Data.UpdateTrip.Ops {
 		// /itinerary/<id>/...
 		if !strings.HasPrefix(op.Path, "/itinerary/") {
@@ -252,4 +253,45 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 		}
 	}
 	crd.trip, _ = json.Marshal(toSave)
+}
+
+func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.Context, msg *Message, toSave *trips.Trip) {
+	op := msg.Data.UpdateTrip.Ops[0]
+	pathTokens := strings.Split(op.Path, "/")
+	if len(pathTokens) < 3 {
+		return
+	}
+	fmt.Println(pathTokens, len(pathTokens))
+	idx, _ := strconv.Atoi(pathTokens[2])
+	itinList := toSave.Itinerary[idx]
+	sorted := itinList.SortActivities()
+	sortedFracIndexes := trips.GetFracIndexes(sorted)
+	placeIDs := []string{}
+	for _, itinAct := range sorted {
+		act := toSave.Activities[itinAct.ActivityListID].Activities[itinAct.ActivityID]
+		placeIDs = append(placeIDs, act.Place.PlaceID)
+	}
+
+	routes, err := crd.mapsSvc.OptimizeRoute(
+		ctx, placeIDs[0], placeIDs[len(placeIDs)-1], placeIDs[1:len(placeIDs)-1],
+	)
+	if err != nil || len(routes) <= 0 {
+		return
+	}
+	for oidx, order := range routes[0].WaypointOrder {
+		sortedIdx := oidx + 1
+		sortedOrderIdx := order + 1
+		a1Id := sorted[sortedOrderIdx].ID
+		a2Id := sorted[sortedIdx].ID
+		itinList.Activities[a1Id].Labels[trips.LabelFractionalIndex],
+			itinList.Activities[a2Id].Labels[trips.LabelFractionalIndex] =
+			sortedFracIndexes[sortedIdx], sortedFracIndexes[sortedOrderIdx]
+
+		jop := jp.MakeRepOp(fmt.Sprintf("/itinerary/%d/activities/%s/labels/fIndex", idx, a1Id), sortedFracIndexes[sortedIdx])
+		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
+		jop = jp.MakeRepOp(fmt.Sprintf("/itinerary/%d/activities/%s/labels/fIndex", idx, a2Id), sortedFracIndexes[sortedOrderIdx])
+		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
+	}
+
+	crd.HandleTobOpUpdateTripReorderItinerary(ctx, msg, toSave)
 }

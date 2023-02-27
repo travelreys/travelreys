@@ -291,6 +291,7 @@ const TripPage: FC = () => {
               handleLeaveSessionMsg(minMsg);
               break;
             case OpUpdateTrip:
+              console.log(minMsg.data.updateTrip!.ops)
               const newTrip = applyPatch(
                 tripRef.current,
                 minMsg.data.updateTrip!.ops as any,

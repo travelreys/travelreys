@@ -7,6 +7,7 @@ export const OpUpdateTrip = "OpUpdateTrip";
 
 export const MsgUpdateTripTitleAddNewMember = "AddNewMember";
 export const MsgUpdateTripTitleReorderItinerary = "ReorderItinerary";
+export const MsgUpdateTripOptimizeItineraryRoute      = "OptimizeItinerary"
 
 export interface Message {
   connID?: string
