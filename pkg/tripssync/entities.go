@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	MsgUpdateTripTitleAddNewMember      = "AddNewMember"
+	MsgUpdateTripTitleUpdateTripMembers = "UpdateTripMembers"
 	MsgUpdateTripTitleReorderItinerary  = "ReorderItinerary"
 	MsgUpdateTripOptimizeItineraryRoute = "OptimizeItinerary"
 )

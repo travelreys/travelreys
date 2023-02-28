@@ -3,6 +3,7 @@ package trips
 import (
 	context "context"
 	"errors"
+	"fmt"
 
 	"github.com/tiinyplanet/tiinyplanet/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
@@ -23,13 +24,16 @@ var (
 )
 
 type ListFilter struct {
-	ID *string `json:"string"`
+	UserID *string
 }
 
 func (f ListFilter) toBSON() bson.M {
 	bsonM := bson.M{}
-	if f.ID != nil {
-		bsonM[bsonKeyID] = f.ID
+	if f.UserID != nil {
+		bsonM["$or"] = bson.A{
+			bson.M{"creator.id": *f.UserID},
+			bson.M{fmt.Sprintf("membersId.%s", *f.UserID): *f.UserID},
+		}
 	}
 	return bsonM
 }
@@ -53,10 +57,11 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 	defer cancel()
 
 	tripsColl := db.Collection(tripsColl)
-
-	idIdx := mongo.IndexModel{Keys: bson.M{bsonKeyID: 1}}
-	tripsColl.Indexes().CreateOne(ctx, idIdx)
-
+	tripsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.M{bsonKeyID: 1}},
+		{Keys: bson.M{"creator.id": 1}},
+		{Keys: bson.M{"membersId.$**": 1}},
+	})
 	return &store{db, tripsColl, logger.Named(storeLoggerName)}
 }
 

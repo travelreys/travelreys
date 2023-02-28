@@ -22,7 +22,7 @@ import {
   userFromMember,
 } from '../../lib/trips';
 import { LabelUserGoogleImage, User } from '../../lib/auth';
-import { MsgUpdateTripTitleAddNewMember } from '../../lib/tripSync';
+import { MsgUpdateTripTitleUpdateTripMembers } from '../../lib/tripSync';
 import {
   makeAddOp,
   makeRemoveOp,
@@ -355,12 +355,20 @@ const SettingsSection: FC<SettingsSectionProps> = (props: SettingsSectionProps) 
 
   const addMember = (id: string, role: string) => {
     const member = { id, role, labels: {} } as Member;
-    props.tripOnUpdate([makeAddOp(`/members/${id}`, member)], MsgUpdateTripTitleAddNewMember);
+    const ops = [
+      makeAddOp(`/members/${id}`, member),
+      makeAddOp(`/membersId/${id}`, id),
+    ];
+    props.tripOnUpdate(ops, MsgUpdateTripTitleUpdateTripMembers);
   }
 
   const deleteMember = (id: string) => {
     const member = { id } as Member;
-    props.tripOnUpdate([makeRemoveOp(`/members/${id}`, member)], MsgUpdateTripTitleAddNewMember);
+    const ops = [
+      makeRemoveOp(`/members/${id}`, member),
+      makeRemoveOp(`/membersId/${id}`, id)
+    ];
+    props.tripOnUpdate(ops, MsgUpdateTripTitleUpdateTripMembers);
   }
 
   return (

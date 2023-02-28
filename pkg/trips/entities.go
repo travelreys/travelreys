@@ -35,8 +35,9 @@ type Trip struct {
 	EndDate    time.Time            `json:"endDate" bson:"endDate"`
 
 	// Members
-	Creator Member            `json:"creator" bson:"creator"`
-	Members map[string]Member `json:"members" bson:"members"`
+	Creator   Member            `json:"creator" bson:"creator"`
+	Members   map[string]Member `json:"members" bson:"members"`
+	MembersID map[string]string `json:"membersId" bson:"membersId"`
 
 	// Logistics
 	Notes    string                 `json:"notes" bson:"notes"`
@@ -71,8 +72,9 @@ func NewTrip(creator Member, name string) Trip {
 		StartDate:  time.Time{},
 		EndDate:    time.Time{},
 
-		Creator: creator,
-		Members: map[string]Member{},
+		Creator:   creator,
+		Members:   map[string]Member{},
+		MembersID: map[string]string{},
 
 		Flights:  map[string]Flight{},
 		Transits: map[string]BaseTransit{},
@@ -121,6 +123,14 @@ func NewMember(id, role string) Member {
 		Role:   role,
 		Labels: map[string]string{},
 	}
+}
+
+func (t Trip) GetAllMembersID() []string {
+	membersIDs := []string{t.Creator.ID}
+	for id := range t.Members {
+		membersIDs = append(membersIDs, id)
+	}
+	return membersIDs
 }
 
 const (

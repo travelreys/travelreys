@@ -5,7 +5,7 @@ export const OpLeaveSession = "OpLeaveSession";
 export const OpPingSession = "OpPingSession";
 export const OpUpdateTrip = "OpUpdateTrip";
 
-export const MsgUpdateTripTitleAddNewMember = "AddNewMember";
+export const MsgUpdateTripTitleUpdateTripMembers = "UpdateTripMembers";
 export const MsgUpdateTripTitleReorderItinerary = "ReorderItinerary";
 export const MsgUpdateTripOptimizeItineraryRoute      = "OptimizeItinerary"
 
