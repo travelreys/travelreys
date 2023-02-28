@@ -19,7 +19,6 @@ import {
 
 import Dropdown from '../../components/common/Dropdown';
 import InputDatesPicker from '../../components/common/InputDatesPicker';
-import PlacePicturesCarousel from './PlacePicturesCarousel';
 import {
   fmt,
   isEmptyDate,
@@ -226,7 +225,6 @@ const TripLodgingCard: FC<TripLodgingCardProps> = (props: TripLodgingCardProps) 
       </p>
       {renderDates()}
       {renderPrice()}
-      <PlacePicturesCarousel photos={props.lodging.place.photos} />
     </div>
   );
 }
