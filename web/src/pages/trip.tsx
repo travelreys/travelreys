@@ -36,7 +36,7 @@ import {
   OpUpdateTrip,
   OpJoinSession,
   OpLeaveSession,
-  MsgUpdateTripTitleAddNewMember,
+  MsgUpdateTripTitleUpdateTripMembers,
   Message,
 } from '../lib/tripSync';
 import { Op } from '../lib/jsonpatch';
@@ -216,7 +216,7 @@ const TripPage: FC = () => {
     if (_isEmpty(title)) {
       return;
     }
-    if (title === MsgUpdateTripTitleAddNewMember) {
+    if (title === MsgUpdateTripTitleUpdateTripMembers) {
       TripsAPI.readMembers(id as string)
         .then((data: ReadMembersResponse) => {
           setTripMembers(data.members);

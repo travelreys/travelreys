@@ -56,11 +56,7 @@ func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.
 	if err != nil {
 		return trip, nil, err
 	}
-	membersIDs := []string{trip.Creator.ID}
-	for id := range trip.Members {
-		membersIDs = append(membersIDs, id)
-	}
-	ff := auth.ListFilter{IDs: membersIDs}
+	ff := auth.ListFilter{IDs: trip.GetAllMembersID()}
 	users, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
 		return trip, nil, err
@@ -77,11 +73,7 @@ func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, 
 	if err != nil {
 		return nil, err
 	}
-	membersIDs := []string{trip.Creator.ID}
-	for id := range trip.Members {
-		membersIDs = append(membersIDs, id)
-	}
-	ff := auth.ListFilter{IDs: membersIDs}
+	ff := auth.ListFilter{IDs: trip.GetAllMembersID()}
 	users, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
 		return nil, err

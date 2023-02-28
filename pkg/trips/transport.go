@@ -93,8 +93,16 @@ func decodeReadMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 	return ReadMembersRequest{ID: ID}, nil
 }
 
-func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return ListRequest{}, nil
+func decodeListRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ci.UserID == "" {
+		return nil, ErrRBAC
+	}
+	ff := ListFilter{UserID: common.StringPtr(ci.UserID)}
+	return ListRequest{ff}, nil
 
 }
 func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
