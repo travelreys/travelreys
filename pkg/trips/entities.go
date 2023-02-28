@@ -18,6 +18,7 @@ const (
 
 	LabelDelimeter              = "|"
 	LabelFractionalIndex        = "fIndex"
+	LabelLocked                 = "locked"
 	LabelItineraryDates         = "itinerary|dates"
 	LabelItineraryDatesJSONPath = "labels/itinerary|dates"
 	LabelTransportModePref      = "transportationPreference"
@@ -252,6 +253,14 @@ func (l ItineraryList) SortActivities() []ItineraryActivity {
 	}
 	sort.Sort(sorted)
 	return sorted
+}
+
+func GetFracIndexes(acts []ItineraryActivity) []string {
+	result := []string{}
+	for _, a := range acts {
+		result = append(result, a.Labels[LabelFractionalIndex])
+	}
+	return result
 }
 
 func (l ItineraryList) routePairingKey(a1 ItineraryActivity, a2 ItineraryActivity) string {

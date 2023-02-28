@@ -26,15 +26,17 @@ export const DefaultTransportModePref = "walk+drive";
 export const DefaultActivityColor = "rgb(203 213 225)";
 
 export const LabelDelimiter = "|";
+export const LabelFractionalIndex = "fIndex";
+export const LabelLocked = "locked";
 export const LabelTransportModePref = "transportationPreference";
 export const LabelItineraryDates = "itinerary|dates";
 export const LabelUiColor = "ui|color";
 export const LabelUiIcon = "ui|icon";
-export const LabelFractionalIndex = "fIndex";
 
 export const JSONPathPriceAmount = "price/amount";
 export const JSONPathBudgetAmount = "amount/amount";
 export const JSONPathLabelItineraryDates = "labels/itinerary|dates";
+export const JSONPathLabelLocked = "labels/locked";
 export const JSONPathLabelUiColor = "labels/ui|color";
 export const JSONPathLabelUiIcon = "labels/ui|icon";
 
@@ -222,6 +224,10 @@ export const getActivityColor = (l: ActivityList | ItineraryList) => {
 
 export const getActivityIcon = (l: ActivityList | ItineraryList) => {
   return _get(l, jsonPathToPath(JSONPathLabelUiIcon));
+}
+
+export const isListLock = (l: ActivityList | ItineraryList) => {
+  return _get(l, jsonPathToPath(JSONPathLabelLocked)) === "true";
 }
 
 export const getItineraryActivityPriceAmt = (act: ItineraryActivity) => {
