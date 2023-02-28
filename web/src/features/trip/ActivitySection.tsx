@@ -26,12 +26,15 @@ import {
 import Dropdown from '../../components/common/Dropdown';
 import NotesEditor from '../../components/common/NotesEditor';
 import PlaceAutocomplete from '../maps/PlaceAutocomplete';
-import PlacePicturesCarousel from './PlacePicturesCarousel';
 import ToggleChevron from '../../components/common/ToggleChevron';
 import ColorIconModal from './ColorIconModal';
 import ActivityListPin from '../maps/ListPin';
 
-import MapsAPI, { AutocompleteResponse, PlaceDetailsResponse, placeFields } from '../../apis/maps';
+import MapsAPI, {
+  AutocompleteResponse,
+  PlaceDetailsResponse,
+  placeFields
+} from '../../apis/maps';
 import {
   Activity,
   ActivityColorOpts,
@@ -40,7 +43,6 @@ import {
   DefaultActivityColor,
   getActivityColor,
   getActivityIcon,
-  getfIndex,
   getSortedActivies,
   ItineraryActivity,
   ItineraryList,
@@ -48,8 +50,6 @@ import {
   JSONPathLabelUiIcon,
   LabelDelimiter,
   LabelItineraryDates,
-  LabelUiColor,
-  LabelUiIcon,
   makeActivity,
   makeActivityList,
   makeItineraryActivity,
@@ -300,13 +300,6 @@ const TripActivity: FC<TripActivityProps> = (props: TripActivityProps) => {
     );
   }
 
-  const renderPlacePicturesCarousel = () => {
-    const photos = _get(props.activity, "place.photos", []);
-    if (_isEmpty(photos)) {
-      return null;
-    }
-    return <PlacePicturesCarousel photos={photos} />
-  }
 
   return (
     <div className={css.ctn}>
@@ -323,7 +316,6 @@ const TripActivity: FC<TripActivityProps> = (props: TripActivityProps) => {
         notesOnChange={notesOnChange}
         placeholder={"Notes..."}
       />
-      {renderPlacePicturesCarousel()}
     </div>
   );
 }

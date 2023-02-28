@@ -261,7 +261,7 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 	if len(pathTokens) < 3 {
 		return
 	}
-	fmt.Println(pathTokens, len(pathTokens))
+
 	idx, _ := strconv.Atoi(pathTokens[2])
 	itinList := toSave.Itinerary[idx]
 	sorted := itinList.SortActivities()
