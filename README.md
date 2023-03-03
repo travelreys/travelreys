@@ -7,7 +7,6 @@ TiinyPlanet is a travel platform.
 |: Dependency :|: Version :|
 |--------------|-----------|
 | Go           | v1.19.4   |
-| NodeJS       | v18.12.1  |
 | MongoDB      | v6.0.3    |
 | Redis        | v7.0      |
 | nats.io      | v2.9.10   |
@@ -41,6 +40,20 @@ rs.status()
 
 # Build Server
 make
+```
+
+## Running
+```bash
+$ ./build/server --help
+Usage of ./build/server:
+      --host string        host address to bind server
+      --log-level string   log level
+      --port string        http server port
+
+$ ./build/coordinator --help
+Usage of ./build/coordinator:
+      --host string        host address to bind server
+      --log-level string   log level
 ```
 
 > Remember to configure `.envrc` with the correct environment variables!
