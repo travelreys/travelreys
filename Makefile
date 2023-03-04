@@ -18,4 +18,4 @@ clean:
 
 docker:
 	docker build . -t tiinyplanet-api
-	docker tag tiinyplanet-api $(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)/$(DOCKER_IMAGE)/$(VERSION)
+	docker tag tiinyplanet-api $(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)/$(DOCKER_IMAGE):$(VERSION)
