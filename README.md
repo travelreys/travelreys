@@ -42,7 +42,7 @@ rs.status()
 make
 ```
 
-## Running
+## Run Locally
 ```bash
 $ ./build/server --help
 Usage of ./build/server:
@@ -62,3 +62,21 @@ Usage of ./build/coordinator:
 ```bash
 make test
 ```
+
+## Environment variables
+
+|: Env Vars :|: Description :|
+|--------------|-----------|
+|TIINYPLANET_CORS_ORIGIN||
+|TIINYPLANET_MONGO_URL||
+|TIINYPLANET_MONGO_DBNAME||
+|TIINYPLANET_NATS_URL||
+|TIINYPLANET_REDIS_URL||
+|TIINYPLANET_JWT_SECRET||
+|TIINYPLANET_UNSPLASH_ACCESSKEY||
+|TIINYPLANET_SKYSCANNER_APIKEY||
+|TIINYPLANET_SKYSCANNER_APIHOST||
+|TIINYPLANET_GOOGLE_MAPS_APIKEY||
+|TIINYPLANET_OAUTH_GOOGLE_SECRET_FILE||
+
+
