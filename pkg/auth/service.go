@@ -44,6 +44,7 @@ func NewService(gp GoogleProvider, store Store, logger *zap.Logger) Service {
 func (svc service) googleLogin(ctx context.Context, authCode string) (User, error) {
 	gusr, err := svc.google.TokenToUserInfo(ctx, authCode)
 	if err != nil {
+		svc.logger.Error("google login failed", zap.Error(err))
 		return User{}, ErrProviderGoogleError
 	}
 	usr := UserFromGoogleUser(gusr)
