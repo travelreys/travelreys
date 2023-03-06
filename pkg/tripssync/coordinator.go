@@ -211,17 +211,17 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 			continue
 		}
 		idx, _ := strconv.Atoi(pathTokens[2])
-		itinList := toSave.Itinerary[idx]
-		pairings := itinList.MakeRoutePairings()
+		itin := toSave.Itinerary[idx]
+		pairings := itin.MakeRoutePairings()
 		routesToRemove := []string{}
 
 		for pair := range pairings {
-			if _, ok := itinList.Routes[pair]; ok {
+			if _, ok := itin.Routes[pair]; ok {
 				continue
 			}
 			itinActIds := strings.Split(pair, trips.LabelDelimeter)
-			orig := itinList.Activities[itinActIds[0]]
-			dest := itinList.Activities[itinActIds[1]]
+			orig := itin.Activities[itinActIds[0]]
+			dest := itin.Activities[itinActIds[1]]
 			origAct := toSave.Activities[orig.ActivityListID].Activities[orig.ActivityID]
 			destAct := toSave.Activities[dest.ActivityListID].Activities[dest.ActivityID]
 			if !(origAct.HasPlace() && destAct.HasPlace()) {
@@ -239,7 +239,7 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 			)
 		}
 
-		for pair := range itinList.Routes {
+		for pair := range itin.Routes {
 			if _, ok := pairings[pair]; ok {
 				continue
 			}
@@ -263,8 +263,8 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 	}
 
 	idx, _ := strconv.Atoi(pathTokens[2])
-	itinList := toSave.Itinerary[idx]
-	sorted := itinList.SortActivities()
+	itin := toSave.Itinerary[idx]
+	sorted := itin.SortActivities()
 	sortedFracIndexes := trips.GetFracIndexes(sorted)
 	placeIDs := []string{}
 	for _, itinAct := range sorted {
@@ -283,8 +283,8 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 		sortedOrderIdx := order + 1
 		a1Id := sorted[sortedOrderIdx].ID
 		a2Id := sorted[sortedIdx].ID
-		itinList.Activities[a1Id].Labels[trips.LabelFractionalIndex],
-			itinList.Activities[a2Id].Labels[trips.LabelFractionalIndex] =
+		itin.Activities[a1Id].Labels[trips.LabelFractionalIndex],
+			itin.Activities[a2Id].Labels[trips.LabelFractionalIndex] =
 			sortedFracIndexes[sortedIdx], sortedFracIndexes[sortedOrderIdx]
 
 		jop := jp.MakeRepOp(fmt.Sprintf("/itinerary/%d/activities/%s/labels/fIndex", idx, a1Id), sortedFracIndexes[sortedIdx])
