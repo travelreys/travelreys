@@ -47,7 +47,7 @@ type Trip struct {
 
 	// Activities
 	Activities map[string]ActivityList `json:"activities" bson:"activities"`
-	Itinerary  []ItineraryList         `json:"itinerary" bson:"itinerary"`
+	Itinerary  []Itinerary             `json:"itinerary" bson:"itinerary"`
 
 	// Budget
 	Budget Budget `json:"budget" bson:"budget"`
@@ -81,7 +81,7 @@ func NewTrip(creator Member, name string) Trip {
 		Lodgings: map[string]Lodging{},
 
 		Activities: map[string]ActivityList{},
-		Itinerary:  []ItineraryList{},
+		Itinerary:  []Itinerary{},
 		Budget:     NewBudget(),
 
 		UpdatedAt: time.Now(),
@@ -234,7 +234,7 @@ func (l ItineraryActivityList) Less(i, j int) bool {
 	return l[i].Labels[LabelFractionalIndex] < l[j].Labels[LabelFractionalIndex]
 }
 
-type ItineraryList struct {
+type Itinerary struct {
 	ID          string                       `json:"id" bson:"id"`
 	Date        time.Time                    `json:"date" bson:"date"`
 	Description string                       `json:"desc" bson:"desc"`
@@ -243,8 +243,8 @@ type ItineraryList struct {
 	Labels      common.Labels                `json:"labels" bson:"labels"`
 }
 
-func NewItineraryList(date time.Time) ItineraryList {
-	return ItineraryList{
+func NewItinerary(date time.Time) Itinerary {
+	return Itinerary{
 		ID:          uuid.New().String(),
 		Date:        date,
 		Description: "",
@@ -256,7 +256,7 @@ func NewItineraryList(date time.Time) ItineraryList {
 
 // SortActivities returns a list of ItineraryActivities sorted
 // by their fractional index
-func (l ItineraryList) SortActivities() []ItineraryActivity {
+func (l Itinerary) SortActivities() []ItineraryActivity {
 	sorted := ItineraryActivityList{}
 	for _, act := range l.Activities {
 		sorted = append(sorted, act)
@@ -273,11 +273,11 @@ func GetFracIndexes(acts []ItineraryActivity) []string {
 	return result
 }
 
-func (l ItineraryList) routePairingKey(a1 ItineraryActivity, a2 ItineraryActivity) string {
+func (l Itinerary) routePairingKey(a1 ItineraryActivity, a2 ItineraryActivity) string {
 	return fmt.Sprintf("%s%s%s", a1.ID, LabelDelimeter, a2.ID)
 }
 
-func (l ItineraryList) MakeRoutePairings() map[string]bool {
+func (l Itinerary) MakeRoutePairings() map[string]bool {
 	pairings := map[string]bool{}
 	sorted := l.SortActivities()
 	for i := 1; i < len(sorted); i++ {
