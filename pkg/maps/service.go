@@ -137,6 +137,7 @@ func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, 
 
 	routes := RouteList{}
 	for _, r := range groutes {
+		r.Legs = []*maps.Leg{}
 		routes = append(routes, Route{Route: r, TravelMode: mode})
 	}
 	return routes, err
@@ -169,6 +170,7 @@ func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceI
 
 	routes := RouteList{}
 	for _, r := range groutes {
+		r.Legs = []*maps.Leg{}
 		routes = append(routes, Route{Route: r, TravelMode: ""})
 	}
 

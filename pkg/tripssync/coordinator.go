@@ -278,18 +278,14 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 	if err != nil || len(routes) <= 0 {
 		return
 	}
-	for oidx, order := range routes[0].WaypointOrder {
-		sortedIdx := oidx + 1
-		sortedOrderIdx := order + 1
-		a1Id := sorted[sortedOrderIdx].ID
-		a2Id := sorted[sortedIdx].ID
-		itin.Activities[a1Id].Labels[trips.LabelFractionalIndex],
-			itin.Activities[a2Id].Labels[trips.LabelFractionalIndex] =
-			sortedFracIndexes[sortedIdx], sortedFracIndexes[sortedOrderIdx]
 
-		jop := jp.MakeRepOp(fmt.Sprintf("/itinerary/%d/activities/%s/labels/fIndex", idx, a1Id), sortedFracIndexes[sortedIdx])
-		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
-		jop = jp.MakeRepOp(fmt.Sprintf("/itinerary/%d/activities/%s/labels/fIndex", idx, a2Id), sortedFracIndexes[sortedOrderIdx])
+	for moveToIdx, currIdx := range routes[0].WaypointOrder {
+		actId := sorted[currIdx+1].ID
+		newFIdx := sortedFracIndexes[moveToIdx+1]
+
+		itin.Activities[actId].Labels[trips.LabelFractionalIndex] = newFIdx
+
+		jop := jp.MakeRepOp(fmt.Sprintf("/itinerary/%d/activities/%s/labels/fIndex", idx, actId), newFIdx)
 		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 	}
 
