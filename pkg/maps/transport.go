@@ -67,6 +67,7 @@ func decodePlaceAutocompleteRequest(_ context.Context, r *http.Request) (interfa
 		Query:        q.Get("query"),
 		Sessiontoken: q.Get("sessiontoken"),
 		Types:        q.Get("types"),
+		Lang:         q.Get("language"),
 	}, nil
 
 }
@@ -77,6 +78,7 @@ func decodePlaceDetailsRequest(_ context.Context, r *http.Request) (interface{},
 		PlaceID:      q.Get("placeID"),
 		Sessiontoken: q.Get("sessiontoken"),
 		Fields:       strings.Split(q.Get("fields"), ","),
+		Lang:         q.Get("language"),
 	}, nil
 }
 

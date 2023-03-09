@@ -10,6 +10,7 @@ import (
 type PlacesAutocompleteRequest struct {
 	Query        string `json:"query"`
 	Types        string `json:"types"`
+	Lang         string `json:"lang"`
 	Sessiontoken string `json:"sessiontoken"`
 }
 type PlacesAutocompleteResponse struct {
@@ -29,7 +30,7 @@ func NewPlacesAutocompleteEndpoint(svc Service) endpoint.Endpoint {
 				Err: common.ErrorEndpointReqMismatch,
 			}, nil
 		}
-		preds, err := svc.PlacesAutocomplete(ctx, req.Query, req.Types, req.Sessiontoken)
+		preds, err := svc.PlacesAutocomplete(ctx, req.Query, req.Types, req.Sessiontoken, req.Lang)
 		return PlacesAutocompleteResponse{Predictions: preds, Err: err}, nil
 	}
 }
@@ -37,6 +38,7 @@ func NewPlacesAutocompleteEndpoint(svc Service) endpoint.Endpoint {
 type PlaceDetailsRequest struct {
 	PlaceID      string   `json:"placeID"`
 	Fields       []string `json:"fields"`
+	Lang         string   `json:"lang"`
 	Sessiontoken string   `json:"sessiontoken"`
 }
 
@@ -57,7 +59,7 @@ func NewPlaceDetailsEndpoint(svc Service) endpoint.Endpoint {
 				Err: common.ErrorEndpointReqMismatch,
 			}, nil
 		}
-		place, err := svc.PlaceDetails(ctx, req.PlaceID, req.Fields, req.Sessiontoken)
+		place, err := svc.PlaceDetails(ctx, req.PlaceID, req.Fields, req.Sessiontoken, req.Lang)
 		return PlaceDetailsResponse{Place: place, Err: err}, nil
 	}
 }

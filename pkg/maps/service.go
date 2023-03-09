@@ -23,8 +23,8 @@ var (
 )
 
 type Service interface {
-	PlacesAutocomplete(context.Context, string, string, string) (AutocompletePredictionList, error)
-	PlaceDetails(context.Context, string, []string, string) (Place, error)
+	PlacesAutocomplete(context.Context, string, string, string, string) (AutocompletePredictionList, error)
+	PlaceDetails(context.Context, string, []string, string, string) (Place, error)
 	Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error)
 	OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error)
 }
@@ -50,7 +50,7 @@ func NewService(apiToken string, logger *zap.Logger) (Service, error) {
 	return &service{c, logger.Named(mapSerivceLogger)}, nil
 }
 
-func (svc *service) PlacesAutocomplete(ctx context.Context, query, types, sessiontoken string) (AutocompletePredictionList, error) {
+func (svc *service) PlacesAutocomplete(ctx context.Context, query, types, sessiontoken, lang string) (AutocompletePredictionList, error) {
 	stuuid, err := uuid.Parse(sessiontoken)
 	if err != nil {
 		return AutocompletePredictionList{}, ErrInvalidSessionToken
@@ -59,6 +59,7 @@ func (svc *service) PlacesAutocomplete(ctx context.Context, query, types, sessio
 		Input:        query,
 		Types:        maps.AutocompletePlaceType(types),
 		SessionToken: maps.PlaceAutocompleteSessionToken(stuuid),
+		Language:     lang,
 	}
 	res, err := svc.c.PlaceAutocomplete(ctx, req)
 	if err != nil {
@@ -89,15 +90,16 @@ func (svc *service) stringsToPlaceDefaultsFieldMasks(fields []string) ([]maps.Pl
 	return list, nil
 }
 
-func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken string) (Place, error) {
+func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (Place, error) {
 	fieldMasks, err := svc.stringsToPlaceDefaultsFieldMasks(fields)
 	if err != nil {
 		return Place{}, err
 	}
 
 	req := &maps.PlaceDetailsRequest{
-		PlaceID: placeID,
-		Fields:  fieldMasks,
+		PlaceID:  placeID,
+		Fields:   fieldMasks,
+		Language: lang,
 	}
 	if sessiontoken != "" {
 		stuuid, err := uuid.Parse(sessiontoken)
