@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	JwtIssuer     = "tiinyplanet"
+	JwtIssuer     = "travelreys"
 	JwtClaimIss   = "iss"
 	JwtClaimSub   = "sub"
 	JwtClaimEmail = "email"
 	JwtClaimIat   = "iat"
 
-	EnvJwtSecret = "TIINYPLANET_JWT_SECRET"
+	EnvJwtSecret = "TRAVELREYS_JWT_SECRET"
 )
 
 var (

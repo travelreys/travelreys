@@ -14,7 +14,7 @@ import (
 
 const (
 	mapSerivceLogger      = "maps.service"
-	envGoogleMapsApiToken = "TIINYPLANET_GOOGLE_MAPS_APIKEY"
+	envGoogleMapsApiToken = "TRAVELREYS_GOOGLE_MAPS_APIKEY"
 )
 
 var (

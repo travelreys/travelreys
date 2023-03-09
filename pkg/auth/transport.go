@@ -8,8 +8,8 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/reqctx"
 )
 
 func errToHttpCode(err error) int {

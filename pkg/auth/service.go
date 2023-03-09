@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/travelreys/travelreys/pkg/common"
 	"go.uber.org/zap"
 )
 

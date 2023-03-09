@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	envOAuthGoolgeSecretFile = "TIINYPLANET_OAUTH_GOOGLE_SECRET_FILE"
+	envOAuthGoolgeSecretFile = "TRAVELREYS_OAUTH_GOOGLE_SECRET_FILE"
 	userInfoURL              = "https://www.googleapis.com/oauth2/v2/userinfo?access_token"
 )
 

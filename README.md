@@ -1,15 +1,15 @@
-# TiinyPlanet
+# Travelreys
 
-TiinyPlanet is a travel platform.
+Travelreys is a travel platform.
 
 ## Dependencies
 
-|: Dependency :|: Version :|
-|--------------|-----------|
-| Go           | v1.19.4   |
-| MongoDB      | v6.0.3    |
-| Redis        | v7.0      |
-| nats.io      | v2.9.10   |
+| : Dependency : | : Version : |
+| -------------- | ----------- |
+| Go             | v1.19.4     |
+| MongoDB        | v6.0.3      |
+| Redis          | v7.0        |
+| nats.io        | v2.9.10     |
 
 ## Getting Started
 
@@ -65,18 +65,18 @@ make test
 
 ## Environment variables
 
-|: Env Vars :|: Description :|
-|--------------|-----------|
-|TIINYPLANET_CORS_ORIGIN||
-|TIINYPLANET_MONGO_URL||
-|TIINYPLANET_MONGO_DBNAME||
-|TIINYPLANET_NATS_URL||
-|TIINYPLANET_REDIS_URL||
-|TIINYPLANET_JWT_SECRET||
-|TIINYPLANET_UNSPLASH_ACCESSKEY||
-|TIINYPLANET_SKYSCANNER_APIKEY||
-|TIINYPLANET_SKYSCANNER_APIHOST||
-|TIINYPLANET_GOOGLE_MAPS_APIKEY||
-|TIINYPLANET_OAUTH_GOOGLE_SECRET_FILE||
+| : Env Vars :                        | : Description : |
+| ----------------------------------- | --------------- |
+| TRAVELREYS_CORS_ORIGIN              |                 |
+| TRAVELREYS_MONGO_URL                |                 |
+| TRAVELREYS_MONGO_DBNAME             |                 |
+| TRAVELREYS_NATS_URL                 |                 |
+| TRAVELREYS_REDIS_URL                |                 |
+| TRAVELREYS_JWT_SECRET               |                 |
+| TRAVELREYS_UNSPLASH_ACCESSKEY       |                 |
+| TRAVELREYS_SKYSCANNER_APIKEY        |                 |
+| TRAVELREYS_SKYSCANNER_APIHOST       |                 |
+| TRAVELREYS_GOOGLE_MAPS_APIKEY       |                 |
+| TRAVELREYS_OAUTH_GOOGLE_SECRET_FILE |                 |
 
 

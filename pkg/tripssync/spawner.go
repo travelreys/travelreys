@@ -3,8 +3,8 @@ package tripssync
 import (
 	context "context"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
-	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 

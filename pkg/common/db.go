@@ -16,7 +16,7 @@ import (
 // NATS
 
 const (
-	NATSClientName = "tiinyplanet"
+	NATSClientName = "travelreys"
 )
 
 func MakeNATSConn(url string) (*nats.Conn, error) {

@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
-	"github.com/tiinyplanet/tiinyplanet/pkg/images"
-	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/flights"
+	"github.com/travelreys/travelreys/pkg/images"
+	"github.com/travelreys/travelreys/pkg/maps"
 )
 
 const (

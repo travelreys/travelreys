@@ -9,10 +9,10 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/google/uuid"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	jp "github.com/tiinyplanet/tiinyplanet/pkg/jsonpatch"
-	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
-	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"github.com/travelreys/travelreys/pkg/common"
+	jp "github.com/travelreys/travelreys/pkg/jsonpatch"
+	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 

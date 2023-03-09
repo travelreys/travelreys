@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/auth"
+	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/reqctx"
 )
 
 // Trips Endpoints

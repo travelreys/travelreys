@@ -4,7 +4,7 @@ import (
 	context "context"
 	"errors"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"github.com/travelreys/travelreys/pkg/trips"
 )
 
 var (

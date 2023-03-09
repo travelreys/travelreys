@@ -3,7 +3,7 @@ package flights
 import (
 	"time"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/travelreys/travelreys/pkg/common"
 )
 
 type Airline struct {

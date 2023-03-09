@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/tiinyplanet/tiinyplanet/pkg/api"
+	"github.com/travelreys/travelreys/pkg/api"
 	"go.uber.org/zap"
 )
 
@@ -24,7 +24,7 @@ const (
 	cfgFlagRedisURL         = "redis-url"
 	cfgFlagRedisClusterMode = "redis-cluster-mode"
 
-	envVarPrefix = "TIINYPLANET"
+	envVarPrefix = "TRAVELREYS"
 )
 
 type ServerConfig struct {
