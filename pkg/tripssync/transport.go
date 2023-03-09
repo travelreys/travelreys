@@ -47,7 +47,7 @@ func (srv *WebsocketServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	go srv.PingPong(ws)
+	// go srv.PingPong(ws)
 	connID := uuid.New().String()
 	h := ConnHandler{ID: connID, svc: srv.svc, ws: ws, logger: srv.logger}
 	h.Run()
