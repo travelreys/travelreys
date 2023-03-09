@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
-	"github.com/tiinyplanet/tiinyplanet/pkg/images"
+	"github.com/travelreys/travelreys/pkg/auth"
+	"github.com/travelreys/travelreys/pkg/images"
 )
 
 type Service interface {

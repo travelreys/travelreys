@@ -17,7 +17,7 @@ const (
 	// https://unsplash.com/documentation
 	webapiLoggerName     = "images.webapi"
 	unsplashUrl          = "https://api.unsplash.com"
-	envUnsplashAccessKey = "TIINYPLANET_UNSPLASH_ACCESSKEY"
+	envUnsplashAccessKey = "TRAVELREYS_UNSPLASH_ACCESSKEY"
 )
 
 var (

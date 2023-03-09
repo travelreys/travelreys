@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/travelreys/travelreys/pkg/common"
 )
 
 const (

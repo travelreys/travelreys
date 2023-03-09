@@ -6,14 +6,14 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/tiinyplanet/tiinyplanet/pkg/api"
-	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/flights"
-	"github.com/tiinyplanet/tiinyplanet/pkg/images"
-	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
-	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
-	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
+	"github.com/travelreys/travelreys/pkg/api"
+	"github.com/travelreys/travelreys/pkg/auth"
+	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/flights"
+	"github.com/travelreys/travelreys/pkg/images"
+	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/trips"
+	"github.com/travelreys/travelreys/pkg/tripssync"
 	"go.uber.org/zap"
 )
 

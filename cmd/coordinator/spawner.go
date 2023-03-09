@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/maps"
-	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
-	"github.com/tiinyplanet/tiinyplanet/pkg/tripssync"
+	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/trips"
+	"github.com/travelreys/travelreys/pkg/tripssync"
 	"go.uber.org/zap"
 )
 

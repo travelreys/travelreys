@@ -1,9 +1,9 @@
 package tripssync
 
 import (
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/jsonpatch"
-	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/jsonpatch"
+	"github.com/travelreys/travelreys/pkg/trips"
 )
 
 const (

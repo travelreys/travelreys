@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/auth"
-	"github.com/tiinyplanet/tiinyplanet/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/auth"
+	"github.com/travelreys/travelreys/pkg/reqctx"
 	"go.uber.org/zap"
 )
 

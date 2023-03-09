@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-redis/redis/v9"
 	"github.com/nats-io/nats.go"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
-	"github.com/tiinyplanet/tiinyplanet/pkg/trips"
+	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 

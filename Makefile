@@ -1,6 +1,6 @@
 DOCKER_REGISTRY := asia-southeast1-docker.pkg.dev/tiinyplanet-379603
-DOCKER_REPOSITORY := tiinyplanet-api
-DOCKER_IMAGE := tiinyplanet-api
+DOCKER_REPOSITORY := travelreys-api
+DOCKER_IMAGE := travelreys-api
 VERSION := $(shell grep 'VERSION' pkg/common/version.go | awk '{ print $$4 }' | tr -d '"')
 
 .PHONY: build protoc protoc clean test
@@ -17,5 +17,5 @@ clean:
 	rm -rf build
 
 docker:
-	docker build . -t tiinyplanet-api
-	docker tag tiinyplanet-api $(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)/$(DOCKER_IMAGE):$(VERSION)
+	docker build . -t travelreys-api
+	docker tag travelreys-api $(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)/$(DOCKER_IMAGE):$(VERSION)

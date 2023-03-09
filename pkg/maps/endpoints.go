@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/travelreys/travelreys/pkg/common"
 )
 
 type PlacesAutocompleteRequest struct {

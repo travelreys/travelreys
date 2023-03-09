@@ -12,14 +12,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/travelreys/travelreys/pkg/common"
 	"go.uber.org/zap"
 )
 
 const (
 	DefaultCurrency      = "USD"
-	envSkyscannerApiKey  = "TIINYPLANET_SKYSCANNER_APIKEY"
-	envSkyscannerApiHost = "TIINYPLANET_SKYSCANNER_APIHOST"
+	envSkyscannerApiKey  = "TRAVELREYS_SKYSCANNER_APIKEY"
+	envSkyscannerApiHost = "TRAVELREYS_SKYSCANNER_APIHOST"
 
 	fieldAdults        = "adults"
 	fieldOrigin        = "origin"

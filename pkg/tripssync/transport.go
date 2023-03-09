@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/tiinyplanet/tiinyplanet/pkg/common"
+	"github.com/travelreys/travelreys/pkg/common"
 	"go.uber.org/zap"
 )
 
