@@ -13,16 +13,18 @@ import (
 
 const (
 	// Time allowed to write the file to the client.
-	writeWait = 10 * time.Second
+	writeWait = 3 * time.Second
 
 	// Time allowed to read the next pong message from the client.
-	pongWait = 60 * time.Second
+	pongWait = 10 * time.Second
 
 	// Send pings to client with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
+	pingPeriod = (pongWait * 7) / 10
 )
 
 var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
@@ -45,32 +47,34 @@ func (srv *WebsocketServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	// go srv.PingPong(ws)
+	go srv.PingPong(ws)
 	connID := uuid.New().String()
 	h := ConnHandler{ID: connID, svc: srv.svc, ws: ws, logger: srv.logger}
 	h.Run()
 }
 
 func (srv *WebsocketServer) PingPong(ws *websocket.Conn) {
-	ws.SetReadDeadline(time.Now().Add(pongWait))
-	ws.SetPongHandler(func(string) error {
-		ws.SetReadDeadline(time.Now().Add(pongWait))
-		srv.logger.Debug("pingpong read")
-		return nil
-	})
-
 	pingTicker := time.NewTicker(pingPeriod)
 	defer func() {
 		pingTicker.Stop()
-		ws.Close()
 	}()
-	for range pingTicker.C {
-		ws.SetWriteDeadline(time.Now().Add(writeWait))
-		srv.logger.Debug("pingpong write deadline")
-		if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-			srv.logger.Debug("pingpong write deadline error")
-			srv.logger.Error("ping error", zap.Error(err))
-			return
+
+	ws.SetReadDeadline(time.Now().Add(pongWait))
+	ws.SetPongHandler(func(string) error {
+		ws.SetReadDeadline(time.Now().Add(pongWait))
+		srv.logger.Debug("pong")
+		return nil
+	})
+
+	for {
+		select {
+		case <-pingTicker.C:
+			srv.logger.Debug("ping")
+			ws.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := ws.WriteMessage(websocket.PingMessage, nil); err != nil {
+				srv.logger.Error("ping error", zap.Error(err))
+				return
+			}
 		}
 	}
 }
