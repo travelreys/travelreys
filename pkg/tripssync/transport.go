@@ -11,15 +11,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// https://github.com/gorilla/websocket/tree/master/examples/chat
+
 const (
-	// Time allowed to write the file to the client.
-	writeWait = 3 * time.Second
+	// Time allowed to write a message to the peer.
+	writeWait = 5 * time.Second
 
-	// Time allowed to read the next pong message from the client.
-	pongWait = 10 * time.Second
+	// Time allowed to read the next pong message from the peer.
+	pongWait = 30 * time.Second
 
-	// Send pings to client with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 7) / 10
+	// Send pings to peer with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
 )
 
 var upgrader = websocket.Upgrader{
@@ -39,6 +41,7 @@ func NewWebsocketServer(svc Service, logger *zap.Logger) *WebsocketServer {
 	return &WebsocketServer{svc: svc, logger: logger}
 }
 
+// HandleFunc upgrades the HTTP connection to the WebSocket protocol and then creates a ConnHandler.
 func (srv *WebsocketServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -47,39 +50,14 @@ func (srv *WebsocketServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	// go srv.PingPong(ws)
-	connID := uuid.New().String()
-	h := ConnHandler{ID: connID, svc: srv.svc, ws: ws, logger: srv.logger}
+	h := ConnHandler{ID: uuid.New().String(), svc: srv.svc, ws: ws, logger: srv.logger}
 	h.Run()
 }
 
-func (srv *WebsocketServer) PingPong(ws *websocket.Conn) {
-	pingTicker := time.NewTicker(pingPeriod)
-	defer func() {
-		pingTicker.Stop()
-	}()
-
-	ws.SetReadDeadline(time.Now().Add(pongWait))
-	ws.SetPongHandler(func(string) error {
-		ws.SetReadDeadline(time.Now().Add(pongWait))
-		srv.logger.Debug("pong")
-		return nil
-	})
-
-	for {
-		select {
-		case <-pingTicker.C:
-			srv.logger.Debug("ping")
-			ws.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := ws.WriteMessage(websocket.PingMessage, nil); err != nil {
-				srv.logger.Error("ping error", zap.Error(err))
-				return
-			}
-		}
-	}
-}
-
-// ConnHandler handles a single Websocket connection
+// ConnHandler handles a single Websocket connection. The proxy creates an instance of the ConnHandler type for each
+// websocket connection. A ConnHandler acts as an intermediary between the websocket connection and the session.
+// WebSocket connections support one concurrent reader and one concurrent writer.
+// (https://pkg.go.dev/github.com/gorilla/websocket#hdr-Concurrency)
 type ConnHandler struct {
 	ID       string
 	tripID   string
@@ -94,21 +72,30 @@ func (h *ConnHandler) Run() {
 	h.logger.Info("new connection", zap.String("id", h.ID))
 	defer func() {
 		h.logger.Info("closing connection", zap.String("id", h.ID))
-		h.HandleMessage(NewMsgLeaveSession(h.ID, h.tripID))
+		h.ReadMessage(NewMsgLeaveSession(h.ID, h.tripID))
 		h.ws.Close()
 	}()
+
+	h.ws.SetReadDeadline(time.Now().Add(pongWait))
+	h.ws.SetPongHandler(func(string) error {
+		h.ws.SetReadDeadline(time.Now().Add(pongWait))
+		h.logger.Debug("pong")
+		return nil
+	})
 
 	for {
 		var msg Message
 		if err := h.ws.ReadJSON(&msg); err != nil {
-			h.logger.Error("h.ws.ReadJSON(&msg)", zap.Error(err))
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				h.logger.Error("h.ws.ReadJSON(&msg)", zap.Error(err))
+			}
 			return
 		}
 		if !isValidMessageType(msg.Op) {
 			h.logger.Error("!isValidMessageType(msg.Op)", zap.Error(ErrInvalidOp))
 			continue
 		}
-		if err := h.HandleMessage(msg); err != nil {
+		if err := h.ReadMessage(msg); err != nil {
 			h.logger.Error("h.HandleMessage(msg)", zap.Error(err))
 			continue
 		}
@@ -116,12 +103,11 @@ func (h *ConnHandler) Run() {
 		if msg.Op == OpLeaveSession {
 			return
 		}
-
 	}
 }
 
-func (h *ConnHandler) HandleMessage(msg Message) error {
-	h.logger.Info("recv msg", zap.String("msg", common.FmtString(msg)))
+func (h *ConnHandler) ReadMessage(msg Message) error {
+	h.logger.Debug("recv msg", zap.String("msg", common.FmtString(msg)))
 
 	msg.ConnID = h.ID
 	ctx := context.Background()
@@ -140,12 +126,7 @@ func (h *ConnHandler) HandleMessage(msg Message) error {
 		if _, err = h.svc.JoinSession(ctx, msg); err != nil {
 			return err
 		}
-		go func() {
-			for msg := range h.tobMsgCh {
-				h.logger.Debug("recv tob", zap.String("msg", common.FmtString(msg)))
-				h.ws.WriteJSON(msg)
-			}
-		}()
+		go h.WriteMessage()
 		return nil
 	case OpLeaveSession:
 		h.doneCh <- true
@@ -154,5 +135,30 @@ func (h *ConnHandler) HandleMessage(msg Message) error {
 		return h.svc.UpdateTrip(ctx, msg)
 	default:
 		return nil
+	}
+}
+
+func (h *ConnHandler) WriteMessage() {
+	pingTicker := time.NewTicker(pingPeriod)
+	defer func() {
+		pingTicker.Stop()
+	}()
+
+	for {
+		select {
+		case msg, ok := <-h.tobMsgCh:
+			if !ok {
+				return
+			}
+			h.logger.Debug("recv tob", zap.String("msg", common.FmtString(msg)))
+			h.ws.WriteJSON(msg)
+		case <-pingTicker.C:
+			h.logger.Debug("ping")
+			h.ws.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := h.ws.WriteMessage(websocket.PingMessage, nil); err != nil {
+				h.logger.Error("ping error", zap.Error(err))
+				return
+			}
+		}
 	}
 }
