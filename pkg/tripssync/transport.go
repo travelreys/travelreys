@@ -14,11 +14,8 @@ import (
 // https://github.com/gorilla/websocket/tree/master/examples/chat
 
 const (
-	// Time allowed to write a message to the peer.
-	writeWait = 5 * time.Second
-
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 30 * time.Second
+	pongWait = 60 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
@@ -59,13 +56,21 @@ func (srv *WebsocketServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
 // WebSocket connections support one concurrent reader and one concurrent writer.
 // (https://pkg.go.dev/github.com/gorilla/websocket#hdr-Concurrency)
 type ConnHandler struct {
-	ID       string
-	tripID   string
-	ws       *websocket.Conn
+	ID     string
+	tripID string
+	ws     *websocket.Conn
+
 	svc      Service
 	tobMsgCh <-chan Message
 	doneCh   chan<- bool
-	logger   *zap.Logger
+
+	pongDeadline time.Time
+
+	logger *zap.Logger
+}
+
+func (h *ConnHandler) SetPongDeadline(deadline time.Time) {
+	h.pongDeadline = deadline
 }
 
 func (h *ConnHandler) Run() {
@@ -76,12 +81,7 @@ func (h *ConnHandler) Run() {
 		h.ws.Close()
 	}()
 
-	h.ws.SetReadDeadline(time.Now().Add(pongWait))
-	h.ws.SetPongHandler(func(string) error {
-		h.ws.SetReadDeadline(time.Now().Add(pongWait))
-		h.logger.Debug("pong")
-		return nil
-	})
+	h.SetPongDeadline(time.Now().Add(pongWait))
 
 	for {
 		var msg Message
@@ -107,7 +107,7 @@ func (h *ConnHandler) Run() {
 }
 
 func (h *ConnHandler) ReadMessage(msg Message) error {
-	h.logger.Debug("recv msg", zap.String("msg", common.FmtString(msg)))
+	h.logger.Debug("recv msg", zap.String("op", msg.Op), zap.String("msg", common.FmtString(msg)))
 
 	msg.ConnID = h.ID
 	ctx := context.Background()
@@ -127,6 +127,10 @@ func (h *ConnHandler) ReadMessage(msg Message) error {
 			return err
 		}
 		go h.WriteMessage()
+		return nil
+	case OpPingSession:
+		h.logger.Debug("pong")
+		h.SetPongDeadline(time.Now().Add(pongWait))
 		return nil
 	case OpLeaveSession:
 		h.doneCh <- true
@@ -154,11 +158,7 @@ func (h *ConnHandler) WriteMessage() {
 			h.ws.WriteJSON(msg)
 		case <-pingTicker.C:
 			h.logger.Debug("ping")
-			h.ws.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := h.ws.WriteMessage(websocket.PingMessage, nil); err != nil {
-				h.logger.Error("ping error", zap.Error(err))
-				return
-			}
+			h.ws.WriteJSON(NewMsgPing(h.ID, h.tripID))
 		}
 	}
 }

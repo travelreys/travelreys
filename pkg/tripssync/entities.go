@@ -92,6 +92,17 @@ func NewMsgLeaveSession(connID, tripID string) Message {
 
 type MsgDataPing struct{}
 
+func NewMsgPing(connID, tripID string) Message {
+	return Message{
+		ConnID: connID,
+		TripID: tripID,
+		Op:     OpPingSession,
+		Data: MessageData{
+			Ping: MsgDataPing{},
+		},
+	}
+}
+
 type MsgDataUpdateTrip struct {
 	Title string         `json:"title"`
 	Ops   []jsonpatch.Op `json:"ops"`
