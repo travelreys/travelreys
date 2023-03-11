@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/otiai10/opengraph/ogp"
+	"github.com/otiai10/opengraph/v2"
 )
 
 const (
@@ -27,13 +27,18 @@ func NewService(store Store) Service {
 }
 
 func (s service) AddBasePin(ctx context.Context, url string) (string, error) {
-	intent := ogp.Intent{
+	intent := opengraph.Intent{
 		Context:     ctx,
-		HTTPClient:  http.Client{Timeout: httpTimeout},
+		HTTPClient:  &http.Client{Timeout: httpTimeout},
 		Strict:      true,
 		TrustedTags: []string{"meta", "title"},
 	}
-	ogp, err := ogp.Fetch("https://ogp.me", intent)
+	ogp, err := opengraph.Fetch("https://ogp.me", intent)
+	if err != nil {
+		return "", err
+	}
+	return "", nil
+
 }
 
 func (s service) UpdatePin(ctx context.Context, id string, notes string) error {
