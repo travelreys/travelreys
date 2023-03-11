@@ -146,6 +146,7 @@ func (s *msgStore) Publish(tripID string, msg Message) error {
 	if err != nil {
 		s.logger.Error("json.Marshal(msg)", zap.Error(err))
 	}
+	s.logger.Debug("publish", zap.String("subj", SubjRequest(tripID)))
 	if err = s.nc.Publish(SubjRequest(tripID), data); err != nil {
 		return err
 	}

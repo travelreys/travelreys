@@ -109,7 +109,7 @@ func (crd *Coordinator) Run() error {
 	go func() {
 		// 3.1. Takes in op msg indicating changes from clients
 		for msg := range crd.msgCh {
-			crd.logger.Debug("recv msg", zap.String("msg", common.FmtString(msg)))
+			crd.logger.Debug("recv msg", zap.String("op", msg.Op), zap.String("msg", common.FmtString(msg)))
 			ctx := context.Background()
 			switch msg.Op {
 			case OpJoinSession:
