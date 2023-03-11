@@ -15,7 +15,7 @@ import (
 func errToHttpCode() func(err error) int {
 	notFoundErrors := []error{}
 	appErrors := []error{ErrInvalidField, ErrInvalidSessionToken}
-	authErrors := []error{ErrRBACMissing, ErrRBAC}
+	authErrors := []error{ErrRBAC}
 
 	return func(err error) int {
 		if common.ErrorContains(notFoundErrors, err) {
