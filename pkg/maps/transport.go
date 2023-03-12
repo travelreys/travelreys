@@ -69,7 +69,6 @@ func decodePlaceAutocompleteRequest(_ context.Context, r *http.Request) (interfa
 		Types:        q.Get("types"),
 		Lang:         q.Get("language"),
 	}, nil
-
 }
 
 func decodePlaceDetailsRequest(_ context.Context, r *http.Request) (interface{}, error) {

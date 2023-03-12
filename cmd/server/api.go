@@ -12,7 +12,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/flights"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
-	"github.com/travelreys/travelreys/pkg/moodboard"
+	"github.com/travelreys/travelreys/pkg/ogp"
 	"github.com/travelreys/travelreys/pkg/trips"
 	"github.com/travelreys/travelreys/pkg/tripssync"
 	"go.uber.org/zap"
@@ -62,9 +62,8 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		return nil, err
 	}
 
-	mbStore := moodboard.NewStore(ctx, db, logger)
-	mbSvc := moodboard.NewService(mbStore)
-	mbSvc = moodboard.ServiceWithRBACMiddleware(mbSvc, logger)
+	ogpSvc := ogp.NewService()
+	ogpSvc = ogp.ServiceWithRBACMiddleware(ogpSvc, logger)
 
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
@@ -98,7 +97,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
-	r.PathPrefix("/api/v1/moodboards").Handler(moodboard.MakeHandler(mbSvc))
+	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 
 	return &http.Server{

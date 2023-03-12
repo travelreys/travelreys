@@ -10,6 +10,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/flights"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/ogp"
 )
 
 const (
@@ -52,6 +53,9 @@ type Trip struct {
 	// Budget
 	Budget Budget `json:"budget" bson:"budget"`
 
+	// Links
+	Links map[string]Link `json:"links" bson:"links"`
+
 	UpdatedAt  time.Time `json:"updatedAt" bson:"updatedAt"`
 	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`
 	IsArchived bool      `json:"isArchived" bson:"isArchived"`
@@ -83,6 +87,7 @@ func NewTrip(creator Member, name string) Trip {
 		Activities: map[string]ActivityList{},
 		Itinerary:  []Itinerary{},
 		Budget:     NewBudget(),
+		Links:      LinkMap{},
 
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
@@ -145,9 +150,8 @@ type BaseTransit struct {
 	Notes          string       `json:"notes" bson:"notes"`
 	Price          common.Price `json:"price" bson:"price"`
 
-	Tags        common.Tags         `json:"tags" bson:"tags"`
-	Labels      common.Labels       `json:"labels" bson:"labels"`
-	Attachments []common.FileObject `json:"attachments" bson:"attachments"`
+	Tags   common.Tags   `json:"tags" bson:"tags"`
+	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
 type Flight struct {
@@ -168,9 +172,8 @@ type Lodging struct {
 	Notes          string       `json:"notes" bson:"notes"`
 	Place          maps.Place   `json:"place" bson:"place"`
 
-	Tags        common.Tags         `json:"tags" bson:"tags"`
-	Labels      common.Labels       `json:"labels" bson:"labels"`
-	Attachments []common.FileObject `json:"attachments" bson:"attachments"`
+	Tags   common.Tags   `json:"tags" bson:"tags"`
+	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
 type Activity struct {
@@ -314,3 +317,13 @@ type BudgetItem struct {
 }
 
 type BudgetItemsList []BudgetItem
+
+type Link struct {
+	ID     string        `json:"id" bson:"id"`
+	Notes  string        `json:"notes" bson:"notes"`
+	OGP    ogp.Opengraph `json:"ogp"`
+	Labels common.Labels `json:"labels" bson:"labels"`
+	Tags   common.Tags   `json:"tags" bson:"tags"`
+}
+
+type LinkMap map[string]Link
