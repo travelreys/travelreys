@@ -140,11 +140,19 @@ func (t Trip) GetAllMembersID() []string {
 
 const (
 	TransitTypeFlight = "flight"
+	TransitTypeTrain  = "train"
+	TransitTypeBus    = "bus"
+	TransitTypeOthers = "others"
 )
 
 type BaseTransit struct {
 	ID   string `json:"id" bson:"id"`
 	Type string `json:"type"`
+
+	DepartTime      time.Time  `json:"departTime" bson:"departTime"`
+	DepartLocation  maps.Place `json:"departLocation" bson:"departLocation"`
+	ArrivalTime     time.Time  `json:"arrivalTime" bson:"arrivalTime"`
+	ArrivalLocation maps.Place `json:"arrivalLocation" bson:"arrivalLocation"`
 
 	ConfirmationID string       `json:"confirmationID" bson:"confirmationID"`
 	Notes          string       `json:"notes" bson:"notes"`
