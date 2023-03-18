@@ -9,7 +9,6 @@ import (
 	"github.com/travelreys/travelreys/pkg/api"
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
-	"github.com/travelreys/travelreys/pkg/flights"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/ogp"
@@ -46,10 +45,6 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	authStore := auth.NewStore(ctx, db, logger)
 	authSvc := auth.NewService(gp, authStore, logger)
 	authSvc = auth.ServiceWithRBACMiddleware(authSvc, logger)
-
-	// Flights
-	flightsSvc := flights.NewService(flights.NewDefaultWebAPI(logger))
-	flightsSvc = flights.ServiceWithRBACMiddleware(flightsSvc, logger)
 
 	// Images
 	imageSvc := images.NewService(images.NewDefaultWebAPI(logger))
@@ -94,7 +89,6 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.HandleFunc("/ws", wsSvr.HandleFunc)
 
 	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvc))
-	r.PathPrefix("/api/v1/flights").Handler(flights.MakeHandler(flightsSvc))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
