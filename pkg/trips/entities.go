@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/common"
-	"github.com/travelreys/travelreys/pkg/flights"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/ogp"
@@ -42,7 +41,6 @@ type Trip struct {
 
 	// Logistics
 	Notes    string                 `json:"notes" bson:"notes"`
-	Flights  map[string]Flight      `json:"flights" bson:"flights"`
 	Transits map[string]BaseTransit `json:"transits" bson:"transits"`
 	Lodgings map[string]Lodging     `json:"lodgings" bson:"lodgings"`
 
@@ -80,7 +78,6 @@ func NewTrip(creator Member, name string) Trip {
 		Members:   map[string]Member{},
 		MembersID: map[string]string{},
 
-		Flights:  map[string]Flight{},
 		Transits: map[string]BaseTransit{},
 		Lodgings: map[string]Lodging{},
 
@@ -160,13 +157,6 @@ type BaseTransit struct {
 
 	Tags   common.Tags   `json:"tags" bson:"tags"`
 	Labels common.Labels `json:"labels" bson:"labels"`
-}
-
-type Flight struct {
-	BaseTransit
-	ItineraryType string         `json:"itineraryType" bson:"itineraryType"`
-	Depart        flights.Flight `json:"depart" bson:"depart"`
-	Return        flights.Flight `json:"return" bson:"return"`
 }
 
 type Lodging struct {
