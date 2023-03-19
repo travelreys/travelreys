@@ -2,8 +2,10 @@ package storage
 
 import (
 	"context"
-	"io"
+	"fmt"
+	"net/url"
 	"os"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -15,13 +17,15 @@ const (
 	envHost      = "TRAVELREYS_STORAGE_HOST"
 	envApiKey    = "TRAVELREYS_STORAGE_APIKEY"
 	envSecretKey = "TRAVELREYS_STORAGE_SECRETKEY"
+
+	defaultPresignedURLDuration = 30 * time.Minute
 )
 
 type Service interface {
-	Read(ctx context.Context, bucket, path string) (Object, error)
-	Upload(ctx context.Context, obj Object, file io.Reader) error
-	Download(ctx context.Context, obj Object) (io.ReadCloser, error)
+	Stat(ctx context.Context, bucket, path string) (Object, error)
 	Remove(ctx context.Context, obj Object) error
+	GetPresignedURL(ctx context.Context, bucket, path, filename string) (string, error)
+	PutPresignedURL(ctx context.Context, bucket, path, filename string) (string, error)
 }
 
 type service struct {
@@ -51,7 +55,7 @@ func NewMinioService(host, apikey, secretkey string) (Service, error) {
 	return &service{host, apikey, secretkey, mc}, nil
 }
 
-func (svc service) Read(ctx context.Context, bucket, path string) (Object, error) {
+func (svc service) Stat(ctx context.Context, bucket, path string) (Object, error) {
 	info, err := svc.mc.StatObject(ctx, bucket, path, minio.StatObjectOptions{})
 	if err != nil {
 		return Object{}, err
@@ -59,20 +63,27 @@ func (svc service) Read(ctx context.Context, bucket, path string) (Object, error
 	obj := ObjectFromObjectInfo(info)
 	obj.Bucket = bucket
 	return obj, nil
-
-}
-
-func (svc service) Upload(ctx context.Context, obj Object, file io.Reader) error {
-	_, err := svc.mc.PutObject(ctx, obj.Bucket, obj.Path, file, obj.Size, minio.PutObjectOptions{
-		ContentType: obj.MIMEType,
-	})
-	return err
-}
-
-func (svc service) Download(ctx context.Context, obj Object) (io.ReadCloser, error) {
-	return svc.mc.GetObject(ctx, obj.Bucket, obj.Path, minio.GetObjectOptions{})
 }
 
 func (svc service) Remove(ctx context.Context, obj Object) error {
 	return svc.mc.RemoveObject(ctx, obj.Bucket, obj.Path, minio.RemoveObjectOptions{})
+}
+
+func (svc service) GetPresignedURL(ctx context.Context, bucket, path, filename string) (string, error) {
+	// Set request parameters for content-disposition.
+	reqParams := make(url.Values)
+	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+
+	// Generates a presigned url which expires in a day.
+	presignedURL, err := svc.mc.PresignedGetObject(ctx, bucket, path, defaultPresignedURLDuration, reqParams)
+	return presignedURL.String(), err
+}
+
+func (svc service) PutPresignedURL(ctx context.Context, bucket, path, filename string) (string, error) {
+	presignedURL, err := svc.mc.PresignedPutObject(
+		ctx,
+		bucket,
+		path,
+		defaultPresignedURLDuration)
+	return presignedURL.String(), err
 }

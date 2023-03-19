@@ -3,8 +3,6 @@ package trips
 import (
 	context "context"
 	"errors"
-	"fmt"
-	"io"
 	"time"
 
 	"github.com/travelreys/travelreys/pkg/auth"
@@ -74,27 +72,26 @@ func (mw rbacMiddleware) Delete(ctx context.Context, ID string) error {
 	return mw.next.Delete(ctx, ID)
 }
 
-func (mw rbacMiddleware) Upload(ctx context.Context, ID string, filename string, filesize int64, mimeType, attachmentType string, file io.Reader) error {
+func (mw rbacMiddleware) DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	return mw.next.Upload(ctx, ID, filename, filesize, mimeType, attachmentType, file)
+	return mw.next.DeleteAttachment(ctx, ID, obj)
 }
 
-func (mw rbacMiddleware) Download(ctx context.Context, ID string, obj storage.Object) (storage.Object, io.ReadCloser, error) {
+func (mw rbacMiddleware) DownloadAttachmentPresignedURL(ctx context.Context, ID, path, filename string) (string, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return storage.Object{}, nil, ErrRBAC
+		return "", ErrRBAC
 	}
-	return mw.next.Download(ctx, ID, obj)
+	return mw.next.DownloadAttachmentPresignedURL(ctx, ID, path, filename)
 }
 
-func (mw rbacMiddleware) DeleteFile(ctx context.Context, ID string, obj storage.Object) error {
+func (mw rbacMiddleware) UploadAttachmentPresignedURL(ctx context.Context, ID, filename string) (string, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return ErrRBAC
+		return "", ErrRBAC
 	}
-	fmt.Println(obj)
-	return mw.next.DeleteFile(ctx, ID, obj)
+	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename)
 }
