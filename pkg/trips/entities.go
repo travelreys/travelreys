@@ -10,6 +10,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/ogp"
+	"github.com/travelreys/travelreys/pkg/storage"
 )
 
 const (
@@ -54,9 +55,12 @@ type Trip struct {
 	// Links
 	Links map[string]Link `json:"links" bson:"links"`
 
-	UpdatedAt  time.Time `json:"updatedAt" bson:"updatedAt"`
-	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`
-	IsArchived bool      `json:"isArchived" bson:"isArchived"`
+	// Media, Attachements
+	Media map[string]storage.Object `json:"media" bson:"media"`
+	Files map[string]storage.Object `json:"files" bson:"files"`
+
+	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
+	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 	Tags   common.Tags   `json:"tags" bson:"tags"`
@@ -73,23 +77,19 @@ func NewTrip(creator Member, name string) Trip {
 		CoverImage: images.ImageMetadata{},
 		StartDate:  time.Time{},
 		EndDate:    time.Time{},
-
-		Creator:   creator,
-		Members:   map[string]Member{},
-		MembersID: map[string]string{},
-
-		Transits: map[string]BaseTransit{},
-		Lodgings: map[string]Lodging{},
-
+		Creator:    creator,
+		Members:    map[string]Member{},
+		MembersID:  map[string]string{},
+		Transits:   map[string]BaseTransit{},
+		Lodgings:   map[string]Lodging{},
 		Activities: map[string]ActivityList{},
 		Itinerary:  []Itinerary{},
 		Budget:     NewBudget(),
 		Links:      LinkMap{},
-
-		UpdatedAt: time.Now(),
-		CreatedAt: time.Now(),
-
-		IsArchived: false,
+		Media:      map[string]storage.Object{},
+		Files:      map[string]storage.Object{},
+		UpdatedAt:  time.Now(),
+		CreatedAt:  time.Now(),
 		Labels:     common.Labels{},
 		Tags:       common.Tags{},
 	}
@@ -325,3 +325,8 @@ type Link struct {
 }
 
 type LinkMap map[string]Link
+
+const (
+	AttachmentTypeFile  = "file"
+	AttachmentTypeMedia = "media"
+)

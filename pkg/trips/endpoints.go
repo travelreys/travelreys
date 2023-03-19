@@ -2,12 +2,15 @@ package trips
 
 import (
 	context "context"
+	"io"
+	"path/filepath"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/storage"
 )
 
 // Trips Endpoints
@@ -153,5 +156,90 @@ func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
 		}
 		err := svc.Delete(ctx, req.ID)
 		return DeleteResponse{Err: err}, nil
+	}
+}
+
+type UploadRequest struct {
+	ID             string        `json:"id"`
+	Filename       string        `json:"filename"`
+	Filesize       int64         `json:"filesize"`
+	MimeType       string        `json:"mimeType"`
+	AttachmentType string        `json:"attachmentType"`
+	File           io.ReadCloser `json:"file"`
+}
+
+type UploadResponse struct {
+	File io.ReadCloser
+	Err  error `json:"error,omitempty"`
+}
+
+func (r UploadResponse) Error() error {
+	return r.Err
+}
+
+func NewUploadEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(UploadRequest)
+		if !ok {
+			return UploadResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		err := svc.Upload(ctx, req.ID, req.Filename, req.Filesize, req.MimeType, req.AttachmentType, req.File)
+		return UploadResponse{File: req.File, Err: err}, nil
+	}
+}
+
+type DownloadRequest struct {
+	ID  string         `json:"id"`
+	Obj storage.Object `json:"object"`
+}
+
+type DownloadResponse struct {
+	File io.ReadCloser
+	Name string
+	Stat storage.Object
+	Err  error `json:"error,omitempty"`
+}
+
+func (r DownloadResponse) Error() error {
+	return r.Err
+}
+
+func NewDownloadEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(DownloadRequest)
+		if !ok {
+			return DownloadResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		stat, file, err := svc.Download(ctx, req.ID, req.Obj)
+		return DownloadResponse{
+			File: file,
+			Name: filepath.Base(req.Obj.Path),
+			Stat: stat,
+			Err:  err,
+		}, nil
+	}
+}
+
+type DeleteFileRequest struct {
+	ID  string         `json:"id"`
+	Obj storage.Object `json:"object"`
+}
+
+type DeleteFileResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r DeleteFileResponse) Error() error {
+	return r.Err
+}
+
+func NewDeleteFileEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(DeleteFileRequest)
+		if !ok {
+			return DeleteFileResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		err := svc.DeleteFile(ctx, req.ID, req.Obj)
+		return DeleteFileResponse{Err: err}, nil
 	}
 }

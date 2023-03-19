@@ -12,6 +12,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/ogp"
+	"github.com/travelreys/travelreys/pkg/storage"
 	"github.com/travelreys/travelreys/pkg/trips"
 	"github.com/travelreys/travelreys/pkg/tripssync"
 	"go.uber.org/zap"
@@ -57,12 +58,20 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		return nil, err
 	}
 
+	// Storage
+	storageSvc, err := storage.NewDefaultMinioService()
+	if err != nil {
+		logger.Error("unable to connect storage service", zap.Error(err))
+		return nil, err
+	}
+
+	// Ogp
 	ogpSvc := ogp.NewService()
 	ogpSvc = ogp.ServiceWithRBACMiddleware(ogpSvc, logger)
 
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
-	tripSvc := trips.NewService(tripStore, authSvc, imageSvc)
+	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, storageSvc)
 	tripSvc = trips.ServiceWithRBACMiddleware(tripSvc, logger)
 
 	r := mux.NewRouter()

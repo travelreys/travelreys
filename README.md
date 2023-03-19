@@ -38,6 +38,10 @@ rs.initiate({
 
 rs.status()
 
+# Minio
+docker run --name minio -d -p 9000:9000 -p 9001:9001 \
+  quay.io/minio/minio server /data --console-address ":9001"
+
 # Build Server
 make
 ```
