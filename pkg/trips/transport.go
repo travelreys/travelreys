@@ -3,8 +3,6 @@ package trips
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 	"path/filepath"
 
@@ -59,18 +57,24 @@ func MakeHandler(svc Service) http.Handler {
 	readHandler := kithttp.NewServer(NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...)
 	readMembersHandler := kithttp.NewServer(NewReadMembersEndpoint(svc), decodeReadMembersRequest, encodeResponse, opts...)
 	deleteHandler := kithttp.NewServer(NewDeleteEndpoint(svc), decodeDeleteRequest, encodeResponse, opts...)
-	uploadHandler := kithttp.NewServer(NewUploadEndpoint(svc), decodeUploadRequest, encodeUploadResponse, opts...)
-	downloadHandler := kithttp.NewServer(NewDownloadEndpoint(svc), decodeDownloadRequest, encodeDownloadResponse, opts...)
-	deleteFileHandler := kithttp.NewServer(NewDeleteFileEndpoint(svc), encodeDeleteFileRequest, encodeResponse, opts...)
+
+	downloadPresignedURLHandler := kithttp.NewServer(NewDownloadAttachmentPresignedURLEndpoint(svc), decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...)
+	uploadPresignedURLHandler := kithttp.NewServer(NewUploadAttachmentPresignedURLEndpoint(svc), decodeUploadAttachmentPresignedURLRequest, encodeResponse, opts...)
+	deleteAttachmentHandler := kithttp.NewServer(NewDeleteAttachmentEndpoint(svc), decodeDeleteAttachmentRequest, encodeResponse, opts...)
 
 	r.Handle("/api/v1/trips", createHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/trips", listHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}", readHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}/members", readMembersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}", deleteHandler).Methods(http.MethodDelete)
-	r.Handle("/api/v1/trips/{id}/storage", uploadHandler).Methods(http.MethodPost)
-	r.Handle("/api/v1/trips/{id}/storage", downloadHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trips/{id}/storage", deleteFileHandler).Methods(http.MethodDelete)
+
+	r.Handle("/api/v1/trips/{id}/storage/download/pre-signed", downloadPresignedURLHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadPresignedURLHandler).Methods(http.MethodGet)
+
+	r.Handle("/api/v1/trips/{id}/storage", deleteAttachmentHandler).Methods(http.MethodDelete)
+
+	// downloadHandler := kithttp.NewServer(NewDownloadEndpoint(svc), decodeDownloadRequest, encodeDownloadResponse, opts...)
+	// r.Handle("/api/v1/trips/{id}/storage", downloadHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -126,60 +130,14 @@ func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error
 	return DeleteRequest{ID}, nil
 }
 
-func decodeUploadRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	ID, ok := vars[URLPathVarID]
-	if !ok {
-		return nil, common.ErrInvalidRequest
-	}
-	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-	file, fileheader, err := r.FormFile("file")
-	if err != nil {
-		return nil, err
-	}
-	buff := make([]byte, 512)
-	if _, err = file.Read(buff); err != nil {
-		return nil, err
-	}
-	filetype := http.DetectContentType(buff)
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		return nil, err
-	}
-
-	return UploadRequest{
-		ID:             ID,
-		Filename:       fileheader.Filename,
-		Filesize:       fileheader.Size,
-		AttachmentType: r.FormValue("attachmentType"),
-		MimeType:       filetype,
-		File:           file,
-	}, nil
-}
-
-func encodeUploadResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
-		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
-		return nil
-	}
-	resp, ok := response.(UploadResponse)
-	if !ok {
-		return common.ErrorEncodeInvalidResponse
-	}
-	resp.File.Close()
-	return json.NewEncoder(w).Encode(response)
-}
-
-func decodeDownloadRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDeleteAttachmentRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
 	path := r.URL.Query().Get("path")
-	return DownloadRequest{
+	return DeleteAttachmentRequest{
 		ID: ID,
 		Obj: storage.Object{
 			Path: path,
@@ -188,45 +146,30 @@ func decodeDownloadRequest(_ context.Context, r *http.Request) (interface{}, err
 	}, nil
 }
 
-func encodeDownloadResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
-		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
-		return nil
-	}
-	resp, ok := response.(DownloadResponse)
-	if !ok {
-		return common.ErrorEncodeInvalidResponse
-	}
-
-	//Set the headers
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", resp.Name))
-	w.Header().Set("Content-Type", resp.Stat.MIMEType+";"+resp.Name)
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", resp.Stat.Size))
-
-	fmt.Println("copying")
-	written, err := io.Copy(w, resp.File)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	fmt.Println(written)
-
-	resp.File.Close()
-	return nil
-}
-
-func encodeDeleteFileRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDownloadAttachmentPresignedURLRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
 	path := r.URL.Query().Get("path")
-	return DeleteFileRequest{
-		ID: ID,
-		Obj: storage.Object{
-			Path: path,
-			Name: filepath.Base(path),
-		},
+	filename := r.URL.Query().Get("filename")
+	return DownloadAttachmentPresignedURLRequest{
+		ID:       ID,
+		Path:     path,
+		Filename: filename,
+	}, nil
+}
+
+func decodeUploadAttachmentPresignedURLRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	filename := r.URL.Query().Get("filename")
+	return UploadAttachmentPresignedURLRequest{
+		ID:       ID,
+		Filename: filename,
 	}, nil
 }

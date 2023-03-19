@@ -2,12 +2,10 @@ package trips
 
 import (
 	context "context"
-	"io"
 	"math/rand"
 	"path/filepath"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/storage"
@@ -15,6 +13,7 @@ import (
 
 const (
 	attachmentBucket = "trips"
+	mediaBucket      = "media"
 )
 
 type Service interface {
@@ -24,9 +23,9 @@ type Service interface {
 	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	Delete(ctx context.Context, ID string) error
-	Upload(ctx context.Context, ID string, filename string, filesize int64, mimeType, attachmentType string, file io.Reader) error
-	Download(ctx context.Context, ID string, obj storage.Object) (storage.Object, io.ReadCloser, error)
-	DeleteFile(ctx context.Context, ID string, obj storage.Object) error
+	UploadAttachmentPresignedURL(ctx context.Context, ID, filename string) (string, error)
+	DownloadAttachmentPresignedURL(ctx context.Context, ID, path, filename string) (string, error)
+	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
 }
 
 type service struct {
@@ -105,37 +104,19 @@ func (svc service) Delete(ctx context.Context, ID string) error {
 	return svc.store.Delete(ctx, ID)
 }
 
-func (svc service) Upload(ctx context.Context, ID string, filename string, filesize int64, mimeType, attachmentType string, file io.Reader) error {
-	if _, err := svc.Read(ctx, ID); err != nil {
-		return err
-	}
-
-	obj := storage.Object{
-		ID:           uuid.NewString(),
-		Name:         filename,
-		Bucket:       attachmentBucket,
-		Size:         filesize,
-		Path:         filepath.Join(ID, attachmentType, filename),
-		MIMEType:     mimeType,
-		LastModified: time.Now(),
-	}
-	return svc.storageSvc.Upload(ctx, obj, file)
+func (svc service) UploadAttachmentPresignedURL(ctx context.Context, ID, filename string) (string, error) {
+	return svc.storageSvc.PutPresignedURL(
+		ctx,
+		attachmentBucket,
+		filepath.Join(ID, filename),
+		filename)
 }
 
-func (svc service) Download(ctx context.Context, ID string, obj storage.Object) (storage.Object, io.ReadCloser, error) {
-	obj.Bucket = attachmentBucket
-	stat, err := svc.storageSvc.Read(ctx, obj.Bucket, obj.Path)
-	if err != nil {
-		return stat, nil, err
-	}
-	file, err := svc.storageSvc.Download(ctx, obj)
-	if err != nil {
-		return stat, nil, err
-	}
-	return stat, file, nil
+func (svc service) DownloadAttachmentPresignedURL(ctx context.Context, ID, path, filename string) (string, error) {
+	return svc.storageSvc.GetPresignedURL(ctx, attachmentBucket, path, filename)
 }
 
-func (svc service) DeleteFile(ctx context.Context, ID string, obj storage.Object) error {
+func (svc service) DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error {
 	obj.Bucket = attachmentBucket
 	return svc.storageSvc.Remove(ctx, obj)
 }

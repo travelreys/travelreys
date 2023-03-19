@@ -2,8 +2,6 @@ package trips
 
 import (
 	context "context"
-	"io"
-	"path/filepath"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -159,87 +157,83 @@ func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-type UploadRequest struct {
-	ID             string        `json:"id"`
-	Filename       string        `json:"filename"`
-	Filesize       int64         `json:"filesize"`
-	MimeType       string        `json:"mimeType"`
-	AttachmentType string        `json:"attachmentType"`
-	File           io.ReadCloser `json:"file"`
-}
-
-type UploadResponse struct {
-	File io.ReadCloser
-	Err  error `json:"error,omitempty"`
-}
-
-func (r UploadResponse) Error() error {
-	return r.Err
-}
-
-func NewUploadEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(UploadRequest)
-		if !ok {
-			return UploadResponse{Err: common.ErrorEndpointReqMismatch}, nil
-		}
-		err := svc.Upload(ctx, req.ID, req.Filename, req.Filesize, req.MimeType, req.AttachmentType, req.File)
-		return UploadResponse{File: req.File, Err: err}, nil
-	}
-}
-
-type DownloadRequest struct {
+type DeleteAttachmentRequest struct {
 	ID  string         `json:"id"`
 	Obj storage.Object `json:"object"`
 }
 
-type DownloadResponse struct {
-	File io.ReadCloser
-	Name string
-	Stat storage.Object
-	Err  error `json:"error,omitempty"`
+type DeleteAttachmentResponse struct {
+	Err error `json:"error,omitempty"`
 }
 
-func (r DownloadResponse) Error() error {
+func (r DeleteAttachmentResponse) Error() error {
 	return r.Err
 }
 
-func NewDownloadEndpoint(svc Service) endpoint.Endpoint {
+func NewDeleteAttachmentEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(DownloadRequest)
+		req, ok := epReq.(DeleteAttachmentRequest)
 		if !ok {
-			return DownloadResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return DeleteAttachmentResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		stat, file, err := svc.Download(ctx, req.ID, req.Obj)
-		return DownloadResponse{
-			File: file,
-			Name: filepath.Base(req.Obj.Path),
-			Stat: stat,
-			Err:  err,
+		err := svc.DeleteAttachment(ctx, req.ID, req.Obj)
+		return DeleteAttachmentResponse{Err: err}, nil
+	}
+}
+
+type DownloadAttachmentPresignedURLRequest struct {
+	ID       string `json:"id"`
+	Filename string `json:"filename"`
+	Path     string `json:"path"`
+}
+
+type DownloadAttachmentPresignedURLResponse struct {
+	PresignedURL string `json:"presignedURL"`
+	Err          error  `json:"error,omitempty"`
+}
+
+func (r DownloadAttachmentPresignedURLResponse) Error() error {
+	return r.Err
+}
+
+func NewDownloadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(DownloadAttachmentPresignedURLRequest)
+		if !ok {
+			return DownloadAttachmentPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		presignedURL, err := svc.DownloadAttachmentPresignedURL(ctx, req.ID, req.Path, req.Filename)
+		return DownloadAttachmentPresignedURLResponse{
+			PresignedURL: presignedURL,
+			Err:          err,
 		}, nil
 	}
 }
 
-type DeleteFileRequest struct {
-	ID  string         `json:"id"`
-	Obj storage.Object `json:"object"`
+type UploadAttachmentPresignedURLRequest struct {
+	ID       string `json:"id"`
+	Filename string `json:"filename"`
 }
 
-type DeleteFileResponse struct {
-	Err error `json:"error,omitempty"`
+type UploadAttachmentPresignedURLResponse struct {
+	PresignedURL string `json:"presignedURL"`
+	Err          error  `json:"error,omitempty"`
 }
 
-func (r DeleteFileResponse) Error() error {
+func (r UploadAttachmentPresignedURLResponse) Error() error {
 	return r.Err
 }
 
-func NewDeleteFileEndpoint(svc Service) endpoint.Endpoint {
+func NewUploadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(DeleteFileRequest)
+		req, ok := epReq.(UploadAttachmentPresignedURLRequest)
 		if !ok {
-			return DeleteFileResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return UploadAttachmentPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		err := svc.DeleteFile(ctx, req.ID, req.Obj)
-		return DeleteFileResponse{Err: err}, nil
+		presignedURL, err := svc.UploadAttachmentPresignedURL(ctx, req.ID, req.Filename)
+		return UploadAttachmentPresignedURLResponse{
+			PresignedURL: presignedURL,
+			Err:          err,
+		}, nil
 	}
 }
