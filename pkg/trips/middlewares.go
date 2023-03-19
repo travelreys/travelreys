@@ -3,10 +3,13 @@ package trips
 import (
 	context "context"
 	"errors"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/storage"
 	"go.uber.org/zap"
 )
 
@@ -69,4 +72,29 @@ func (mw rbacMiddleware) Delete(ctx context.Context, ID string) error {
 		return ErrRBAC
 	}
 	return mw.next.Delete(ctx, ID)
+}
+
+func (mw rbacMiddleware) Upload(ctx context.Context, ID string, filename string, filesize int64, mimeType, attachmentType string, file io.Reader) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	return mw.next.Upload(ctx, ID, filename, filesize, mimeType, attachmentType, file)
+}
+
+func (mw rbacMiddleware) Download(ctx context.Context, ID string, obj storage.Object) (storage.Object, io.ReadCloser, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return storage.Object{}, nil, ErrRBAC
+	}
+	return mw.next.Download(ctx, ID, obj)
+}
+
+func (mw rbacMiddleware) DeleteFile(ctx context.Context, ID string, obj storage.Object) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	fmt.Println(obj)
+	return mw.next.DeleteFile(ctx, ID, obj)
 }
