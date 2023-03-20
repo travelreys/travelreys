@@ -17,5 +17,5 @@ clean:
 	rm -rf build
 
 docker:
-	docker build . -t travelreys-api
+	docker build -t travelreys-api .
 	docker tag travelreys-api $(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)/$(DOCKER_IMAGE):$(VERSION)

@@ -2,9 +2,12 @@ FROM golang:1.19.4 AS build-stage
 
 WORKDIR /app
 
-COPY . .
+COPY go.mod go.mod
+COPY go.sum go.sum
 
 RUN go mod download
+
+COPY . .
 RUN make build
 
 FROM debian:bullseye
