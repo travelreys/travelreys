@@ -60,6 +60,8 @@ type MessageData struct {
 // MsgDataJoinSession contains the member that joins the session
 type MsgDataJoinSession struct {
 	trips.Member
+
+	// Updated list of members
 	Members trips.MembersList `json:"members"`
 }
 

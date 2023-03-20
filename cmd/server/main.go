@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -101,7 +99,8 @@ func main() {
 		}
 	}()
 
-	stopChan := make(chan os.Signal, 1)
-	signal.Notify(stopChan, syscall.SIGTERM, syscall.SIGINT)
-	<-stopChan
+	// graceful shutdown
+	stopCh := api.SetupSignalHandler()
+	sd, _ := api.NewShutdown(logger)
+	sd.Graceful(stopCh, apiSrv)
 }

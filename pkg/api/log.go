@@ -35,7 +35,7 @@ func InitZap(logLevel string) (*zap.Logger, error) {
 		DisableStacktrace: true,
 		Encoding:          "json",
 		EncoderConfig: zapcore.EncoderConfig{
-			TimeKey:        "ts",
+			TimeKey:        "",
 			LevelKey:       "level",
 			NameKey:        "logger",
 			CallerKey:      "caller",
