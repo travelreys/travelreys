@@ -59,7 +59,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	}
 
 	// Storage
-	storageSvc, err := storage.NewDefaultMinioService()
+	storageSvc, err := storage.NewDefaultStorageService(ctx)
 	if err != nil {
 		logger.Error("unable to connect storage service", zap.Error(err))
 		return nil, err

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/travelreys/travelreys/pkg/common"
 	"go.uber.org/zap"
@@ -47,7 +46,7 @@ func (srv *WebsocketServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	h := ConnHandler{ID: uuid.New().String(), svc: srv.svc, ws: ws, logger: srv.logger}
+	h := ConnHandler{svc: srv.svc, ws: ws, logger: srv.logger}
 	h.Run()
 }
 
@@ -74,7 +73,7 @@ func (h *ConnHandler) SetPongDeadline(deadline time.Time) {
 }
 
 func (h *ConnHandler) Run() {
-	h.logger.Info("new connection", zap.String("id", h.ID))
+	h.logger.Info("new connection", zap.String("tripID", h.tripID))
 	defer func() {
 		h.logger.Info("closing connection", zap.String("id", h.ID))
 		h.ReadMessage(NewMsgLeaveSession(h.ID, h.tripID))
@@ -109,11 +108,12 @@ func (h *ConnHandler) Run() {
 func (h *ConnHandler) ReadMessage(msg Message) error {
 	h.logger.Debug("recv msg", zap.String("op", msg.Op), zap.String("msg", common.FmtString(msg)))
 
-	msg.ConnID = h.ID
 	ctx := context.Background()
 
 	switch msg.Op {
 	case OpJoinSession:
+		h.ID = msg.ConnID
+		h.logger.Info("new client", zap.String("connID", msg.ConnID))
 		tobMsgCh, doneCh, err := h.svc.SubscribeTOBUpdates(ctx, msg.TripID)
 		if err != nil {
 			return err

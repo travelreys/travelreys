@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/minio/minio-go/v7"
 	"github.com/travelreys/travelreys/pkg/common"
 )
@@ -28,6 +29,17 @@ func ObjectFromObjectInfo(info minio.ObjectInfo) Object {
 		Size:         info.Size,
 		MIMEType:     info.ContentType,
 		LastModified: info.LastModified,
+	}
+}
+
+func ObjectFromAttrs(attrs *storage.ObjectAttrs) Object {
+	keyTkns := strings.Split(attrs.Name, "/")
+	return Object{
+		Name:         keyTkns[len(keyTkns)-1],
+		Path:         attrs.Name,
+		Size:         attrs.Size,
+		MIMEType:     attrs.ContentType,
+		LastModified: attrs.Updated,
 	}
 }
 
