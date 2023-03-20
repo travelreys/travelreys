@@ -12,7 +12,6 @@ import (
 
 var (
 	projectID = os.Getenv("TRAVELREYS_GCS_PROJECT")
-	// os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "")
 )
 
 type gcsService struct {
@@ -26,10 +25,19 @@ func NewDefaultGCSService(ctx context.Context) (Service, error) {
 }
 
 func NewGCSService(ctx context.Context, credsPath string) (Service, error) {
-	client, err := storage.NewClient(ctx, option.WithCredentialsFile(credsPath))
+	var (
+		client *storage.Client
+		err    error
+	)
+	if credsPath != "" {
+		client, err = storage.NewClient(ctx, option.WithCredentialsFile(credsPath))
+	} else {
+		client, err = storage.NewClient(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	return &gcsService{
 		client,
 		projectID,
