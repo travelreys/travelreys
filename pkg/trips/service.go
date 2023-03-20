@@ -3,6 +3,7 @@ package trips
 import (
 	context "context"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -11,9 +12,11 @@ import (
 	"github.com/travelreys/travelreys/pkg/storage"
 )
 
-const (
-	attachmentBucket = "trips"
-	mediaBucket      = "media"
+const ()
+
+var (
+	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET") // "trips"
+	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET") // "media"
 )
 
 type Service interface {
