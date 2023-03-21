@@ -4,6 +4,7 @@ import (
 	context "context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/go-redis/redis/v9"
 	"github.com/nats-io/nats.go"
@@ -18,14 +19,16 @@ const (
 	GroupSpawners     = "spawners"
 	GroupCoordinators = "coordinators"
 
+	defaultSyncSessionConnTTL = 5 * time.Minute
+
 	sessStoreLogger   = "coordinator.sessStore"
 	msgStoreLogger    = "coordinator.msgStore"
 	tobMsgStoreLogger = "coordinator.tobStore"
 )
 
 // sessConnectionsKey is the Redis key for maintaining session connections
-func sessConnectionsKey(tripID string) string {
-	return fmt.Sprintf("sync-session:%s:connections", tripID)
+func sessConnectionsKey(tripID, connID string) string {
+	return fmt.Sprintf("sync-session:%s:connections:%s", tripID, connID)
 }
 
 // sessCounterKey is the Redis for TOB counter
@@ -45,13 +48,13 @@ func SubjTOB(tripID string) string {
 
 type Store interface {
 	Read(ctx context.Context, tripID string) (Session, error)
-	AddConn(ctx context.Context, conn Connection) error
-	RemoveConn(ctx context.Context, conn Connection) error
+	AddSessCtx(ctx context.Context, sessCtx SessionContext) error
+	RemoveSessCtx(ctx context.Context, sessCtx SessionContext) error
 
 	GetCounter(ctx context.Context, tripID string) (uint64, error)
 	IncrCounter(ctx context.Context, tripID string) error
-	ResetCounter(ctx context.Context, tripID string) error
 	DeleteCounter(ctx context.Context, tripID string) error
+	RefreshCounterTTL(ctx context.Context, tripID string) error
 }
 
 type store struct {
@@ -64,32 +67,43 @@ func NewStore(rdb redis.UniversalClient, logger *zap.Logger) Store {
 }
 
 func (s *store) Read(ctx context.Context, tripID string) (Session, error) {
-	var strSlice []string
-	cmd := s.rdb.HVals(ctx, sessConnectionsKey(tripID))
-	err := cmd.ScanSlice(&strSlice)
-	if err != nil {
-		return Session{}, err
+	var cursor uint64
+	keys := []string{}
+	for {
+		skeys, cursor, err := s.rdb.Scan(ctx, cursor, sessConnectionsKey(tripID, "*"), 10).Result()
+		if err != nil {
+			return Session{}, err
+		}
+		for _, key := range skeys {
+			keys = append(keys, key)
+		}
+		if cursor == 0 {
+			break
+		}
 	}
-
 	members := trips.MembersList{}
-	for _, str := range strSlice {
+	for _, key := range keys {
+		str, err := s.rdb.Get(ctx, key).Result()
+		if err != nil {
+			return Session{}, err
+		}
 		var mem trips.Member
 		json.Unmarshal([]byte(str), &mem)
 		members = append(members, mem)
 	}
-	return Session{members}, err
+	return Session{members}, nil
 }
 
-func (s *store) AddConn(ctx context.Context, conn Connection) error {
-	key := sessConnectionsKey(conn.TripID)
-	value, _ := json.Marshal(conn.Member)
-	cmd := s.rdb.HSet(ctx, key, conn.ID, value)
+func (s *store) AddSessCtx(ctx context.Context, sessCtx SessionContext) error {
+	key := sessConnectionsKey(sessCtx.TripID, sessCtx.ID)
+	value, _ := json.Marshal(sessCtx.Member)
+	cmd := s.rdb.Set(ctx, key, value, defaultSyncSessionConnTTL)
 	return cmd.Err()
 }
 
-func (s *store) RemoveConn(ctx context.Context, conn Connection) error {
-	key := sessConnectionsKey(conn.TripID)
-	cmd := s.rdb.HDel(ctx, key, conn.ID)
+func (s *store) RemoveSessCtx(ctx context.Context, sessCtx SessionContext) error {
+	key := sessConnectionsKey(sessCtx.TripID, sessCtx.ID)
+	cmd := s.rdb.Del(ctx, key, sessCtx.ID)
 	return cmd.Err()
 }
 
@@ -108,20 +122,23 @@ func (s *store) GetCounter(ctx context.Context, tripID string) (uint64, error) {
 
 func (s *store) IncrCounter(ctx context.Context, tripID string) error {
 	key := sessCounterKey(tripID)
-	cmd := s.rdb.Incr(ctx, key)
-	return cmd.Err()
-}
-
-func (s *store) ResetCounter(ctx context.Context, tripID string) error {
-	key := sessCounterKey(tripID)
-	cmd := s.rdb.Set(ctx, key, "1", 0)
-	return cmd.Err()
+	incCmd := s.rdb.Incr(ctx, key)
+	if incCmd.Err() != nil {
+		return incCmd.Err()
+	}
+	return s.RefreshCounterTTL(ctx, tripID)
 }
 
 func (s *store) DeleteCounter(ctx context.Context, tripID string) error {
 	key := sessCounterKey(tripID)
 	cmd := s.rdb.Del(ctx, key)
 	return cmd.Err()
+}
+
+func (s *store) RefreshCounterTTL(ctx context.Context, tripID string) error {
+	key := sessCounterKey(tripID)
+	exprCmd := s.rdb.Expire(ctx, key, defaultSyncSessionConnTTL)
+	return exprCmd.Err()
 }
 
 type MessageStore interface {

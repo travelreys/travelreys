@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
+	"github.com/go-redis/redis/v9"
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/common"
 	jp "github.com/travelreys/travelreys/pkg/jsonpatch"
@@ -16,13 +18,15 @@ import (
 	"go.uber.org/zap"
 )
 
-/***************
-/* Coordinator *
-/***************/
+const (
+	defaultRefreshCounterTTL = 1 * time.Minute
+)
 
 type Coordinator struct {
 	ID     string
 	tripID string
+
+	doneCh chan bool
 
 	// trip is the coordinators' local copy of the trip trip
 	trip []byte
@@ -37,14 +41,15 @@ type Coordinator struct {
 	queue chan Message
 
 	// msgCh recevies request message from clients
-	msgCh  <-chan Message
-	doneCh chan<- bool
+	msgCh     <-chan Message
+	msgDoneCh chan<- bool
 
-	mapsSvc   maps.Service
-	store     Store
-	msgStore  MessageStore
-	tobStore  TOBMessageStore
-	tripStore trips.Store
+	refreshCtrTicker *time.Ticker
+	mapsSvc          maps.Service
+	store            Store
+	msgStore         MessageStore
+	tobStore         TOBMessageStore
+	tripStore        trips.Store
 
 	logger *zap.Logger
 }
@@ -60,48 +65,62 @@ func NewCoordinator(
 	logger *zap.Logger,
 ) *Coordinator {
 	return &Coordinator{
-		ID:        uuid.New().String(),
-		tripID:    tripID,
-		trip:      []byte{},
-		counter:   1,
-		queue:     make(chan Message, common.DefaultChSize),
-		mapsSvc:   mapsSvc,
-		store:     store,
-		msgStore:  msgStore,
-		tobStore:  tobStore,
-		tripStore: tripStore,
-		logger:    logger.Named("sync.coordinator"),
+		ID:               uuid.New().String(),
+		doneCh:           make(chan bool),
+		tripID:           tripID,
+		trip:             []byte{},
+		counter:          1,
+		queue:            make(chan Message, common.DefaultChSize),
+		refreshCtrTicker: time.NewTicker(defaultRefreshCounterTTL),
+		mapsSvc:          mapsSvc,
+		store:            store,
+		msgStore:         msgStore,
+		tobStore:         tobStore,
+		tripStore:        tripStore,
+		logger:           logger.Named("sync.coordinator"),
 	}
 }
 
-func (crd *Coordinator) Init() error {
+func (crd *Coordinator) Init() (<-chan bool, error) {
 	crd.logger.Info("new coordinator", zap.String("tripID", crd.tripID))
 
 	// 1. Initialise trip for coordinator
-	trip, err := crd.tripStore.Read(context.Background(), crd.tripID)
+	ctx := context.Background()
+	trip, err := crd.tripStore.Read(ctx, crd.tripID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	tripBytes, _ := json.Marshal(trip)
 	crd.trip = tripBytes
 
 	// 2. Subscribe to updates from clients
-	msgCh, done, err := crd.msgStore.SubscribeQueue(crd.tripID, GroupCoordinators)
+	msgCh, msgDoneCh, err := crd.msgStore.SubscribeQueue(crd.tripID, GroupCoordinators)
 	if err != nil {
 		crd.logger.Error("subscribe fail", zap.Error(err))
-		return err
+		return nil, err
 	}
 	crd.msgCh = msgCh
-	crd.doneCh = done
-	return nil
+	crd.msgDoneCh = msgDoneCh
+
+	// 3. See if there is stale state in redis
+	ctr, err := crd.store.GetCounter(ctx, crd.tripID)
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+	if ctr != 0 {
+		crd.counter = ctr
+	}
+	return crd.doneCh, nil
 }
 
 func (crd *Coordinator) Stop() {
 	crd.store.DeleteCounter(context.Background(), crd.tripID)
-	if crd.doneCh != nil {
-		crd.doneCh <- true
+	crd.refreshCtrTicker.Stop()
+	if crd.msgDoneCh != nil {
+		crd.msgDoneCh <- true
 	}
 	close(crd.queue)
+	crd.doneCh <- true
 }
 
 func (crd *Coordinator) Run() error {
@@ -109,7 +128,7 @@ func (crd *Coordinator) Run() error {
 	go func() {
 		// 3.1. Takes in op msg indicating changes from clients
 		for msg := range crd.msgCh {
-			crd.logger.Debug("recv msg", zap.String("op", msg.Op), zap.String("msg", common.FmtString(msg)))
+			crd.logger.Debug("recv msg", zap.String("op", msg.Op))
 			ctx := context.Background()
 			switch msg.Op {
 			case OpJoinSession:
@@ -131,7 +150,6 @@ func (crd *Coordinator) Run() error {
 			// 3.3. Sends each ordered message back to the FIFO queue
 			crd.queue <- msg
 		}
-
 	}()
 
 	go func() {
@@ -148,6 +166,13 @@ func (crd *Coordinator) Run() error {
 			crd.tobStore.Publish(crd.tripID, msg)
 		}
 	}()
+
+	go func() {
+		for range crd.refreshCtrTicker.C {
+			crd.store.RefreshCounterTTL(context.Background(), crd.tripID)
+		}
+	}()
+
 	return nil
 }
 

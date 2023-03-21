@@ -2,6 +2,7 @@ package tripssync
 
 import (
 	context "context"
+	"sync"
 
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/trips"
@@ -9,6 +10,9 @@ import (
 )
 
 type Spawner struct {
+	crds map[string]struct{} // map of coordinators by tripIDs
+	mu   sync.Mutex
+
 	mapsSvc   maps.Service
 	store     Store
 	msgStore  MessageStore
@@ -27,6 +31,7 @@ func NewSpawner(
 	logger *zap.Logger,
 ) *Spawner {
 	return &Spawner{
+		crds:      make(map[string]struct{}),
 		mapsSvc:   mapsSvc,
 		store:     store,
 		msgStore:  msgStore,
@@ -59,10 +64,22 @@ func (spwn *Spawner) Run() error {
 			spwn.logger.Error("unable to read session", zap.Error(err))
 			continue
 		}
-		if len(sess.Members) > 1 {
-			// First member would have joined and coordinator is created.
+		// if len(sess.Members) > 1 {
+		// 	continue
+		// }
+
+		exist := false
+		spwn.mu.Lock()
+		_, ok := spwn.crds[msg.TripID]
+		exist = ok
+		if !ok {
+			spwn.crds[msg.TripID] = struct{}{}
+		}
+		spwn.mu.Unlock()
+		if exist {
 			continue
 		}
+
 		coord := NewCoordinator(
 			msg.TripID,
 			spwn.mapsSvc,
@@ -72,7 +89,8 @@ func (spwn *Spawner) Run() error {
 			spwn.tripStore,
 			spwn.logger,
 		)
-		if err := coord.Init(); err != nil {
+		doneCh, err := coord.Init()
+		if err != nil {
 			spwn.logger.Error("unable to init coordinator", zap.Error(err))
 			continue
 		}
@@ -81,6 +99,13 @@ func (spwn *Spawner) Run() error {
 			continue
 		}
 		coord.SendFirstMemberJoinMsg(ctx, sess)
+
+		go func() {
+			<-doneCh
+			spwn.mu.Lock()
+			delete(spwn.crds, coord.tripID)
+			spwn.mu.Unlock()
+		}()
 	}
 	return nil
 }

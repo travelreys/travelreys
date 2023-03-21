@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 
@@ -55,9 +55,11 @@ func (srv *WebsocketServer) HandleFunc(w http.ResponseWriter, r *http.Request) {
 // WebSocket connections support one concurrent reader and one concurrent writer.
 // (https://pkg.go.dev/github.com/gorilla/websocket#hdr-Concurrency)
 type ConnHandler struct {
+	ws *websocket.Conn
+
 	ID     string
 	tripID string
-	ws     *websocket.Conn
+	member trips.Member
 
 	svc      Service
 	tobMsgCh <-chan Message
@@ -106,7 +108,7 @@ func (h *ConnHandler) Run() {
 }
 
 func (h *ConnHandler) ReadMessage(msg Message) error {
-	h.logger.Debug("recv msg", zap.String("op", msg.Op), zap.String("msg", common.FmtString(msg)))
+	h.logger.Debug("recv msg", zap.String("op", msg.Op))
 
 	ctx := context.Background()
 
@@ -120,9 +122,9 @@ func (h *ConnHandler) ReadMessage(msg Message) error {
 		}
 
 		h.tobMsgCh = tobMsgCh
-		h.tripID = msg.TripID
 		h.doneCh = doneCh
-
+		h.tripID = msg.TripID
+		h.member = msg.Data.JoinSession.Member
 		if _, err = h.svc.JoinSession(ctx, msg); err != nil {
 			return err
 		}
@@ -131,6 +133,8 @@ func (h *ConnHandler) ReadMessage(msg Message) error {
 	case OpPingSession:
 		h.logger.Debug("pong")
 		h.SetPongDeadline(time.Now().Add(pongWait))
+		msg.Data.Ping.Member = h.member
+		h.svc.PingSession(ctx, msg)
 		return nil
 	case OpLeaveSession:
 		h.doneCh <- true
@@ -154,7 +158,7 @@ func (h *ConnHandler) WriteMessage() {
 			if !ok {
 				return
 			}
-			h.logger.Debug("recv tob", zap.String("msg", common.FmtString(msg)))
+			h.logger.Debug("recv tob", zap.String("op", msg.Op))
 			h.ws.WriteJSON(msg)
 		case <-pingTicker.C:
 			h.logger.Debug("ping")
