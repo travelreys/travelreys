@@ -12,9 +12,9 @@ const (
 	MsgUpdateTripOptimizeItineraryRoute = "OptimizeItinerary"
 )
 
-// Connection represents a user's participation
+// SessionContext represents a user's participation
 // to the multiplayer collaboration session.
-type Connection struct {
+type SessionContext struct {
 	ID     string
 	TripID string
 	Member trips.Member
@@ -92,7 +92,9 @@ func NewMsgLeaveSession(connID, tripID string) Message {
 	}
 }
 
-type MsgDataPing struct{}
+type MsgDataPing struct {
+	trips.Member
+}
 
 func NewMsgPing(connID, tripID string) Message {
 	return Message{

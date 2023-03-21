@@ -37,8 +37,8 @@ func InitZap(logLevel string) (*zap.Logger, error) {
 		EncoderConfig: zapcore.EncoderConfig{
 			TimeKey:        "",
 			LevelKey:       "level",
-			NameKey:        "logger",
-			CallerKey:      "caller",
+			NameKey:        "",
+			CallerKey:      "",
 			MessageKey:     "msg",
 			StacktraceKey:  "stacktrace",
 			LineEnding:     zapcore.DefaultLineEnding,
