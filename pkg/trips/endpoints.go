@@ -2,6 +2,7 @@ package trips
 
 import (
 	context "context"
+	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -234,6 +235,61 @@ func NewUploadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 		return UploadAttachmentPresignedURLResponse{
 			PresignedURL: presignedURL,
 			Err:          err,
+		}, nil
+	}
+}
+
+type UploadMediaPresignedURLRequest struct {
+	ID       string `json:"id"`
+	Filename string `json:"filename"`
+}
+
+type UploadMediaPresignedURLResponse struct {
+	PresignedURL string `json:"presignedURL"`
+	Err          error  `json:"error,omitempty"`
+}
+
+func (r UploadMediaPresignedURLResponse) Error() error {
+	return r.Err
+}
+
+func NewUploadMediaPresignedURLEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(UploadMediaPresignedURLRequest)
+		if !ok {
+			return UploadMediaPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		presignedURL, err := svc.UploadMediaPresignedURL(ctx, req.ID, req.Filename)
+		return UploadMediaPresignedURLResponse{
+			PresignedURL: presignedURL,
+			Err:          err,
+		}, nil
+	}
+}
+
+type GenerateMediaPresignedCookieRequest struct {
+	ID string `json:"id"`
+}
+
+type GenerateMediaPresignedCookieResponse struct {
+	Cookie *http.Cookie `json:"-"`
+	Err    error        `json:"error,omitempty"`
+}
+
+func (r GenerateMediaPresignedCookieResponse) Error() error {
+	return r.Err
+}
+
+func NewGenerateMediaPresignedCookieEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(GenerateMediaPresignedCookieRequest)
+		if !ok {
+			return GenerateMediaPresignedCookieResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		cookie, err := svc.GenerateMediaPresignedCookie(ctx, req.ID)
+		return GenerateMediaPresignedCookieResponse{
+			Cookie: cookie,
+			Err:    err,
 		}, nil
 	}
 }

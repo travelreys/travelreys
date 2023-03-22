@@ -2,7 +2,9 @@ package trips
 
 import (
 	context "context"
+	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,6 +19,7 @@ const ()
 var (
 	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET") // "trips"
 	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET") // "media"
+	mediaCDNDomain   = os.Getenv("TRAVELREYS_MEDIA_DOMAIN")
 )
 
 type Service interface {
@@ -26,9 +29,13 @@ type Service interface {
 	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	Delete(ctx context.Context, ID string) error
+
 	UploadAttachmentPresignedURL(ctx context.Context, ID, filename string) (string, error)
 	DownloadAttachmentPresignedURL(ctx context.Context, ID, path, filename string) (string, error)
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
+
+	UploadMediaPresignedURL(ctx context.Context, ID, filename string) (string, error)
+	GenerateMediaPresignedCookie(ctx context.Context, ID string) (*http.Cookie, error)
 }
 
 type service struct {
@@ -122,4 +129,20 @@ func (svc service) DownloadAttachmentPresignedURL(ctx context.Context, ID, path,
 func (svc service) DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error {
 	obj.Bucket = attachmentBucket
 	return svc.storageSvc.Remove(ctx, obj)
+}
+
+func (svc service) UploadMediaPresignedURL(ctx context.Context, ID, filename string) (string, error) {
+	return svc.storageSvc.PutPresignedURL(
+		ctx,
+		mediaBucket,
+		filepath.Join(ID, filename),
+		filename)
+}
+
+func (svc service) GenerateMediaPresignedCookie(ctx context.Context, ID string) (*http.Cookie, error) {
+	return svc.storageSvc.GeneratePresignedCookie(
+		ctx,
+		mediaCDNDomain,
+		fmt.Sprintf("%s/", ID),
+	)
 }

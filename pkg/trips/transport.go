@@ -58,9 +58,10 @@ func MakeHandler(svc Service) http.Handler {
 	readMembersHandler := kithttp.NewServer(NewReadMembersEndpoint(svc), decodeReadMembersRequest, encodeResponse, opts...)
 	deleteHandler := kithttp.NewServer(NewDeleteEndpoint(svc), decodeDeleteRequest, encodeResponse, opts...)
 
-	downloadPresignedURLHandler := kithttp.NewServer(NewDownloadAttachmentPresignedURLEndpoint(svc), decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...)
-	uploadPresignedURLHandler := kithttp.NewServer(NewUploadAttachmentPresignedURLEndpoint(svc), decodeUploadAttachmentPresignedURLRequest, encodeResponse, opts...)
 	deleteAttachmentHandler := kithttp.NewServer(NewDeleteAttachmentEndpoint(svc), decodeDeleteAttachmentRequest, encodeResponse, opts...)
+	downloadAttachmentPresignedURLHandler := kithttp.NewServer(NewDownloadAttachmentPresignedURLEndpoint(svc), decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...)
+	uploadAttachmentPresignedURLHandler := kithttp.NewServer(NewUploadAttachmentPresignedURLEndpoint(svc), decodeUploadAttachmentPresignedURLRequest, encodeResponse, opts...)
+	uploadMediaPresignedURLHandler := kithttp.NewServer(NewUploadMediaPresignedURLEndpoint(svc), decodeUploadMediaPresignedURLRequest, encodeResponse, opts...)
 
 	r.Handle("/api/v1/trips", createHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/trips", listHandler).Methods(http.MethodGet)
@@ -68,10 +69,11 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips/{id}/members", readMembersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}", deleteHandler).Methods(http.MethodDelete)
 
-	r.Handle("/api/v1/trips/{id}/storage/download/pre-signed", downloadPresignedURLHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadPresignedURLHandler).Methods(http.MethodGet)
-
 	r.Handle("/api/v1/trips/{id}/storage", deleteAttachmentHandler).Methods(http.MethodDelete)
+	r.Handle("/api/v1/trips/{id}/storage/download/pre-signed", downloadAttachmentPresignedURLHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadAttachmentPresignedURLHandler).Methods(http.MethodGet)
+
+	r.Handle("/api/v1/trips/{id}/media/upload/pre-signed", uploadMediaPresignedURLHandler).Methods(http.MethodGet)
 
 	// downloadHandler := kithttp.NewServer(NewDownloadEndpoint(svc), decodeDownloadRequest, encodeDownloadResponse, opts...)
 	// r.Handle("/api/v1/trips/{id}/storage", downloadHandler).Methods(http.MethodGet)
@@ -169,6 +171,19 @@ func decodeUploadAttachmentPresignedURLRequest(_ context.Context, r *http.Reques
 	}
 	filename := r.URL.Query().Get("filename")
 	return UploadAttachmentPresignedURLRequest{
+		ID:       ID,
+		Filename: filename,
+	}, nil
+}
+
+func decodeUploadMediaPresignedURLRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	filename := r.URL.Query().Get("filename")
+	return UploadMediaPresignedURLRequest{
 		ID:       ID,
 		Filename: filename,
 	}, nil
