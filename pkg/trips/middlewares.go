@@ -3,6 +3,7 @@ package trips
 import (
 	context "context"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/travelreys/travelreys/pkg/auth"
@@ -94,4 +95,20 @@ func (mw rbacMiddleware) UploadAttachmentPresignedURL(ctx context.Context, ID, f
 		return "", ErrRBAC
 	}
 	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename)
+}
+
+func (mw rbacMiddleware) UploadMediaPresignedURL(ctx context.Context, ID, filename string) (string, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return "", ErrRBAC
+	}
+	return mw.next.UploadMediaPresignedURL(ctx, ID, filename)
+}
+
+func (mw rbacMiddleware) GenerateMediaPresignedCookie(ctx context.Context, ID, domain string) (*http.Cookie, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+	return mw.next.GenerateMediaPresignedCookie(ctx, ID, domain)
 }

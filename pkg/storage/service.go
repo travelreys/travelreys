@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"time"
 )
@@ -9,10 +10,11 @@ import (
 // https://medium.com/google-cloud/using-google-cloud-storage-with-minio-object-storage-c994fe4aab6b
 
 const (
-	storageProviderMinio        = "minio"
-	storageProviderGcs          = "gcs"
-	defaultStorageProvider      = "minio"
-	defaultPresignedURLDuration = 30 * time.Minute
+	storageProviderMinio           = "minio"
+	storageProviderGcs             = "gcs"
+	defaultStorageProvider         = "minio"
+	defaultPresignedURLDuration    = 30 * time.Minute
+	defaultPresignedCookieDuration = 30 * time.Minute
 )
 
 type Service interface {
@@ -20,6 +22,7 @@ type Service interface {
 	Remove(ctx context.Context, obj Object) error
 	GetPresignedURL(ctx context.Context, bucket, path, filename string) (string, error)
 	PutPresignedURL(ctx context.Context, bucket, path, filename string) (string, error)
+	GeneratePresignedCookie(ctx context.Context, domain, path string) (*http.Cookie, error)
 }
 
 func NewDefaultStorageService(ctx context.Context) (Service, error) {

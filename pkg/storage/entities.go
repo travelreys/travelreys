@@ -21,25 +21,33 @@ type Object struct {
 	Tags         common.Tags   `json:"tags" bson:"tags"`
 }
 
-func ObjectFromObjectInfo(info minio.ObjectInfo) Object {
+func ObjectFromObjectInfo(info minio.ObjectInfo, bucket string) Object {
 	keyTkns := strings.Split(info.Key, "/")
 	return Object{
+		ID:           keyTkns[len(keyTkns)-1],
 		Name:         keyTkns[len(keyTkns)-1],
+		Bucket:       bucket,
 		Path:         info.Key,
 		Size:         info.Size,
 		MIMEType:     info.ContentType,
 		LastModified: info.LastModified,
+		Labels:       info.UserTags,
+		Tags:         common.Tags{},
 	}
 }
 
 func ObjectFromAttrs(attrs *storage.ObjectAttrs) Object {
 	keyTkns := strings.Split(attrs.Name, "/")
 	return Object{
+		ID:           keyTkns[len(keyTkns)-1],
 		Name:         keyTkns[len(keyTkns)-1],
-		Path:         attrs.Name,
+		Bucket:       attrs.Bucket,
 		Size:         attrs.Size,
+		Path:         attrs.Name,
 		MIMEType:     attrs.ContentType,
 		LastModified: attrs.Updated,
+		Labels:       attrs.Metadata,
+		Tags:         common.Tags{},
 	}
 }
 

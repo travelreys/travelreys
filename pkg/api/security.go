@@ -16,6 +16,7 @@ func (m *SecureHeadersMiddleware) Handler(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", m.Origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		// Security Headers, https,/"/helmeths.github.io")
 		w.Header().Set("Content-Security-Policy", "default-src 'self';base-uri 'self';font-src 'self' https, data,;form-action 'self';frame-ancestors 'self';img-src 'self' data,;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https, 'unsafe-inline';upgrade-insecure-requests")

@@ -3,6 +3,7 @@ package trips
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 
@@ -52,15 +53,44 @@ func MakeHandler(svc Service) http.Handler {
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode)),
 	}
 
-	createHandler := kithttp.NewServer(NewCreateEndpoint(svc), decodeCreateRequest, encodeResponse, opts...)
-	listHandler := kithttp.NewServer(NewListEndpoint(svc), decodeListRequest, encodeResponse, opts...)
-	readHandler := kithttp.NewServer(NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...)
-	readMembersHandler := kithttp.NewServer(NewReadMembersEndpoint(svc), decodeReadMembersRequest, encodeResponse, opts...)
-	deleteHandler := kithttp.NewServer(NewDeleteEndpoint(svc), decodeDeleteRequest, encodeResponse, opts...)
+	createHandler := kithttp.NewServer(
+		NewCreateEndpoint(svc), decodeCreateRequest, encodeResponse, opts...,
+	)
+	listHandler := kithttp.NewServer(
+		NewListEndpoint(svc), decodeListRequest, encodeResponse, opts...,
+	)
+	readHandler := kithttp.NewServer(
+		NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...,
+	)
+	readMembersHandler := kithttp.NewServer(
+		NewReadMembersEndpoint(svc), decodeReadMembersRequest, encodeResponse, opts...,
+	)
+	deleteHandler := kithttp.NewServer(
+		NewDeleteEndpoint(svc), decodeDeleteRequest, encodeResponse, opts...,
+	)
+	deleteAttachmentHandler := kithttp.NewServer(
+		NewDeleteAttachmentEndpoint(svc),
+		decodeDeleteAttachmentRequest, encodeResponse, opts...,
+	)
+	uploadAttachmentPresignedURLHandler := kithttp.NewServer(
+		NewUploadAttachmentPresignedURLEndpoint(svc),
+		decodeUploadAttachmentPresignedURLRequest, encodeResponse, opts...,
+	)
+	downloadAttachmentPresignedURLHandler := kithttp.NewServer(
+		NewDownloadAttachmentPresignedURLEndpoint(svc),
+		decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...,
+	)
 
-	downloadPresignedURLHandler := kithttp.NewServer(NewDownloadAttachmentPresignedURLEndpoint(svc), decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...)
-	uploadPresignedURLHandler := kithttp.NewServer(NewUploadAttachmentPresignedURLEndpoint(svc), decodeUploadAttachmentPresignedURLRequest, encodeResponse, opts...)
-	deleteAttachmentHandler := kithttp.NewServer(NewDeleteAttachmentEndpoint(svc), decodeDeleteAttachmentRequest, encodeResponse, opts...)
+	uploadMediaPresignedURLHandler := kithttp.NewServer(
+		NewUploadMediaPresignedURLEndpoint(svc),
+		decodeUploadMediaPresignedURLRequest, encodeResponse, opts...,
+	)
+	generateMediaPresignedCookieHandler := kithttp.NewServer(
+		NewGenerateMediaPresignedCookieEndpoint(svc),
+		decodeGenerateMediaPresignedCookieRequest,
+		encodeGenerateMediaPresignedCookieResponse,
+		opts...,
+	)
 
 	r.Handle("/api/v1/trips", createHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/trips", listHandler).Methods(http.MethodGet)
@@ -68,13 +98,12 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips/{id}/members", readMembersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}", deleteHandler).Methods(http.MethodDelete)
 
-	r.Handle("/api/v1/trips/{id}/storage/download/pre-signed", downloadPresignedURLHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadPresignedURLHandler).Methods(http.MethodGet)
-
 	r.Handle("/api/v1/trips/{id}/storage", deleteAttachmentHandler).Methods(http.MethodDelete)
+	r.Handle("/api/v1/trips/{id}/storage/download/pre-signed", downloadAttachmentPresignedURLHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadAttachmentPresignedURLHandler).Methods(http.MethodGet)
 
-	// downloadHandler := kithttp.NewServer(NewDownloadEndpoint(svc), decodeDownloadRequest, encodeDownloadResponse, opts...)
-	// r.Handle("/api/v1/trips/{id}/storage", downloadHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/{id}/media/upload/pre-signed", uploadMediaPresignedURLHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/{id}/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -172,4 +201,48 @@ func decodeUploadAttachmentPresignedURLRequest(_ context.Context, r *http.Reques
 		ID:       ID,
 		Filename: filename,
 	}, nil
+}
+
+func decodeUploadMediaPresignedURLRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	filename := r.URL.Query().Get("filename")
+	return UploadMediaPresignedURLRequest{
+		ID:       ID,
+		Filename: filename,
+	}, nil
+}
+
+func decodeGenerateMediaPresignedCookieRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	mediaDomain := r.URL.Query().Get("mediaDomain")
+	cookies := r.Cookies()
+	for _, c := range cookies {
+		fmt.Println(c)
+	}
+
+	return GenerateMediaPresignedCookieRequest{ID: ID, MediaDomain: mediaDomain}, nil
+}
+
+func encodeGenerateMediaPresignedCookieResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
+		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	resp, ok := response.(GenerateMediaPresignedCookieResponse)
+	if !ok {
+		return common.ErrorEncodeInvalidResponse
+	}
+	if resp.Cookie != nil {
+		http.SetCookie(w, resp.Cookie)
+	}
+	return json.NewEncoder(w).Encode(response)
 }
