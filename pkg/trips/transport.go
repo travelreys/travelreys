@@ -52,16 +52,44 @@ func MakeHandler(svc Service) http.Handler {
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode)),
 	}
 
-	createHandler := kithttp.NewServer(NewCreateEndpoint(svc), decodeCreateRequest, encodeResponse, opts...)
-	listHandler := kithttp.NewServer(NewListEndpoint(svc), decodeListRequest, encodeResponse, opts...)
-	readHandler := kithttp.NewServer(NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...)
-	readMembersHandler := kithttp.NewServer(NewReadMembersEndpoint(svc), decodeReadMembersRequest, encodeResponse, opts...)
-	deleteHandler := kithttp.NewServer(NewDeleteEndpoint(svc), decodeDeleteRequest, encodeResponse, opts...)
+	createHandler := kithttp.NewServer(
+		NewCreateEndpoint(svc), decodeCreateRequest, encodeResponse, opts...,
+	)
+	listHandler := kithttp.NewServer(
+		NewListEndpoint(svc), decodeListRequest, encodeResponse, opts...,
+	)
+	readHandler := kithttp.NewServer(
+		NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...,
+	)
+	readMembersHandler := kithttp.NewServer(
+		NewReadMembersEndpoint(svc), decodeReadMembersRequest, encodeResponse, opts...,
+	)
+	deleteHandler := kithttp.NewServer(
+		NewDeleteEndpoint(svc), decodeDeleteRequest, encodeResponse, opts...,
+	)
+	deleteAttachmentHandler := kithttp.NewServer(
+		NewDeleteAttachmentEndpoint(svc),
+		decodeDeleteAttachmentRequest, encodeResponse, opts...,
+	)
+	uploadAttachmentPresignedURLHandler := kithttp.NewServer(
+		NewUploadAttachmentPresignedURLEndpoint(svc),
+		decodeUploadAttachmentPresignedURLRequest, encodeResponse, opts...,
+	)
+	downloadAttachmentPresignedURLHandler := kithttp.NewServer(
+		NewDownloadAttachmentPresignedURLEndpoint(svc),
+		decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...,
+	)
 
-	deleteAttachmentHandler := kithttp.NewServer(NewDeleteAttachmentEndpoint(svc), decodeDeleteAttachmentRequest, encodeResponse, opts...)
-	downloadAttachmentPresignedURLHandler := kithttp.NewServer(NewDownloadAttachmentPresignedURLEndpoint(svc), decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...)
-	uploadAttachmentPresignedURLHandler := kithttp.NewServer(NewUploadAttachmentPresignedURLEndpoint(svc), decodeUploadAttachmentPresignedURLRequest, encodeResponse, opts...)
-	uploadMediaPresignedURLHandler := kithttp.NewServer(NewUploadMediaPresignedURLEndpoint(svc), decodeUploadMediaPresignedURLRequest, encodeResponse, opts...)
+	uploadMediaPresignedURLHandler := kithttp.NewServer(
+		NewUploadMediaPresignedURLEndpoint(svc),
+		decodeUploadMediaPresignedURLRequest, encodeResponse, opts...,
+	)
+	generateMediaPresignedCookieHandler := kithttp.NewServer(
+		NewGenerateMediaPresignedCookieEndpoint(svc),
+		decodeGenerateMediaPresignedCookieRequest,
+		encodeGenerateMediaPresignedCookieResponse,
+		opts...,
+	)
 
 	r.Handle("/api/v1/trips", createHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/trips", listHandler).Methods(http.MethodGet)
@@ -74,9 +102,7 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadAttachmentPresignedURLHandler).Methods(http.MethodGet)
 
 	r.Handle("/api/v1/trips/{id}/media/upload/pre-signed", uploadMediaPresignedURLHandler).Methods(http.MethodGet)
-
-	// downloadHandler := kithttp.NewServer(NewDownloadEndpoint(svc), decodeDownloadRequest, encodeDownloadResponse, opts...)
-	// r.Handle("/api/v1/trips/{id}/storage", downloadHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -187,4 +213,24 @@ func decodeUploadMediaPresignedURLRequest(_ context.Context, r *http.Request) (i
 		ID:       ID,
 		Filename: filename,
 	}, nil
+}
+
+func decodeGenerateMediaPresignedCookieRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return GenerateMediaPresignedCookieRequest{}, nil
+}
+
+func encodeGenerateMediaPresignedCookieResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
+		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	resp, ok := response.(GenerateMediaPresignedCookieResponse)
+	if !ok {
+		return common.ErrorEncodeInvalidResponse
+	}
+	if resp.Cookie != nil {
+		http.SetCookie(w, resp.Cookie)
+	}
+	return json.NewEncoder(w).Encode(response)
 }

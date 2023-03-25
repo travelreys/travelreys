@@ -1,8 +1,7 @@
 package trips
 
 import (
-	context "context"
-	"fmt"
+	"context"
 	"math/rand"
 	"net/http"
 	"os"
@@ -140,9 +139,10 @@ func (svc service) UploadMediaPresignedURL(ctx context.Context, tripID, fileID s
 }
 
 func (svc service) GenerateMediaPresignedCookie(ctx context.Context, tripID string) (*http.Cookie, error) {
-	return svc.storageSvc.GeneratePresignedCookie(
+	ck, err := svc.storageSvc.GeneratePresignedCookie(
 		ctx,
 		mediaCDNDomain,
-		fmt.Sprintf("%s/", tripID),
+		"/", // fmt.Sprintf("/", tripID),
 	)
+	return ck, err
 }
