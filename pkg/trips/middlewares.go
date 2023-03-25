@@ -105,10 +105,10 @@ func (mw rbacMiddleware) UploadMediaPresignedURL(ctx context.Context, ID, filena
 	return mw.next.UploadMediaPresignedURL(ctx, ID, filename)
 }
 
-func (mw rbacMiddleware) GenerateMediaPresignedCookie(ctx context.Context, ID string) (*http.Cookie, error) {
+func (mw rbacMiddleware) GenerateMediaPresignedCookie(ctx context.Context, ID, domain string) (*http.Cookie, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
 	}
-	return mw.next.GenerateMediaPresignedCookie(ctx, ID)
+	return mw.next.GenerateMediaPresignedCookie(ctx, ID, domain)
 }

@@ -268,7 +268,8 @@ func NewUploadMediaPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type GenerateMediaPresignedCookieRequest struct {
-	ID string `json:"id"`
+	ID          string `json:"id"`
+	MediaDomain string `json:"mediaDomain"`
 }
 
 type GenerateMediaPresignedCookieResponse struct {
@@ -286,7 +287,7 @@ func NewGenerateMediaPresignedCookieEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return GenerateMediaPresignedCookieResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		cookie, err := svc.GenerateMediaPresignedCookie(ctx, req.ID)
+		cookie, err := svc.GenerateMediaPresignedCookie(ctx, req.ID, req.MediaDomain)
 		return GenerateMediaPresignedCookieResponse{
 			Cookie: cookie,
 			Err:    err,

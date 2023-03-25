@@ -176,14 +176,13 @@ func (svc gcsService) GeneratePresignedCookie(ctx context.Context, domain, path 
 	// Use Go's http.Cookie type to construct a cookie.
 	// domain and path should match the user-facing URL for accessing content.
 	cookie := &http.Cookie{
-		Name:   cookieHeader,
-		Value:  signedValue,
-		Path:   path, // Best practice: only send the cookie for paths it is valid for
-		Domain: domain,
-		MaxAge: int(expiration.Seconds()),
+		Name:     cookieHeader,
+		Value:    signedValue,
+		Path:     path, // Best practice: only send the cookie for paths it is valid for
+		Domain:   domain,
+		MaxAge:   int(expiration.Seconds()),
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	}
-
-	// In a real application, use the SetCookie method on a http.ResponseWriter
-	// to write the cookie to the user.
 	return cookie, nil
 }

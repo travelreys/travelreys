@@ -3,6 +3,7 @@ package trips
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 
@@ -102,7 +103,7 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadAttachmentPresignedURLHandler).Methods(http.MethodGet)
 
 	r.Handle("/api/v1/trips/{id}/media/upload/pre-signed", uploadMediaPresignedURLHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trips/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/{id}/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -216,7 +217,18 @@ func decodeUploadMediaPresignedURLRequest(_ context.Context, r *http.Request) (i
 }
 
 func decodeGenerateMediaPresignedCookieRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return GenerateMediaPresignedCookieRequest{}, nil
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	mediaDomain := r.URL.Query().Get("mediaDomain")
+	cookies := r.Cookies()
+	for _, c := range cookies {
+		fmt.Println(c)
+	}
+
+	return GenerateMediaPresignedCookieRequest{ID: ID, MediaDomain: mediaDomain}, nil
 }
 
 func encodeGenerateMediaPresignedCookieResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

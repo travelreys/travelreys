@@ -42,7 +42,7 @@ func (svc minioService) Stat(ctx context.Context, bucket, path string) (Object, 
 	if err != nil {
 		return Object{}, err
 	}
-	obj := ObjectFromObjectInfo(info)
+	obj := ObjectFromObjectInfo(info, bucket)
 	obj.Bucket = bucket
 	return obj, nil
 }
