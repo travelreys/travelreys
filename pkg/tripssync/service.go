@@ -64,7 +64,7 @@ func (p *service) PingSession(ctx context.Context, msg Message) error {
 	sessCtx := SessionContext{
 		ID:     msg.ConnID,
 		TripID: msg.TripID,
-		Member: msg.Data.JoinSession.Member,
+		Member: msg.Data.Ping.Member,
 	}
 	return p.store.AddSessCtx(ctx, sessCtx)
 }
