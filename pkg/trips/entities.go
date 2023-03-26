@@ -47,7 +47,7 @@ type Trip struct {
 	Budget   Budget                 `json:"budget" bson:"budget"`
 	Links    map[string]Link        `json:"links" bson:"links"`
 
-	Itinerary []Itinerary `json:"itinerary" bson:"itinerary"`
+	Itineraries map[string]Itinerary `json:"itineraries" bson:"itineraries"`
 
 	// Media, Attachements
 	Media map[string]storage.Object `json:"media" bson:"media"`
@@ -66,25 +66,25 @@ func NewTrip(creator Member, name string) Trip {
 	creator.Role = MemberRoleCreator
 
 	return Trip{
-		ID:         uuid.New().String(),
-		Name:       name,
-		CoverImage: images.ImageMetadata{},
-		StartDate:  time.Time{},
-		EndDate:    time.Time{},
-		Creator:    creator,
-		Members:    map[string]Member{},
-		MembersID:  map[string]string{},
-		Transits:   map[string]BaseTransit{},
-		Lodgings:   map[string]Lodging{},
-		Itinerary:  []Itinerary{},
-		Budget:     NewBudget(),
-		Links:      LinkMap{},
-		Media:      map[string]storage.Object{},
-		Files:      map[string]storage.Object{},
-		UpdatedAt:  time.Now(),
-		CreatedAt:  time.Now(),
-		Labels:     common.Labels{},
-		Tags:       common.Tags{},
+		ID:          uuid.New().String(),
+		Name:        name,
+		CoverImage:  images.ImageMetadata{},
+		StartDate:   time.Time{},
+		EndDate:     time.Time{},
+		Creator:     creator,
+		Members:     map[string]Member{},
+		MembersID:   map[string]string{},
+		Transits:    map[string]BaseTransit{},
+		Lodgings:    map[string]Lodging{},
+		Itineraries: map[string]Itinerary{},
+		Budget:      NewBudget(),
+		Links:       LinkMap{},
+		Media:       map[string]storage.Object{},
+		Files:       map[string]storage.Object{},
+		UpdatedAt:   time.Now(),
+		CreatedAt:   time.Now(),
+		Labels:      common.Labels{},
+		Tags:        common.Tags{},
 	}
 }
 
@@ -135,35 +135,31 @@ const (
 )
 
 type BaseTransit struct {
-	ID   string `json:"id" bson:"id"`
-	Type string `json:"type"`
-
-	DepartTime      time.Time  `json:"departTime" bson:"departTime"`
-	DepartLocation  maps.Place `json:"departLocation" bson:"departLocation"`
-	ArrivalTime     time.Time  `json:"arrivalTime" bson:"arrivalTime"`
-	ArrivalLocation maps.Place `json:"arrivalLocation" bson:"arrivalLocation"`
-
-	ConfirmationID string       `json:"confirmationID" bson:"confirmationID"`
-	Notes          string       `json:"notes" bson:"notes"`
-	Price          common.Price `json:"price" bson:"price"`
+	ID              string       `json:"id" bson:"id"`
+	Type            string       `json:"type"`
+	DepartTime      time.Time    `json:"departTime" bson:"departTime"`
+	DepartLocation  maps.Place   `json:"departLocation" bson:"departLocation"`
+	ArrivalTime     time.Time    `json:"arrivalTime" bson:"arrivalTime"`
+	ArrivalLocation maps.Place   `json:"arrivalLocation" bson:"arrivalLocation"`
+	ConfirmationID  string       `json:"confirmationID" bson:"confirmationID"`
+	Notes           string       `json:"notes" bson:"notes"`
+	Price           common.Price `json:"price" bson:"price"`
 
 	Tags   common.Tags   `json:"tags" bson:"tags"`
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
 type Lodging struct {
-	ID string `json:"id" bson:"id"`
-
-	NumGuests      int32        `json:"numGuests" bson:"numGuests"`
-	CheckinTime    time.Time    `json:"checkinTime" bson:"checkinTime"`
-	CheckoutTime   time.Time    `json:"checkoutTime" bson:"checkoutTime"`
-	Price          common.Price `json:"price" bson:"price"`
-	ConfirmationID string       `json:"confirmationID" bson:"confirmationID"`
-	Notes          string       `json:"notes" bson:"notes"`
-	Place          maps.Place   `json:"place" bson:"place"`
-
-	Tags   common.Tags   `json:"tags" bson:"tags"`
-	Labels common.Labels `json:"labels" bson:"labels"`
+	ID             string        `json:"id" bson:"id"`
+	NumGuests      int32         `json:"numGuests" bson:"numGuests"`
+	CheckinTime    time.Time     `json:"checkinTime" bson:"checkinTime"`
+	CheckoutTime   time.Time     `json:"checkoutTime" bson:"checkoutTime"`
+	Price          common.Price  `json:"price" bson:"price"`
+	ConfirmationID string        `json:"confirmationID" bson:"confirmationID"`
+	Notes          string        `json:"notes" bson:"notes"`
+	Place          maps.Place    `json:"place" bson:"place"`
+	Tags           common.Tags   `json:"tags" bson:"tags"`
+	Labels         common.Labels `json:"labels" bson:"labels"`
 }
 
 type ActivityComment struct {

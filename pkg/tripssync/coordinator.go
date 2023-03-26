@@ -4,7 +4,6 @@ import (
 	context "context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -227,7 +226,7 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 
 func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Context, msg *Message, toSave *trips.Trip) {
 	for _, op := range msg.Data.UpdateTrip.Ops {
-		// /itinerary/<id>/...
+		// /itinerary/<dt>/{...}
 		if !strings.HasPrefix(op.Path, "/itinerary/") {
 			continue
 		}
@@ -235,8 +234,8 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 		if len(pathTokens) < 3 {
 			continue
 		}
-		idx, _ := strconv.Atoi(pathTokens[2])
-		itin := toSave.Itinerary[idx]
+		dtKey := pathTokens[2]
+		itin := toSave.Itineraries[dtKey]
 		pairings := itin.MakeRoutePairings()
 		routesToRemove := []string{}
 
@@ -255,8 +254,8 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 				continue
 			}
 
-			toSave.Itinerary[idx].Routes[pair] = routes
-			jop := jp.MakeAddOp(fmt.Sprintf("/itinerary/%d/routes/%s", idx, pair), routes)
+			toSave.Itineraries[dtKey].Routes[pair] = routes
+			jop := jp.MakeAddOp(fmt.Sprintf("/itinerary/%s/routes/%s", dtKey, pair), routes)
 			msg.Data.UpdateTrip.Ops = append(
 				msg.Data.UpdateTrip.Ops, jop,
 			)
@@ -270,9 +269,9 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 		}
 
 		for _, pair := range routesToRemove {
-			jop := jp.MakeRemoveOp(fmt.Sprintf("/itinerary/%d/routes/%s", idx, pair), "")
+			jop := jp.MakeRemoveOp(fmt.Sprintf("/itinerary/%s/routes/%s", dtKey, pair), "")
 			msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
-			delete(toSave.Itinerary[idx].Routes, pair)
+			delete(toSave.Itineraries[dtKey].Routes, pair)
 		}
 	}
 	crd.trip, _ = json.Marshal(toSave)
@@ -285,8 +284,8 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 		return
 	}
 
-	idx, _ := strconv.Atoi(pathTokens[2])
-	itin := toSave.Itinerary[idx]
+	dtKey := pathTokens[2]
+	itin := toSave.Itineraries[dtKey]
 	sorted := itin.SortActivities()
 	sortedFracIndexes := trips.GetFracIndexes(sorted)
 	placeIDs := []string{}
@@ -307,7 +306,7 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 
 		itin.Activities[actId].Labels[trips.LabelFractionalIndex] = newFIdx
 
-		jop := jp.MakeRepOp(fmt.Sprintf("/itinerary/%d/activities/%s/labels/fIndex", idx, actId), newFIdx)
+		jop := jp.MakeRepOp(fmt.Sprintf("/itinerary/%s/activities/%s/labels/fIndex", dtKey, actId), newFIdx)
 		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 	}
 
