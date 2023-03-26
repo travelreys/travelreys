@@ -247,12 +247,10 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 			itinActIds := strings.Split(pair, trips.LabelDelimeter)
 			orig := itin.Activities[itinActIds[0]]
 			dest := itin.Activities[itinActIds[1]]
-			origAct := toSave.Activities[orig.ActivityListID].Activities[orig.ActivityID]
-			destAct := toSave.Activities[dest.ActivityListID].Activities[dest.ActivityID]
-			if !(origAct.HasPlace() && destAct.HasPlace()) {
+			if !(orig.HasPlace() && dest.HasPlace()) {
 				continue
 			}
-			routes, err := crd.mapsSvc.Directions(ctx, origAct.Place.PlaceID, destAct.Place.PlaceID, "")
+			routes, err := crd.mapsSvc.Directions(ctx, orig.Place.PlaceID(), dest.Place.PlaceID(), "")
 			if err != nil {
 				continue
 			}
@@ -293,18 +291,17 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 	sortedFracIndexes := trips.GetFracIndexes(sorted)
 	placeIDs := []string{}
 	for _, itinAct := range sorted {
-		act := toSave.Activities[itinAct.ActivityListID].Activities[itinAct.ActivityID]
-		placeIDs = append(placeIDs, act.Place.PlaceID)
+		placeIDs = append(placeIDs, itinAct.Place.PlaceID())
 	}
 
-	routes, err := crd.mapsSvc.OptimizeRoute(
+	routes, waypointsOrder, err := crd.mapsSvc.OptimizeRoute(
 		ctx, placeIDs[0], placeIDs[len(placeIDs)-1], placeIDs[1:len(placeIDs)-1],
 	)
 	if err != nil || len(routes) <= 0 {
 		return
 	}
 
-	for moveToIdx, currIdx := range routes[0].WaypointOrder {
+	for moveToIdx, currIdx := range waypointsOrder {
 		actId := sorted[currIdx+1].ID
 		newFIdx := sortedFracIndexes[moveToIdx+1]
 

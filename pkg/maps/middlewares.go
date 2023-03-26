@@ -45,10 +45,10 @@ func (mw rbacMiddleware) Directions(ctx context.Context, originPlaceID, destPlac
 	return mw.next.Directions(ctx, originPlaceID, destPlaceID, mode)
 }
 
-func (mw rbacMiddleware) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error) {
+func (mw rbacMiddleware) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return RouteList{}, ErrRBAC
+		return RouteList{}, nil, ErrRBAC
 	}
 	return mw.next.OptimizeRoute(ctx, originPlaceID, destPlaceID, waypointsPlaceID)
 }

@@ -53,10 +53,6 @@ func (svc service) Create(ctx context.Context, creator Member, name string, star
 	trip := NewTripWithDates(creator, name, start, end)
 	trip.CoverImage = images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))]
 
-	// bootstrap 1 activity list
-	activityList := NewActivityList("")
-	trip.Activities[activityList.ID] = activityList
-
 	// bootstrap itinerary dates
 	numDays := trip.EndDate.Sub(trip.StartDate).Hours() / 24
 	for i := 0; i <= int(numDays); i++ {

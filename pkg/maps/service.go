@@ -26,7 +26,7 @@ type Service interface {
 	PlacesAutocomplete(context.Context, string, string, string, string) (AutocompletePredictionList, error)
 	PlaceDetails(context.Context, string, []string, string, string) (Place, error)
 	Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error)
-	OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error)
+	OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error)
 }
 
 type service struct {
@@ -116,7 +116,7 @@ func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []s
 	}
 
 	res, err := svc.c.PlaceDetails(ctx, req)
-	return Place{res}, err
+	return PlaceFromPlaceDetailsResult(res), err
 
 }
 
@@ -139,13 +139,12 @@ func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, 
 
 	routes := RouteList{}
 	for _, r := range groutes {
-		r.Legs = []*maps.Leg{}
-		routes = append(routes, Route{Route: r, TravelMode: mode})
+		routes = append(routes, RouteFromRouteResult(r, mode))
 	}
 	return routes, err
 }
 
-func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error) {
+func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error) {
 	wpWithLabel := []string{}
 	for _, wp := range waypointsPlaceID {
 		wpWithLabel = append(wpWithLabel, fmt.Sprintf("place_id:%s", wp))
@@ -159,6 +158,7 @@ func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceI
 		Optimize:    true,
 	}
 
+	routes := RouteList{}
 	groutes, _, err := svc.c.Directions(ctx, req)
 	if err != nil {
 		svc.logger.Error("OptimizeRoute",
@@ -167,14 +167,15 @@ func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceI
 			zap.String("waypointsPlaceID", strings.Join(waypointsPlaceID, ",")),
 			zap.Error(err),
 		)
-		return RouteList{}, err
+		return routes, nil, err
 	}
 
-	routes := RouteList{}
+	if len(groutes) <= 0 {
+		return routes, []int{}, nil
+	}
+
 	for _, r := range groutes {
-		r.Legs = []*maps.Leg{}
-		routes = append(routes, Route{Route: r, TravelMode: ""})
+		routes = append(routes, RouteFromRouteResult(r, ""))
 	}
-
-	return routes, err
+	return routes, groutes[0].WaypointOrder, err
 }
