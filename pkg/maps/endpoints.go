@@ -63,3 +63,32 @@ func NewPlaceDetailsEndpoint(svc Service) endpoint.Endpoint {
 		return PlaceDetailsResponse{Place: place, Err: err}, nil
 	}
 }
+
+type PlaceAtmosphereRequest struct {
+	PlaceID      string   `json:"placeID"`
+	Fields       []string `json:"fields"`
+	Lang         string   `json:"lang"`
+	Sessiontoken string   `json:"sessiontoken"`
+}
+
+type PlaceAtmosphereResponse struct {
+	Place PlaceAtmosphere `json:"place"`
+	Err   error           `json:"error,omitempty"`
+}
+
+func (r PlaceAtmosphereResponse) Error() error {
+	return r.Err
+}
+
+func NewPlaceAtmosphereEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(PlaceAtmosphereRequest)
+		if !ok {
+			return PlaceAtmosphereResponse{
+				Err: common.ErrorEndpointReqMismatch,
+			}, nil
+		}
+		place, err := svc.PlaceAtmosphere(ctx, req.PlaceID, req.Fields, req.Sessiontoken, req.Lang)
+		return PlaceAtmosphereResponse{Place: place, Err: err}, nil
+	}
+}

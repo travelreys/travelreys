@@ -243,9 +243,9 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 			if _, ok := itin.Routes[pair]; ok {
 				continue
 			}
-			itinActIds := strings.Split(pair, trips.LabelDelimeter)
-			orig := itin.Activities[itinActIds[0]]
-			dest := itin.Activities[itinActIds[1]]
+			actIds := strings.Split(pair, trips.LabelDelimeter)
+			orig := itin.Activities[actIds[0]]
+			dest := itin.Activities[actIds[1]]
 			if !(orig.HasPlace() && dest.HasPlace()) {
 				continue
 			}
@@ -289,8 +289,8 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 	sorted := itin.SortActivities()
 	sortedFracIndexes := trips.GetFracIndexes(sorted)
 	placeIDs := []string{}
-	for _, itinAct := range sorted {
-		placeIDs = append(placeIDs, itinAct.Place.PlaceID())
+	for _, act := range sorted {
+		placeIDs = append(placeIDs, act.Place.PlaceID())
 	}
 
 	routes, waypointsOrder, err := crd.mapsSvc.OptimizeRoute(

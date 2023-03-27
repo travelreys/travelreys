@@ -25,6 +25,7 @@ var (
 type Service interface {
 	PlacesAutocomplete(context.Context, string, string, string, string) (AutocompletePredictionList, error)
 	PlaceDetails(context.Context, string, []string, string, string) (Place, error)
+	PlaceAtmosphere(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (PlaceAtmosphere, error)
 	Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error)
 	OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error)
 }
@@ -90,10 +91,10 @@ func (svc *service) stringsToPlaceDefaultsFieldMasks(fields []string) ([]maps.Pl
 	return list, nil
 }
 
-func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (Place, error) {
+func (svc *service) placeDetails(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (maps.PlaceDetailsResult, error) {
 	fieldMasks, err := svc.stringsToPlaceDefaultsFieldMasks(fields)
 	if err != nil {
-		return Place{}, err
+		return maps.PlaceDetailsResult{}, err
 	}
 
 	req := &maps.PlaceDetailsRequest{
@@ -110,14 +111,28 @@ func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []s
 				zap.String("sessiontoken", sessiontoken),
 				zap.Error(err),
 			)
-			return Place{}, err
+			return maps.PlaceDetailsResult{}, err
 		}
 		req.SessionToken = maps.PlaceAutocompleteSessionToken(stuuid)
 	}
-
 	res, err := svc.c.PlaceDetails(ctx, req)
-	return PlaceFromPlaceDetailsResult(res), err
+	return res, err
+}
 
+func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (Place, error) {
+	result, err := svc.placeDetails(ctx, placeID, fields, sessiontoken, lang)
+	if err != nil {
+		return Place{}, err
+	}
+	return PlaceFromPlaceDetailsResult(result), nil
+}
+
+func (svc *service) PlaceAtmosphere(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (PlaceAtmosphere, error) {
+	result, err := svc.placeDetails(ctx, placeID, fields, sessiontoken, lang)
+	if err != nil {
+		return PlaceAtmosphere{}, err
+	}
+	return PlaceAtmosphere{result}, err
 }
 
 func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error) {

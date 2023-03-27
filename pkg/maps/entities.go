@@ -11,6 +11,8 @@ import (
 const (
 	LabelPlaceID        = "gID"
 	LabelPhotoReference = "p"
+	LabelCountry        = "country"
+	LabelCity           = "city"
 )
 
 type LatLng struct {
@@ -45,11 +47,26 @@ func PlaceFromPlaceDetailsResult(result maps.PlaceDetailsResult) Place {
 	if len(result.Photos) > 0 {
 		place.Labels[LabelPhotoReference] = result.Photos[0].PhotoReference
 	}
+	for _, adr := range result.AddressComponents {
+		for _, typ := range adr.Types {
+			if typ == "country" {
+				place.Labels[LabelCountry] = adr.LongName
+			}
+			if typ == "locality" {
+				place.Labels[LabelCity] = adr.LongName
+			}
+		}
+	}
+
 	return place
 }
 
 func (p Place) PlaceID() string {
 	return p.Labels[LabelPlaceID]
+}
+
+type PlaceAtmosphere struct {
+	maps.PlaceDetailsResult
 }
 
 type AutocompletePrediction struct {

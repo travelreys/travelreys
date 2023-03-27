@@ -37,6 +37,14 @@ func (mw rbacMiddleware) PlaceDetails(ctx context.Context, placeID string, field
 	return mw.next.PlaceDetails(ctx, placeID, fields, sessiontoken, lang)
 }
 
+func (mw rbacMiddleware) PlaceAtmosphere(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (PlaceAtmosphere, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return PlaceAtmosphere{}, ErrRBAC
+	}
+	return mw.next.PlaceAtmosphere(ctx, placeID, fields, sessiontoken, lang)
+}
+
 func (mw rbacMiddleware) Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
