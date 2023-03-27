@@ -31,6 +31,10 @@ type Place struct {
 	Labels      common.Labels `json:"labels"`
 }
 
+func (p Place) isEmpty() bool {
+	return p.ID == ""
+}
+
 func PlaceFromPlaceDetailsResult(result maps.PlaceDetailsResult) Place {
 	place := Place{
 		ID:          uuid.NewString(),

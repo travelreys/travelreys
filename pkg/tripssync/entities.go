@@ -7,9 +7,11 @@ import (
 )
 
 const (
-	MsgUpdateTripTitleUpdateTripMembers = "UpdateTripMembers"
-	MsgUpdateTripTitleReorderItinerary  = "ReorderItinerary"
-	MsgUpdateTripOptimizeItineraryRoute = "OptimizeItinerary"
+	MsgUpdateTripTitleUpdateTripMembers   = "UpdateTripMembers"
+	MsgUpdateTripTitleUpdateActivityPlace = "UpdateActivityPlace"
+	MsgUpdateTripTitleDeleteActivity      = "DeleteActivity"
+	MsgUpdateTripTitleReorderItinerary    = "ReorderItinerary"
+	MsgUpdateTripOptimizeItineraryRoute   = "OptimizeItinerary"
 )
 
 // SessionContext represents a user's participation

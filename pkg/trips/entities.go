@@ -245,6 +245,10 @@ func (l Itinerary) MakeRoutePairings() map[string]bool {
 	pairings := map[string]bool{}
 	sorted := l.SortActivities()
 	for i := 1; i < len(sorted); i++ {
+		// We need the origin and destination to have a place
+		if sorted[i-1].Place.ID == "" || sorted[i].Place.ID == "" {
+			continue
+		}
 		pairings[l.routePairingKey(sorted[i-1], sorted[i])] = true
 	}
 	return pairings

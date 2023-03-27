@@ -194,6 +194,8 @@ func (crd *Coordinator) HandleMsgOpLeaveSession(ctx context.Context, msg *Messag
 }
 
 // HandleTobOpUpdateTrip handles OpUpdateTrip messages on crd.queue
+// by applying the json.Op before performing additional processing
+// based on message title.
 func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message) {
 	patchOps, _ := json.Marshal(msg.Data.UpdateTrip.Ops)
 	patch, _ := jsonpatch.DecodePatch(patchOps)
@@ -210,7 +212,9 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	}
 
 	switch msg.Data.UpdateTrip.Title {
-	case MsgUpdateTripTitleReorderItinerary:
+	case MsgUpdateTripTitleReorderItinerary,
+		MsgUpdateTripTitleUpdateActivityPlace,
+		MsgUpdateTripTitleDeleteActivity:
 		crd.HandleTobOpUpdateTripReorderItinerary(ctx, msg, &toSave)
 	case MsgUpdateTripOptimizeItineraryRoute:
 		crd.HandleTobOpUpdateTripOptimizeItineraryRoute(ctx, msg, &toSave)
@@ -225,12 +229,14 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 }
 
 func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Context, msg *Message, toSave *trips.Trip) {
+	fmt.Println(msg.Data.UpdateTrip.Ops)
 	for _, op := range msg.Data.UpdateTrip.Ops {
-		// /itinerary/<dt>/{...}
-		if !strings.HasPrefix(op.Path, "/itinerary/") {
+		// /itineraries/2023-03-26/activities/9935afee-8bfd-4148-8be8-79fdb2f12b8e
+		if !strings.HasPrefix(op.Path, "/itineraries/") {
 			continue
 		}
 		pathTokens := strings.Split(op.Path, "/")
+		fmt.Println(pathTokens)
 		if len(pathTokens) < 3 {
 			continue
 		}
@@ -238,6 +244,8 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 		itin := toSave.Itineraries[dtKey]
 		pairings := itin.MakeRoutePairings()
 		routesToRemove := []string{}
+
+		fmt.Println(pairings)
 
 		for pair := range pairings {
 			if _, ok := itin.Routes[pair]; ok {
@@ -255,7 +263,7 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 			}
 
 			toSave.Itineraries[dtKey].Routes[pair] = routes
-			jop := jp.MakeAddOp(fmt.Sprintf("/itinerary/%s/routes/%s", dtKey, pair), routes)
+			jop := jp.MakeAddOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
 			msg.Data.UpdateTrip.Ops = append(
 				msg.Data.UpdateTrip.Ops, jop,
 			)
@@ -269,7 +277,7 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 		}
 
 		for _, pair := range routesToRemove {
-			jop := jp.MakeRemoveOp(fmt.Sprintf("/itinerary/%s/routes/%s", dtKey, pair), "")
+			jop := jp.MakeRemoveOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), "")
 			msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 			delete(toSave.Itineraries[dtKey].Routes, pair)
 		}
@@ -306,7 +314,7 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 
 		itin.Activities[actId].Labels[trips.LabelFractionalIndex] = newFIdx
 
-		jop := jp.MakeRepOp(fmt.Sprintf("/itinerary/%s/activities/%s/labels/fIndex", dtKey, actId), newFIdx)
+		jop := jp.MakeRepOp(fmt.Sprintf("/itineraries/%s/activities/%s/labels/fIndex", dtKey, actId), newFIdx)
 		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 	}
 
