@@ -23,5 +23,3 @@ go.work
 /conf/*
 /build
 .envrc
-
-Makefile
