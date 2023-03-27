@@ -64,57 +64,31 @@ func NewPlaceDetailsEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-type DirectionsRequest struct {
-	OriginPlaceID string `json:"originPlaceID"`
-	DestPlaceID   string `json:"destPlaceID"`
-	Mode          string `json:"mode"`
-}
-type DirectionsResponse struct {
-	RouteList RouteList `json:"routeList"`
-	Err       error     `json:"error,omitempty"`
+type PlaceAtmosphereRequest struct {
+	PlaceID      string   `json:"placeID"`
+	Fields       []string `json:"fields"`
+	Lang         string   `json:"lang"`
+	Sessiontoken string   `json:"sessiontoken"`
 }
 
-func (r DirectionsResponse) Error() error {
+type PlaceAtmosphereResponse struct {
+	Place PlaceAtmosphere `json:"place"`
+	Err   error           `json:"error,omitempty"`
+}
+
+func (r PlaceAtmosphereResponse) Error() error {
 	return r.Err
 }
 
-func NewDirectionsEndpoint(svc Service) endpoint.Endpoint {
+func NewPlaceAtmosphereEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(DirectionsRequest)
+		req, ok := epReq.(PlaceAtmosphereRequest)
 		if !ok {
-			return DirectionsResponse{
+			return PlaceAtmosphereResponse{
 				Err: common.ErrorEndpointReqMismatch,
 			}, nil
 		}
-		routeList, err := svc.Directions(ctx, req.OriginPlaceID, req.DestPlaceID, req.Mode)
-		return DirectionsResponse{RouteList: routeList, Err: err}, nil
-	}
-}
-
-type OptimizeRouteRequest struct {
-	OriginPlaceID    string   `json:"originPlaceID"`
-	DestPlaceID      string   `json:"destPlaceID"`
-	WaypointsPlaceID []string `json:"waypointsPlaceID"`
-}
-
-type OptimizeRouteResponse struct {
-	RouteList RouteList `json:"routeList"`
-	Err       error     `json:"error,omitempty"`
-}
-
-func (r OptimizeRouteResponse) Error() error {
-	return r.Err
-}
-
-func NewOptimizeRouteEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(OptimizeRouteRequest)
-		if !ok {
-			return OptimizeRouteResponse{
-				Err: common.ErrorEndpointReqMismatch,
-			}, nil
-		}
-		routeList, err := svc.OptimizeRoute(ctx, req.OriginPlaceID, req.DestPlaceID, req.WaypointsPlaceID)
-		return OptimizeRouteResponse{RouteList: routeList, Err: err}, nil
+		place, err := svc.PlaceAtmosphere(ctx, req.PlaceID, req.Fields, req.Sessiontoken, req.Lang)
+		return PlaceAtmosphereResponse{Place: place, Err: err}, nil
 	}
 }

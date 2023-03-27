@@ -25,8 +25,9 @@ var (
 type Service interface {
 	PlacesAutocomplete(context.Context, string, string, string, string) (AutocompletePredictionList, error)
 	PlaceDetails(context.Context, string, []string, string, string) (Place, error)
+	PlaceAtmosphere(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (PlaceAtmosphere, error)
 	Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error)
-	OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error)
+	OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error)
 }
 
 type service struct {
@@ -90,10 +91,10 @@ func (svc *service) stringsToPlaceDefaultsFieldMasks(fields []string) ([]maps.Pl
 	return list, nil
 }
 
-func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (Place, error) {
+func (svc *service) placeDetails(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (maps.PlaceDetailsResult, error) {
 	fieldMasks, err := svc.stringsToPlaceDefaultsFieldMasks(fields)
 	if err != nil {
-		return Place{}, err
+		return maps.PlaceDetailsResult{}, err
 	}
 
 	req := &maps.PlaceDetailsRequest{
@@ -110,14 +111,28 @@ func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []s
 				zap.String("sessiontoken", sessiontoken),
 				zap.Error(err),
 			)
-			return Place{}, err
+			return maps.PlaceDetailsResult{}, err
 		}
 		req.SessionToken = maps.PlaceAutocompleteSessionToken(stuuid)
 	}
-
 	res, err := svc.c.PlaceDetails(ctx, req)
-	return Place{res}, err
+	return res, err
+}
 
+func (svc *service) PlaceDetails(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (Place, error) {
+	result, err := svc.placeDetails(ctx, placeID, fields, sessiontoken, lang)
+	if err != nil {
+		return Place{}, err
+	}
+	return PlaceFromPlaceDetailsResult(result), nil
+}
+
+func (svc *service) PlaceAtmosphere(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (PlaceAtmosphere, error) {
+	result, err := svc.placeDetails(ctx, placeID, fields, sessiontoken, lang)
+	if err != nil {
+		return PlaceAtmosphere{}, err
+	}
+	return PlaceAtmosphere{result}, err
 }
 
 func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error) {
@@ -139,13 +154,12 @@ func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, 
 
 	routes := RouteList{}
 	for _, r := range groutes {
-		r.Legs = []*maps.Leg{}
-		routes = append(routes, Route{Route: r, TravelMode: mode})
+		routes = append(routes, RouteFromRouteResult(r, mode))
 	}
 	return routes, err
 }
 
-func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error) {
+func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error) {
 	wpWithLabel := []string{}
 	for _, wp := range waypointsPlaceID {
 		wpWithLabel = append(wpWithLabel, fmt.Sprintf("place_id:%s", wp))
@@ -159,6 +173,7 @@ func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceI
 		Optimize:    true,
 	}
 
+	routes := RouteList{}
 	groutes, _, err := svc.c.Directions(ctx, req)
 	if err != nil {
 		svc.logger.Error("OptimizeRoute",
@@ -167,14 +182,15 @@ func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceI
 			zap.String("waypointsPlaceID", strings.Join(waypointsPlaceID, ",")),
 			zap.Error(err),
 		)
-		return RouteList{}, err
+		return routes, nil, err
 	}
 
-	routes := RouteList{}
+	if len(groutes) <= 0 {
+		return routes, []int{}, nil
+	}
+
 	for _, r := range groutes {
-		r.Legs = []*maps.Leg{}
-		routes = append(routes, Route{Route: r, TravelMode: ""})
+		routes = append(routes, RouteFromRouteResult(r, ""))
 	}
-
-	return routes, err
+	return routes, groutes[0].WaypointOrder, err
 }

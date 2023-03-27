@@ -4,7 +4,6 @@ import (
 	context "context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -195,6 +194,8 @@ func (crd *Coordinator) HandleMsgOpLeaveSession(ctx context.Context, msg *Messag
 }
 
 // HandleTobOpUpdateTrip handles OpUpdateTrip messages on crd.queue
+// by applying the json.Op before performing additional processing
+// based on message title.
 func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message) {
 	patchOps, _ := json.Marshal(msg.Data.UpdateTrip.Ops)
 	patch, _ := jsonpatch.DecodePatch(patchOps)
@@ -211,10 +212,29 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	}
 
 	switch msg.Data.UpdateTrip.Title {
-	case MsgUpdateTripTitleReorderItinerary:
-		crd.HandleTobOpUpdateTripReorderItinerary(ctx, msg, &toSave)
-	case MsgUpdateTripOptimizeItineraryRoute:
-		crd.HandleTobOpUpdateTripOptimizeItineraryRoute(ctx, msg, &toSave)
+	case MsgUpdateTripTitleReorderItinerary,
+		MsgUpdateTripTitleUpdateActivityPlace,
+		MsgUpdateTripTitleDeleteActivity:
+		dtKey := crd.FindItineraryDtKey(msg.Data.UpdateTrip.Ops)
+		if dtKey == "" {
+			break
+		}
+		crd.CalculateRoute(ctx, dtKey, msg, &toSave)
+	case MsgUpdateTripTitleReorderActivityToAnotherDay:
+		origDtKey := crd.FindItineraryDtKey(msg.Data.UpdateTrip.Ops)
+		if origDtKey == "" {
+			break
+		}
+		crd.CalculateRoute(ctx, origDtKey, msg, &toSave)
+		lessOneOps := msg.Data.UpdateTrip.Ops[1:]
+		destDtKey := crd.FindItineraryDtKey(lessOneOps)
+		if destDtKey == "" {
+			break
+		}
+		crd.CalculateRoute(ctx, destDtKey, msg, &toSave)
+
+	case MsgUpdateTripTitleOptimizeItinerary:
+		crd.OptimizeRoute(ctx, msg, &toSave)
 	}
 
 	// Persist trip state to database
@@ -225,94 +245,98 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	crd.store.IncrCounter(ctx, crd.tripID)
 }
 
-func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Context, msg *Message, toSave *trips.Trip) {
-	for _, op := range msg.Data.UpdateTrip.Ops {
-		// /itinerary/<id>/...
-		if !strings.HasPrefix(op.Path, "/itinerary/") {
+func (crd *Coordinator) FindItineraryDtKey(ops []jp.Op) string {
+	// /itineraries/2023-03-26/activities/9935afee-8bfd-4148-8be8-79fdb2f12b8e
+
+	var dtKey string
+	for _, op := range ops {
+		if !strings.HasPrefix(op.Path, "/itineraries/") {
 			continue
 		}
 		pathTokens := strings.Split(op.Path, "/")
 		if len(pathTokens) < 3 {
 			continue
 		}
-		idx, _ := strconv.Atoi(pathTokens[2])
-		itin := toSave.Itinerary[idx]
-		pairings := itin.MakeRoutePairings()
-		routesToRemove := []string{}
+		dtKey = pathTokens[2]
+		break
+	}
+	return dtKey
+}
 
-		for pair := range pairings {
-			if _, ok := itin.Routes[pair]; ok {
-				continue
-			}
-			itinActIds := strings.Split(pair, trips.LabelDelimeter)
-			orig := itin.Activities[itinActIds[0]]
-			dest := itin.Activities[itinActIds[1]]
-			origAct := toSave.Activities[orig.ActivityListID].Activities[orig.ActivityID]
-			destAct := toSave.Activities[dest.ActivityListID].Activities[dest.ActivityID]
-			if !(origAct.HasPlace() && destAct.HasPlace()) {
-				continue
-			}
-			routes, err := crd.mapsSvc.Directions(ctx, origAct.Place.PlaceID, destAct.Place.PlaceID, "")
-			if err != nil {
-				continue
-			}
+func (crd *Coordinator) CalculateRoute(ctx context.Context, dtKey string, msg *Message, toSave *trips.Trip) {
+	itin := toSave.Itineraries[dtKey]
+	pairings := itin.MakeRoutePairings()
+	routesToRemove := []string{}
 
-			toSave.Itinerary[idx].Routes[pair] = routes
-			jop := jp.MakeAddOp(fmt.Sprintf("/itinerary/%d/routes/%s", idx, pair), routes)
-			msg.Data.UpdateTrip.Ops = append(
-				msg.Data.UpdateTrip.Ops, jop,
-			)
+	for pair := range pairings {
+		if _, ok := itin.Routes[pair]; ok {
+			continue
+		}
+		actIds := strings.Split(pair, trips.LabelDelimeter)
+		orig := itin.Activities[actIds[0]]
+		dest := itin.Activities[actIds[1]]
+		if !(orig.HasPlace() && dest.HasPlace()) {
+			continue
+		}
+		routes, err := crd.mapsSvc.Directions(ctx, orig.Place.PlaceID(), dest.Place.PlaceID(), "")
+		if err != nil {
+			continue
 		}
 
-		for pair := range itin.Routes {
-			if _, ok := pairings[pair]; ok {
-				continue
-			}
-			routesToRemove = append(routesToRemove, pair)
-		}
+		toSave.Itineraries[dtKey].Routes[pair] = routes
+		jop := jp.MakeAddOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
+		msg.Data.UpdateTrip.Ops = append(
+			msg.Data.UpdateTrip.Ops, jop,
+		)
+	}
 
-		for _, pair := range routesToRemove {
-			jop := jp.MakeRemoveOp(fmt.Sprintf("/itinerary/%d/routes/%s", idx, pair), "")
-			msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
-			delete(toSave.Itinerary[idx].Routes, pair)
+	for pair := range itin.Routes {
+		if _, ok := pairings[pair]; ok {
+			continue
 		}
+		routesToRemove = append(routesToRemove, pair)
+	}
+
+	for _, pair := range routesToRemove {
+		jop := jp.MakeRemoveOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), "")
+		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
+		delete(toSave.Itineraries[dtKey].Routes, pair)
 	}
 	crd.trip, _ = json.Marshal(toSave)
 }
 
-func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.Context, msg *Message, toSave *trips.Trip) {
+func (crd *Coordinator) OptimizeRoute(ctx context.Context, msg *Message, toSave *trips.Trip) {
+	// /itineraries/2023-03-26
 	op := msg.Data.UpdateTrip.Ops[0]
 	pathTokens := strings.Split(op.Path, "/")
 	if len(pathTokens) < 3 {
 		return
 	}
-
-	idx, _ := strconv.Atoi(pathTokens[2])
-	itin := toSave.Itinerary[idx]
+	dtKey := pathTokens[2]
+	itin := toSave.Itineraries[dtKey]
 	sorted := itin.SortActivities()
 	sortedFracIndexes := trips.GetFracIndexes(sorted)
 	placeIDs := []string{}
-	for _, itinAct := range sorted {
-		act := toSave.Activities[itinAct.ActivityListID].Activities[itinAct.ActivityID]
-		placeIDs = append(placeIDs, act.Place.PlaceID)
+	for _, act := range sorted {
+		placeIDs = append(placeIDs, act.Place.PlaceID())
 	}
 
-	routes, err := crd.mapsSvc.OptimizeRoute(
+	routes, waypointsOrder, err := crd.mapsSvc.OptimizeRoute(
 		ctx, placeIDs[0], placeIDs[len(placeIDs)-1], placeIDs[1:len(placeIDs)-1],
 	)
 	if err != nil || len(routes) <= 0 {
 		return
 	}
 
-	for moveToIdx, currIdx := range routes[0].WaypointOrder {
+	for moveToIdx, currIdx := range waypointsOrder {
 		actId := sorted[currIdx+1].ID
 		newFIdx := sortedFracIndexes[moveToIdx+1]
 
 		itin.Activities[actId].Labels[trips.LabelFractionalIndex] = newFIdx
 
-		jop := jp.MakeRepOp(fmt.Sprintf("/itinerary/%d/activities/%s/labels/fIndex", idx, actId), newFIdx)
+		jop := jp.MakeRepOp(fmt.Sprintf("/itineraries/%s/activities/%s/labels/fIndex", dtKey, actId), newFIdx)
 		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 	}
 
-	crd.HandleTobOpUpdateTripReorderItinerary(ctx, msg, toSave)
+	crd.CalculateRoute(ctx, dtKey, msg, toSave)
 }

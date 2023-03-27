@@ -37,6 +37,14 @@ func (mw rbacMiddleware) PlaceDetails(ctx context.Context, placeID string, field
 	return mw.next.PlaceDetails(ctx, placeID, fields, sessiontoken, lang)
 }
 
+func (mw rbacMiddleware) PlaceAtmosphere(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (PlaceAtmosphere, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return PlaceAtmosphere{}, ErrRBAC
+	}
+	return mw.next.PlaceAtmosphere(ctx, placeID, fields, sessiontoken, lang)
+}
+
 func (mw rbacMiddleware) Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
@@ -45,10 +53,10 @@ func (mw rbacMiddleware) Directions(ctx context.Context, originPlaceID, destPlac
 	return mw.next.Directions(ctx, originPlaceID, destPlaceID, mode)
 }
 
-func (mw rbacMiddleware) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, error) {
+func (mw rbacMiddleware) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return RouteList{}, ErrRBAC
+		return RouteList{}, nil, ErrRBAC
 	}
 	return mw.next.OptimizeRoute(ctx, originPlaceID, destPlaceID, waypointsPlaceID)
 }

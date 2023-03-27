@@ -44,16 +44,10 @@ type Trip struct {
 	Notes    string                 `json:"notes" bson:"notes"`
 	Transits map[string]BaseTransit `json:"transits" bson:"transits"`
 	Lodgings map[string]Lodging     `json:"lodgings" bson:"lodgings"`
+	Budget   Budget                 `json:"budget" bson:"budget"`
+	Links    map[string]Link        `json:"links" bson:"links"`
 
-	// Activities
-	Activities map[string]ActivityList `json:"activities" bson:"activities"`
-	Itinerary  []Itinerary             `json:"itinerary" bson:"itinerary"`
-
-	// Budget
-	Budget Budget `json:"budget" bson:"budget"`
-
-	// Links
-	Links map[string]Link `json:"links" bson:"links"`
+	Itineraries map[string]Itinerary `json:"itineraries" bson:"itineraries"`
 
 	// Media, Attachements
 	Media map[string]storage.Object `json:"media" bson:"media"`
@@ -72,26 +66,25 @@ func NewTrip(creator Member, name string) Trip {
 	creator.Role = MemberRoleCreator
 
 	return Trip{
-		ID:         uuid.New().String(),
-		Name:       name,
-		CoverImage: images.ImageMetadata{},
-		StartDate:  time.Time{},
-		EndDate:    time.Time{},
-		Creator:    creator,
-		Members:    map[string]Member{},
-		MembersID:  map[string]string{},
-		Transits:   map[string]BaseTransit{},
-		Lodgings:   map[string]Lodging{},
-		Activities: map[string]ActivityList{},
-		Itinerary:  []Itinerary{},
-		Budget:     NewBudget(),
-		Links:      LinkMap{},
-		Media:      map[string]storage.Object{},
-		Files:      map[string]storage.Object{},
-		UpdatedAt:  time.Now(),
-		CreatedAt:  time.Now(),
-		Labels:     common.Labels{},
-		Tags:       common.Tags{},
+		ID:          uuid.New().String(),
+		Name:        name,
+		CoverImage:  images.ImageMetadata{},
+		StartDate:   time.Time{},
+		EndDate:     time.Time{},
+		Creator:     creator,
+		Members:     map[string]Member{},
+		MembersID:   map[string]string{},
+		Transits:    map[string]BaseTransit{},
+		Lodgings:    map[string]Lodging{},
+		Itineraries: map[string]Itinerary{},
+		Budget:      NewBudget(),
+		Links:       LinkMap{},
+		Media:       map[string]storage.Object{},
+		Files:       map[string]storage.Object{},
+		UpdatedAt:   time.Now(),
+		CreatedAt:   time.Now(),
+		Labels:      common.Labels{},
+		Tags:        common.Tags{},
 	}
 }
 
@@ -111,9 +104,8 @@ const (
 )
 
 type Member struct {
-	ID   string `json:"id" bson:"id"`
-	Role string `json:"role" bson:"role"`
-
+	ID     string            `json:"id" bson:"id"`
+	Role   string            `json:"role" bson:"role"`
 	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
@@ -143,66 +135,31 @@ const (
 )
 
 type BaseTransit struct {
-	ID   string `json:"id" bson:"id"`
-	Type string `json:"type"`
-
-	DepartTime      time.Time  `json:"departTime" bson:"departTime"`
-	DepartLocation  maps.Place `json:"departLocation" bson:"departLocation"`
-	ArrivalTime     time.Time  `json:"arrivalTime" bson:"arrivalTime"`
-	ArrivalLocation maps.Place `json:"arrivalLocation" bson:"arrivalLocation"`
-
-	ConfirmationID string       `json:"confirmationID" bson:"confirmationID"`
-	Notes          string       `json:"notes" bson:"notes"`
-	Price          common.Price `json:"price" bson:"price"`
+	ID              string       `json:"id" bson:"id"`
+	Type            string       `json:"type"`
+	DepartTime      time.Time    `json:"departTime" bson:"departTime"`
+	DepartLocation  maps.Place   `json:"departLocation" bson:"departLocation"`
+	ArrivalTime     time.Time    `json:"arrivalTime" bson:"arrivalTime"`
+	ArrivalLocation maps.Place   `json:"arrivalLocation" bson:"arrivalLocation"`
+	ConfirmationID  string       `json:"confirmationID" bson:"confirmationID"`
+	Notes           string       `json:"notes" bson:"notes"`
+	Price           common.Price `json:"price" bson:"price"`
 
 	Tags   common.Tags   `json:"tags" bson:"tags"`
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
 type Lodging struct {
-	ID string `json:"id" bson:"id"`
-
-	NumGuests      int32        `json:"numGuests" bson:"numGuests"`
-	CheckinTime    time.Time    `json:"checkinTime" bson:"checkinTime"`
-	CheckoutTime   time.Time    `json:"checkoutTime" bson:"checkoutTime"`
-	Price          common.Price `json:"price" bson:"price"`
-	ConfirmationID string       `json:"confirmationID" bson:"confirmationID"`
-	Notes          string       `json:"notes" bson:"notes"`
-	Place          maps.Place   `json:"place" bson:"place"`
-
-	Tags   common.Tags   `json:"tags" bson:"tags"`
-	Labels common.Labels `json:"labels" bson:"labels"`
-}
-
-type Activity struct {
-	ID    string `json:"id" bson:"id"`
-	Title string `json:"title" bson:"title"`
-
-	Place maps.Place `json:"place" bson:"place"`
-	Notes string     `json:"notes" bson:"notes"`
-
-	Comments []ActivityComment `json:"comments" bson:"comments"`
-	Labels   common.Labels     `json:"labels" bson:"labels"`
-}
-
-func (a Activity) HasPlace() bool {
-	return a.Place.Name != ""
-}
-
-type ActivityList struct {
-	ID         string              `json:"id" bson:"id"`
-	Name       string              `json:"name" bson:"name"`
-	Activities map[string]Activity `json:"activities" bson:"activities"`
-	Labels     common.Labels       `json:"labels" bson:"labels"`
-}
-
-func NewActivityList(name string) ActivityList {
-	return ActivityList{
-		ID:         uuid.New().String(),
-		Name:       name,
-		Activities: map[string]Activity{},
-		Labels:     common.Labels{},
-	}
+	ID             string        `json:"id" bson:"id"`
+	NumGuests      int32         `json:"numGuests" bson:"numGuests"`
+	CheckinTime    time.Time     `json:"checkinTime" bson:"checkinTime"`
+	CheckoutTime   time.Time     `json:"checkoutTime" bson:"checkoutTime"`
+	Price          common.Price  `json:"price" bson:"price"`
+	ConfirmationID string        `json:"confirmationID" bson:"confirmationID"`
+	Notes          string        `json:"notes" bson:"notes"`
+	Place          maps.Place    `json:"place" bson:"place"`
+	Tags           common.Tags   `json:"tags" bson:"tags"`
+	Labels         common.Labels `json:"labels" bson:"labels"`
 }
 
 type ActivityComment struct {
@@ -213,35 +170,41 @@ type ActivityComment struct {
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
-type ItineraryActivity struct {
-	ID             string        `json:"id" bson:"id"`
-	ActivityListID string        `json:"activityListId" bson:"activityListId"`
-	ActivityID     string        `json:"activityId" bson:"activityId"`
-	Price          common.Price  `json:"price" bson:"price"`
-	StartTime      time.Time     `json:"startTime" bson:"startTime"`
-	EndTime        time.Time     `json:"endTime" bson:"endTime"`
-	Labels         common.Labels `json:"labels" bson:"labels"`
+type Activity struct {
+	ID        string            `json:"id" bson:"id"`
+	Title     string            `json:"title" bson:"title"`
+	Place     maps.Place        `json:"place" bson:"place"`
+	Notes     string            `json:"notes" bson:"notes"`
+	Price     common.Price      `json:"price" bson:"price"`
+	StartTime time.Time         `json:"startTime" bson:"startTime"`
+	EndTime   time.Time         `json:"endTime" bson:"endTime"`
+	Comments  []ActivityComment `json:"comments" bson:"comments"`
+	Labels    common.Labels     `json:"labels" bson:"labels"`
 }
 
-type ItineraryActivityList []ItineraryActivity
+func (a Activity) HasPlace() bool {
+	return a.Place.Name != ""
+}
 
-func (l ItineraryActivityList) Len() int {
+type ActivityList []Activity
+
+func (l ActivityList) Len() int {
 	return len(l)
 }
-func (l ItineraryActivityList) Swap(i, j int) {
+func (l ActivityList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
-func (l ItineraryActivityList) Less(i, j int) bool {
+func (l ActivityList) Less(i, j int) bool {
 	return l[i].Labels[LabelFractionalIndex] < l[j].Labels[LabelFractionalIndex]
 }
 
 type Itinerary struct {
-	ID          string                       `json:"id" bson:"id"`
-	Date        time.Time                    `json:"date" bson:"date"`
-	Description string                       `json:"desc" bson:"desc"`
-	Activities  map[string]ItineraryActivity `json:"activities" bson:"activities"`
-	Routes      map[string]maps.RouteList    `json:"routes" bson:"routes"`
-	Labels      common.Labels                `json:"labels" bson:"labels"`
+	ID          string                    `json:"id" bson:"id"`
+	Date        time.Time                 `json:"date" bson:"date"`
+	Description string                    `json:"desc" bson:"desc"`
+	Activities  map[string]Activity       `json:"activities" bson:"activities"`
+	Routes      map[string]maps.RouteList `json:"routes" bson:"routes"`
+	Labels      common.Labels             `json:"labels" bson:"labels"`
 }
 
 func NewItinerary(date time.Time) Itinerary {
@@ -249,16 +212,15 @@ func NewItinerary(date time.Time) Itinerary {
 		ID:          uuid.New().String(),
 		Date:        date,
 		Description: "",
-		Activities:  map[string]ItineraryActivity{},
+		Activities:  map[string]Activity{},
 		Routes:      map[string]maps.RouteList{},
 		Labels:      common.Labels{},
 	}
 }
 
-// SortActivities returns a list of ItineraryActivities sorted
-// by their fractional index
-func (l Itinerary) SortActivities() []ItineraryActivity {
-	sorted := ItineraryActivityList{}
+// SortActivities returns Activities sorted by their fractional index
+func (l Itinerary) SortActivities() []Activity {
+	sorted := ActivityList{}
 	for _, act := range l.Activities {
 		sorted = append(sorted, act)
 	}
@@ -266,7 +228,7 @@ func (l Itinerary) SortActivities() []ItineraryActivity {
 	return sorted
 }
 
-func GetFracIndexes(acts []ItineraryActivity) []string {
+func GetFracIndexes(acts []Activity) []string {
 	result := []string{}
 	for _, a := range acts {
 		result = append(result, a.Labels[LabelFractionalIndex])
@@ -274,7 +236,7 @@ func GetFracIndexes(acts []ItineraryActivity) []string {
 	return result
 }
 
-func (l Itinerary) routePairingKey(a1 ItineraryActivity, a2 ItineraryActivity) string {
+func (l Itinerary) routePairingKey(a1 Activity, a2 Activity) string {
 	return fmt.Sprintf("%s%s%s", a1.ID, LabelDelimeter, a2.ID)
 }
 
@@ -282,6 +244,10 @@ func (l Itinerary) MakeRoutePairings() map[string]bool {
 	pairings := map[string]bool{}
 	sorted := l.SortActivities()
 	for i := 1; i < len(sorted); i++ {
+		// We need the origin and destination to have a place
+		if sorted[i-1].Place.ID == "" || sorted[i].Place.ID == "" {
+			continue
+		}
 		pairings[l.routePairingKey(sorted[i-1], sorted[i])] = true
 	}
 	return pairings
