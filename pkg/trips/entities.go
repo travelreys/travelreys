@@ -218,8 +218,7 @@ func NewItinerary(date time.Time) Itinerary {
 	}
 }
 
-// SortActivities returns a list of ItineraryActivities sorted
-// by their fractional index
+// SortActivities returns Activities sorted by their fractional index
 func (l Itinerary) SortActivities() []Activity {
 	sorted := ActivityList{}
 	for _, act := range l.Activities {

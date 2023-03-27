@@ -215,9 +215,9 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	case MsgUpdateTripTitleReorderItinerary,
 		MsgUpdateTripTitleUpdateActivityPlace,
 		MsgUpdateTripTitleDeleteActivity:
-		crd.HandleTobOpUpdateTripReorderItinerary(ctx, msg, &toSave)
+		crd.CalculateRoute(ctx, msg, &toSave)
 	case MsgUpdateTripOptimizeItineraryRoute:
-		crd.HandleTobOpUpdateTripOptimizeItineraryRoute(ctx, msg, &toSave)
+		crd.OptimizeRoute(ctx, msg, &toSave)
 	}
 
 	// Persist trip state to database
@@ -228,15 +228,13 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	crd.store.IncrCounter(ctx, crd.tripID)
 }
 
-func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Context, msg *Message, toSave *trips.Trip) {
-	fmt.Println(msg.Data.UpdateTrip.Ops)
+func (crd *Coordinator) CalculateRoute(ctx context.Context, msg *Message, toSave *trips.Trip) {
 	for _, op := range msg.Data.UpdateTrip.Ops {
 		// /itineraries/2023-03-26/activities/9935afee-8bfd-4148-8be8-79fdb2f12b8e
 		if !strings.HasPrefix(op.Path, "/itineraries/") {
 			continue
 		}
 		pathTokens := strings.Split(op.Path, "/")
-		fmt.Println(pathTokens)
 		if len(pathTokens) < 3 {
 			continue
 		}
@@ -244,8 +242,6 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 		itin := toSave.Itineraries[dtKey]
 		pairings := itin.MakeRoutePairings()
 		routesToRemove := []string{}
-
-		fmt.Println(pairings)
 
 		for pair := range pairings {
 			if _, ok := itin.Routes[pair]; ok {
@@ -285,13 +281,13 @@ func (crd *Coordinator) HandleTobOpUpdateTripReorderItinerary(ctx context.Contex
 	crd.trip, _ = json.Marshal(toSave)
 }
 
-func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.Context, msg *Message, toSave *trips.Trip) {
+func (crd *Coordinator) OptimizeRoute(ctx context.Context, msg *Message, toSave *trips.Trip) {
+	// /itineraries/2023-03-26
 	op := msg.Data.UpdateTrip.Ops[0]
 	pathTokens := strings.Split(op.Path, "/")
 	if len(pathTokens) < 3 {
 		return
 	}
-
 	dtKey := pathTokens[2]
 	itin := toSave.Itineraries[dtKey]
 	sorted := itin.SortActivities()
@@ -318,5 +314,5 @@ func (crd *Coordinator) HandleTobOpUpdateTripOptimizeItineraryRoute(ctx context.
 		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 	}
 
-	crd.HandleTobOpUpdateTripReorderItinerary(ctx, msg, toSave)
+	crd.CalculateRoute(ctx, msg, toSave)
 }
