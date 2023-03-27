@@ -215,8 +215,25 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	case MsgUpdateTripTitleReorderItinerary,
 		MsgUpdateTripTitleUpdateActivityPlace,
 		MsgUpdateTripTitleDeleteActivity:
-		crd.CalculateRoute(ctx, msg, &toSave)
-	case MsgUpdateTripOptimizeItineraryRoute:
+		dtKey := crd.FindItineraryDtKey(msg.Data.UpdateTrip.Ops)
+		if dtKey == "" {
+			break
+		}
+		crd.CalculateRoute(ctx, dtKey, msg, &toSave)
+	case MsgUpdateTripTitleReorderActivityToAnotherDay:
+		origDtKey := crd.FindItineraryDtKey(msg.Data.UpdateTrip.Ops)
+		if origDtKey == "" {
+			break
+		}
+		crd.CalculateRoute(ctx, origDtKey, msg, &toSave)
+		lessOneOps := msg.Data.UpdateTrip.Ops[1:]
+		destDtKey := crd.FindItineraryDtKey(lessOneOps)
+		if destDtKey == "" {
+			break
+		}
+		crd.CalculateRoute(ctx, destDtKey, msg, &toSave)
+
+	case MsgUpdateTripTitleOptimizeItinerary:
 		crd.OptimizeRoute(ctx, msg, &toSave)
 	}
 
@@ -228,9 +245,11 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	crd.store.IncrCounter(ctx, crd.tripID)
 }
 
-func (crd *Coordinator) CalculateRoute(ctx context.Context, msg *Message, toSave *trips.Trip) {
-	for _, op := range msg.Data.UpdateTrip.Ops {
-		// /itineraries/2023-03-26/activities/9935afee-8bfd-4148-8be8-79fdb2f12b8e
+func (crd *Coordinator) FindItineraryDtKey(ops []jp.Op) string {
+	// /itineraries/2023-03-26/activities/9935afee-8bfd-4148-8be8-79fdb2f12b8e
+
+	var dtKey string
+	for _, op := range ops {
 		if !strings.HasPrefix(op.Path, "/itineraries/") {
 			continue
 		}
@@ -238,45 +257,50 @@ func (crd *Coordinator) CalculateRoute(ctx context.Context, msg *Message, toSave
 		if len(pathTokens) < 3 {
 			continue
 		}
-		dtKey := pathTokens[2]
-		itin := toSave.Itineraries[dtKey]
-		pairings := itin.MakeRoutePairings()
-		routesToRemove := []string{}
+		dtKey = pathTokens[2]
+		break
+	}
+	return dtKey
+}
 
-		for pair := range pairings {
-			if _, ok := itin.Routes[pair]; ok {
-				continue
-			}
-			actIds := strings.Split(pair, trips.LabelDelimeter)
-			orig := itin.Activities[actIds[0]]
-			dest := itin.Activities[actIds[1]]
-			if !(orig.HasPlace() && dest.HasPlace()) {
-				continue
-			}
-			routes, err := crd.mapsSvc.Directions(ctx, orig.Place.PlaceID(), dest.Place.PlaceID(), "")
-			if err != nil {
-				continue
-			}
+func (crd *Coordinator) CalculateRoute(ctx context.Context, dtKey string, msg *Message, toSave *trips.Trip) {
+	itin := toSave.Itineraries[dtKey]
+	pairings := itin.MakeRoutePairings()
+	routesToRemove := []string{}
 
-			toSave.Itineraries[dtKey].Routes[pair] = routes
-			jop := jp.MakeAddOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
-			msg.Data.UpdateTrip.Ops = append(
-				msg.Data.UpdateTrip.Ops, jop,
-			)
+	for pair := range pairings {
+		if _, ok := itin.Routes[pair]; ok {
+			continue
+		}
+		actIds := strings.Split(pair, trips.LabelDelimeter)
+		orig := itin.Activities[actIds[0]]
+		dest := itin.Activities[actIds[1]]
+		if !(orig.HasPlace() && dest.HasPlace()) {
+			continue
+		}
+		routes, err := crd.mapsSvc.Directions(ctx, orig.Place.PlaceID(), dest.Place.PlaceID(), "")
+		if err != nil {
+			continue
 		}
 
-		for pair := range itin.Routes {
-			if _, ok := pairings[pair]; ok {
-				continue
-			}
-			routesToRemove = append(routesToRemove, pair)
-		}
+		toSave.Itineraries[dtKey].Routes[pair] = routes
+		jop := jp.MakeAddOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
+		msg.Data.UpdateTrip.Ops = append(
+			msg.Data.UpdateTrip.Ops, jop,
+		)
+	}
 
-		for _, pair := range routesToRemove {
-			jop := jp.MakeRemoveOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), "")
-			msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
-			delete(toSave.Itineraries[dtKey].Routes, pair)
+	for pair := range itin.Routes {
+		if _, ok := pairings[pair]; ok {
+			continue
 		}
+		routesToRemove = append(routesToRemove, pair)
+	}
+
+	for _, pair := range routesToRemove {
+		jop := jp.MakeRemoveOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), "")
+		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
+		delete(toSave.Itineraries[dtKey].Routes, pair)
 	}
 	crd.trip, _ = json.Marshal(toSave)
 }
@@ -314,5 +338,5 @@ func (crd *Coordinator) OptimizeRoute(ctx context.Context, msg *Message, toSave 
 		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 	}
 
-	crd.CalculateRoute(ctx, msg, toSave)
+	crd.CalculateRoute(ctx, dtKey, msg, toSave)
 }
