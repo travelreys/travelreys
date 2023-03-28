@@ -14,7 +14,7 @@ const (
 	storageProviderGcs             = "gcs"
 	defaultStorageProvider         = "minio"
 	defaultPresignedURLDuration    = 30 * time.Minute
-	defaultPresignedCookieDuration = 30 * time.Minute
+	defaultPresignedCookieDuration = 24 * time.Hour
 )
 
 type Service interface {

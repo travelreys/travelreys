@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	projectID     = os.Getenv("TRAVELREYS_GCS_PROJECT")
-	cookieKeyName = os.Getenv("TRAVELREYS_GCS_COOKIE_KEY_NAME")
-	cookieKeyPath = os.Getenv("TRAVELREYS_GCS_COOKIE_KEY_PATH")
+	projectID       = os.Getenv("TRAVELREYS_GCS_PROJECT")
+	gcsAuthJsonPath = os.Getenv("TRAVELREYS_GCS_AUTH_JSON")
+	cookieKeyName   = os.Getenv("TRAVELREYS_GCS_COOKIE_KEY_NAME")
+	cookieKeyPath   = os.Getenv("TRAVELREYS_GCS_COOKIE_KEY_PATH")
 )
 
 const (
@@ -32,7 +33,7 @@ type gcsService struct {
 }
 
 func NewDefaultGCSService(ctx context.Context) (Service, error) {
-	return NewGCSService(ctx, os.Getenv("TRAVELREYS_GCS_AUTH_JSON"))
+	return NewGCSService(ctx, gcsAuthJsonPath)
 }
 
 func NewGCSService(ctx context.Context, credsPath string) (Service, error) {
@@ -69,17 +70,19 @@ func (svc gcsService) Remove(ctx context.Context, obj Object) error {
 	return svc.cl.Bucket(obj.Bucket).Object(obj.Path).Delete(ctx)
 }
 
+// https://cloud.google.com/storage/docs/access-control/signing-urls-with-helpers
+// Signing a URL requires credentials authorized to sign a URL. You can pass
+// these in through SignedURLOptions with one of the following options:
+//
+//	a. a Google service account private key, obtainable from the Google Developers Console
+//	b. a Google Access ID with iam.serviceAccounts.signBlob permissions
+//	c. a SignBytes function implementing custom signing.
+//
+// In this example, none of these options are used, which means the SignedURL
+// function attempts to use the same authentication that was used to instantiate
+// the Storage client. This authentication must include a private key or have
+// iam.serviceAccounts.signBlob permissions.
 func (svc gcsService) GetPresignedURL(ctx context.Context, bucket, path, filename string) (string, error) {
-	// https://cloud.google.com/storage/docs/access-control/signing-urls-with-helpers
-	// Signing a URL requires credentials authorized to sign a URL. You can pass
-	// these in through SignedURLOptions with one of the following options:
-	//    a. a Google service account private key, obtainable from the Google Developers Console
-	//    b. a Google Access ID with iam.serviceAccounts.signBlob permissions
-	//    c. a SignBytes function implementing custom signing.
-	// In this example, none of these options are used, which means the SignedURL
-	// function attempts to use the same authentication that was used to instantiate
-	// the Storage client. This authentication must include a private key or have
-	// iam.serviceAccounts.signBlob permissions.
 	opts := &storage.SignedURLOptions{
 		Scheme:  storage.SigningSchemeV4,
 		Method:  "GET",
@@ -94,17 +97,20 @@ func (svc gcsService) GetPresignedURL(ctx context.Context, bucket, path, filenam
 	return u, nil
 }
 
+// https://cloud.google.com/storage/docs/access-control/signing-urls-with-helpers
+// Signing a URL requires credentials authorized to sign a URL. You can pass
+// these in through SignedURLOptions with one of the following options:
+//
+//	a. a Google service account private key, obtainable from the Google Developers Console
+//	b. a Google Access ID with iam.serviceAccounts.signBlob permissions
+//	c. a SignBytes function implementing custom signing.
+//
+// In this example, none of these options are used, which means the SignedURL
+// function attempts to use the same authentication that was used to instantiate
+// the Storage client. This authentication must include a private key or have
+// iam.serviceAccounts.signBlob permissions.
 func (svc gcsService) PutPresignedURL(ctx context.Context, bucket, path, filename string) (string, error) {
-	// https://cloud.google.com/storage/docs/access-control/signing-urls-with-helpers
-	// Signing a URL requires credentials authorized to sign a URL. You can pass
-	// these in through SignedURLOptions with one of the following options:
-	//    a. a Google service account private key, obtainable from the Google Developers Console
-	//    b. a Google Access ID with iam.serviceAccounts.signBlob permissions
-	//    c. a SignBytes function implementing custom signing.
-	// In this example, none of these options are used, which means the SignedURL
-	// function attempts to use the same authentication that was used to instantiate
-	// the Storage client. This authentication must include a private key or have
-	// iam.serviceAccounts.signBlob permissions.
+
 	opts := &storage.SignedURLOptions{
 		Scheme:  storage.SigningSchemeV4,
 		Method:  "PUT",
@@ -141,8 +147,8 @@ func signCookie(urlPrefix, keyName string, key []byte, expiration time.Time) (st
 }
 
 // readKeyFile reads the base64url-encoded key file and decodes it.
-func readKeyFile(path string) ([]byte, error) {
-	b, err := ioutil.ReadFile(path)
+func readKeyFile(cookieFilePath string) ([]byte, error) {
+	b, err := ioutil.ReadFile(cookieFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %+v", err)
 	}
@@ -164,7 +170,7 @@ func (svc gcsService) GeneratePresignedCookie(ctx context.Context, domain, path 
 
 	expiration := defaultPresignedCookieDuration
 	signedValue, err := signCookie(
-		fmt.Sprintf("https://%s%s", domain, path),
+		fmt.Sprintf("https://%s/%s", domain, path),
 		cookieKeyName,
 		key,
 		time.Now().Add(expiration),
