@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	SvcLoggerName = "auth.service"
+	SvcLoggerName      = "auth.service"
+	authCookieDuration = 365 * 24 * time.Hour
 )
 
 var (
@@ -90,6 +91,7 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (User, 
 		Value:    jwt,
 		HttpOnly: true,
 		Path:     "/",
+		MaxAge:   int(authCookieDuration.Seconds()),
 	}
 	if svc.secureCookie {
 		cookie.SameSite = http.SameSiteNoneMode

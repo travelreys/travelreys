@@ -189,6 +189,7 @@ func (svc gcsService) GeneratePresignedCookie(ctx context.Context, domain, path 
 		MaxAge:   int(expiration.Seconds()),
 		SameSite: http.SameSiteNoneMode,
 		Secure:   true,
+		HttpOnly: true,
 	}
 	return cookie, nil
 }

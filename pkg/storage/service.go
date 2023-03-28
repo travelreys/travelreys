@@ -10,11 +10,12 @@ import (
 // https://medium.com/google-cloud/using-google-cloud-storage-with-minio-object-storage-c994fe4aab6b
 
 const (
-	storageProviderMinio           = "minio"
-	storageProviderGcs             = "gcs"
-	defaultStorageProvider         = "minio"
-	defaultPresignedURLDuration    = 30 * time.Minute
-	defaultPresignedCookieDuration = 24 * time.Hour
+	storageProviderMinio                  = "minio"
+	storageProviderGcs                    = "gcs"
+	defaultStorageProvider                = "minio"
+	defaultPresignedURLDuration           = 30 * time.Minute
+	defaultPresignedCookieDuration        = 24 * time.Hour
+	DefaultPresignedCookieRefreshDuration = 23 * time.Hour
 )
 
 type Service interface {
