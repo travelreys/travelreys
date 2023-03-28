@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/travelreys/travelreys/pkg/common"
@@ -13,8 +14,9 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	JWTToken string `json:"jwtToken"`
-	Err      error  `json:"error,omitempty"`
+	User   User         `json:"user"`
+	Cookie *http.Cookie `json:"-"`
+	Err    error        `json:"error,omitempty"`
 }
 
 func (r LoginResponse) Error() error {
@@ -27,8 +29,8 @@ func NewLoginEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return LoginResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		jwtTkn, err := svc.Login(ctx, req.Code, OIDCProviderGoogle)
-		return LoginResponse{JWTToken: jwtTkn, Err: err}, nil
+		usr, cookie, err := svc.Login(ctx, req.Code, OIDCProviderGoogle)
+		return LoginResponse{User: usr, Cookie: cookie, Err: err}, nil
 	}
 }
 
@@ -104,5 +106,20 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 		}
 		users, err := svc.List(ctx, req.FF)
 		return ListResponse{Users: users, Err: err}, nil
+	}
+}
+
+type LogoutRequest struct{}
+type LogoutResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r LogoutResponse) Error() error {
+	return r.Err
+}
+
+func NewLogoutEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		return LogoutResponse{}, nil
 	}
 }
