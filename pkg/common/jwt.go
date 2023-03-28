@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	JwtIssuer     = "travelreys"
+	JwtIssuer     = "travelreys.com"
 	JwtClaimIss   = "iss"
 	JwtClaimSub   = "sub"
 	JwtClaimEmail = "email"

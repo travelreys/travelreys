@@ -4,12 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
+)
+
+const (
+	AccessCookieName = "_travelreysAuth"
 )
 
 func errToHttpCode(err error) int {
@@ -46,12 +51,14 @@ func MakeHandler(svc Service) http.Handler {
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode)),
 	}
 
-	loginHandler := kithttp.NewServer(NewLoginEndpoint(svc), decodeLoginRequest, encodeResponse, opts...)
+	loginHandler := kithttp.NewServer(NewLoginEndpoint(svc), decodeLoginRequest, encodeLoginResponse, opts...)
+	logoutHandler := kithttp.NewServer(NewLogoutEndpoint(svc), decodeLogoutRequest, encodeLogoutResponse, opts...)
 	readUserHandler := kithttp.NewServer(NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...)
 	listUsersHandler := kithttp.NewServer(NewListEndpoint(svc), decodeListRequest, encodeResponse, opts...)
 	updateUserHandler := kithttp.NewServer(NewUpdateEndpoint(svc), decodeUpdateRequest, encodeResponse, opts...)
 
 	r.Handle("/api/v1/auth/login", loginHandler).Methods(http.MethodPost)
+	r.Handle("/api/v1/auth/logout", logoutHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/auth/users", listUsersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/auth/users/{id}", readUserHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/auth/users/{id}", updateUserHandler).Methods(http.MethodPut)
@@ -59,14 +66,44 @@ func MakeHandler(svc Service) http.Handler {
 	return r
 }
 
-// Request Decoders
-
 func decodeLoginRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	req := LoginRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
 	}
 	return req, nil
+}
+
+func encodeLoginResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
+		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	resp, ok := response.(LoginResponse)
+	if !ok {
+		return common.ErrorEncodeInvalidResponse
+	}
+	http.SetCookie(w, resp.Cookie)
+	return json.NewEncoder(w).Encode(response)
+}
+
+func decodeLogoutRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return LogoutRequest{}, nil
+}
+
+func encodeLogoutResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	cookie := &http.Cookie{
+		Name:     AccessCookieName,
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		Expires:  time.Now(),
+		// SameSite: http.SameSiteNoneMode,
+		// Secure:   true,
+	}
+	http.SetCookie(w, cookie)
+	return nil
 }
 
 func decodeReadRequest(_ context.Context, r *http.Request) (interface{}, error) {

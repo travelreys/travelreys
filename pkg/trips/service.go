@@ -2,7 +2,6 @@ package trips
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"os"
@@ -19,7 +18,7 @@ const ()
 var (
 	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET") // "trips"
 	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET") // "media"
-	mediaCDNDomain   = os.Getenv("TRAVELREYS_MEDIA_DOMAIN")
+	mediaCDNDomain   = os.Getenv("TRAVELREYS_MEDIA_DOMAIN") // cdn.travelreys.com
 )
 
 type Service interface {
@@ -35,7 +34,7 @@ type Service interface {
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
 
 	UploadMediaPresignedURL(ctx context.Context, ID, fileID string) (string, error)
-	GenerateMediaPresignedCookie(ctx context.Context, ID, domain string) (*http.Cookie, error)
+	GenerateMediaPresignedCookie(ctx context.Context) (*http.Cookie, error)
 }
 
 type service struct {
@@ -131,7 +130,7 @@ func (svc service) UploadMediaPresignedURL(ctx context.Context, tripID, fileID s
 	return svc.storageSvc.PutPresignedURL(ctx, mediaBucket, filepath.Join(tripID, fileID), fileID)
 }
 
-func (svc service) GenerateMediaPresignedCookie(ctx context.Context, tripID, domain string) (*http.Cookie, error) {
-	ck, err := svc.storageSvc.GeneratePresignedCookie(ctx, domain, fmt.Sprintf("/%s", tripID))
+func (svc service) GenerateMediaPresignedCookie(ctx context.Context) (*http.Cookie, error) {
+	ck, err := svc.storageSvc.GeneratePresignedCookie(ctx, mediaCDNDomain, mediaBucket)
 	return ck, err
 }

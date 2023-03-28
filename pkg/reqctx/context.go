@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	AuthHeader = "authorization"
+	AuthHeader     = "authorization"
+	AuthCookieName = "_travelreysAuth"
 )
 
 type ContextKey int
@@ -28,14 +29,12 @@ func (ci ClientInfo) HasEmptyID() bool {
 func makeClientInfo(r *http.Request) ClientInfo {
 	ci := ClientInfo{}
 
-	authorization := r.Header.Get(AuthHeader)
-	if authorization == "" {
+	cookie, err := r.Cookie(AuthCookieName)
+	if err != nil || cookie.Value == "" {
 		return ci
 	}
-	jwtToken, err := common.ParseBearerAndToken(authorization)
-	if err != nil {
-		return ci
-	}
+
+	jwtToken := cookie.Value
 	ci.RawToken = jwtToken
 	claims, err := common.ParseJWT(jwtToken, common.GetJwtSecret())
 	if err != nil {

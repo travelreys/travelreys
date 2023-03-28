@@ -283,11 +283,7 @@ func (r GenerateMediaPresignedCookieResponse) Error() error {
 
 func NewGenerateMediaPresignedCookieEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(GenerateMediaPresignedCookieRequest)
-		if !ok {
-			return GenerateMediaPresignedCookieResponse{Err: common.ErrorEndpointReqMismatch}, nil
-		}
-		cookie, err := svc.GenerateMediaPresignedCookie(ctx, req.ID, req.MediaDomain)
+		cookie, err := svc.GenerateMediaPresignedCookie(ctx)
 		return GenerateMediaPresignedCookieResponse{
 			Cookie: cookie,
 			Err:    err,

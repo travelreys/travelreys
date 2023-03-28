@@ -3,7 +3,6 @@ package trips
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"path/filepath"
 
@@ -15,8 +14,9 @@ import (
 )
 
 const (
-	URLPathVarID  = "id"
-	maxUploadSize = 25 * 1024 * 1024 // 25MB
+	URLPathVarID     = "id"
+	mediaValidCookie = "_travelreys_media"
+	maxUploadSize    = 25 * 1024 * 1024 // 25MB
 )
 
 func errToHttpCode(err error) int {
@@ -103,7 +103,7 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadAttachmentPresignedURLHandler).Methods(http.MethodGet)
 
 	r.Handle("/api/v1/trips/{id}/media/upload/pre-signed", uploadMediaPresignedURLHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trips/{id}/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -217,18 +217,7 @@ func decodeUploadMediaPresignedURLRequest(_ context.Context, r *http.Request) (i
 }
 
 func decodeGenerateMediaPresignedCookieRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	ID, ok := vars[URLPathVarID]
-	if !ok {
-		return nil, common.ErrInvalidRequest
-	}
-	mediaDomain := r.URL.Query().Get("mediaDomain")
-	cookies := r.Cookies()
-	for _, c := range cookies {
-		fmt.Println(c)
-	}
-
-	return GenerateMediaPresignedCookieRequest{ID: ID, MediaDomain: mediaDomain}, nil
+	return GenerateMediaPresignedCookieRequest{}, nil
 }
 
 func encodeGenerateMediaPresignedCookieResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -241,8 +230,16 @@ func encodeGenerateMediaPresignedCookieResponse(ctx context.Context, w http.Resp
 	if !ok {
 		return common.ErrorEncodeInvalidResponse
 	}
+
 	if resp.Cookie != nil {
 		http.SetCookie(w, resp.Cookie)
+		expCookie := &http.Cookie{
+			Name:   mediaValidCookie,
+			Value:  "1",
+			Path:   "/",
+			MaxAge: int(storage.DefaultPresignedCookieRefreshDuration.Seconds()),
+		}
+		http.SetCookie(w, expCookie)
 	}
 	return json.NewEncoder(w).Encode(response)
 }

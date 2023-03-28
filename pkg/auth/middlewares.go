@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/travelreys/travelreys/pkg/reqctx"
 	"go.uber.org/zap"
@@ -21,7 +22,7 @@ func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
 	return &rbacMiddleware{svc, logger}
 }
 
-func (mw rbacMiddleware) Login(ctx context.Context, authCode, provider string) (string, error) {
+func (mw rbacMiddleware) Login(ctx context.Context, authCode, provider string) (User, *http.Cookie, error) {
 	return mw.next.Login(ctx, authCode, provider)
 }
 

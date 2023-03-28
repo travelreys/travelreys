@@ -13,27 +13,29 @@ import (
 )
 
 const (
-	cfgFlagHost        = "host"
-	cfgFlagHostname    = "hostname"
-	cfgFlagPort        = "port"
-	cfgFlagLogLevel    = "log-level"
-	cfgFlagCORSOrigin  = "cors-origin"
-	cfgFlagMongoURL    = "mongo-url"
-	cfgFlagMongoDBName = "mongo-dbname"
-	cfgFlagNatsURL     = "nats-url"
-	cfgFlagRedisURL    = "redis-url"
+	cfgFlagHost         = "host"
+	cfgFlagHostname     = "hostname"
+	cfgFlagPort         = "port"
+	cfgFlagLogLevel     = "log-level"
+	cfgFlagCORSOrigin   = "cors-origin"
+	cfgFlagMongoURL     = "mongo-url"
+	cfgFlagMongoDBName  = "mongo-dbname"
+	cfgFlagNatsURL      = "nats-url"
+	cfgFlagRedisURL     = "redis-url"
+	cfgFlagSecureCookie = "secure-cookie"
 
 	envVarPrefix = "TRAVELREYS"
 )
 
 type ServerConfig struct {
-	Host        string `mapstructure:"host"`
-	Port        string `mapstructure:"port"`
-	CORSOrigin  string `mapstructure:"cors-origin"`
-	NatsURL     string `mapstructure:"nats-url"`
-	RedisURL    string `mapstructure:"redis-url"`
-	MongoURL    string `mapstructure:"mongo-url"`
-	MongoDBName string `mapstructure:"mongo-dbname"`
+	Host         string `mapstructure:"host"`
+	Port         string `mapstructure:"port"`
+	CORSOrigin   string `mapstructure:"cors-origin"`
+	SecureCookie bool   `mapstructure:"secure-cookie"`
+	NatsURL      string `mapstructure:"nats-url"`
+	RedisURL     string `mapstructure:"redis-url"`
+	MongoURL     string `mapstructure:"mongo-url"`
+	MongoDBName  string `mapstructure:"mongo-dbname"`
 }
 
 func (cfg ServerConfig) HTTPBindAddress() string {
@@ -52,6 +54,7 @@ func main() {
 	viper.SetDefault(cfgFlagRedisURL, "")
 	viper.SetDefault(cfgFlagMongoURL, "")
 	viper.SetDefault(cfgFlagMongoDBName, "")
+	viper.SetDefault(cfgFlagSecureCookie, true)
 
 	viper.SetEnvPrefix(envVarPrefix)
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
@@ -60,6 +63,7 @@ func main() {
 	pflag.String(cfgFlagHost, "", "host address to bind server")
 	pflag.String(cfgFlagPort, "", "http server port")
 	pflag.String(cfgFlagLogLevel, "", "log level")
+	pflag.Bool(cfgFlagSecureCookie, true, "secure cookie")
 	pflag.Parse()
 
 	viper.BindPFlags(pflag.CommandLine)
