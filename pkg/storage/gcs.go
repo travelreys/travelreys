@@ -170,7 +170,7 @@ func (svc gcsService) GeneratePresignedCookie(ctx context.Context, domain, path 
 
 	expiration := defaultPresignedCookieDuration
 	signedValue, err := signCookie(
-		fmt.Sprintf("https://%s/%s", domain, path),
+		fmt.Sprintf("https://%s/%s/", domain, path),
 		cookieKeyName,
 		key,
 		time.Now().Add(expiration),
@@ -181,11 +181,12 @@ func (svc gcsService) GeneratePresignedCookie(ctx context.Context, domain, path 
 
 	// Use Go's http.Cookie type to construct a cookie.
 	// domain and path should match the user-facing URL for accessing content.
+	// Best practice: only send the cookie for paths it is valid for
 	cookie := &http.Cookie{
 		Name:     cookieHeader,
 		Value:    signedValue,
-		Path:     path, // Best practice: only send the cookie for paths it is valid for
-		Domain:   domain,
+		Path:     "/",
+		Domain:   os.Getenv("TRAVELREYS_MEDIA_COOKIE_DOMAIN"),
 		MaxAge:   int(expiration.Seconds()),
 		SameSite: http.SameSiteNoneMode,
 		Secure:   true,
