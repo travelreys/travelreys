@@ -72,6 +72,7 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (User, 
 
 	existUsr, err := svc.store.Read(ctx, ReadFilter{Email: usr.Email})
 	if err == ErrUserNotFound {
+		usr.CreatedAt = time.Now()
 		if err := svc.createUser(ctx, usr); err != nil {
 			return User{}, nil, err
 		}

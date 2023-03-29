@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -26,13 +27,14 @@ type PhoneNumber struct {
 }
 
 type User struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
+	ID    string `json:"id" bson:"id"`
+	Email string `json:"email" bson:"email"`
+	Name  string `json:"name" bson:"name"`
 
-	PhoneNumber PhoneNumber `json:"phoneNumber"`
+	CreatedAt   time.Time   `json:"createdAt" bson:"createdAt"`
+	PhoneNumber PhoneNumber `json:"phoneNumber" bson:"phonenumber"`
 
-	Labels map[string]string `json:"labels"`
+	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
 type UsersList []User
