@@ -80,7 +80,7 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/auth/users/{id}", updateUserHandler).Methods(http.MethodPut)
 	r.Handle("/api/v1/auth/users/{id}", deleteUserHandler).Methods(http.MethodDelete)
 	r.Handle("/api/v1/auth/users/{id}/avatar/upload/pre-signed", uploadAvatarPresignedURLHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trips/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/auth/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
 
 	return r
 }
