@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/storage"
 	"go.uber.org/zap"
 )
 
@@ -17,6 +20,11 @@ const (
 )
 
 var (
+	avatarFilePrefix = "avatar"
+	avatarBucket     = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
+	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
+	mediaCDNDomain   = os.Getenv("TRAVELREYS_MEDIA_DOMAIN") // cdn.travelreys.com
+
 	ErrProviderGoogleError  = errors.New("auth.service.google.error")
 	ErrProviderNotSupported = errors.New("auth.service.provider.notsupported")
 )
@@ -26,6 +34,10 @@ type Service interface {
 	Read(context.Context, string) (User, error)
 	List(ctx context.Context, ff ListFilter) (UsersList, error)
 	Update(context.Context, string, UpdateFilter) error
+	Delete(context.Context, string) error
+
+	UploadAvatarPresignedURL(context.Context, string) (string, error)
+	GenerateMediaPresignedCookie(ctx context.Context) (*http.Cookie, error)
 }
 
 type service struct {
@@ -33,14 +45,22 @@ type service struct {
 	store        Store
 	secureCookie bool
 
-	logger *zap.Logger
+	storageSvc storage.Service
+	logger     *zap.Logger
 }
 
-func NewService(gp GoogleProvider, store Store, secureCookie bool, logger *zap.Logger) Service {
+func NewService(
+	gp GoogleProvider,
+	store Store,
+	secureCookie bool,
+	storageSvc storage.Service,
+	logger *zap.Logger,
+) Service {
 	return &service{
 		google:       gp,
 		store:        store,
 		secureCookie: secureCookie,
+		storageSvc:   storageSvc,
 		logger:       logger.Named(SvcLoggerName),
 	}
 }
@@ -112,6 +132,29 @@ func (svc service) Update(ctx context.Context, ID string, ff UpdateFilter) error
 
 func (svc service) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	return svc.store.List(ctx, ff)
+}
+
+func (svc service) Delete(ctx context.Context, ID string) error {
+	ff := UpdateFilter{
+		Email:       common.StringPtr(""),
+		Name:        common.StringPtr(""),
+		PhoneNumber: &PhoneNumber{},
+		Labels:      &common.Labels{},
+	}
+	return svc.store.Update(ctx, ID, ff)
+}
+
+func (svc service) UploadAvatarPresignedURL(ctx context.Context, ID string) (string, error) {
+	return svc.storageSvc.PutPresignedURL(
+		ctx,
+		avatarBucket,
+		filepath.Join(avatarFilePrefix, ID),
+		ID,
+	)
+}
+
+func (svc service) GenerateMediaPresignedCookie(ctx context.Context) (*http.Cookie, error) {
+	return svc.storageSvc.GeneratePresignedCookie(ctx, mediaCDNDomain, mediaBucket)
 }
 
 func (svc service) createUser(ctx context.Context, usr User) error {

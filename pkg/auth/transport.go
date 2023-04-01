@@ -11,10 +11,13 @@ import (
 
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/storage"
 )
 
 const (
 	AccessCookieName = "_travelreysAuth"
+	mediaValidCookie = "_travelreys_media"
+	cdnCookie        = "Cloud-CDN-Cookie"
 )
 
 func errToHttpCode(err error) int {
@@ -56,12 +59,28 @@ func MakeHandler(svc Service) http.Handler {
 	readUserHandler := kithttp.NewServer(NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...)
 	listUsersHandler := kithttp.NewServer(NewListEndpoint(svc), decodeListRequest, encodeResponse, opts...)
 	updateUserHandler := kithttp.NewServer(NewUpdateEndpoint(svc), decodeUpdateRequest, encodeResponse, opts...)
+	deleteUserHandler := kithttp.NewServer(NewDeleteEndpoint(svc), decodeDeleteRequest, encodeDeleteResponse, opts...)
+	uploadAvatarPresignedURLHandler := kithttp.NewServer(
+		NewUploadAvatarPresignedURLEndpoint(svc),
+		decodeUploadAvatarPresignedURLRequest,
+		encodeResponse,
+		opts...,
+	)
+	generateMediaPresignedCookieHandler := kithttp.NewServer(
+		NewGenerateMediaPresignedCookieEndpoint(svc),
+		decodeGenerateMediaPresignedCookieRequest,
+		encodeGenerateMediaPresignedCookieResponse,
+		opts...,
+	)
 
 	r.Handle("/api/v1/auth/login", loginHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/auth/logout", logoutHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/auth/users", listUsersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/auth/users/{id}", readUserHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/auth/users/{id}", updateUserHandler).Methods(http.MethodPut)
+	r.Handle("/api/v1/auth/users/{id}", deleteUserHandler).Methods(http.MethodDelete)
+	r.Handle("/api/v1/auth/users/{id}/avatar/upload/pre-signed", uploadAvatarPresignedURLHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/auth/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -93,16 +112,30 @@ func decodeLogoutRequest(_ context.Context, r *http.Request) (interface{}, error
 }
 
 func encodeLogoutResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	cookie := &http.Cookie{
+	accessCookie := &http.Cookie{
 		Name:     AccessCookieName,
 		Value:    "",
 		HttpOnly: true,
 		Path:     "/",
 		Expires:  time.Now(),
-		// SameSite: http.SameSiteNoneMode,
-		// Secure:   true,
 	}
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, accessCookie)
+	mediaCookie := &http.Cookie{
+		Name:     mediaValidCookie,
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		Expires:  time.Now(),
+	}
+	http.SetCookie(w, mediaCookie)
+	cdnCookie := &http.Cookie{
+		Name:     cdnCookie,
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		Expires:  time.Now(),
+	}
+	http.SetCookie(w, cdnCookie)
 	return nil
 }
 
@@ -131,4 +164,76 @@ func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) 
 		req.FF.Email = common.StringPtr(r.URL.Query().Get(bsonKeyEmail))
 	}
 	return req, nil
+}
+
+func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	req := DeleteRequest{
+		ID: vars[bsonKeyID],
+	}
+	return req, nil
+}
+
+func encodeDeleteResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	accessCookie := &http.Cookie{
+		Name:     AccessCookieName,
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		Expires:  time.Now(),
+	}
+	http.SetCookie(w, accessCookie)
+	mediaCookie := &http.Cookie{
+		Name:     mediaValidCookie,
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		Expires:  time.Now(),
+	}
+	http.SetCookie(w, mediaCookie)
+	cdnCookie := &http.Cookie{
+		Name:     cdnCookie,
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		Expires:  time.Now(),
+	}
+	http.SetCookie(w, cdnCookie)
+	return nil
+}
+
+func decodeUploadAvatarPresignedURLRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	req := UploadAvatarPresignedURLRequest{
+		ID: vars[bsonKeyID],
+	}
+	return req, nil
+}
+
+func decodeGenerateMediaPresignedCookieRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return GenerateMediaPresignedCookieRequest{}, nil
+}
+
+func encodeGenerateMediaPresignedCookieResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
+		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	resp, ok := response.(GenerateMediaPresignedCookieResponse)
+	if !ok {
+		return common.ErrorEncodeInvalidResponse
+	}
+
+	if resp.Cookie != nil {
+		http.SetCookie(w, resp.Cookie)
+		expCookie := &http.Cookie{
+			Name:   mediaValidCookie,
+			Value:  "1",
+			Path:   "/",
+			MaxAge: int(storage.DefaultPresignedCookieRefreshDuration.Seconds()),
+		}
+		http.SetCookie(w, expCookie)
+	}
+	return json.NewEncoder(w).Encode(response)
 }

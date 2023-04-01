@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	URLPathVarID     = "id"
-	mediaValidCookie = "_travelreys_media"
-	maxUploadSize    = 25 * 1024 * 1024 // 25MB
+	URLPathVarID = "id"
+
+	maxUploadSize = 25 * 1024 * 1024 // 25MB
 )
 
 func errToHttpCode(err error) int {
@@ -85,12 +85,6 @@ func MakeHandler(svc Service) http.Handler {
 		NewUploadMediaPresignedURLEndpoint(svc),
 		decodeUploadMediaPresignedURLRequest, encodeResponse, opts...,
 	)
-	generateMediaPresignedCookieHandler := kithttp.NewServer(
-		NewGenerateMediaPresignedCookieEndpoint(svc),
-		decodeGenerateMediaPresignedCookieRequest,
-		encodeGenerateMediaPresignedCookieResponse,
-		opts...,
-	)
 
 	r.Handle("/api/v1/trips", createHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/trips", listHandler).Methods(http.MethodGet)
@@ -101,9 +95,7 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips/{id}/storage", deleteAttachmentHandler).Methods(http.MethodDelete)
 	r.Handle("/api/v1/trips/{id}/storage/download/pre-signed", downloadAttachmentPresignedURLHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadAttachmentPresignedURLHandler).Methods(http.MethodGet)
-
 	r.Handle("/api/v1/trips/{id}/media/upload/pre-signed", uploadMediaPresignedURLHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trips/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -214,32 +206,4 @@ func decodeUploadMediaPresignedURLRequest(_ context.Context, r *http.Request) (i
 		ID:       ID,
 		Filename: filename,
 	}, nil
-}
-
-func decodeGenerateMediaPresignedCookieRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return GenerateMediaPresignedCookieRequest{}, nil
-}
-
-func encodeGenerateMediaPresignedCookieResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
-		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
-		return nil
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	resp, ok := response.(GenerateMediaPresignedCookieResponse)
-	if !ok {
-		return common.ErrorEncodeInvalidResponse
-	}
-
-	if resp.Cookie != nil {
-		http.SetCookie(w, resp.Cookie)
-		expCookie := &http.Cookie{
-			Name:   mediaValidCookie,
-			Value:  "1",
-			Path:   "/",
-			MaxAge: int(storage.DefaultPresignedCookieRefreshDuration.Seconds()),
-		}
-		http.SetCookie(w, expCookie)
-	}
-	return json.NewEncoder(w).Encode(response)
 }

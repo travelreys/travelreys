@@ -52,3 +52,33 @@ func (mw rbacMiddleware) Update(ctx context.Context, ID string, ff UpdateFilter)
 	}
 	return mw.next.Update(ctx, ID, ff)
 }
+
+func (mw rbacMiddleware) Delete(ctx context.Context, ID string) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil {
+		return ErrRBAC
+	}
+	if ci.UserID != ID {
+		return ErrRBAC
+	}
+	return mw.next.Delete(ctx, ID)
+}
+
+func (mw rbacMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID string) (string, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil {
+		return "", ErrRBAC
+	}
+	if ci.UserID != ID {
+		return "", ErrRBAC
+	}
+	return mw.next.UploadAvatarPresignedURL(ctx, ID)
+}
+
+func (mw rbacMiddleware) GenerateMediaPresignedCookie(ctx context.Context) (*http.Cookie, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+	return mw.next.GenerateMediaPresignedCookie(ctx)
+}

@@ -38,13 +38,20 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	ctx := context.Background()
 
+	// Storage
+	storageSvc, err := storage.NewDefaultStorageService(ctx)
+	if err != nil {
+		logger.Error("unable to connect storage service", zap.Error(err))
+		return nil, err
+	}
+
 	// Auth
 	gp, err := auth.NewDefaultGoogleProvider()
 	if err != nil {
 		return nil, err
 	}
 	authStore := auth.NewStore(ctx, db, logger)
-	authSvc := auth.NewService(gp, authStore, cfg.SecureCookie, logger)
+	authSvc := auth.NewService(gp, authStore, cfg.SecureCookie, storageSvc, logger)
 	authSvc = auth.ServiceWithRBACMiddleware(authSvc, logger)
 
 	// Images
@@ -55,13 +62,6 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	mapsSvc, err := maps.NewDefaulService(logger)
 	if err != nil {
 		logger.Error("unable to connect map service", zap.Error(err))
-		return nil, err
-	}
-
-	// Storage
-	storageSvc, err := storage.NewDefaultStorageService(ctx)
-	if err != nil {
-		logger.Error("unable to connect storage service", zap.Error(err))
 		return nil, err
 	}
 
