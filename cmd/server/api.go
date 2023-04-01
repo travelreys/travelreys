@@ -50,8 +50,10 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	fb := auth.NewFacebookProvider()
+
 	authStore := auth.NewStore(ctx, db, logger)
-	authSvc := auth.NewService(gp, authStore, cfg.SecureCookie, storageSvc, logger)
+	authSvc := auth.NewService(gp, fb, authStore, cfg.SecureCookie, storageSvc, logger)
 	authSvc = auth.ServiceWithRBACMiddleware(authSvc, logger)
 
 	// Images

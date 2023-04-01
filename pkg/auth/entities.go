@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	OIDCProviderGoogle = "google"
+	OIDCProviderGoogle   = "google"
+	OIDCProviderFacebook = "facebook"
 )
 
 const (
@@ -19,6 +20,9 @@ const (
 	LabelGoogleID            = "google|id"
 	LabelGoogleUserPicture   = "google|picture"
 	LabelGoogleVerifiedEmail = "google|verifiedEmail"
+
+	LabelFacebookID          = "facebook|id"
+	LabelFacebookUserPicture = "facebook|picure"
 )
 
 type PhoneNumber struct {
@@ -62,6 +66,42 @@ func UserFromGoogleUser(gusr GoogleUser) User {
 			LabelGoogleUserPicture:   gusr.Picture,
 			LabelGoogleVerifiedEmail: fmt.Sprintf("%t", gusr.VerifiedEmail),
 			LabelDefaultLocale:       gusr.Locale,
+		},
+	}
+}
+
+func (gUsr GoogleUser) AddLabelsToUser(usr *User) {
+	usr.Labels[LabelGoogleID] = gUsr.ID
+	usr.Labels[LabelGoogleUserPicture] = gUsr.Picture
+	usr.Labels[LabelGoogleVerifiedEmail] = fmt.Sprintf("%t", gUsr.VerifiedEmail)
+	usr.Labels[LabelDefaultLocale] = gUsr.Locale
+}
+
+type FacebookUser struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Email   string `json:"email"`
+	Picture struct {
+		Data struct {
+			URL string `json:"url"`
+		}
+	} `json:"picture"`
+}
+
+func (fbUsr FacebookUser) AddLabelsToUser(usr *User) {
+	usr.Labels[LabelFacebookID] = fbUsr.ID
+	usr.Labels[LabelFacebookUserPicture] = fbUsr.Picture.Data.URL
+}
+
+func UserFromFBUser(fbUsr FacebookUser) User {
+	return User{
+		ID:          uuid.New().String(),
+		Email:       fbUsr.Email,
+		Name:        fbUsr.Name,
+		PhoneNumber: PhoneNumber{},
+		Labels: map[string]string{
+			LabelFacebookID:          fbUsr.ID,
+			LabelFacebookUserPicture: fbUsr.Picture.Data.URL,
 		},
 	}
 }
