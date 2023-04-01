@@ -29,7 +29,7 @@ func NewLoginEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return LoginResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		usr, cookie, err := svc.Login(ctx, req.Code, OIDCProviderGoogle)
+		usr, cookie, err := svc.Login(ctx, req.Code, req.Provider)
 		return LoginResponse{User: usr, Cookie: cookie, Err: err}, nil
 	}
 }

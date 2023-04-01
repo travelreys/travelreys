@@ -25,8 +25,9 @@ var (
 	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
 	mediaCDNDomain   = os.Getenv("TRAVELREYS_MEDIA_DOMAIN") // cdn.travelreys.com
 
-	ErrProviderGoogleError  = errors.New("auth.service.google.error")
-	ErrProviderNotSupported = errors.New("auth.service.provider.notsupported")
+	ErrProviderGoogleError   = errors.New("auth.service.google.error")
+	ErrProviderFacebookError = errors.New("auth.service.facebook.error")
+	ErrProviderNotSupported  = errors.New("auth.service.provider.notsupported")
 )
 
 type Service interface {
@@ -42,6 +43,7 @@ type Service interface {
 
 type service struct {
 	google       GoogleProvider
+	fb           FacebookProvider
 	store        Store
 	secureCookie bool
 
@@ -51,6 +53,7 @@ type service struct {
 
 func NewService(
 	gp GoogleProvider,
+	fb FacebookProvider,
 	store Store,
 	secureCookie bool,
 	storageSvc storage.Service,
@@ -58,6 +61,7 @@ func NewService(
 ) Service {
 	return &service{
 		google:       gp,
+		fb:           fb,
 		store:        store,
 		secureCookie: secureCookie,
 		storageSvc:   storageSvc,
@@ -65,27 +69,45 @@ func NewService(
 	}
 }
 
-func (svc service) googleLogin(ctx context.Context, authCode string) (User, error) {
+func (svc service) googleLogin(ctx context.Context, authCode string) (GoogleUser, error) {
 	gusr, err := svc.google.TokenToUserInfo(ctx, authCode)
 	if err != nil {
 		svc.logger.Error("google login failed", zap.Error(err))
-		return User{}, ErrProviderGoogleError
+		return GoogleUser{}, ErrProviderGoogleError
 	}
-	usr := UserFromGoogleUser(gusr)
-	return usr, nil
+	return gusr, nil
+}
+
+func (svc service) fbLogin(ctx context.Context, authCode string) (FacebookUser, error) {
+	fbUsr, err := svc.fb.TokenToUserInfo(ctx, authCode)
+	if err != nil {
+		svc.logger.Error("facebook login failed", zap.Error(err))
+		return FacebookUser{}, ErrProviderFacebookError
+	}
+	return fbUsr, nil
 }
 
 func (svc service) Login(ctx context.Context, authCode, provider string) (User, *http.Cookie, error) {
 	var (
-		usr User
-		err error
+		usr   User
+		gUsr  GoogleUser
+		fbUsr FacebookUser
+		err   error
 	)
 	if provider == OIDCProviderGoogle {
-		usr, err = svc.googleLogin(ctx, authCode)
+		gUsr, err = svc.googleLogin(ctx, authCode)
 		if err != nil {
 			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
 			return User{}, nil, err
 		}
+		usr = UserFromGoogleUser(gUsr)
+	} else if provider == OIDCProviderFacebook {
+		fbUsr, err = svc.fbLogin(ctx, authCode)
+		if err != nil {
+			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
+			return User{}, nil, err
+		}
+		usr = UserFromFBUser(fbUsr)
 	} else {
 		return User{}, nil, ErrProviderNotSupported
 	}
@@ -100,6 +122,16 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (User, 
 		return User{}, nil, err
 	} else {
 		usr = existUsr
+	}
+
+	if provider == OIDCProviderGoogle {
+		gUsr.AddLabelsToUser(&existUsr)
+	} else if provider == OIDCProviderFacebook {
+		fbUsr.AddLabelsToUser(&existUsr)
+	}
+
+	if err := svc.store.Save(ctx, existUsr); err != nil {
+		return User{}, nil, err
 	}
 
 	jwt, err := svc.issueJwtToken(usr)
