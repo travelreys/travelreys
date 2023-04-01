@@ -12,10 +12,13 @@ import (
 )
 
 const (
-	bsonKeyID       = "id"
-	bsonKeyEmail    = "email"
-	collectionUsers = "users"
-	storeLoggerName = "auth.store"
+	bsonKeyID          = "id"
+	bsonKeyEmail       = "email"
+	bsonKeyName        = "name"
+	bsonKeyPhoneNumber = "phonenumber"
+	bsonKeyLabels      = "labels"
+	collectionUsers    = "users"
+	storeLoggerName    = "auth.store"
 )
 
 var (
@@ -29,7 +32,28 @@ type ReadFilter struct {
 }
 
 type UpdateFilter struct {
-	Labels common.Labels `json:"labels" bson:"labels"`
+	Email       *string
+	Name        *string
+	PhoneNumber *PhoneNumber
+	Labels      *common.Labels `json:"labels" bson:"labels"`
+}
+
+func (ff UpdateFilter) toBson() bson.M {
+	bsonM := bson.M{}
+
+	if ff.Email != nil {
+		bsonM[bsonKeyEmail] = ff.Email
+	}
+	if ff.Name != nil {
+		bsonM[bsonKeyName] = ff.Name
+	}
+	if ff.PhoneNumber != nil {
+		bsonM[bsonKeyPhoneNumber] = ff.PhoneNumber
+	}
+	if ff.Labels != nil {
+		bsonM[bsonKeyLabels] = ff.Labels
+	}
+	return bsonM
 }
 
 type ListFilter struct {
@@ -100,12 +124,16 @@ func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 }
 
 func (s store) Update(ctx context.Context, ID string, ff UpdateFilter) error {
-	_, err := s.usrsColl.UpdateOne(ctx, bson.M{bsonKeyID: ID}, bson.M{"$set": ff})
+	_, err := s.usrsColl.UpdateOne(ctx, bson.M{bsonKeyID: ID}, bson.M{"$set": ff.toBson()})
 	if err == mongo.ErrNoDocuments {
 		return ErrUserNotFound
 	}
 	if err != nil {
-		s.logger.Error("Update", zap.String("ID", ID), zap.String("ff", common.FmtString(ff)), zap.Error(err))
+		s.logger.Error("Update",
+			zap.String("ID", ID),
+			zap.String("ff", common.FmtString(ff)),
+			zap.Error(err),
+		)
 	}
 	return err
 }

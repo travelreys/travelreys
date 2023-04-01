@@ -110,6 +110,7 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type LogoutRequest struct{}
+
 type LogoutResponse struct {
 	Err error `json:"error,omitempty"`
 }
@@ -121,5 +122,81 @@ func (r LogoutResponse) Error() error {
 func NewLogoutEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		return LogoutResponse{}, nil
+	}
+}
+
+type DeleteRequest struct {
+	ID string
+}
+
+type DeleteResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r DeleteResponse) Error() error {
+	return r.Err
+}
+
+func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(DeleteRequest)
+		if !ok {
+			return DeleteResponse{
+				Err: common.ErrorEndpointReqMismatch,
+			}, nil
+		}
+		err := svc.Delete(ctx, req.ID)
+		return DeleteResponse{err}, nil
+	}
+}
+
+type UploadAvatarPresignedURLRequest struct {
+	ID string
+}
+
+type UploadAvatarPresignedURLResponse struct {
+	PresignedURL string `json:"presignedURL"`
+	Err          error  `json:"error,omitempty"`
+}
+
+func (r UploadAvatarPresignedURLResponse) Error() error {
+	return r.Err
+}
+
+func NewUploadAvatarPresignedURLEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(UploadAvatarPresignedURLRequest)
+		if !ok {
+			return UploadAvatarPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		presignedURL, err := svc.UploadAvatarPresignedURL(ctx, req.ID)
+		return UploadAvatarPresignedURLResponse{
+			PresignedURL: presignedURL,
+			Err:          err,
+		}, nil
+	}
+}
+
+type GenerateMediaPresignedCookieRequest struct {
+	ID          string `json:"id"`
+	MediaDomain string `json:"mediaDomain"`
+}
+
+type GenerateMediaPresignedCookieResponse struct {
+	Cookie *http.Cookie `json:"-"`
+	Err    error        `json:"error,omitempty"`
+}
+
+func (r GenerateMediaPresignedCookieResponse) Error() error {
+	return r.Err
+}
+
+func NewGenerateMediaPresignedCookieEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		cookie, err := svc.GenerateMediaPresignedCookie(ctx)
+		return GenerateMediaPresignedCookieResponse{
+			Cookie: cookie,
+			Err:    err,
+		}, nil
 	}
 }
