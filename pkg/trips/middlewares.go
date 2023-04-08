@@ -40,6 +40,10 @@ func (mw rbacMiddleware) Read(ctx context.Context, ID string) (Trip, error) {
 	return mw.next.Read(ctx, ID)
 }
 
+func (mw rbacMiddleware) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+	return mw.next.ReadShare(ctx, ID)
+}
+
 func (mw rbacMiddleware) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {

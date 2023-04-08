@@ -62,6 +62,9 @@ func MakeHandler(svc Service) http.Handler {
 	readHandler := kithttp.NewServer(
 		NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...,
 	)
+	readShareHandler := kithttp.NewServer(
+		NewReadShareEndpoint(svc), decodeReadRequest, encodeResponse, opts...,
+	)
 	readMembersHandler := kithttp.NewServer(
 		NewReadMembersEndpoint(svc), decodeReadMembersRequest, encodeResponse, opts...,
 	)
@@ -89,6 +92,7 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips", createHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/trips", listHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}", readHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/{id}/share", readShareHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}/members", readMembersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}", deleteHandler).Methods(http.MethodDelete)
 

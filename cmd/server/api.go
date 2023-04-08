@@ -54,7 +54,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	authStore := auth.NewStore(ctx, db, logger)
 	authSvc := auth.NewService(gp, fb, authStore, cfg.SecureCookie, storageSvc, logger)
-	authSvc = auth.ServiceWithRBACMiddleware(authSvc, logger)
+	authSvcWithRBAC := auth.ServiceWithRBACMiddleware(authSvc, logger)
 
 	// Images
 	imageSvc := images.NewService(images.NewDefaultWebAPI(logger))
@@ -99,7 +99,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.HandleFunc("/healthz", api.HealthzHandler)
 	r.HandleFunc("/ws", wsSvr.HandleFunc)
 
-	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvc))
+	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvcWithRBAC))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))

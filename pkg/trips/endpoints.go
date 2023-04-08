@@ -41,8 +41,8 @@ func NewCreateEndpoint(svc Service) endpoint.Endpoint {
 		}
 
 		creator := NewMember(ci.UserID, MemberRoleCreator)
-		plan, err := svc.Create(ctx, creator, req.Name, req.StartDate, req.EndDate)
-		return CreateResponse{Trip: plan, Err: err}, nil
+		trip, err := svc.Create(ctx, creator, req.Name, req.StartDate, req.EndDate)
+		return CreateResponse{Trip: trip, Err: err}, nil
 	}
 }
 
@@ -77,13 +77,24 @@ func NewReadEndpoint(svc Service) endpoint.Endpoint {
 			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
 		if req.WithMembers {
-			plan, members, err := svc.ReadWithMembers(ctx, req.ID)
+			trip, members, err := svc.ReadWithMembers(ctx, req.ID)
 			return ReadWithMembersResponse{
-				Trip: plan, Members: members, Err: err,
+				Trip: trip, Members: members, Err: err,
 			}, nil
 		}
-		plan, err := svc.Read(ctx, req.ID)
-		return ReadResponse{Trip: plan, Err: err}, nil
+		trip, err := svc.Read(ctx, req.ID)
+		return ReadResponse{Trip: trip, Err: err}, nil
+	}
+}
+
+func NewReadShareEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ReadRequest)
+		if !ok {
+			return ReadWithMembersResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		trip, members, err := svc.ReadShare(ctx, req.ID)
+		return ReadWithMembersResponse{Trip: trip, Members: members, Err: err}, nil
 	}
 }
 
@@ -129,8 +140,8 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		plans, err := svc.List(ctx, req.FF)
-		return ListResponse{Trips: plans, Err: err}, nil
+		trips, err := svc.List(ctx, req.FF)
+		return ListResponse{Trips: trips, Err: err}, nil
 	}
 }
 
