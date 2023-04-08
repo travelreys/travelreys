@@ -23,6 +23,7 @@ var (
 type Service interface {
 	Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error)
 	Read(ctx context.Context, ID string) (Trip, error)
+	ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
 	ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
 	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
@@ -62,6 +63,23 @@ func (svc service) Create(ctx context.Context, creator Member, name string, star
 
 func (svc service) Read(ctx context.Context, ID string) (Trip, error) {
 	return svc.store.Read(ctx, ID)
+}
+
+func (svc service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+	trip, err := svc.store.Read(ctx, ID)
+	if err != nil {
+		return Trip{}, nil, err
+	}
+	ff := auth.ListFilter{IDs: []string{trip.Creator.ID}}
+	users, err := svc.authSvc.List(ctx, ff)
+	if err != nil {
+		return trip, nil, err
+	}
+	usersMap := auth.UsersMap{}
+	for _, usr := range users {
+		usersMap[usr.ID] = usr
+	}
+	return RemoveNonPublicInfo(trip), usersMap, nil
 }
 
 func (svc service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {

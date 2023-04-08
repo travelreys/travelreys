@@ -95,6 +95,14 @@ func NewTripWithDates(creator Member, name string, start, end time.Time) Trip {
 	return plan
 }
 
+func RemoveNonPublicInfo(trip Trip) Trip {
+	newTrip := NewTrip(trip.Creator, trip.Name)
+	newTrip.CoverImage = trip.CoverImage
+	newTrip.Lodgings = trip.Lodgings
+	newTrip.Itineraries = trip.Itineraries
+	return newTrip
+}
+
 // Members
 
 const (
