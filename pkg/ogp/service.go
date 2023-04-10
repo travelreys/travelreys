@@ -2,7 +2,6 @@ package ogp
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -32,7 +31,6 @@ func (svc service) Fetch(ctx context.Context, queryUrl string) (Opengraph, error
 	}
 
 	graph, err := opengraph.Fetch(queryUrl, intent)
-	fmt.Println(fmt.Sprintf("%+v", graph))
 	if err != nil {
 		return Opengraph{}, err
 	}
