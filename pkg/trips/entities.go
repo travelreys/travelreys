@@ -226,6 +226,15 @@ func NewItinerary(date time.Time) Itinerary {
 	}
 }
 
+func GetSortedItineraryKeys(trip *Trip) []string {
+	list := []string{}
+	for key := range trip.Itineraries {
+		list = append(list, key)
+	}
+	sort.Sort(sort.StringSlice(list))
+	return list
+}
+
 // SortActivities returns Activities sorted by their fractional index
 func (l Itinerary) SortActivities() []Activity {
 	sorted := ActivityList{}

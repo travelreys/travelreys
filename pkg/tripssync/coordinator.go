@@ -212,6 +212,8 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	}
 
 	switch msg.Data.UpdateTrip.Title {
+	case MsgUpdateTripTitleUpdateTripDates:
+		crd.ChangeDates(ctx, msg, &toSave)
 	case MsgUpdateTripTitleReorderItinerary,
 		MsgUpdateTripTitleUpdateActivityPlace,
 		MsgUpdateTripTitleDeleteActivity:
@@ -232,7 +234,6 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 			break
 		}
 		crd.CalculateRoute(ctx, destDtKey, msg, &toSave)
-
 	case MsgUpdateTripTitleOptimizeItinerary:
 		crd.OptimizeRoute(ctx, msg, &toSave)
 	}
@@ -261,6 +262,31 @@ func (crd *Coordinator) FindItineraryDtKey(ops []jp.Op) string {
 		break
 	}
 	return dtKey
+}
+
+func (crd *Coordinator) ChangeDates(ctx context.Context, msg *Message, toSave *trips.Trip) {
+
+	sortedCurrDates := trips.GetSortedItineraryKeys(toSave)
+	numCurrDates := len(sortedCurrDates)
+	newItineraries := map[string]trips.Itinerary{}
+
+	numDays := toSave.EndDate.Sub(toSave.StartDate).Hours() / 24
+	for i := 0; i <= int(numDays); i++ {
+		dt := toSave.StartDate.Add(time.Duration(i*24) * time.Hour)
+		key := dt.Format("2006-01-02")
+		if i < numCurrDates {
+			itin := toSave.Itineraries[sortedCurrDates[i]]
+			itin.Date = dt
+			newItineraries[key] = itin
+		} else {
+			newItineraries[key] = trips.NewItinerary(dt)
+		}
+
+	}
+	toSave.Itineraries = newItineraries
+	jop := jp.MakeRepOp("/itineraries", newItineraries)
+	msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
+	crd.trip, _ = json.Marshal(toSave)
 }
 
 func (crd *Coordinator) CalculateRoute(ctx context.Context, dtKey string, msg *Message, toSave *trips.Trip) {

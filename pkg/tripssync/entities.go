@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	MsgUpdateTripTitleUpdateTripDates             = "UpdateTripDates"
 	MsgUpdateTripTitleUpdateTripMembers           = "UpdateTripMembers"
 	MsgUpdateTripTitleUpdateActivityPlace         = "UpdateActivityPlace"
 	MsgUpdateTripTitleDeleteActivity              = "DeleteActivity"
