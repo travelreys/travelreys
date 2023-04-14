@@ -46,14 +46,15 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	}
 
 	// Auth
+	authStore := auth.NewStore(ctx, db, logger)
 	gp, err := auth.NewDefaultGoogleProvider()
 	if err != nil {
 		return nil, err
 	}
 	fb := auth.NewFacebookProvider()
+	epw := auth.NewEmailPasswordProvider(authStore)
 
-	authStore := auth.NewStore(ctx, db, logger)
-	authSvc := auth.NewService(gp, fb, authStore, cfg.SecureCookie, storageSvc, logger)
+	authSvc := auth.NewService(gp, fb, epw, authStore, cfg.SecureCookie, storageSvc, logger)
 	authSvcWithRBAC := auth.ServiceWithRBACMiddleware(authSvc, logger)
 
 	// Images

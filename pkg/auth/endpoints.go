@@ -8,6 +8,31 @@ import (
 	"github.com/travelreys/travelreys/pkg/common"
 )
 
+type SignupRequest struct {
+	Code string `json:"code"`
+}
+
+type SignupResponse struct {
+	User   User         `json:"user"`
+	Cookie *http.Cookie `json:"-"`
+	Err    error        `json:"error,omitempty"`
+}
+
+func (r SignupResponse) Error() error {
+	return r.Err
+}
+
+func NewSignupEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(SignupRequest)
+		if !ok {
+			return SignupResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		usr, cookie, err := svc.Signup(ctx, req.Code)
+		return SignupResponse{User: usr, Cookie: cookie, Err: err}, nil
+	}
+}
+
 type LoginRequest struct {
 	Code     string `json:"code"`
 	Provider string `json:"provider"`
