@@ -31,6 +31,7 @@ var (
 )
 
 type Service interface {
+	Signup(ctx context.Context, authCode string) (User, *http.Cookie, error)
 	Login(context.Context, string, string) (User, *http.Cookie, error)
 	Read(context.Context, string) (User, error)
 	List(ctx context.Context, ff ListFilter) (UsersList, error)
@@ -44,6 +45,7 @@ type Service interface {
 type service struct {
 	google       GoogleProvider
 	fb           FacebookProvider
+	emailpw      *EmailPasswordProvider
 	store        Store
 	secureCookie bool
 
@@ -54,6 +56,7 @@ type service struct {
 func NewService(
 	gp GoogleProvider,
 	fb FacebookProvider,
+	emailpw *EmailPasswordProvider,
 	store Store,
 	secureCookie bool,
 	storageSvc storage.Service,
@@ -62,6 +65,7 @@ func NewService(
 	return &service{
 		google:       gp,
 		fb:           fb,
+		emailpw:      emailpw,
 		store:        store,
 		secureCookie: secureCookie,
 		storageSvc:   storageSvc,
@@ -69,69 +73,92 @@ func NewService(
 	}
 }
 
-func (svc service) googleLogin(ctx context.Context, authCode string) (GoogleUser, error) {
-	gusr, err := svc.google.TokenToUserInfo(ctx, authCode)
+func (svc service) Signup(ctx context.Context, authCode string) (User, *http.Cookie, error) {
+	usr, err := svc.emailpw.Signup(ctx, authCode)
 	if err != nil {
-		svc.logger.Error("google login failed", zap.Error(err))
-		return GoogleUser{}, ErrProviderGoogleError
+		return usr, nil, err
 	}
-	return gusr, nil
-}
 
-func (svc service) fbLogin(ctx context.Context, authCode string) (FacebookUser, error) {
-	fbUsr, err := svc.fb.TokenToUserInfo(ctx, authCode)
+	jwt, err := svc.issueJwtToken(usr)
 	if err != nil {
-		svc.logger.Error("facebook login failed", zap.Error(err))
-		return FacebookUser{}, ErrProviderFacebookError
+		svc.logger.Error("Signup", zap.Error(err))
+		return User{}, nil, err
 	}
-	return fbUsr, nil
+
+	if err := svc.store.Save(ctx, usr); err != nil {
+		return User{}, nil, err
+	}
+
+	cookie := &http.Cookie{
+		Name:     AccessCookieName,
+		Value:    jwt,
+		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   int(authCookieDuration.Seconds()),
+	}
+	if svc.secureCookie {
+		cookie.SameSite = http.SameSiteNoneMode
+		cookie.Secure = true
+	}
+
+	return usr, cookie, nil
 }
 
 func (svc service) Login(ctx context.Context, authCode, provider string) (User, *http.Cookie, error) {
 	var (
-		usr   User
-		gUsr  GoogleUser
-		fbUsr FacebookUser
-		err   error
+		usr     User
+		googUsr GoogleUser
+		fbUsr   FacebookUser
+		err     error
 	)
+
 	if provider == OIDCProviderGoogle {
-		gUsr, err = svc.googleLogin(ctx, authCode)
+		googUsr, err := svc.google.TokenToUserInfo(ctx, authCode)
 		if err != nil {
 			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
 			return User{}, nil, err
 		}
-		usr = UserFromGoogleUser(gUsr)
+		usr = UserFromGoogleUser(googUsr)
 	} else if provider == OIDCProviderFacebook {
-		fbUsr, err = svc.fbLogin(ctx, authCode)
+		fbUsr, err := svc.fb.TokenToUserInfo(ctx, authCode)
 		if err != nil {
 			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
 			return User{}, nil, err
 		}
 		usr = UserFromFBUser(fbUsr)
+	} else if provider == OIDCProviderEmailPassword {
+		emailUsr, err := svc.emailpw.TokenToUserInfo(ctx, authCode)
+		if err != nil {
+			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
+			return User{}, nil, err
+		}
+		usr = emailUsr
 	} else {
 		return User{}, nil, ErrProviderNotSupported
 	}
 
-	existUsr, err := svc.store.Read(ctx, ReadFilter{Email: usr.Email})
-	if err == ErrUserNotFound {
-		usr.CreatedAt = time.Now()
-		if err := svc.createUser(ctx, usr); err != nil {
+	if provider == OIDCProviderGoogle || provider == OIDCProviderFacebook {
+		existUsr, err := svc.store.Read(ctx, ReadFilter{Email: usr.Email})
+		if err == ErrUserNotFound {
+			usr.CreatedAt = time.Now()
+			if err := svc.createUser(ctx, usr); err != nil {
+				return User{}, nil, err
+			}
+		} else if err != nil {
+			return User{}, nil, err
+		} else {
+			usr = existUsr
+		}
+
+		if provider == OIDCProviderGoogle {
+			googUsr.AddLabelsToUser(&existUsr)
+		} else if provider == OIDCProviderFacebook {
+			fbUsr.AddLabelsToUser(&existUsr)
+		}
+
+		if err := svc.store.Save(ctx, existUsr); err != nil {
 			return User{}, nil, err
 		}
-	} else if err != nil {
-		return User{}, nil, err
-	} else {
-		usr = existUsr
-	}
-
-	if provider == OIDCProviderGoogle {
-		gUsr.AddLabelsToUser(&existUsr)
-	} else if provider == OIDCProviderFacebook {
-		fbUsr.AddLabelsToUser(&existUsr)
-	}
-
-	if err := svc.store.Save(ctx, existUsr); err != nil {
-		return User{}, nil, err
 	}
 
 	jwt, err := svc.issueJwtToken(usr)

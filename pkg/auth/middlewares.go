@@ -22,6 +22,10 @@ func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
 	return &rbacMiddleware{svc, logger}
 }
 
+func (mw rbacMiddleware) Signup(ctx context.Context, authCode string) (User, *http.Cookie, error) {
+	return mw.next.Signup(ctx, authCode)
+}
+
 func (mw rbacMiddleware) Login(ctx context.Context, authCode, provider string) (User, *http.Cookie, error) {
 	return mw.next.Login(ctx, authCode, provider)
 }

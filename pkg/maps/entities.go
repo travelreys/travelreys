@@ -13,6 +13,7 @@ const (
 	LabelPhotoReference = "p"
 	LabelCountry        = "country"
 	LabelCity           = "city"
+	LabelState          = "state"
 )
 
 type LatLng struct {
@@ -58,6 +59,9 @@ func PlaceFromPlaceDetailsResult(result maps.PlaceDetailsResult) Place {
 			}
 			if typ == "locality" {
 				place.Labels[LabelCity] = adr.LongName
+			}
+			if typ == "administrative_area_level_1" {
+				place.Labels[LabelState] = adr.LongName
 			}
 		}
 	}
