@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/email"
 	"github.com/travelreys/travelreys/pkg/storage"
 	"go.uber.org/zap"
 )
@@ -31,8 +33,8 @@ var (
 )
 
 type Service interface {
-	Signup(ctx context.Context, authCode string) (User, *http.Cookie, error)
 	Login(context.Context, string, string) (User, *http.Cookie, error)
+	MagicLink(ctx context.Context, email string) error
 	Read(context.Context, string) (User, error)
 	List(ctx context.Context, ff ListFilter) (UsersList, error)
 	Update(context.Context, string, UpdateFilter) error
@@ -43,12 +45,14 @@ type Service interface {
 }
 
 type service struct {
-	google       GoogleProvider
-	fb           FacebookProvider
-	emailpw      *EmailPasswordProvider
+	google GoogleProvider
+	fb     FacebookProvider
+	otp    *OTPProvider
+
 	store        Store
 	secureCookie bool
 
+	mailSvc    email.Service
 	storageSvc storage.Service
 	logger     *zap.Logger
 }
@@ -56,52 +60,23 @@ type service struct {
 func NewService(
 	gp GoogleProvider,
 	fb FacebookProvider,
-	emailpw *EmailPasswordProvider,
+	otp *OTPProvider,
 	store Store,
 	secureCookie bool,
+	mailSvc email.Service,
 	storageSvc storage.Service,
 	logger *zap.Logger,
 ) Service {
 	return &service{
 		google:       gp,
 		fb:           fb,
-		emailpw:      emailpw,
+		otp:          otp,
 		store:        store,
 		secureCookie: secureCookie,
+		mailSvc:      mailSvc,
 		storageSvc:   storageSvc,
 		logger:       logger.Named(SvcLoggerName),
 	}
-}
-
-func (svc service) Signup(ctx context.Context, authCode string) (User, *http.Cookie, error) {
-	usr, err := svc.emailpw.Signup(ctx, authCode)
-	if err != nil {
-		return usr, nil, err
-	}
-
-	jwt, err := svc.issueJwtToken(usr)
-	if err != nil {
-		svc.logger.Error("Signup", zap.Error(err))
-		return User{}, nil, err
-	}
-
-	if err := svc.store.Save(ctx, usr); err != nil {
-		return User{}, nil, err
-	}
-
-	cookie := &http.Cookie{
-		Name:     AccessCookieName,
-		Value:    jwt,
-		HttpOnly: true,
-		Path:     "/",
-		MaxAge:   int(authCookieDuration.Seconds()),
-	}
-	if svc.secureCookie {
-		cookie.SameSite = http.SameSiteNoneMode
-		cookie.Secure = true
-	}
-
-	return usr, cookie, nil
 }
 
 func (svc service) Login(ctx context.Context, authCode, provider string) (User, *http.Cookie, error) {
@@ -127,7 +102,7 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (User, 
 		}
 		usr = UserFromFBUser(fbUsr)
 	} else if provider == OIDCProviderEmailPassword {
-		emailUsr, err := svc.emailpw.TokenToUserInfo(ctx, authCode)
+		emailUsr, err := svc.otp.TokenToUserInfo(ctx, authCode)
 		if err != nil {
 			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
 			return User{}, nil, err
@@ -141,7 +116,7 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (User, 
 		existUsr, err := svc.store.Read(ctx, ReadFilter{Email: usr.Email})
 		if err == ErrUserNotFound {
 			usr.CreatedAt = time.Now()
-			if err := svc.createUser(ctx, usr); err != nil {
+			if err := svc.store.Save(ctx, usr); err != nil {
 				return User{}, nil, err
 			}
 		} else if err != nil {
@@ -181,6 +156,36 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (User, 
 	return usr, cookie, nil
 }
 
+func (svc service) MagicLink(ctx context.Context, email string) error {
+	var (
+		usr User
+		err error
+	)
+	usr, err = svc.store.Read(ctx, ReadFilter{Email: email})
+	if err == ErrUserNotFound {
+		newUsr, err := svc.createUser(ctx, email)
+		if err != nil {
+			return err
+		}
+		usr = newUsr
+	}
+
+	otp, hashedOTP, err := svc.otp.GenerateOTP(6)
+	if err != nil {
+		return err
+	}
+	if err = svc.store.SaveOTP(ctx, usr.ID, hashedOTP); err != nil {
+		return err
+	}
+	go func() {
+		mailBody, _ := svc.otp.GenerateMagicLinkEmail(usr, otp)
+		if err := svc.mailSvc.SendMail(ctx, email, "login@travelreys.com", "Login Magic Link", mailBody); err != nil {
+			svc.logger.Error("send mail", zap.Error(err))
+		}
+	}()
+	return nil
+}
+
 func (svc service) Read(ctx context.Context, ID string) (User, error) {
 	return svc.store.Read(ctx, ReadFilter{ID: ID})
 }
@@ -216,10 +221,6 @@ func (svc service) GenerateMediaPresignedCookie(ctx context.Context) (*http.Cook
 	return svc.storageSvc.GeneratePresignedCookie(ctx, mediaCDNDomain, mediaBucket)
 }
 
-func (svc service) createUser(ctx context.Context, usr User) error {
-	return svc.store.Save(ctx, usr)
-}
-
 func (svc service) issueJwtToken(usr User) (string, error) {
 	token := jwt.NewWithClaims(common.JWTDefaultSigningMethod, jwt.MapClaims{
 		common.JwtClaimIss:   common.JwtIssuer,
@@ -228,4 +229,24 @@ func (svc service) issueJwtToken(usr User) (string, error) {
 		common.JwtClaimIat:   time.Now().Unix(),
 	})
 	return token.SignedString(common.GetJwtSecretBytes())
+}
+
+func (svc service) createUser(ctx context.Context, email string) (User, error) {
+	if _, err := svc.store.Read(ctx, ReadFilter{Email: email}); err == nil {
+		return User{}, ErrProviderEmailEmailExists
+	}
+	newusr := User{
+		ID:          uuid.NewString(),
+		Email:       email,
+		Name:        email,
+		CreatedAt:   time.Now(),
+		PhoneNumber: PhoneNumber{},
+		Labels: common.Labels{
+			LabelAvatarImage: "https://cdn.travelreys.com/travelreys-media-demo/avatar/account.png",
+		},
+	}
+	if err := svc.store.Save(ctx, newusr); err != nil {
+		return User{}, err
+	}
+	return newusr, nil
 }

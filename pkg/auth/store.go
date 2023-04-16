@@ -3,7 +3,10 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
+	"time"
 
+	"github.com/go-redis/redis/v9"
 	"github.com/travelreys/travelreys/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -77,25 +80,29 @@ type Store interface {
 	List(context.Context, ListFilter) (UsersList, error)
 	Update(context.Context, string, UpdateFilter) error
 	Save(context.Context, User) error
+
+	GetOTP(context.Context, string) (string, error)
+	SaveOTP(context.Context, string, string) error
 }
 
 type store struct {
 	db       *mongo.Database
 	usrsColl *mongo.Collection
 
+	rdb redis.UniversalClient
+
 	logger *zap.Logger
 }
 
-func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store {
+func NewStore(ctx context.Context, db *mongo.Database, rdb redis.UniversalClient, logger *zap.Logger) Store {
 	ctx, cancel := context.WithTimeout(ctx, common.DbReqTimeout)
 	defer cancel()
 
 	usrsColl := db.Collection(collectionUsers)
-
 	idIdx := mongo.IndexModel{Keys: bson.M{bsonKeyID: 1}}
 	usrsColl.Indexes().CreateOne(ctx, idIdx)
 
-	return &store{db, usrsColl, logger.Named(storeLoggerName)}
+	return &store{db, usrsColl, rdb, logger.Named(storeLoggerName)}
 }
 
 func (s store) Read(ctx context.Context, ff ReadFilter) (User, error) {
@@ -146,4 +153,19 @@ func (s store) Save(ctx context.Context, usr User) error {
 		s.logger.Error("Save", zap.String("usr", common.FmtString(usr)), zap.Error(err))
 	}
 	return err
+}
+
+func (s store) GetOTP(ctx context.Context, ID string) (string, error) {
+	key := fmt.Sprintf("otp:%s", ID)
+	cmd := s.rdb.Get(ctx, key)
+	if cmd.Err() != nil {
+		return "", cmd.Err()
+	}
+	return cmd.String(), nil
+}
+
+func (s store) SaveOTP(ctx context.Context, ID string, otp string) error {
+	key := fmt.Sprintf("otp:%s", ID)
+	cmd := s.rdb.Set(ctx, key, otp, 60*time.Second)
+	return cmd.Err()
 }

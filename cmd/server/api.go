@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -9,6 +10,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/api"
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/email"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/ogp"
@@ -38,6 +40,8 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	ctx := context.Background()
 
+	mailSvc := email.NewDefaultService()
+
 	// Storage
 	storageSvc, err := storage.NewDefaultStorageService(ctx)
 	if err != nil {
@@ -46,15 +50,15 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	}
 
 	// Auth
-	authStore := auth.NewStore(ctx, db, logger)
+	authStore := auth.NewStore(ctx, db, rdb, logger)
 	gp, err := auth.NewDefaultGoogleProvider()
 	if err != nil {
 		return nil, err
 	}
 	fb := auth.NewFacebookProvider()
-	epw := auth.NewEmailPasswordProvider(authStore)
+	otp := auth.NewOTPProvider(authStore, rand.Reader)
 
-	authSvc := auth.NewService(gp, fb, epw, authStore, cfg.SecureCookie, storageSvc, logger)
+	authSvc := auth.NewService(gp, fb, otp, authStore, cfg.SecureCookie, mailSvc, storageSvc, logger)
 	authSvcWithRBAC := auth.ServiceWithRBACMiddleware(authSvc, logger)
 
 	// Images
