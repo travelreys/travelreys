@@ -25,11 +25,11 @@ func errToHttpCode(err error) int {
 	appErrors := []error{
 		ErrProviderNotSupported,
 		ErrProviderGoogleError,
-		ErrProviderEmailPasswordEmailNotFound,
-		ErrProviderEmailPasswordEmailExists,
-		ErrProviderEmailPasswordNotSet,
-		ErrProviderEmailPasswordInvalidEmail,
-		ErrProviderEmailPasswordInvalidPw,
+		ErrProviderEmailEmailNotFound,
+		ErrProviderEmailEmailExists,
+		ErrProviderEmailNotSet,
+		ErrProviderEmailInvalidEmail,
+		ErrProviderEmailInvalidPw,
 	}
 	authErrors := []error{ErrRBAC}
 
@@ -62,9 +62,9 @@ func MakeHandler(svc Service) http.Handler {
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode)),
 	}
 
-	signupHandler := kithttp.NewServer(NewSignupEndpoint(svc), decodeSignupRequest, encodeSignupResponse, opts...)
 	loginHandler := kithttp.NewServer(NewLoginEndpoint(svc), decodeLoginRequest, encodeLoginResponse, opts...)
 	logoutHandler := kithttp.NewServer(NewLogoutEndpoint(svc), decodeLogoutRequest, encodeLogoutResponse, opts...)
+	magicLinkHandler := kithttp.NewServer(NewMagicLinkEndpoint(svc), decodeMagicLinkRequest, encodeResponse, opts...)
 	readUserHandler := kithttp.NewServer(NewReadEndpoint(svc), decodeReadRequest, encodeResponse, opts...)
 	listUsersHandler := kithttp.NewServer(NewListEndpoint(svc), decodeListRequest, encodeResponse, opts...)
 	updateUserHandler := kithttp.NewServer(NewUpdateEndpoint(svc), decodeUpdateRequest, encodeResponse, opts...)
@@ -82,9 +82,9 @@ func MakeHandler(svc Service) http.Handler {
 		opts...,
 	)
 
-	r.Handle("/api/v1/auth/signup", signupHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/auth/login", loginHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/auth/logout", logoutHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/auth/magic-link", magicLinkHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/auth/users", listUsersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/auth/users/{id}", readUserHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/auth/users/{id}", updateUserHandler).Methods(http.MethodPut)
@@ -95,26 +95,12 @@ func MakeHandler(svc Service) http.Handler {
 	return r
 }
 
-func decodeSignupRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	req := SignupRequest{}
+func decodeMagicLinkRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := MagicLinkRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
 	}
 	return req, nil
-}
-
-func encodeSignupResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
-		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
-		return nil
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	resp, ok := response.(SignupResponse)
-	if !ok {
-		return common.ErrorEncodeInvalidResponse
-	}
-	http.SetCookie(w, resp.Cookie)
-	return json.NewEncoder(w).Encode(response)
 }
 
 func decodeLoginRequest(_ context.Context, r *http.Request) (interface{}, error) {
