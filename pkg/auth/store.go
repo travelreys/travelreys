@@ -82,7 +82,7 @@ type Store interface {
 	Save(context.Context, User) error
 
 	GetOTP(context.Context, string) (string, error)
-	SaveOTP(context.Context, string, string) error
+	SaveOTP(context.Context, string, string, time.Duration) error
 }
 
 type store struct {
@@ -161,11 +161,11 @@ func (s store) GetOTP(ctx context.Context, ID string) (string, error) {
 	if cmd.Err() != nil {
 		return "", cmd.Err()
 	}
-	return cmd.String(), nil
+	return cmd.Val(), nil
 }
 
-func (s store) SaveOTP(ctx context.Context, ID string, otp string) error {
+func (s store) SaveOTP(ctx context.Context, ID, otp string, ttl time.Duration) error {
 	key := fmt.Sprintf("otp:%s", ID)
-	cmd := s.rdb.Set(ctx, key, otp, 60*time.Second)
+	cmd := s.rdb.Set(ctx, key, otp, ttl)
 	return cmd.Err()
 }
