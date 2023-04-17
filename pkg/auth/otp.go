@@ -97,7 +97,9 @@ func (prv OTPProvider) ValidateOTP(otp, hashedOTP []byte) error {
 
 func (prv OTPProvider) GenerateMagicLinkEmail(usr User, otp string) (string, error) {
 	authCode := fmt.Sprintf("%s|%s", usr.Email, otp)
-	magicLink := fmt.Sprintf("https://www.travelreys.com/magic-link?authCode=%s", authCode)
+	sEnc := base64.StdEncoding.EncodeToString([]byte(authCode))
+
+	magicLink := fmt.Sprintf("https://www.travelreys.com/magic-link?c=%s", sEnc)
 	bodyTmpl := `
 	<div>
 	<p>Welcome to travelreys. Click on the following magic link to login.</p>
@@ -105,6 +107,7 @@ func (prv OTPProvider) GenerateMagicLinkEmail(usr User, otp string) (string, err
 	<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>
 	</div>
 	`
-	body := fmt.Sprintf(bodyTmpl, magicLink)
+	body := fmt.Sprintf(bodyTmpl, magicLink, magicLink)
+	fmt.Println(body)
 	return body, nil
 }
