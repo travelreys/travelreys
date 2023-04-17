@@ -18,6 +18,7 @@ import (
 
 const (
 	SvcLoggerName      = "auth.service"
+	defaultLoginSender = "login@travelreys.com"
 	authCookieDuration = 365 * 24 * time.Hour
 )
 
@@ -179,7 +180,8 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 	}
 	go func() {
 		mailBody, _ := svc.otp.GenerateMagicLinkEmail(usr, otp)
-		if err := svc.mailSvc.SendMail(ctx, email, "login@travelreys.com", "Login Magic Link", mailBody); err != nil {
+		loginSubj := "Login to Travelreys!"
+		if err := svc.mailSvc.SendMail(ctx, email, defaultLoginSender, loginSubj, mailBody); err != nil {
 			svc.logger.Error("send mail", zap.Error(err))
 		}
 	}()

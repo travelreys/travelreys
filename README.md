@@ -45,7 +45,7 @@ docker run --name minio -d -p 9000:9000 -p 9001:9001 \
 # Postfix
 docker run --rm -d \
   --name postfix \
-  -e HOSTNAME=postfix-docker \
+  -e HOSTNAME=postfix \
   -e ALLOWED_SENDER_DOMAINS=travelreys.com \
   -p 1587:587 \
   boky/postfix
