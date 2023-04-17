@@ -25,11 +25,11 @@ func errToHttpCode(err error) int {
 	appErrors := []error{
 		ErrProviderNotSupported,
 		ErrProviderGoogleError,
-		ErrProviderEmailEmailNotFound,
-		ErrProviderEmailEmailExists,
-		ErrProviderEmailNotSet,
-		ErrProviderEmailInvalidEmail,
-		ErrProviderEmailInvalidPw,
+		ErrProviderOTPEmailNotFound,
+		ErrProviderOTPEmailExists,
+		ErrProviderOTPNotSet,
+		ErrProviderOTPInvalidEmail,
+		ErrProviderOTPInvalidPw,
 	}
 	authErrors := []error{ErrRBAC}
 

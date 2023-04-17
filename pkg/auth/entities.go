@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	OIDCProviderGoogle        = "google"
-	OIDCProviderFacebook      = "facebook"
-	OIDCProviderEmailPassword = "emailpassword"
+	OIDCProviderGoogle   = "google"
+	OIDCProviderFacebook = "facebook"
+	OIDCProviderOTP      = "otp"
 )
 
 const (
@@ -18,9 +18,6 @@ const (
 	LabelDefaultCurrency = "currency"
 	LabelDefaultLocale   = "locale"
 	LabelAvatarImage     = "avatarImage"
-
-	LabelPasswordHash  = "emailpassword|hashedPassword"
-	LabelVerifiedEmail = "emailpassword|verifiedEmail"
 
 	LabelGoogleID            = "google|id"
 	LabelGoogleUserPicture   = "google|picture"

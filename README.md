@@ -42,13 +42,12 @@ rs.status()
 docker run --name minio -d -p 9000:9000 -p 9001:9001 \
   quay.io/minio/minio server /data --console-address ":9001"
 
-# Postfix
+# Mailhog
 docker run --rm -d \
-  --name postfix \
-  -e HOSTNAME=postfix \
-  -e ALLOWED_SENDER_DOMAINS=travelreys.com \
-  -p 1587:587 \
-  boky/postfix
+  --name mailhog \
+  -p 1025:1025 \
+  -p 8025:8025 \
+  mailhog/mailhog
 
 
 # Build Server

@@ -17,9 +17,11 @@ import (
 )
 
 const (
-	SvcLoggerName      = "auth.service"
-	defaultLoginSender = "login@travelreys.com"
 	authCookieDuration = 365 * 24 * time.Hour
+	otpDuration        = 60 * time.Second
+	defaultLoginSender = "login@travelreys.com"
+
+	svcLoggerName = "auth.service"
 )
 
 var (
@@ -76,65 +78,27 @@ func NewService(
 		secureCookie: secureCookie,
 		mailSvc:      mailSvc,
 		storageSvc:   storageSvc,
-		logger:       logger.Named(SvcLoggerName),
+		logger:       logger.Named(svcLoggerName),
 	}
 }
 
 func (svc service) Login(ctx context.Context, authCode, provider string) (User, *http.Cookie, error) {
 	var (
-		usr     User
-		googUsr GoogleUser
-		fbUsr   FacebookUser
-		err     error
+		usr User
+		err error
 	)
-
-	if provider == OIDCProviderGoogle {
-		googUsr, err := svc.google.TokenToUserInfo(ctx, authCode)
-		if err != nil {
-			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
-			return User{}, nil, err
-		}
-		usr = UserFromGoogleUser(googUsr)
-	} else if provider == OIDCProviderFacebook {
-		fbUsr, err := svc.fb.TokenToUserInfo(ctx, authCode)
-		if err != nil {
-			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
-			return User{}, nil, err
-		}
-		usr = UserFromFBUser(fbUsr)
-	} else if provider == OIDCProviderEmailPassword {
-		emailUsr, err := svc.otp.TokenToUserInfo(ctx, authCode)
-		if err != nil {
-			svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
-			return User{}, nil, err
-		}
-		usr = emailUsr
-	} else {
+	switch provider {
+	case OIDCProviderFacebook, OIDCProviderGoogle:
+		usr, err = svc.socialLogin(ctx, authCode, provider)
+	case OIDCProviderOTP:
+		usr, err = svc.otp.TokenToUserInfo(ctx, authCode)
+	default:
 		return User{}, nil, ErrProviderNotSupported
 	}
 
-	if provider == OIDCProviderGoogle || provider == OIDCProviderFacebook {
-		existUsr, err := svc.store.Read(ctx, ReadFilter{Email: usr.Email})
-		if err == ErrUserNotFound {
-			usr.CreatedAt = time.Now()
-			if err := svc.store.Save(ctx, usr); err != nil {
-				return User{}, nil, err
-			}
-		} else if err != nil {
-			return User{}, nil, err
-		} else {
-			usr = existUsr
-		}
-
-		if provider == OIDCProviderGoogle {
-			googUsr.AddLabelsToUser(&existUsr)
-		} else if provider == OIDCProviderFacebook {
-			fbUsr.AddLabelsToUser(&existUsr)
-		}
-
-		if err := svc.store.Save(ctx, existUsr); err != nil {
-			return User{}, nil, err
-		}
+	if err != nil {
+		svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
+		return User{}, nil, err
 	}
 
 	jwt, err := svc.issueJwtToken(usr)
@@ -157,6 +121,52 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (User, 
 	return usr, cookie, nil
 }
 
+func (svc service) socialLogin(ctx context.Context, authCode, provider string) (User, error) {
+	var (
+		usr     User
+		googUsr GoogleUser
+		fbUsr   FacebookUser
+		err     error
+	)
+
+	if provider == OIDCProviderGoogle {
+		googUsr, err := svc.google.TokenToUserInfo(ctx, authCode)
+		if err != nil {
+			return User{}, err
+		}
+		usr = UserFromGoogleUser(googUsr)
+	} else if provider == OIDCProviderFacebook {
+		fbUsr, err := svc.fb.TokenToUserInfo(ctx, authCode)
+		if err != nil {
+			return User{}, err
+		}
+		usr = UserFromFBUser(fbUsr)
+	}
+
+	existUsr, err := svc.store.Read(ctx, ReadFilter{Email: usr.Email})
+	if err == ErrUserNotFound {
+		usr.CreatedAt = time.Now()
+		if err := svc.store.Save(ctx, usr); err != nil {
+			return User{}, err
+		}
+	} else if err != nil {
+		return User{}, err
+	} else {
+		usr = existUsr
+	}
+
+	if provider == OIDCProviderGoogle {
+		googUsr.AddLabelsToUser(&existUsr)
+	} else if provider == OIDCProviderFacebook {
+		fbUsr.AddLabelsToUser(&existUsr)
+	}
+
+	if err := svc.store.Save(ctx, existUsr); err != nil {
+		return User{}, err
+	}
+	return existUsr, nil
+}
+
 func (svc service) MagicLink(ctx context.Context, email string) error {
 	var (
 		usr User
@@ -175,7 +185,7 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 	if err != nil {
 		return err
 	}
-	if err = svc.store.SaveOTP(ctx, usr.ID, hashedOTP); err != nil {
+	if err = svc.store.SaveOTP(ctx, usr.ID, hashedOTP, otpDuration); err != nil {
 		return err
 	}
 	go func() {
@@ -235,7 +245,7 @@ func (svc service) issueJwtToken(usr User) (string, error) {
 
 func (svc service) createUser(ctx context.Context, email string) (User, error) {
 	if _, err := svc.store.Read(ctx, ReadFilter{Email: email}); err == nil {
-		return User{}, ErrProviderEmailEmailExists
+		return User{}, ErrProviderOTPEmailExists
 	}
 	newusr := User{
 		ID:          uuid.NewString(),
@@ -244,7 +254,8 @@ func (svc service) createUser(ctx context.Context, email string) (User, error) {
 		CreatedAt:   time.Now(),
 		PhoneNumber: PhoneNumber{},
 		Labels: common.Labels{
-			LabelAvatarImage: "https://cdn.travelreys.com/travelreys-media-demo/avatar/account.png",
+			LabelAvatarImage:   "https://cdn.travelreys.com/travelreys-media-demo/avatar/account.png",
+			LabelDefaultLocale: "en",
 		},
 	}
 	if err := svc.store.Save(ctx, newusr); err != nil {
