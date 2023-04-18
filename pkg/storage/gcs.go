@@ -82,6 +82,7 @@ func (svc gcsService) Remove(ctx context.Context, obj Object) error {
 // function attempts to use the same authentication that was used to instantiate
 // the Storage client. This authentication must include a private key or have
 // iam.serviceAccounts.signBlob permissions.
+// https://stackoverflow.com/questions/57564505/unable-to-assign-iam-serviceaccounts-signblob-permission
 func (svc gcsService) GetPresignedURL(ctx context.Context, bucket, path, filename string) (string, error) {
 	opts := &storage.SignedURLOptions{
 		Scheme:  storage.SigningSchemeV4,

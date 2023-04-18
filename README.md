@@ -91,4 +91,3 @@ make test
 | TRAVELREYS_GOOGLE_MAPS_APIKEY       |                 |
 | TRAVELREYS_OAUTH_GOOGLE_SECRET_FILE |                 |
 
-
