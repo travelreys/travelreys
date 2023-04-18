@@ -130,13 +130,13 @@ func (svc service) socialLogin(ctx context.Context, authCode, provider string) (
 	)
 
 	if provider == OIDCProviderGoogle {
-		googUsr, err := svc.google.TokenToUserInfo(ctx, authCode)
+		googUsr, err = svc.google.TokenToUserInfo(ctx, authCode)
 		if err != nil {
 			return User{}, err
 		}
 		usr = UserFromGoogleUser(googUsr)
 	} else if provider == OIDCProviderFacebook {
-		fbUsr, err := svc.fb.TokenToUserInfo(ctx, authCode)
+		fbUsr, err = svc.fb.TokenToUserInfo(ctx, authCode)
 		if err != nil {
 			return User{}, err
 		}
