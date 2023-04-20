@@ -153,18 +153,17 @@ func (svc service) socialLogin(ctx context.Context, authCode, provider string) (
 		return User{}, err
 	} else {
 		usr = existUsr
+		if provider == OIDCProviderGoogle {
+			googUsr.AddLabelsToUser(&usr)
+		} else if provider == OIDCProviderFacebook {
+			fbUsr.AddLabelsToUser(&usr)
+		}
+		if err := svc.store.Save(ctx, existUsr); err != nil {
+			return User{}, err
+		}
 	}
 
-	if provider == OIDCProviderGoogle {
-		googUsr.AddLabelsToUser(&existUsr)
-	} else if provider == OIDCProviderFacebook {
-		fbUsr.AddLabelsToUser(&existUsr)
-	}
-
-	if err := svc.store.Save(ctx, existUsr); err != nil {
-		return User{}, err
-	}
-	return existUsr, nil
+	return usr, nil
 }
 
 func (svc service) MagicLink(ctx context.Context, email string) error {
