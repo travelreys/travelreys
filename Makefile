@@ -19,3 +19,4 @@ clean:
 docker:
 	docker build -t travelreys-api .
 	docker tag travelreys-api $(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)/$(DOCKER_IMAGE):$(VERSION)
+	docker push $(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)/$(DOCKER_IMAGE):$(VERSION)
