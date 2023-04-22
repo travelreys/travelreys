@@ -36,7 +36,7 @@ var (
 )
 
 type Service interface {
-	Login(context.Context, string, string) (User, *http.Cookie, error)
+	Login(context.Context, string, string, string) (User, *http.Cookie, error)
 	MagicLink(ctx context.Context, email string) error
 	Read(context.Context, string) (User, error)
 	List(ctx context.Context, ff ListFilter) (UsersList, error)
@@ -82,7 +82,7 @@ func NewService(
 	}
 }
 
-func (svc service) Login(ctx context.Context, authCode, provider string) (User, *http.Cookie, error) {
+func (svc service) Login(ctx context.Context, authCode, signature, provider string) (User, *http.Cookie, error) {
 	var (
 		usr User
 		err error
@@ -91,7 +91,7 @@ func (svc service) Login(ctx context.Context, authCode, provider string) (User, 
 	case OIDCProviderFacebook, OIDCProviderGoogle:
 		usr, err = svc.socialLogin(ctx, authCode, provider)
 	case OIDCProviderOTP:
-		usr, err = svc.otp.TokenToUserInfo(ctx, authCode)
+		usr, err = svc.otp.TokenToUserInfo(ctx, authCode, signature)
 	default:
 		return User{}, nil, ErrProviderNotSupported
 	}
