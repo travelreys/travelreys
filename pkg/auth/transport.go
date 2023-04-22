@@ -30,6 +30,7 @@ func errToHttpCode(err error) int {
 		ErrProviderOTPNotSet,
 		ErrProviderOTPInvalidEmail,
 		ErrProviderOTPInvalidPw,
+		ErrProviderOTPInvalidSig,
 	}
 	authErrors := []error{ErrRBAC}
 

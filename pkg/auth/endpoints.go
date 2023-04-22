@@ -32,8 +32,9 @@ func NewMagicLinkEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type LoginRequest struct {
-	Code     string `json:"code"`
-	Provider string `json:"provider"`
+	Code      string `json:"code"`
+	Signature string `json:"signature"`
+	Provider  string `json:"provider"`
 }
 
 type LoginResponse struct {
@@ -52,7 +53,7 @@ func NewLoginEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return LoginResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		usr, cookie, err := svc.Login(ctx, req.Code, req.Provider)
+		usr, cookie, err := svc.Login(ctx, req.Code, req.Provider, req.Signature)
 		return LoginResponse{User: usr, Cookie: cookie, Err: err}, nil
 	}
 }

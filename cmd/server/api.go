@@ -56,7 +56,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		return nil, err
 	}
 	fb := auth.NewFacebookProvider()
-	otp := auth.NewOTPProvider(authStore, rand.Reader)
+	otp := auth.NewDefaultOTPProvider(authStore, rand.Reader)
 
 	authSvc := auth.NewService(gp, fb, otp, authStore, cfg.SecureCookie, mailSvc, storageSvc, logger)
 	authSvcWithRBAC := auth.ServiceWithRBACMiddleware(authSvc, logger)
