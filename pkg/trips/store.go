@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	ErrPlanNotFound         = errors.New("trip.store.not-found")
+	ErrTripNotFound         = errors.New("trip.store.not-found")
 	ErrUnexpectedStoreError = errors.New("trip.store.unexpected-error")
 )
 
@@ -80,7 +80,7 @@ func (s *store) Read(ctx context.Context, ID string) (Trip, error) {
 	var plan Trip
 	err := s.tripsColl.FindOne(ctx, bson.M{bsonKeyID: ID}).Decode(&plan)
 	if err == mongo.ErrNoDocuments {
-		return plan, ErrPlanNotFound
+		return plan, ErrTripNotFound
 	}
 	if err != nil {
 		s.logger.Error("Read", zap.String("id", ID), zap.Error(err))

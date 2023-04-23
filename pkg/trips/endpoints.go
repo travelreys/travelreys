@@ -122,6 +122,26 @@ func NewReadMembersEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
+type ReadOGPResponse struct {
+	TripOGP TripOGP `json:"ogp"`
+	Err     error   `json:"error,omitempty"`
+}
+
+func (r ReadOGPResponse) Error() error {
+	return r.Err
+}
+
+func NewReadOGPEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ReadRequest)
+		if !ok {
+			return ReadOGPResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		ogp, err := svc.ReadOGP(ctx, req.ID)
+		return ReadOGPResponse{TripOGP: ogp, Err: err}, nil
+	}
+}
+
 type ListRequest struct {
 	FF ListFilter
 }

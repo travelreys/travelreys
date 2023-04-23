@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
@@ -17,14 +18,16 @@ const (
 	JSONPathLabelUiColor = "labels/ui|color"
 	JSONPathLabelUiIcon  = "labels/ui|icon"
 
-	LabelDelimeter              = "|"
-	LabelFractionalIndex        = "fIndex"
-	LabelLocked                 = "locked"
-	LabelItineraryDates         = "itinerary|dates"
-	LabelItineraryDatesJSONPath = "labels/itinerary|dates"
-	LabelTransportModePref      = "transportationPreference"
-	LabelUiColor                = "ui|color"
-	LabelUiIcon                 = "ui|icon"
+	LabelDelimeter       = "|"
+	LabelFractionalIndex = "fIndex"
+	LabelSharingAccess   = "sharing|access"
+	LabelUiColor         = "ui|color"
+	LabelUiIcon          = "ui|icon"
+)
+
+const (
+	SharingAccessViewer  = "view"
+	SharingAccessComment = "comment"
 )
 
 type Trip struct {
@@ -58,6 +61,14 @@ type Trip struct {
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 	Tags   common.Tags   `json:"tags" bson:"tags"`
+}
+
+type TripOGP struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+
+	CoverImage images.ImageMetadata `json:"coverImage" bson:"coverImage"`
+	Creator    auth.User            `json:"creator"`
 }
 
 type TripsList []Trip
@@ -95,12 +106,26 @@ func NewTripWithDates(creator Member, name string, start, end time.Time) Trip {
 	return plan
 }
 
-func RemoveNonPublicInfo(trip Trip) Trip {
+func (trip Trip) PublicInfo() Trip {
 	newTrip := NewTrip(trip.Creator, trip.Name)
 	newTrip.CoverImage = trip.CoverImage
 	newTrip.Lodgings = trip.Lodgings
 	newTrip.Itineraries = trip.Itineraries
 	return newTrip
+}
+
+func (trip Trip) OGP(creator auth.User) TripOGP {
+	return TripOGP{
+		ID:         trip.ID,
+		Name:       trip.Name,
+		CoverImage: trip.CoverImage,
+		Creator:    creator,
+	}
+}
+
+func (trip Trip) IsSharingEnabled() bool {
+	_, ok := trip.Labels[LabelSharingAccess]
+	return ok
 }
 
 // Members

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/travelreys/travelreys/pkg/auth"
+	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
 	"github.com/travelreys/travelreys/pkg/storage"
 	"go.uber.org/zap"
@@ -41,7 +42,32 @@ func (mw rbacMiddleware) Read(ctx context.Context, ID string) (Trip, error) {
 }
 
 func (mw rbacMiddleware) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
-	return mw.next.ReadShare(ctx, ID)
+	trip, err := mw.next.Read(ctx, ID)
+	if err != nil {
+		return Trip{}, nil, err
+	}
+
+	ctxWithTripInfo := ContextWithTripInfo(ctx, trip)
+	if trip.IsSharingEnabled() {
+		return mw.next.ReadShare(ctxWithTripInfo, ID)
+	}
+
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return Trip{}, nil, ErrTripSharingNotEnabled
+	}
+	membersID := []string{trip.Creator.ID}
+	for _, mem := range trip.Members {
+		membersID = append(membersID, mem.ID)
+	}
+	if !common.StringContains(membersID, ci.UserID) {
+		return Trip{}, nil, ErrTripSharingNotEnabled
+	}
+	return mw.next.ReadShare(ctxWithTripInfo, ID)
+}
+
+func (mw rbacMiddleware) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
+	return mw.next.ReadOGP(ctx, ID)
 }
 
 func (mw rbacMiddleware) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {

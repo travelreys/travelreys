@@ -20,9 +20,9 @@ const (
 )
 
 func errToHttpCode(err error) int {
-	notFoundErrors := []error{ErrPlanNotFound}
+	notFoundErrors := []error{ErrTripNotFound}
 	appErrors := []error{ErrUnexpectedStoreError}
-	authErrors := []error{ErrRBAC}
+	authErrors := []error{ErrTripSharingNotEnabled, ErrRBAC}
 
 	if common.ErrorContains(notFoundErrors, err) {
 		return http.StatusNotFound
@@ -69,6 +69,9 @@ func MakeHandler(svc Service) http.Handler {
 	readMembersHandler := kithttp.NewServer(
 		NewReadMembersEndpoint(svc), decodeReadMembersRequest, encodeResponse, opts...,
 	)
+	readOGPHandler := kithttp.NewServer(
+		NewReadOGPEndpoint(svc), decodeReadRequest, encodeResponse, opts...,
+	)
 	deleteHandler := kithttp.NewServer(
 		NewDeleteEndpoint(svc), decodeDeleteRequest, encodeResponse, opts...,
 	)
@@ -94,6 +97,7 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips", listHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}", readHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}/share", readShareHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/trips/{id}/ogp", readOGPHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}/members", readMembersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}", deleteHandler).Methods(http.MethodDelete)
 
