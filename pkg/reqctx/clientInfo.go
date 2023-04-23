@@ -12,10 +12,6 @@ const (
 	AuthCookieName = "_travelreysAuth"
 )
 
-type ContextKey int
-
-var ContextKeyClientInfo ContextKey = 1
-
 type ClientInfo struct {
 	RawToken  string
 	UserID    string
@@ -55,11 +51,11 @@ func makeClientInfo(r *http.Request) ClientInfo {
 
 func ContextWithClientInfo(ctx context.Context, r *http.Request) context.Context {
 	ci := makeClientInfo(r)
-	return context.WithValue(ctx, ContextKeyClientInfo, ci)
+	return context.WithValue(ctx, common.ContextKeyClientInfo, ci)
 }
 
 func ClientInfoFromCtx(ctx context.Context) (ClientInfo, error) {
-	ci, ok := ctx.Value(ContextKeyClientInfo).(ClientInfo)
+	ci, ok := ctx.Value(common.ContextKeyClientInfo).(ClientInfo)
 	if !ok {
 		return ci, common.ErrMissingJWTClaims
 	}

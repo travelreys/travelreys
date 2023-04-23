@@ -2,6 +2,7 @@ package trips
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -12,18 +13,19 @@ import (
 	"github.com/travelreys/travelreys/pkg/storage"
 )
 
-const ()
-
 var (
 	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
 	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
 	mediaCDNDomain   = os.Getenv("TRAVELREYS_MEDIA_DOMAIN") // cdn.travelreys.com
+
+	ErrTripSharingNotEnabled = errors.New("trip.service.tripSharingNotEnabled")
 )
 
 type Service interface {
 	Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error)
 	Read(ctx context.Context, ID string) (Trip, error)
 	ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
+	ReadOGP(ctx context.Context, ID string) (TripOGP, error)
 	ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
 	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
@@ -66,10 +68,21 @@ func (svc service) Read(ctx context.Context, ID string) (Trip, error) {
 }
 
 func (svc service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
-	trip, err := svc.store.Read(ctx, ID)
-	if err != nil {
-		return Trip{}, nil, err
+	var (
+		trip Trip
+		err  error
+	)
+
+	ti, err := TripInfoFromCtx(ctx)
+	if err == nil {
+		trip = ti.Trip
+	} else {
+		trip, err = svc.store.Read(ctx, ID)
+		if err != nil {
+			return Trip{}, nil, err
+		}
 	}
+
 	ff := auth.ListFilter{IDs: []string{trip.Creator.ID}}
 	users, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
@@ -77,9 +90,32 @@ func (svc service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMa
 	}
 	usersMap := auth.UsersMap{}
 	for _, usr := range users {
+		if usr.ID != trip.Creator.ID {
+			continue
+		}
 		usersMap[usr.ID] = usr
 	}
-	return RemoveNonPublicInfo(trip), usersMap, nil
+	return trip.PublicInfo(), usersMap, nil
+}
+
+func (svc service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
+	trip, err := svc.store.Read(ctx, ID)
+	if err != nil {
+		return TripOGP{}, err
+	}
+	ff := auth.ListFilter{IDs: []string{trip.Creator.ID}}
+	users, err := svc.authSvc.List(ctx, ff)
+	if err != nil {
+		return TripOGP{}, err
+	}
+	var creator auth.User
+	for _, usr := range users {
+		if usr.ID == trip.Creator.ID {
+			creator = usr
+			break
+		}
+	}
+	return trip.OGP(creator), nil
 }
 
 func (svc service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
