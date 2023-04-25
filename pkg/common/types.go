@@ -14,11 +14,6 @@ func Int64Ptr(i int64) *int64    { return &i }
 func StringPtr(i string) *string { return &i }
 func BoolPtr(i bool) *bool       { return &i }
 
-type Price struct {
-	Amount   float64 `json:"amount"`
-	Currency string  `json:"currency"`
-}
-
 type Positioning struct {
 	Name    string `json:"name"`
 	Address string `json:"address"`

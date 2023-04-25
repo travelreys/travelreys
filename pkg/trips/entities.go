@@ -18,6 +18,7 @@ const (
 	JSONPathLabelUiColor = "labels/ui|color"
 	JSONPathLabelUiIcon  = "labels/ui|icon"
 
+	LabelCreatedBy       = "createdBy"
 	LabelDelimeter       = "|"
 	LabelFractionalIndex = "fIndex"
 	LabelSharingAccess   = "sharing|access"
@@ -168,31 +169,31 @@ const (
 )
 
 type BaseTransit struct {
-	ID              string       `json:"id" bson:"id"`
-	Type            string       `json:"type"`
-	DepartTime      time.Time    `json:"departTime" bson:"departTime"`
-	DepartLocation  maps.Place   `json:"departLocation" bson:"departLocation"`
-	ArrivalTime     time.Time    `json:"arrivalTime" bson:"arrivalTime"`
-	ArrivalLocation maps.Place   `json:"arrivalLocation" bson:"arrivalLocation"`
-	ConfirmationID  string       `json:"confirmationID" bson:"confirmationID"`
-	Notes           string       `json:"notes" bson:"notes"`
-	Price           common.Price `json:"price" bson:"price"`
+	ID              string           `json:"id" bson:"id"`
+	Type            string           `json:"type"`
+	DepartTime      time.Time        `json:"departTime" bson:"departTime"`
+	DepartLocation  maps.Place       `json:"departLocation" bson:"departLocation"`
+	ArrivalTime     time.Time        `json:"arrivalTime" bson:"arrivalTime"`
+	ArrivalLocation maps.Place       `json:"arrivalLocation" bson:"arrivalLocation"`
+	ConfirmationID  string           `json:"confirmationID" bson:"confirmationID"`
+	Notes           string           `json:"notes" bson:"notes"`
+	PriceItem       common.PriceItem `json:"price" bson:"price"`
 
 	Tags   common.Tags   `json:"tags" bson:"tags"`
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
 type Lodging struct {
-	ID             string        `json:"id" bson:"id"`
-	NumGuests      int32         `json:"numGuests" bson:"numGuests"`
-	CheckinTime    time.Time     `json:"checkinTime" bson:"checkinTime"`
-	CheckoutTime   time.Time     `json:"checkoutTime" bson:"checkoutTime"`
-	Price          common.Price  `json:"price" bson:"price"`
-	ConfirmationID string        `json:"confirmationID" bson:"confirmationID"`
-	Notes          string        `json:"notes" bson:"notes"`
-	Place          maps.Place    `json:"place" bson:"place"`
-	Tags           common.Tags   `json:"tags" bson:"tags"`
-	Labels         common.Labels `json:"labels" bson:"labels"`
+	ID             string           `json:"id" bson:"id"`
+	NumGuests      int32            `json:"numGuests" bson:"numGuests"`
+	CheckinTime    time.Time        `json:"checkinTime" bson:"checkinTime"`
+	CheckoutTime   time.Time        `json:"checkoutTime" bson:"checkoutTime"`
+	PriceItem      common.PriceItem `json:"price" bson:"price"`
+	ConfirmationID string           `json:"confirmationID" bson:"confirmationID"`
+	Notes          string           `json:"notes" bson:"notes"`
+	Place          maps.Place       `json:"place" bson:"place"`
+	Tags           common.Tags      `json:"tags" bson:"tags"`
+	Labels         common.Labels    `json:"labels" bson:"labels"`
 }
 
 type ActivityComment struct {
@@ -208,7 +209,7 @@ type Activity struct {
 	Title     string            `json:"title" bson:"title"`
 	Place     maps.Place        `json:"place" bson:"place"`
 	Notes     string            `json:"notes" bson:"notes"`
-	Price     common.Price      `json:"price" bson:"price"`
+	PriceItem common.PriceItem  `json:"price" bson:"price"`
 	StartTime time.Time         `json:"startTime" bson:"startTime"`
 	EndTime   time.Time         `json:"endTime" bson:"endTime"`
 	Comments  []ActivityComment `json:"comments" bson:"comments"`
@@ -314,9 +315,9 @@ func NewBudget() Budget {
 }
 
 type BudgetItem struct {
-	Title string       `json:"title" bson:"title"`
-	Desc  string       `json:"desc" bson:"desc"`
-	Price common.Price `json:"price" bson:"price"`
+	Title     string           `json:"title" bson:"title"`
+	Desc      string           `json:"desc" bson:"desc"`
+	PriceItem common.PriceItem `json:"price" bson:"price"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
 	Tag    common.Tags   `json:"tags" bson:"tags"`
