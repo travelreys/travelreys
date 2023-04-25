@@ -23,6 +23,6 @@ type Price struct {
 }
 
 type PriceItem struct {
-	Price
+	Price        `bson:"inline"`
 	SplitOptions PriceSplitOptions `json:"splitOptions" bson:"splitOptions"`
 }
