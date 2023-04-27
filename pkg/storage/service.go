@@ -7,12 +7,11 @@ import (
 )
 
 const (
-	storageProviderMinio                  = "minio"
-	storageProviderGcs                    = "gcs"
-	defaultStorageProvider                = "minio"
-	defaultPresignedURLDuration           = 30 * time.Minute
-	defaultPresignedCookieDuration        = 24 * time.Hour
-	DefaultPresignedCookieRefreshDuration = 23 * time.Hour
+	storageProviderMinio           = "minio"
+	storageProviderGcs             = "gcs"
+	defaultStorageProvider         = "minio"
+	defaultPresignedURLDuration    = 30 * time.Minute
+	defaultPresignedCookieDuration = 24 * time.Hour
 )
 
 type Service interface {

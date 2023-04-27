@@ -2,6 +2,8 @@ package media
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 
 	"github.com/travelreys/travelreys/pkg/storage"
 )
@@ -15,12 +17,13 @@ type Service interface {
 }
 
 type service struct {
-	store      Store
-	storageSvc storage.Service
+	store       Store
+	cdnProvider CDNProvider
+	storageSvc  storage.Service
 }
 
-func NewService(store Store, storageSvc storage.Service) Service {
-	return &service{store, storageSvc}
+func NewService(store Store, cdnProvider CDNProvider, storageSvc storage.Service) Service {
+	return &service{store, cdnProvider, storageSvc}
 }
 
 func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, []string, error) {
@@ -56,7 +59,9 @@ func (svc *service) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter) 
 	}
 	urls := []string{}
 	for _, item := range items {
-		signedURL, err := svc.storageSvc.GetPresignedURL(ctx, MediaItemBucket, item.Path, item.ID)
+		cdnDomain := svc.cdnProvider.Domain(ctx, true)
+		urlToSign := fmt.Sprintf("%s/%s", cdnDomain, filepath.Join(item.Bucket, item.Path))
+		signedURL, err := svc.cdnProvider.PresignedURL(ctx, urlToSign)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -11,14 +11,8 @@ import (
 )
 
 var (
-	projectID       = os.Getenv("TRAVELREYS_GCS_PROJECT")
+	projectID       = os.Getenv("TRAVELREYS_GCP_PROJECT")
 	gcsAuthJsonPath = os.Getenv("TRAVELREYS_GCS_AUTH_JSON")
-	cookieKeyName   = os.Getenv("TRAVELREYS_GCS_COOKIE_KEY_NAME")
-	cookieKeyPath   = os.Getenv("TRAVELREYS_GCS_COOKIE_KEY_PATH")
-)
-
-const (
-	cookieHeader = "Cloud-CDN-Cookie"
 )
 
 type gcsService struct {
@@ -51,6 +45,7 @@ func NewGCSService(ctx context.Context, credsPath string) (Service, error) {
 		credsPath,
 	}, nil
 }
+
 func (svc gcsService) Stat(ctx context.Context, bucket, path string) (Object, error) {
 	attrs, err := svc.cl.Bucket(bucket).Object(path).Attrs(ctx)
 	if err != nil {

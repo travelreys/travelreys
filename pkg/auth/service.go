@@ -27,8 +27,6 @@ const (
 var (
 	avatarFilePrefix = "avatar"
 	avatarBucket     = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
-	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
-	mediaCDNDomain   = os.Getenv("TRAVELREYS_MEDIA_DOMAIN") // cdn.travelreys.com
 
 	ErrProviderGoogleError   = errors.New("auth.service.google.error")
 	ErrProviderFacebookError = errors.New("auth.service.facebook.error")

@@ -16,7 +16,6 @@ import (
 var (
 	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
 	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
-	mediaCDNDomain   = os.Getenv("TRAVELREYS_MEDIA_DOMAIN") // cdn.travelreys.com
 
 	ErrTripSharingNotEnabled = errors.New("trip.service.tripSharingNotEnabled")
 )
