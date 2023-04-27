@@ -59,9 +59,10 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	}
 	fb := auth.NewFacebookProvider()
 	otp := auth.NewDefaultOTPProvider(authStore, rand.Reader)
-
 	authSvc := auth.NewService(
-		gp, fb, otp, authStore, cfg.SecureCookie, mailSvc, storageSvc, logger,
+		gp, fb, otp,
+		authStore, cfg.SecureCookie,
+		mailSvc, storageSvc, logger,
 	)
 	authSvcWithRBAC := auth.ServiceWithRBACMiddleware(authSvc, logger)
 
@@ -82,7 +83,11 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	// Media
 	mediaStore := media.NewStore(ctx, db, logger)
-	mediaSvc := media.NewService(mediaStore, storageSvc)
+	mediaCDNProvider, err := media.NewDefaultCDNProvider()
+	if err != nil {
+		return nil, err
+	}
+	mediaSvc := media.NewService(mediaStore, mediaCDNProvider, storageSvc)
 	mediaSvc = media.ServiceWithRBACMiddleware(mediaSvc, logger)
 
 	// Trips

@@ -57,19 +57,24 @@ func (svc *service) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter) 
 	if err != nil {
 		return nil, nil, err
 	}
+	urls, err := svc.GenerateGetSignedURLsForItems(ctx, items)
+	return items, urls, err
+}
+
+func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
+	return svc.store.Delete(ctx, ff)
+}
+
+func (svc *service) GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) ([]string, error) {
 	urls := []string{}
 	for _, item := range items {
 		cdnDomain := svc.cdnProvider.Domain(ctx, true)
 		urlToSign := fmt.Sprintf("%s/%s", cdnDomain, filepath.Join(item.Bucket, item.Path))
 		signedURL, err := svc.cdnProvider.PresignedURL(ctx, urlToSign)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		urls = append(urls, signedURL)
 	}
-	return items, urls, nil
-}
-
-func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
-	return svc.store.Delete(ctx, ff)
+	return urls, nil
 }
