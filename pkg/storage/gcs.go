@@ -2,12 +2,7 @@ package storage
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha1"
-	"encoding/base64"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"time"
 
@@ -16,14 +11,8 @@ import (
 )
 
 var (
-	projectID       = os.Getenv("TRAVELREYS_GCS_PROJECT")
+	projectID       = os.Getenv("TRAVELREYS_GCP_PROJECT")
 	gcsAuthJsonPath = os.Getenv("TRAVELREYS_GCS_AUTH_JSON")
-	cookieKeyName   = os.Getenv("TRAVELREYS_GCS_COOKIE_KEY_NAME")
-	cookieKeyPath   = os.Getenv("TRAVELREYS_GCS_COOKIE_KEY_PATH")
-)
-
-const (
-	cookieHeader = "Cloud-CDN-Cookie"
 )
 
 type gcsService struct {
@@ -56,6 +45,7 @@ func NewGCSService(ctx context.Context, credsPath string) (Service, error) {
 		credsPath,
 	}, nil
 }
+
 func (svc gcsService) Stat(ctx context.Context, bucket, path string) (Object, error) {
 	attrs, err := svc.cl.Bucket(bucket).Object(path).Attrs(ctx)
 	if err != nil {
@@ -123,75 +113,4 @@ func (svc gcsService) PutPresignedURL(ctx context.Context, bucket, path, filenam
 		return "", fmt.Errorf("Bucket(%q).SignedURL: %v", bucket, err)
 	}
 	return u, nil
-}
-
-// signCookie creates a signed cookie for an endpoint served by Cloud CDN.
-// - urlPrefix must start with "https://" and should include the path prefix
-// for which the cookie will authorize access to.
-// - key should be in raw form (not base64url-encoded) which is
-// 16-bytes long.
-// - keyName must match a key added to the backend service or bucket.
-func signCookie(urlPrefix, keyName string, key []byte, expiration time.Time) (string, error) {
-	encodedURLPrefix := base64.URLEncoding.EncodeToString([]byte(urlPrefix))
-	input := fmt.Sprintf(
-		"URLPrefix=%s:Expires=%d:KeyName=%s",
-		encodedURLPrefix,
-		expiration.Unix(),
-		keyName)
-
-	mac := hmac.New(sha1.New, key)
-	mac.Write([]byte(input))
-	sig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
-
-	signedValue := fmt.Sprintf("%s:Signature=%s", input, sig)
-	return signedValue, nil
-}
-
-// readKeyFile reads the base64url-encoded key file and decodes it.
-func readKeyFile(cookieFilePath string) ([]byte, error) {
-	b, err := ioutil.ReadFile(cookieFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read key file: %+v", err)
-	}
-	d := make([]byte, base64.URLEncoding.DecodedLen(len(b)))
-	n, err := base64.URLEncoding.Decode(d, b)
-	if err != nil {
-		return nil, fmt.Errorf("failed to base64url decode: %+v", err)
-	}
-	return d[:n], nil
-}
-
-func (svc gcsService) GeneratePresignedCookie(ctx context.Context, domain, path string) (*http.Cookie, error) {
-	// Note: consider using the GCP Secret Manager for managing access to your
-	// signing key(s).
-	key, err := readKeyFile(cookieKeyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	expiration := defaultPresignedCookieDuration
-	signedValue, err := signCookie(
-		fmt.Sprintf("https://%s/%s/", domain, path),
-		cookieKeyName,
-		key,
-		time.Now().Add(expiration),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Use Go's http.Cookie type to construct a cookie.
-	// domain and path should match the user-facing URL for accessing content.
-	// Best practice: only send the cookie for paths it is valid for
-	cookie := &http.Cookie{
-		Name:     cookieHeader,
-		Value:    signedValue,
-		Path:     "/",
-		Domain:   os.Getenv("TRAVELREYS_MEDIA_COOKIE_DOMAIN"),
-		MaxAge:   int(expiration.Seconds()),
-		SameSite: http.SameSiteNoneMode,
-		Secure:   true,
-		HttpOnly: true,
-	}
-	return cookie, nil
 }

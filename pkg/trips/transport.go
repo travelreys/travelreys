@@ -15,8 +15,6 @@ import (
 
 const (
 	URLPathVarID = "id"
-
-	maxUploadSize = 25 * 1024 * 1024 // 25MB
 )
 
 func errToHttpCode(err error) int {
@@ -149,8 +147,8 @@ func decodeListRequest(ctx context.Context, r *http.Request) (interface{}, error
 	}
 	ff := ListFilter{UserID: common.StringPtr(ci.UserID)}
 	return ListRequest{ff}, nil
-
 }
+
 func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]

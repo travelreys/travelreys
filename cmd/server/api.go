@@ -13,6 +13,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/email"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/ogp"
 	"github.com/travelreys/travelreys/pkg/storage"
 	"github.com/travelreys/travelreys/pkg/trips"
@@ -40,6 +41,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	ctx := context.Background()
 
+	// Mail
 	mailSvc := email.NewDefaultService()
 
 	// Storage
@@ -57,8 +59,11 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	}
 	fb := auth.NewFacebookProvider()
 	otp := auth.NewDefaultOTPProvider(authStore, rand.Reader)
-
-	authSvc := auth.NewService(gp, fb, otp, authStore, cfg.SecureCookie, mailSvc, storageSvc, logger)
+	authSvc := auth.NewService(
+		gp, fb, otp,
+		authStore, cfg.SecureCookie,
+		mailSvc, storageSvc, logger,
+	)
 	authSvcWithRBAC := auth.ServiceWithRBACMiddleware(authSvc, logger)
 
 	// Images
@@ -76,16 +81,19 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	ogpSvc := ogp.NewService()
 	ogpSvc = ogp.ServiceWithRBACMiddleware(ogpSvc, logger)
 
+	// Media
+	mediaStore := media.NewStore(ctx, db, logger)
+	mediaCDNProvider, err := media.NewDefaultCDNProvider()
+	if err != nil {
+		return nil, err
+	}
+	mediaSvc := media.NewService(mediaStore, mediaCDNProvider, storageSvc)
+	mediaSvc = media.ServiceWithRBACMiddleware(mediaSvc, logger)
+
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
 	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, storageSvc)
 	tripSvc = trips.ServiceWithRBACMiddleware(tripSvc, logger)
-
-	r := mux.NewRouter()
-	securityMW := api.NewSecureHeadersMiddleware(cfg.CORSOrigin)
-	wrwMW := api.NewWrappedReponseWriterMiddleware()
-	loggingMW := api.NewMuxLoggingMiddleware(logger)
-	metricsMW := api.NewMetricsMiddleware()
 
 	// TripSync
 	store := tripssync.NewStore(rdb, logger)
@@ -94,6 +102,12 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	svc := tripssync.NewService(store, msgStore, tobStore, tripStore)
 	wsSvr := tripssync.NewWebsocketServer(svc, logger)
+
+	r := mux.NewRouter()
+	securityMW := api.NewSecureHeadersMiddleware(cfg.CORSOrigin)
+	wrwMW := api.NewWrappedReponseWriterMiddleware()
+	loggingMW := api.NewMuxLoggingMiddleware(logger)
+	metricsMW := api.NewMetricsMiddleware()
 
 	r.Use(securityMW.Handler)
 	r.Use(wrwMW.Handler)
@@ -107,6 +121,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvcWithRBAC))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
+	r.PathPrefix("/api/v1/media").Handler(media.MakeHandler(mediaSvc))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 

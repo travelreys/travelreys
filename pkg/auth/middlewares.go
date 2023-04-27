@@ -78,11 +78,3 @@ func (mw rbacMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID string
 	}
 	return mw.next.UploadAvatarPresignedURL(ctx, ID)
 }
-
-func (mw rbacMiddleware) GenerateMediaPresignedCookie(ctx context.Context) (*http.Cookie, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil || ci.HasEmptyID() {
-		return nil, ErrRBAC
-	}
-	return mw.next.GenerateMediaPresignedCookie(ctx)
-}

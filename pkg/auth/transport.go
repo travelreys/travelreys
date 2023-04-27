@@ -11,7 +11,6 @@ import (
 
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
-	"github.com/travelreys/travelreys/pkg/storage"
 )
 
 const (
@@ -76,12 +75,6 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse,
 		opts...,
 	)
-	generateMediaPresignedCookieHandler := kithttp.NewServer(
-		NewGenerateMediaPresignedCookieEndpoint(svc),
-		decodeGenerateMediaPresignedCookieRequest,
-		encodeGenerateMediaPresignedCookieResponse,
-		opts...,
-	)
 
 	r.Handle("/api/v1/auth/login", loginHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/auth/logout", logoutHandler).Methods(http.MethodGet)
@@ -91,7 +84,6 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/auth/users/{id}", updateUserHandler).Methods(http.MethodPut)
 	r.Handle("/api/v1/auth/users/{id}", deleteUserHandler).Methods(http.MethodDelete)
 	r.Handle("/api/v1/auth/users/{id}/avatar/upload/pre-signed", uploadAvatarPresignedURLHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/auth/media/pre-signed-cookie", generateMediaPresignedCookieHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -227,32 +219,4 @@ func decodeUploadAvatarPresignedURLRequest(_ context.Context, r *http.Request) (
 		ID: vars[bsonKeyID],
 	}
 	return req, nil
-}
-
-func decodeGenerateMediaPresignedCookieRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return GenerateMediaPresignedCookieRequest{}, nil
-}
-
-func encodeGenerateMediaPresignedCookieResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
-		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
-		return nil
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	resp, ok := response.(GenerateMediaPresignedCookieResponse)
-	if !ok {
-		return common.ErrorEncodeInvalidResponse
-	}
-
-	if resp.Cookie != nil {
-		http.SetCookie(w, resp.Cookie)
-		expCookie := &http.Cookie{
-			Name:   mediaValidCookie,
-			Value:  "1",
-			Path:   "/",
-			MaxAge: int(storage.DefaultPresignedCookieRefreshDuration.Seconds()),
-		}
-		http.SetCookie(w, expCookie)
-	}
-	return json.NewEncoder(w).Encode(response)
 }
