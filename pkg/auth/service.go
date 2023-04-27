@@ -44,7 +44,6 @@ type Service interface {
 	Delete(context.Context, string) error
 
 	UploadAvatarPresignedURL(context.Context, string) (string, error)
-	GenerateMediaPresignedCookie(ctx context.Context) (*http.Cookie, error)
 }
 
 type service struct {
@@ -226,10 +225,6 @@ func (svc service) UploadAvatarPresignedURL(ctx context.Context, ID string) (str
 		filepath.Join(avatarFilePrefix, ID),
 		ID,
 	)
-}
-
-func (svc service) GenerateMediaPresignedCookie(ctx context.Context) (*http.Cookie, error) {
-	return svc.storageSvc.GeneratePresignedCookie(ctx, mediaCDNDomain, mediaBucket)
 }
 
 func (svc service) issueJwtToken(usr User) (string, error) {

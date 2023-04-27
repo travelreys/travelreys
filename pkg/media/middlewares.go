@@ -52,11 +52,3 @@ func (mw rbacMiddleware) Delete(ctx context.Context, ff DeleteMediaFilter) error
 	}
 	return mw.next.Delete(ctx, ff)
 }
-
-func (mw rbacMiddleware) GenerateUploadPresignURLs(ctx context.Context, userID string, fileIDs []string) ([]string, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil || ci.HasEmptyID() {
-		return nil, ErrRBAC
-	}
-	return mw.next.GenerateUploadPresignURLs(ctx, userID, fileIDs)
-}

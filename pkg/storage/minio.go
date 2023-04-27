@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 
@@ -74,8 +73,4 @@ func (svc minioService) PutPresignedURL(ctx context.Context, bucket, path, filen
 		return "", err
 	}
 	return presignedURL.String(), err
-}
-
-func (svc minioService) GeneratePresignedCookie(ctx context.Context, domain, path string) (*http.Cookie, error) {
-	return &http.Cookie{}, nil
 }

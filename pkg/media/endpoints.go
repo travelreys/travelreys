@@ -120,28 +120,3 @@ func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
 		return DeleteResponse{err}, nil
 	}
 }
-
-type GenerateUploadPresignURLsRequest struct {
-	UserID  string   `json:"userID"`
-	FileIDs []string `json:"fileIDs"`
-}
-
-type GenerateUploadPresignURLsResponse struct {
-	URLs []string `json:"urls"`
-	Err  error    `json:"error,omitempty"`
-}
-
-func (r GenerateUploadPresignURLsResponse) Error() error {
-	return r.Err
-}
-
-func NewGenerateUploadPresignURLsEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(GenerateUploadPresignURLsRequest)
-		if !ok {
-			return GenerateUploadPresignURLsResponse{Err: common.ErrorEndpointReqMismatch}, nil
-		}
-		urls, err := svc.GenerateUploadPresignURLs(ctx, req.UserID, req.FileIDs)
-		return GenerateUploadPresignURLsResponse{urls, err}, nil
-	}
-}

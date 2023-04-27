@@ -200,27 +200,3 @@ func NewUploadAvatarPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 		}, nil
 	}
 }
-
-type GenerateMediaPresignedCookieRequest struct {
-	ID          string `json:"id"`
-	MediaDomain string `json:"mediaDomain"`
-}
-
-type GenerateMediaPresignedCookieResponse struct {
-	Cookie *http.Cookie `json:"-"`
-	Err    error        `json:"error,omitempty"`
-}
-
-func (r GenerateMediaPresignedCookieResponse) Error() error {
-	return r.Err
-}
-
-func NewGenerateMediaPresignedCookieEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		cookie, err := svc.GenerateMediaPresignedCookie(ctx)
-		return GenerateMediaPresignedCookieResponse{
-			Cookie: cookie,
-			Err:    err,
-		}, nil
-	}
-}

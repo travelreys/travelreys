@@ -2,7 +2,6 @@ package media
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/travelreys/travelreys/pkg/storage"
 )
@@ -13,8 +12,6 @@ type Service interface {
 	List(ctx context.Context, ff ListMediaFilter) (MediaItemList, error)
 	ListWithSignedURLs(ctx context.Context, ff ListMediaFilter) (MediaItemList, []string, error)
 	Delete(ctx context.Context, ff DeleteMediaFilter) error
-
-	GenerateUploadPresignURLs(ctx context.Context, userID string, fileIDs []string) ([]string, error)
 }
 
 type service struct {
@@ -70,17 +67,4 @@ func (svc *service) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter) 
 
 func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
 	return svc.store.Delete(ctx, ff)
-}
-
-func (svc *service) GenerateUploadPresignURLs(ctx context.Context, userID string, fileIDs []string) ([]string, error) {
-	urls := []string{}
-	for _, fID := range fileIDs {
-		path := filepath.Join(UserMediaPathPrefix, userID, fID)
-		signedURL, err := svc.storageSvc.PutPresignedURL(ctx, MediaItemBucket, path, fID)
-		if err != nil {
-			return nil, err
-		}
-		urls = append(urls, signedURL)
-	}
-	return urls, nil
 }
