@@ -1,0 +1,62 @@
+package media
+
+import (
+	"context"
+	"errors"
+
+	"github.com/travelreys/travelreys/pkg/reqctx"
+	"go.uber.org/zap"
+)
+
+var (
+	ErrRBAC = errors.New("auth.rbac.error")
+)
+
+type rbacMiddleware struct {
+	next   Service
+	logger *zap.Logger
+}
+
+func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
+	return &rbacMiddleware{svc, logger}
+}
+
+func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, []string, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, nil, ErrRBAC
+	}
+	return mw.next.GenerateMediaItems(ctx, userID, params)
+}
+
+func (mw rbacMiddleware) SaveForUser(ctx context.Context, userID string, items MediaItemList) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	return mw.next.SaveForUser(ctx, userID, items)
+}
+
+func (mw rbacMiddleware) List(ctx context.Context, ff ListMediaFilter) (MediaItemList, error) {
+	return mw.next.List(ctx, ff)
+}
+
+func (mw rbacMiddleware) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter) (MediaItemList, []string, error) {
+	return mw.next.ListWithSignedURLs(ctx, ff)
+}
+
+func (mw rbacMiddleware) Delete(ctx context.Context, ff DeleteMediaFilter) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	return mw.next.Delete(ctx, ff)
+}
+
+func (mw rbacMiddleware) GenerateUploadPresignURLs(ctx context.Context, userID string, fileIDs []string) ([]string, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+	return mw.next.GenerateUploadPresignURLs(ctx, userID, fileIDs)
+}
