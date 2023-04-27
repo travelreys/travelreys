@@ -3,7 +3,6 @@ package media
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/travelreys/travelreys/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
@@ -84,9 +83,8 @@ func (str *store) SaveForUser(ctx context.Context, userID string, items MediaIte
 }
 
 func (str *store) List(ctx context.Context, ff ListMediaFilter) (MediaItemList, error) {
-	fmt.Println(ff)
 	list := MediaItemList{}
-	cursor, err := str.coll.Find(ctx, ff)
+	cursor, err := str.coll.Find(ctx, ff, options.Find().SetSort(bson.M{"_id": -1}))
 	if err != nil {
 		str.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return list, err
