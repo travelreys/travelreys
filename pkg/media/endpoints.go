@@ -59,12 +59,14 @@ func NewSaveForUserEndpoint(svc Service) endpoint.Endpoint {
 
 type ListRequest struct {
 	ListMediaFilter
+	ListMediaPagination
 	WithURLs bool `json:"withURLs"`
 }
 
 type ListResponse struct {
-	Items MediaItemList `json:"items"`
-	Err   error         `json:"error,omitempty"`
+	Items  MediaItemList `json:"items"`
+	LastID string        `json:"lastId"`
+	Err    error         `json:"error,omitempty"`
 }
 
 func (r ListResponse) Error() error {
@@ -72,9 +74,8 @@ func (r ListResponse) Error() error {
 }
 
 type ListWithSignedURLsResponse struct {
-	Items MediaItemList `json:"items"`
-	URLs  []string      `json:"urls"`
-	Err   error         `json:"error,omitempty"`
+	ListResponse
+	URLs []string `json:"urls"`
 }
 
 func (r ListWithSignedURLsResponse) Error() error {
@@ -89,12 +90,15 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 		}
 
 		if req.WithURLs {
-			items, urls, err := svc.ListWithSignedURLs(ctx, req.ListMediaFilter)
-			return ListWithSignedURLsResponse{items, urls, err}, nil
+			items, lastId, urls, err := svc.ListWithSignedURLs(ctx, req.ListMediaFilter, req.ListMediaPagination)
+			return ListWithSignedURLsResponse{
+				ListResponse{items, lastId, err},
+				urls,
+			}, nil
 		}
 
-		items, err := svc.List(ctx, req.ListMediaFilter)
-		return ListResponse{items, err}, nil
+		items, lastId, err := svc.List(ctx, req.ListMediaFilter, req.ListMediaPagination)
+		return ListResponse{items, lastId, err}, nil
 	}
 }
 

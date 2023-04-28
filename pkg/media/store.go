@@ -6,12 +6,15 @@ import (
 
 	"github.com/travelreys/travelreys/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/zap"
 )
 
 const (
+	defaultPageSize = 10
+
 	bsonKeyID       = "id"
 	bsonKeyUserID   = "userID"
 	mediaItemColl   = "media"
@@ -24,6 +27,19 @@ var (
 
 type ListMediaFilter struct {
 	UserID *string `json:"userID" bson:"userID"`
+}
+
+func (ff ListMediaFilter) toBSON() bson.M {
+	bsonM := bson.M{}
+	if ff.UserID != nil || *ff.UserID != "" {
+		bsonM["userID"] = ff.UserID
+	}
+	return bsonM
+}
+
+type ListMediaPagination struct {
+	Page    *uint64 `json:"page" bson:"page"`
+	StartId *string `json:"startId" bson:"startId"`
 }
 
 type DeleteMediaFilter struct {
@@ -44,7 +60,7 @@ func (ff DeleteMediaFilter) toBSON() bson.M {
 
 type Store interface {
 	SaveForUser(ctx context.Context, userID string, items MediaItemList) error
-	List(ctx context.Context, ff ListMediaFilter) (MediaItemList, error)
+	List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error)
 	Delete(ctx context.Context, ff DeleteMediaFilter) error
 }
 
@@ -61,7 +77,7 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 
 	coll := db.Collection(mediaItemColl)
 	coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		{Keys: bson.M{bsonKeyID: 1, bsonKeyUserID: 1}},
+		{Keys: bson.M{bsonKeyUserID: 1, bsonKeyID: 1}},
 	})
 	return &store{db, coll, logger.Named(storeLoggerName)}
 }
@@ -82,15 +98,41 @@ func (str *store) SaveForUser(ctx context.Context, userID string, items MediaIte
 	return err
 }
 
-func (str *store) List(ctx context.Context, ff ListMediaFilter) (MediaItemList, error) {
+func (str *store) List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error) {
 	list := MediaItemList{}
-	cursor, err := str.coll.Find(ctx, ff, options.Find().SetSort(bson.M{"_id": -1}))
+	bsonFF := ff.toBSON()
+
+	opts := options.Find().SetSort(bson.M{"_id": -1}).SetLimit(defaultPageSize)
+	if pg.Page != nil {
+		numSkip := *pg.Page * defaultPageSize
+		opts.SetSkip(int64(numSkip))
+	}
+	if pg.StartId != nil {
+		objID, err := primitive.ObjectIDFromHex(*pg.StartId)
+		if err != nil {
+			return nil, "", err
+		}
+		bsonFF["_id"] = bson.M{"$lt": objID}
+	}
+
+	cursor, err := str.coll.Find(ctx, bsonFF, opts)
 	if err != nil {
 		str.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
-		return list, err
+		return list, "", err
 	}
-	err = cursor.All(ctx, &list)
-	return list, err
+	var lastId string
+	for cursor.Next(ctx) {
+		bsonItem := struct {
+			ObjectID  primitive.ObjectID `bson:"_id"`
+			MediaItem `bson:"inline"`
+		}{}
+		if err := cursor.Decode(&bsonItem); err != nil {
+			return nil, "", err
+		}
+		lastId = bsonItem.ObjectID.Hex()
+		list = append(list, bsonItem.MediaItem)
+	}
+	return list, lastId, nil
 }
 
 func (str *store) Delete(ctx context.Context, ff DeleteMediaFilter) error {

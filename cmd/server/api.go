@@ -85,6 +85,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	mediaStore := media.NewStore(ctx, db, logger)
 	mediaCDNProvider, err := media.NewDefaultCDNProvider()
 	if err != nil {
+		logger.Error("unable to connect cdn provider", zap.Error(err))
 		return nil, err
 	}
 	mediaSvc := media.NewService(mediaStore, mediaCDNProvider, storageSvc)

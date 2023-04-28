@@ -11,8 +11,8 @@ import (
 type Service interface {
 	GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, []string, error)
 	SaveForUser(ctx context.Context, userID string, items MediaItemList) error
-	List(ctx context.Context, ff ListMediaFilter) (MediaItemList, error)
-	ListWithSignedURLs(ctx context.Context, ff ListMediaFilter) (MediaItemList, []string, error)
+	List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error)
+	ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, []string, error)
 	Delete(ctx context.Context, ff DeleteMediaFilter) error
 }
 
@@ -48,17 +48,17 @@ func (svc *service) SaveForUser(ctx context.Context, userID string, items MediaI
 	return svc.store.SaveForUser(ctx, userID, items)
 }
 
-func (svc *service) List(ctx context.Context, ff ListMediaFilter) (MediaItemList, error) {
-	return svc.store.List(ctx, ff)
+func (svc *service) List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error) {
+	return svc.store.List(ctx, ff, pg)
 }
 
-func (svc *service) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter) (MediaItemList, []string, error) {
-	items, err := svc.store.List(ctx, ff)
+func (svc *service) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, []string, error) {
+	items, lastId, err := svc.store.List(ctx, ff, pg)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
 	urls, err := svc.GenerateGetSignedURLsForItems(ctx, items)
-	return items, urls, err
+	return items, lastId, urls, err
 }
 
 func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
