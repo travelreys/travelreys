@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -109,6 +110,16 @@ func decodeListRequest(ctx context.Context, r *http.Request) (interface{}, error
 	params := r.URL.Query()
 	if params.Has(URLQueryVarUserID) {
 		req.UserID = common.StringPtr(params.Get(URLQueryVarUserID))
+	}
+	if params.Has("startid") {
+		req.StartId = common.StringPtr(params.Get("startid"))
+	}
+	if params.Has("page") {
+		val, err := strconv.Atoi(params.Get("page"))
+		if err != nil {
+			return nil, common.ErrInvalidRequest
+		}
+		req.Page = common.UInt64Ptr(uint64(val))
 	}
 	if params.Has("withURLs") {
 		req.WithURLs = true

@@ -37,12 +37,12 @@ func (mw rbacMiddleware) SaveForUser(ctx context.Context, userID string, items M
 	return mw.next.SaveForUser(ctx, userID, items)
 }
 
-func (mw rbacMiddleware) List(ctx context.Context, ff ListMediaFilter) (MediaItemList, error) {
-	return mw.next.List(ctx, ff)
+func (mw rbacMiddleware) List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error) {
+	return mw.next.List(ctx, ff, pg)
 }
 
-func (mw rbacMiddleware) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter) (MediaItemList, []string, error) {
-	return mw.next.ListWithSignedURLs(ctx, ff)
+func (mw rbacMiddleware) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, []string, error) {
+	return mw.next.ListWithSignedURLs(ctx, ff, pg)
 }
 
 func (mw rbacMiddleware) Delete(ctx context.Context, ff DeleteMediaFilter) error {
