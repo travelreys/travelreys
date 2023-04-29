@@ -62,6 +62,16 @@ func (svc *service) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, 
 }
 
 func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
+	listFF := ListMediaFilter{ff.UserID, ff.IDs}
+	items, _, err := svc.store.List(ctx, listFF, ListMediaPagination{})
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		go func(obj storage.Object) {
+			svc.storageSvc.Remove(ctx, obj)
+		}(item.Object)
+	}
 	return svc.store.Delete(ctx, ff)
 }
 
