@@ -128,10 +128,15 @@ func decodeListRequest(ctx context.Context, r *http.Request) (interface{}, error
 }
 
 func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
 	params := r.URL.Query()
 	req := DeleteRequest{
 		DeleteMediaFilter: DeleteMediaFilter{
-			UserID: common.StringPtr(params.Get(URLQueryVarUserID)),
+			UserID: common.StringPtr(userID),
 			IDs:    strings.Split(params.Get("ids"), ","),
 		},
 	}

@@ -26,13 +26,17 @@ var (
 )
 
 type ListMediaFilter struct {
-	UserID *string `json:"userID" bson:"userID"`
+	UserID *string  `json:"userID" bson:"userID"`
+	IDs    []string `json:"ids"`
 }
 
 func (ff ListMediaFilter) toBSON() bson.M {
 	bsonM := bson.M{}
 	if ff.UserID != nil || *ff.UserID != "" {
-		bsonM["userID"] = ff.UserID
+		bsonM["userID"] = *ff.UserID
+	}
+	if len(ff.IDs) > 0 {
+		bsonM["id"] = bson.M{"$in": ff.IDs}
 	}
 	return bsonM
 }
@@ -50,10 +54,10 @@ type DeleteMediaFilter struct {
 func (ff DeleteMediaFilter) toBSON() bson.M {
 	bsonM := bson.M{}
 	if ff.UserID != nil || *ff.UserID != "" {
-		bsonM["userID"] = ff.UserID
+		bsonM["userID"] = *ff.UserID
 	}
 	if len(ff.IDs) > 0 {
-		bsonM["ids"] = bson.M{"$in": ff.IDs}
+		bsonM["id"] = bson.M{"$in": ff.IDs}
 	}
 	return bsonM
 }
