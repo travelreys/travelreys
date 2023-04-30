@@ -96,13 +96,15 @@ func NewTrip(creator Member, name string) Trip {
 		Itineraries: map[string]Itinerary{},
 		Budget:      NewBudget(),
 		Links:       LinkMap{},
-		MediaItems:  map[string]media.MediaItemList{},
-		Media:       map[string]storage.Object{},
-		Files:       map[string]storage.Object{},
-		UpdatedAt:   time.Now(),
-		CreatedAt:   time.Now(),
-		Labels:      common.Labels{},
-		Tags:        common.Tags{},
+		MediaItems: map[string]media.MediaItemList{
+			MediaItemKeyCoverImage: {},
+		},
+		Media:     map[string]storage.Object{},
+		Files:     map[string]storage.Object{},
+		UpdatedAt: time.Now(),
+		CreatedAt: time.Now(),
+		Labels:    common.Labels{},
+		Tags:      common.Tags{},
 	}
 }
 

@@ -122,7 +122,6 @@ func (svc *service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersM
 func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 	for key := range trip.MediaItems {
 		urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[key])
-
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
 			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i]
 		}
@@ -180,6 +179,7 @@ func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.
 	for _, usr := range users {
 		usersMap[usr.ID] = usr
 	}
+	svc.AugmentTripMediaItemURLs(ctx, &trip)
 	return trip, usersMap, nil
 }
 
@@ -201,7 +201,14 @@ func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, 
 }
 
 func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) {
-	return svc.store.List(ctx, ff)
+	trips, err := svc.store.List(ctx, ff)
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < len(trips); i++ {
+		svc.AugmentTripMediaItemURLs(ctx, &trips[i])
+	}
+	return trips, nil
 }
 
 func (svc *service) Delete(ctx context.Context, ID string) error {
