@@ -127,7 +127,19 @@ func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 			break
 		}
 	}
-	return trip.OGP(creator), nil
+
+	// Select CoverImage URL
+	coverImageURL := trip.CoverImage.WebImage.Urls.Regular
+	if trip.CoverImage.Source == CoverImageSourceTrip {
+		mediaItem := trip.MediaItems[MediaItemKeyCoverImage][trip.CoverImage.TripImage]
+		urls, err := svc.GenerateSignedURLs(ctx, trip.ID, media.MediaItemList{mediaItem})
+		if err != nil {
+			return TripOGP{}, err
+		}
+		coverImageURL = urls[0]
+	}
+
+	return trip.OGP(creator, coverImageURL), nil
 }
 
 func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {

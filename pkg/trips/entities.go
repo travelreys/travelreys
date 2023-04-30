@@ -25,6 +25,8 @@ const (
 	LabelSharingAccess   = "sharing|access"
 	LabelUiColor         = "ui|color"
 	LabelUiIcon          = "ui|icon"
+
+	MediaItemKeyCoverImage = "coverImage"
 )
 
 const (
@@ -69,11 +71,10 @@ type Trip struct {
 }
 
 type TripOGP struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-
-	CoverImage CoverImage `json:"coverImage" bson:"coverImage"`
-	Creator    auth.User  `json:"creator"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	CoverImageURL string    `json:"coverImageURL" bson:"coverImageURL"`
+	Creator       auth.User `json:"creator"`
 }
 
 type TripsList []Trip
@@ -120,12 +121,12 @@ func (trip Trip) PublicInfo() Trip {
 	return newTrip
 }
 
-func (trip Trip) OGP(creator auth.User) TripOGP {
+func (trip Trip) OGP(creator auth.User, coverImageURL string) TripOGP {
 	return TripOGP{
-		ID:         trip.ID,
-		Name:       trip.Name,
-		CoverImage: trip.CoverImage,
-		Creator:    creator,
+		ID:            trip.ID,
+		Name:          trip.Name,
+		CoverImageURL: coverImageURL,
+		Creator:       creator,
 	}
 }
 

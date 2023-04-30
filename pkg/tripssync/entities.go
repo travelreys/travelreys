@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	MsgUpdateTripTitleAddMediaItem                = "AddMediaItem"
 	MsgUpdateTripTitleUpdateTripDates             = "UpdateTripDates"
 	MsgUpdateTripTitleUpdateTripMembers           = "UpdateTripMembers"
 	MsgUpdateTripTitleUpdateActivityPlace         = "UpdateActivityPlace"
