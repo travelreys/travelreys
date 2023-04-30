@@ -128,6 +128,13 @@ func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 	}
 }
 
+func (svc *service) AugmentTripCoverImageURL(ctx context.Context, trip *Trip) {
+	urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[MediaItemKeyCoverImage])
+	for i := 0; i < len(trip.MediaItems[MediaItemKeyCoverImage]); i++ {
+		trip.MediaItems[MediaItemKeyCoverImage][i].Labels[media.LabelMediaURL] = urls[i]
+	}
+}
+
 func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 	trip, err := svc.store.Read(ctx, ID)
 	if err != nil {
@@ -206,7 +213,7 @@ func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) 
 		return nil, err
 	}
 	for i := 0; i < len(trips); i++ {
-		svc.AugmentTripMediaItemURLs(ctx, &trips[i])
+		svc.AugmentTripCoverImageURL(ctx, &trips[i])
 	}
 	return trips, nil
 }
