@@ -26,7 +26,7 @@ const (
 
 var (
 	avatarFilePrefix = "avatar"
-	avatarBucket     = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
+	avatarBucket     = os.Getenv("TRAVELREYS_PUBLIC_BUCKET")
 
 	ErrProviderGoogleError   = errors.New("auth.service.google.error")
 	ErrProviderFacebookError = errors.New("auth.service.facebook.error")
@@ -246,7 +246,7 @@ func (svc service) createUser(ctx context.Context, email string) (User, error) {
 		CreatedAt:   time.Now(),
 		PhoneNumber: PhoneNumber{},
 		Labels: common.Labels{
-			LabelAvatarImage:   "https://cdn.travelreys.com/travelreys-media-demo/avatar/account.png",
+			LabelAvatarImage:   "https://cdn.travelreys.com/travelreys-public-demo/avatar/account.png",
 			LabelDefaultLocale: "en",
 		},
 	}
