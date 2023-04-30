@@ -10,6 +10,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/ogp"
 	"github.com/travelreys/travelreys/pkg/storage"
 )
@@ -35,9 +36,9 @@ type Trip struct {
 	ID   string `json:"id" bson:"id"`
 	Name string `json:"name" bson:"name"`
 
-	CoverImage images.ImageMetadata `json:"coverImage" bson:"coverImage"`
-	StartDate  time.Time            `json:"startDate" bson:"startDate"`
-	EndDate    time.Time            `json:"endDate" bson:"endDate"`
+	CoverImage CoverImage `json:"coverImage" bson:"coverImage"`
+	StartDate  time.Time  `json:"startDate" bson:"startDate"`
+	EndDate    time.Time  `json:"endDate" bson:"endDate"`
 
 	// Members
 	Creator   Member            `json:"creator" bson:"creator"`
@@ -54,8 +55,11 @@ type Trip struct {
 	Itineraries map[string]Itinerary `json:"itineraries" bson:"itineraries"`
 
 	// Media, Attachements
+	MediaItems map[string]media.MediaItemList `json:"mediaItems" bson:"mediaItems"`
+	Files      map[string]storage.Object      `json:"files" bson:"files"`
+
+	// To be deprecated:
 	Media map[string]storage.Object `json:"media" bson:"media"`
-	Files map[string]storage.Object `json:"files" bson:"files"`
 
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
@@ -68,8 +72,8 @@ type TripOGP struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 
-	CoverImage images.ImageMetadata `json:"coverImage" bson:"coverImage"`
-	Creator    auth.User            `json:"creator"`
+	CoverImage CoverImage `json:"coverImage" bson:"coverImage"`
+	Creator    auth.User  `json:"creator"`
 }
 
 type TripsList []Trip
@@ -80,7 +84,7 @@ func NewTrip(creator Member, name string) Trip {
 	return Trip{
 		ID:          uuid.New().String(),
 		Name:        name,
-		CoverImage:  images.ImageMetadata{},
+		CoverImage:  CoverImage{},
 		StartDate:   time.Time{},
 		EndDate:     time.Time{},
 		Creator:     creator,
@@ -91,6 +95,7 @@ func NewTrip(creator Member, name string) Trip {
 		Itineraries: map[string]Itinerary{},
 		Budget:      NewBudget(),
 		Links:       LinkMap{},
+		MediaItems:  map[string]media.MediaItemList{},
 		Media:       map[string]storage.Object{},
 		Files:       map[string]storage.Object{},
 		UpdatedAt:   time.Now(),
@@ -127,6 +132,19 @@ func (trip Trip) OGP(creator auth.User) TripOGP {
 func (trip Trip) IsSharingEnabled() bool {
 	_, ok := trip.Labels[LabelSharingAccess]
 	return ok
+}
+
+const (
+	CoverImageSourceWeb  = "web"
+	CoverImageSourceTrip = "trip"
+)
+
+type CoverImage struct {
+	Source   string               `json:"source" bson:"source"`
+	WebImage images.ImageMetadata `json:"webImage" bson:"webImage"`
+
+	// TripImage is the ID of mediaItem in the mediaItems["coverImage"]
+	TripImage string `json:"tripImage" bson:"tripImage"`
 }
 
 // Members

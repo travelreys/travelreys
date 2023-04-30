@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/travelreys/travelreys/pkg/storage"
+	"go.uber.org/zap"
+)
+
+const (
+	svcLoggerName = "media.svc"
 )
 
 type Service interface {
@@ -14,16 +19,18 @@ type Service interface {
 	List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error)
 	ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, []string, error)
 	Delete(ctx context.Context, ff DeleteMediaFilter) error
+	GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) ([]string, error)
 }
 
 type service struct {
 	store       Store
 	cdnProvider CDNProvider
 	storageSvc  storage.Service
+	logger      *zap.Logger
 }
 
-func NewService(store Store, cdnProvider CDNProvider, storageSvc storage.Service) Service {
-	return &service{store, cdnProvider, storageSvc}
+func NewService(store Store, cdnProvider CDNProvider, storageSvc storage.Service, logger *zap.Logger) Service {
+	return &service{store, cdnProvider, storageSvc, logger.Named(svcLoggerName)}
 }
 
 func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, []string, error) {
@@ -68,9 +75,9 @@ func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
 		return err
 	}
 	for _, item := range items {
-		go func(obj storage.Object) {
-			svc.storageSvc.Remove(ctx, obj)
-		}(item.Object)
+		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+			svc.logger.Error("delete", zap.Error(err))
+		}
 	}
 	return svc.store.Delete(ctx, ff)
 }

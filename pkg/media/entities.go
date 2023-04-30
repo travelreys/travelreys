@@ -15,6 +15,8 @@ const (
 
 	UserMediaPathPrefix = "users"
 	LabelMediaURL       = "mediaURL"
+	LabelWidth          = "width"
+	LabelHeight         = "height"
 )
 
 var (

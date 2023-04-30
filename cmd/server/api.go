@@ -88,12 +88,12 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		logger.Error("unable to connect cdn provider", zap.Error(err))
 		return nil, err
 	}
-	mediaSvc := media.NewService(mediaStore, mediaCDNProvider, storageSvc)
-	mediaSvc = media.ServiceWithRBACMiddleware(mediaSvc, logger)
+	mediaSvc := media.NewService(mediaStore, mediaCDNProvider, storageSvc, logger)
+	mediaSvcWithRBAC := media.ServiceWithRBACMiddleware(mediaSvc, logger)
 
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
-	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, storageSvc)
+	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, mediaSvc, storageSvc)
 	tripSvc = trips.ServiceWithRBACMiddleware(tripSvc, logger)
 
 	// TripSync
@@ -122,7 +122,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvcWithRBAC))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
-	r.PathPrefix("/api/v1/media").Handler(media.MakeHandler(mediaSvc))
+	r.PathPrefix("/api/v1/media").Handler(media.MakeHandler(mediaSvcWithRBAC))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 
