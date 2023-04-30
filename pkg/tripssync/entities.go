@@ -11,6 +11,7 @@ const (
 	MsgUpdateTripTitleUpdateTripDates             = "UpdateTripDates"
 	MsgUpdateTripTitleUpdateTripMembers           = "UpdateTripMembers"
 	MsgUpdateTripTitleUpdateActivityPlace         = "UpdateActivityPlace"
+	MsgUpdateTripTitleUpdateActivityDisplayImage  = "UpdateActivityDisplayImage"
 	MsgUpdateTripTitleDeleteActivity              = "DeleteActivity"
 	MsgUpdateTripTitleReorderItinerary            = "ReorderItinerary"
 	MsgUpdateTripTitleOptimizeItinerary           = "OptimizeItinerary"
