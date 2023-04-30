@@ -39,6 +39,7 @@ type MediaItem struct {
 }
 
 type MediaItemList []MediaItem
+type MediaItemMap map[string]MediaItem
 
 func NewMediaItem(userID string, param NewMediaItemParams) MediaItem {
 	objectPath := filepath.Join(UserMediaPathPrefix, userID, param.Hash)

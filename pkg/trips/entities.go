@@ -55,8 +55,8 @@ type Trip struct {
 	Itineraries map[string]Itinerary `json:"itineraries" bson:"itineraries"`
 
 	// Media, Attachements
-	MediaItems map[string]media.MediaItemList `json:"mediaItems" bson:"mediaItems"`
-	Files      map[string]storage.Object      `json:"files" bson:"files"`
+	MediaItems map[string]media.MediaItemMap `json:"mediaItems" bson:"mediaItems"`
+	Files      map[string]storage.Object     `json:"files" bson:"files"`
 
 	// To be deprecated:
 	Media map[string]storage.Object `json:"media" bson:"media"`
@@ -95,7 +95,7 @@ func NewTrip(creator Member, name string) Trip {
 		Itineraries: map[string]Itinerary{},
 		Budget:      NewBudget(),
 		Links:       LinkMap{},
-		MediaItems:  map[string]media.MediaItemList{},
+		MediaItems:  map[string]media.MediaItemMap{},
 		Media:       map[string]storage.Object{},
 		Files:       map[string]storage.Object{},
 		UpdatedAt:   time.Now(),

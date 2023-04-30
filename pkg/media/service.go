@@ -39,7 +39,9 @@ func (svc *service) GenerateMediaItems(ctx context.Context, userID string, param
 	for _, param := range params {
 		item := NewMediaItem(userID, param)
 		items = append(items, item)
-		signedURL, err := svc.storageSvc.PutPresignedURL(ctx, MediaItemBucket, item.Path, item.ID)
+		signedURL, err := svc.storageSvc.PutPresignedURL(
+			ctx, MediaItemBucket, item.Path, item.ID,
+		)
 		if err != nil {
 			return nil, nil, err
 		}
