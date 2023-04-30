@@ -10,6 +10,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/ogp"
 	"github.com/travelreys/travelreys/pkg/storage"
 )
@@ -24,6 +25,8 @@ const (
 	LabelSharingAccess   = "sharing|access"
 	LabelUiColor         = "ui|color"
 	LabelUiIcon          = "ui|icon"
+
+	MediaItemKeyCoverImage = "coverImage"
 )
 
 const (
@@ -35,9 +38,9 @@ type Trip struct {
 	ID   string `json:"id" bson:"id"`
 	Name string `json:"name" bson:"name"`
 
-	CoverImage images.ImageMetadata `json:"coverImage" bson:"coverImage"`
-	StartDate  time.Time            `json:"startDate" bson:"startDate"`
-	EndDate    time.Time            `json:"endDate" bson:"endDate"`
+	CoverImage CoverImage `json:"coverImage" bson:"coverImage"`
+	StartDate  time.Time  `json:"startDate" bson:"startDate"`
+	EndDate    time.Time  `json:"endDate" bson:"endDate"`
 
 	// Members
 	Creator   Member            `json:"creator" bson:"creator"`
@@ -54,8 +57,11 @@ type Trip struct {
 	Itineraries map[string]Itinerary `json:"itineraries" bson:"itineraries"`
 
 	// Media, Attachements
+	MediaItems map[string]media.MediaItemList `json:"mediaItems" bson:"mediaItems"`
+	Files      map[string]storage.Object      `json:"files" bson:"files"`
+
+	// To be deprecated:
 	Media map[string]storage.Object `json:"media" bson:"media"`
-	Files map[string]storage.Object `json:"files" bson:"files"`
 
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
@@ -65,11 +71,10 @@ type Trip struct {
 }
 
 type TripOGP struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-
-	CoverImage images.ImageMetadata `json:"coverImage" bson:"coverImage"`
-	Creator    auth.User            `json:"creator"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	CoverImageURL string    `json:"coverImageURL" bson:"coverImageURL"`
+	Creator       auth.User `json:"creator"`
 }
 
 type TripsList []Trip
@@ -80,7 +85,7 @@ func NewTrip(creator Member, name string) Trip {
 	return Trip{
 		ID:          uuid.New().String(),
 		Name:        name,
-		CoverImage:  images.ImageMetadata{},
+		CoverImage:  CoverImage{},
 		StartDate:   time.Time{},
 		EndDate:     time.Time{},
 		Creator:     creator,
@@ -91,12 +96,15 @@ func NewTrip(creator Member, name string) Trip {
 		Itineraries: map[string]Itinerary{},
 		Budget:      NewBudget(),
 		Links:       LinkMap{},
-		Media:       map[string]storage.Object{},
-		Files:       map[string]storage.Object{},
-		UpdatedAt:   time.Now(),
-		CreatedAt:   time.Now(),
-		Labels:      common.Labels{},
-		Tags:        common.Tags{},
+		MediaItems: map[string]media.MediaItemList{
+			MediaItemKeyCoverImage: {},
+		},
+		Media:     map[string]storage.Object{},
+		Files:     map[string]storage.Object{},
+		UpdatedAt: time.Now(),
+		CreatedAt: time.Now(),
+		Labels:    common.Labels{},
+		Tags:      common.Tags{},
 	}
 }
 
@@ -112,21 +120,35 @@ func (trip Trip) PublicInfo() Trip {
 	newTrip.CoverImage = trip.CoverImage
 	newTrip.Lodgings = trip.Lodgings
 	newTrip.Itineraries = trip.Itineraries
+	newTrip.MediaItems = trip.MediaItems
 	return newTrip
 }
 
-func (trip Trip) OGP(creator auth.User) TripOGP {
+func (trip Trip) OGP(creator auth.User, coverImageURL string) TripOGP {
 	return TripOGP{
-		ID:         trip.ID,
-		Name:       trip.Name,
-		CoverImage: trip.CoverImage,
-		Creator:    creator,
+		ID:            trip.ID,
+		Name:          trip.Name,
+		CoverImageURL: coverImageURL,
+		Creator:       creator,
 	}
 }
 
 func (trip Trip) IsSharingEnabled() bool {
 	_, ok := trip.Labels[LabelSharingAccess]
 	return ok
+}
+
+const (
+	CoverImageSourceWeb  = "web"
+	CoverImageSourceTrip = "trip"
+)
+
+type CoverImage struct {
+	Source   string               `json:"source" bson:"source"`
+	WebImage images.ImageMetadata `json:"webImage" bson:"webImage"`
+
+	// TripImage is the ID of mediaItem in the mediaItems["coverImage"]
+	TripImage string `json:"tripImage" bson:"tripImage"`
 }
 
 // Members

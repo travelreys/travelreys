@@ -212,6 +212,7 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	}
 
 	switch msg.Data.UpdateTrip.Title {
+
 	case MsgUpdateTripTitleUpdateTripDates:
 		crd.ChangeDates(ctx, msg, &toSave)
 	case MsgUpdateTripTitleReorderItinerary,

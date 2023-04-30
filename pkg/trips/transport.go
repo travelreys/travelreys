@@ -85,10 +85,9 @@ func MakeHandler(svc Service) http.Handler {
 		NewDownloadAttachmentPresignedURLEndpoint(svc),
 		decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...,
 	)
-
-	uploadMediaPresignedURLHandler := kithttp.NewServer(
-		NewUploadMediaPresignedURLEndpoint(svc),
-		decodeUploadMediaPresignedURLRequest, encodeResponse, opts...,
+	generateSignedURLsHandler := kithttp.NewServer(
+		NewGenerateSignedURLsEndpoint(svc),
+		decodeGenerateSignedURLsRequest, encodeResponse, opts...,
 	)
 
 	r.Handle("/api/v1/trips", createHandler).Methods(http.MethodPost)
@@ -102,7 +101,8 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips/{id}/storage", deleteAttachmentHandler).Methods(http.MethodDelete)
 	r.Handle("/api/v1/trips/{id}/storage/download/pre-signed", downloadAttachmentPresignedURLHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadAttachmentPresignedURLHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trips/{id}/media/upload/pre-signed", uploadMediaPresignedURLHandler).Methods(http.MethodGet)
+
+	r.Handle("/api/v1/trips/{id}/media/pre-signed", generateSignedURLsHandler).Methods(http.MethodPost)
 
 	return r
 }
@@ -202,15 +202,18 @@ func decodeUploadAttachmentPresignedURLRequest(_ context.Context, r *http.Reques
 	}, nil
 }
 
-func decodeUploadMediaPresignedURLRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeGenerateSignedURLsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	filename := r.URL.Query().Get("filename")
-	return UploadMediaPresignedURLRequest{
-		ID:       ID,
-		Filename: filename,
-	}, nil
+
+	req := GenerateSignedURLsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, common.ErrInvalidJSONBody
+	}
+	req.ID = ID
+
+	return req, nil
 }

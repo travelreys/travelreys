@@ -7,6 +7,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/reqctx"
 	"github.com/travelreys/travelreys/pkg/storage"
 )
@@ -269,30 +270,53 @@ func NewUploadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-type UploadMediaPresignedURLRequest struct {
-	ID       string `json:"id"`
-	Filename string `json:"filename"`
+type GenerateMediaItemsRequest struct {
+	UserID string                     `json:"userID"`
+	Params []media.NewMediaItemParams `json:"params"`
 }
 
-type UploadMediaPresignedURLResponse struct {
-	PresignedURL string `json:"presignedURL"`
-	Err          error  `json:"error,omitempty"`
+type GenerateMediaItemsResponse struct {
+	Items media.MediaItemList `json:"items"`
+	URLs  []string            `json:"urls"`
+	Err   error               `json:"error,omitempty"`
 }
 
-func (r UploadMediaPresignedURLResponse) Error() error {
+func (r GenerateMediaItemsResponse) Error() error {
 	return r.Err
 }
 
-func NewUploadMediaPresignedURLEndpoint(svc Service) endpoint.Endpoint {
+func NewGenerateMediaItemsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(UploadMediaPresignedURLRequest)
+		req, ok := epReq.(GenerateMediaItemsRequest)
 		if !ok {
-			return UploadMediaPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return GenerateMediaItemsResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		presignedURL, err := svc.UploadMediaPresignedURL(ctx, req.ID, req.Filename)
-		return UploadMediaPresignedURLResponse{
-			PresignedURL: presignedURL,
-			Err:          err,
-		}, nil
+		items, urls, err := svc.GenerateMediaItems(ctx, req.UserID, req.Params)
+		return GenerateMediaItemsResponse{Items: items, URLs: urls, Err: err}, nil
+	}
+}
+
+type GenerateSignedURLsRequest struct {
+	ID    string              `json:"id"`
+	Items media.MediaItemList `json:"items"`
+}
+
+type GenerateSignedURLsResponse struct {
+	URLs []string `json:"urls"`
+	Err  error    `json:"error,omitempty"`
+}
+
+func (r GenerateSignedURLsResponse) Error() error {
+	return r.Err
+}
+
+func NewGenerateSignedURLsEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(GenerateSignedURLsRequest)
+		if !ok {
+			return GenerateSignedURLsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		urls, err := svc.GenerateSignedURLs(ctx, req.ID, req.Items)
+		return GenerateSignedURLsResponse{URLs: urls, Err: err}, nil
 	}
 }

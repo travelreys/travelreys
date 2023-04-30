@@ -10,6 +10,7 @@ import (
 
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/images"
+	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/storage"
 )
 
@@ -33,23 +34,35 @@ type Service interface {
 	UploadAttachmentPresignedURL(ctx context.Context, ID, fileID string) (string, error)
 	DownloadAttachmentPresignedURL(ctx context.Context, ID, path, fileID string) (string, error)
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
-	UploadMediaPresignedURL(ctx context.Context, ID, fileID string) (string, error)
+
+	GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, []string, error)
+	GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) ([]string, error)
 }
 
 type service struct {
 	store      Store
 	authSvc    auth.Service
 	imageSvc   images.Service
+	mediaSvc   media.Service
 	storageSvc storage.Service
 }
 
-func NewService(store Store, authSvc auth.Service, imageSvc images.Service, storageSvc storage.Service) Service {
-	return &service{store, authSvc, imageSvc, storageSvc}
+func NewService(
+	store Store,
+	authSvc auth.Service,
+	imageSvc images.Service,
+	mediaSvc media.Service,
+	storageSvc storage.Service,
+) Service {
+	return &service{store, authSvc, imageSvc, mediaSvc, storageSvc}
 }
 
-func (svc service) Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error) {
+func (svc *service) Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error) {
 	trip := NewTripWithDates(creator, name, start, end)
-	trip.CoverImage = images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))]
+	trip.CoverImage = CoverImage{
+		Source:   CoverImageSourceWeb,
+		WebImage: images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))],
+	}
 
 	// bootstrap itinerary dates
 	numDays := trip.EndDate.Sub(trip.StartDate).Hours() / 24
@@ -62,11 +75,16 @@ func (svc service) Create(ctx context.Context, creator Member, name string, star
 	return trip, err
 }
 
-func (svc service) Read(ctx context.Context, ID string) (Trip, error) {
-	return svc.store.Read(ctx, ID)
+func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {
+	trip, err := svc.store.Read(ctx, ID)
+	if err != nil {
+		return Trip{}, err
+	}
+	svc.AugmentTripMediaItemURLs(ctx, &trip)
+	return trip, nil
 }
 
-func (svc service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+func (svc *service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
 	var (
 		trip Trip
 		err  error
@@ -94,10 +112,30 @@ func (svc service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMa
 		}
 		usersMap[usr.ID] = usr
 	}
-	return trip.PublicInfo(), usersMap, nil
+
+	pubInfo := trip.PublicInfo()
+	svc.AugmentTripMediaItemURLs(ctx, &pubInfo)
+
+	return pubInfo, usersMap, nil
 }
 
-func (svc service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
+func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
+	for key := range trip.MediaItems {
+		urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[key])
+		for i := 0; i < len(trip.MediaItems[key]); i++ {
+			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i]
+		}
+	}
+}
+
+func (svc *service) AugmentTripCoverImageURL(ctx context.Context, trip *Trip) {
+	urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[MediaItemKeyCoverImage])
+	for i := 0; i < len(trip.MediaItems[MediaItemKeyCoverImage]); i++ {
+		trip.MediaItems[MediaItemKeyCoverImage][i].Labels[media.LabelMediaURL] = urls[i]
+	}
+}
+
+func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 	trip, err := svc.store.Read(ctx, ID)
 	if err != nil {
 		return TripOGP{}, err
@@ -114,10 +152,27 @@ func (svc service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 			break
 		}
 	}
-	return trip.OGP(creator), nil
+
+	// Select CoverImage URL
+	coverImageURL := trip.CoverImage.WebImage.Urls.Regular
+	if trip.CoverImage.Source == CoverImageSourceTrip {
+		mediaItem := trip.MediaItems[MediaItemKeyCoverImage][0]
+		for _, item := range trip.MediaItems[MediaItemKeyCoverImage] {
+			if item.ID == trip.CoverImage.TripImage {
+				mediaItem = item
+			}
+		}
+		urls, err := svc.GenerateSignedURLs(ctx, trip.ID, media.MediaItemList{mediaItem})
+		if err != nil {
+			return TripOGP{}, err
+		}
+		coverImageURL = urls[0]
+	}
+
+	return trip.OGP(creator, coverImageURL), nil
 }
 
-func (svc service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
 	trip, err := svc.Read(ctx, ID)
 	if err != nil {
 		return trip, nil, err
@@ -131,10 +186,11 @@ func (svc service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.U
 	for _, usr := range users {
 		usersMap[usr.ID] = usr
 	}
+	svc.AugmentTripMediaItemURLs(ctx, &trip)
 	return trip, usersMap, nil
 }
 
-func (svc service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
+func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
 	trip, err := svc.Read(ctx, ID)
 	if err != nil {
 		return nil, err
@@ -151,15 +207,22 @@ func (svc service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, e
 	return usersMap, nil
 }
 
-func (svc service) List(ctx context.Context, ff ListFilter) (TripsList, error) {
-	return svc.store.List(ctx, ff)
+func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) {
+	trips, err := svc.store.List(ctx, ff)
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < len(trips); i++ {
+		svc.AugmentTripCoverImageURL(ctx, &trips[i])
+	}
+	return trips, nil
 }
 
-func (svc service) Delete(ctx context.Context, ID string) error {
+func (svc *service) Delete(ctx context.Context, ID string) error {
 	return svc.store.Delete(ctx, ID)
 }
 
-func (svc service) UploadAttachmentPresignedURL(ctx context.Context, tripID, fileID string) (string, error) {
+func (svc *service) UploadAttachmentPresignedURL(ctx context.Context, tripID, fileID string) (string, error) {
 	return svc.storageSvc.PutPresignedURL(
 		ctx,
 		attachmentBucket,
@@ -167,15 +230,22 @@ func (svc service) UploadAttachmentPresignedURL(ctx context.Context, tripID, fil
 		fileID)
 }
 
-func (svc service) DownloadAttachmentPresignedURL(ctx context.Context, tripID, path, fileID string) (string, error) {
+func (svc *service) DownloadAttachmentPresignedURL(ctx context.Context, tripID, path, fileID string) (string, error) {
 	return svc.storageSvc.GetPresignedURL(ctx, attachmentBucket, path, fileID)
 }
 
-func (svc service) DeleteAttachment(ctx context.Context, tripID string, obj storage.Object) error {
+func (svc *service) DeleteAttachment(ctx context.Context, tripID string, obj storage.Object) error {
 	obj.Bucket = attachmentBucket
 	return svc.storageSvc.Remove(ctx, obj)
 }
 
-func (svc service) UploadMediaPresignedURL(ctx context.Context, tripID, fileID string) (string, error) {
-	return svc.storageSvc.PutPresignedURL(ctx, mediaBucket, filepath.Join(tripID, fileID), fileID)
+func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, []string, error) {
+	return svc.mediaSvc.GenerateMediaItems(ctx, userID, params)
+}
+
+func (svc *service) GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) ([]string, error) {
+	if _, err := svc.store.Read(ctx, ID); err != nil {
+		return nil, err
+	}
+	return svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, items)
 }

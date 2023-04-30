@@ -7,6 +7,7 @@ import (
 
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/reqctx"
 	"github.com/travelreys/travelreys/pkg/storage"
 	"go.uber.org/zap"
@@ -126,10 +127,19 @@ func (mw rbacMiddleware) UploadAttachmentPresignedURL(ctx context.Context, ID, f
 	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename)
 }
 
-func (mw rbacMiddleware) UploadMediaPresignedURL(ctx context.Context, ID, filename string) (string, error) {
+func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, []string, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return "", ErrRBAC
+		return nil, nil, ErrRBAC
 	}
-	return mw.next.UploadMediaPresignedURL(ctx, ID, filename)
+	return mw.next.GenerateMediaItems(ctx, userID, params)
+}
+
+func (mw rbacMiddleware) GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) ([]string, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+	return mw.next.GenerateSignedURLs(ctx, ID, items)
+
 }

@@ -52,3 +52,11 @@ func (mw rbacMiddleware) Delete(ctx context.Context, ff DeleteMediaFilter) error
 	}
 	return mw.next.Delete(ctx, ff)
 }
+
+func (mw rbacMiddleware) GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) ([]string, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+	return mw.next.GenerateGetSignedURLsForItems(ctx, items)
+}
