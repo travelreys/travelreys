@@ -50,6 +50,7 @@ func NewMediaItem(userID string, param NewMediaItemParams) MediaItem {
 			Name:         param.Name,
 			Bucket:       MediaItemBucket,
 			Path:         objectPath,
+			Size:         param.Size,
 			MIMEType:     param.MimeType,
 			LastModified: time.Now(),
 			Labels:       common.Labels{},
