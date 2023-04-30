@@ -11,7 +11,7 @@ const (
 	cdnProviderMinio               = "minio"
 	cdnProviderGcp                 = "gcpcloudcdn"
 	defaultCDNProvider             = "minio"
-	defaultPresignedURLDuration    = 15 * time.Minute
+	defaultPresignedURLDuration    = 60 * time.Minute
 	defaultPresignedCookieDuration = 24 * time.Hour
 
 	presignedCookieHeader = "_travelreysCookie"

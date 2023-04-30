@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
@@ -14,6 +15,7 @@ type Spawner struct {
 	mu   sync.Mutex
 
 	mapsSvc   maps.Service
+	mediaSvc  media.Service
 	store     Store
 	msgStore  MessageStore
 	tobStore  TOBMessageStore
@@ -24,6 +26,7 @@ type Spawner struct {
 
 func NewSpawner(
 	mapsSvc maps.Service,
+	mediaSvc media.Service,
 	store Store,
 	msgStore MessageStore,
 	tobStore TOBMessageStore,
@@ -33,6 +36,7 @@ func NewSpawner(
 	return &Spawner{
 		crds:      make(map[string]struct{}),
 		mapsSvc:   mapsSvc,
+		mediaSvc:  mediaSvc,
 		store:     store,
 		msgStore:  msgStore,
 		tobStore:  tobStore,
@@ -83,6 +87,7 @@ func (spwn *Spawner) Run() error {
 		coord := NewCoordinator(
 			msg.TripID,
 			spwn.mapsSvc,
+			spwn.mediaSvc,
 			spwn.store,
 			spwn.msgStore,
 			spwn.tobStore,

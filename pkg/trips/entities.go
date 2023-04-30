@@ -19,14 +19,16 @@ const (
 	JSONPathLabelUiColor = "labels/ui|color"
 	JSONPathLabelUiIcon  = "labels/ui|icon"
 
-	LabelCreatedBy       = "createdBy"
-	LabelDelimeter       = "|"
-	LabelFractionalIndex = "fIndex"
-	LabelSharingAccess   = "sharing|access"
-	LabelUiColor         = "ui|color"
-	LabelUiIcon          = "ui|icon"
+	LabelCreatedBy                = "createdBy"
+	LabelDelimeter                = "|"
+	LabelFractionalIndex          = "fIndex"
+	LabelSharingAccess            = "sharing|access"
+	LabelUiColor                  = "ui|color"
+	LabelUiIcon                   = "ui|icon"
+	LabelActivityDisplayMediaItem = "displayMediaItem"
 
-	MediaItemKeyCoverImage = "coverImage"
+	MediaItemKeyCoverImage     = "coverImage"
+	MediaItemKeyActivityPrefix = "activity"
 )
 
 const (
@@ -361,3 +363,7 @@ const (
 	AttachmentTypeFile  = "file"
 	AttachmentTypeMedia = "media"
 )
+
+func MakeActivityMediaItemsKey(actId string) string {
+	return fmt.Sprintf(`%s|%s`, MediaItemKeyActivityPrefix, actId)
+}

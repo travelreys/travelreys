@@ -13,6 +13,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/common"
 	jp "github.com/travelreys/travelreys/pkg/jsonpatch"
 	"github.com/travelreys/travelreys/pkg/maps"
+	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
@@ -45,6 +46,7 @@ type Coordinator struct {
 
 	refreshCtrTicker *time.Ticker
 	mapsSvc          maps.Service
+	mediaSvc         media.Service
 	store            Store
 	msgStore         MessageStore
 	tobStore         TOBMessageStore
@@ -56,6 +58,7 @@ type Coordinator struct {
 func NewCoordinator(
 	tripID string,
 	mapsSvc maps.Service,
+	mediaSvc media.Service,
 	store Store,
 	msgStore MessageStore,
 	tobStore TOBMessageStore,
@@ -72,6 +75,7 @@ func NewCoordinator(
 		queue:            make(chan Message, common.DefaultChSize),
 		refreshCtrTicker: time.NewTicker(defaultRefreshCounterTTL),
 		mapsSvc:          mapsSvc,
+		mediaSvc:         mediaSvc,
 		store:            store,
 		msgStore:         msgStore,
 		tobStore:         tobStore,
@@ -237,6 +241,8 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 		crd.CalculateRoute(ctx, destDtKey, msg, &toSave)
 	case MsgUpdateTripTitleOptimizeItinerary:
 		crd.OptimizeRoute(ctx, msg, &toSave)
+	case MsgUpdateTripTitleAddMediaItem:
+		crd.AugmentMediaItemSignedURL(ctx, msg, &toSave)
 	}
 
 	// Persist trip state to database
@@ -266,7 +272,6 @@ func (crd *Coordinator) FindItineraryDtKey(ops []jp.Op) string {
 }
 
 func (crd *Coordinator) ChangeDates(ctx context.Context, msg *Message, toSave *trips.Trip) {
-
 	sortedCurrDates := trips.GetSortedItineraryKeys(toSave)
 	numCurrDates := len(sortedCurrDates)
 	newItineraries := map[string]trips.Itinerary{}
@@ -366,4 +371,37 @@ func (crd *Coordinator) OptimizeRoute(ctx context.Context, msg *Message, toSave 
 	}
 
 	crd.CalculateRoute(ctx, dtKey, msg, toSave)
+}
+
+func (crd *Coordinator) AugmentMediaItemSignedURL(ctx context.Context, msg *Message, toSave *trips.Trip) {
+	// /mediaItems/${mediaItemsKey}/-
+	tkns := strings.Split(msg.Data.UpdateTrip.Ops[0].Path, "/")
+	if len(tkns) < 4 {
+		crd.logger.Error("invalid number of tokens", zap.Int("count", len(tkns)))
+		return
+	}
+
+	mediaItemKey := tkns[2]
+	bytes, _ := json.Marshal(msg.Data.UpdateTrip.Ops[0].Value)
+	var mediaItem media.MediaItem
+
+	if err := json.Unmarshal(bytes, &mediaItem); err != nil {
+		crd.logger.Error("unmarshall media item", zap.Error(err))
+		return
+	}
+
+	urls, err := crd.mediaSvc.GenerateGetSignedURLsForItems(ctx, media.MediaItemList{mediaItem})
+	if err != nil {
+		crd.logger.Error("generate signed urls", zap.Error(err))
+		return
+	}
+	jop := jp.MakeAddOp(
+		fmt.Sprintf(
+			"/mediaItems/%s/%d/labels/%s",
+			mediaItemKey,
+			len(toSave.MediaItems[mediaItemKey])-1,
+			media.LabelMediaURL,
+		), urls[0],
+	)
+	msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 }
