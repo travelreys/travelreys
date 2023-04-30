@@ -36,8 +36,7 @@ type Service interface {
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
 
 	GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, []string, error)
-	GenerateSignedURLs(ctx context.Context, items media.MediaItemList) ([]string, error)
-	UploadMediaPresignedURL(ctx context.Context, ID, fileID string) (string, error)
+	GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) ([]string, error)
 }
 
 type service struct {
@@ -194,10 +193,6 @@ func (svc *service) GenerateMediaItems(ctx context.Context, userID string, param
 	return svc.mediaSvc.GenerateMediaItems(ctx, userID, params)
 }
 
-func (svc *service) GenerateSignedURLs(ctx context.Context, items media.MediaItemList) ([]string, error) {
+func (svc *service) GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) ([]string, error) {
 	return svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, items)
-}
-
-func (svc *service) UploadMediaPresignedURL(ctx context.Context, tripID, fileID string) (string, error) {
-	return svc.storageSvc.PutPresignedURL(ctx, mediaBucket, filepath.Join(tripID, fileID), fileID)
 }
