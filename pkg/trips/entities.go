@@ -62,9 +62,6 @@ type Trip struct {
 	MediaItems map[string]media.MediaItemList `json:"mediaItems" bson:"mediaItems"`
 	Files      map[string]storage.Object      `json:"files" bson:"files"`
 
-	// To be deprecated:
-	Media map[string]storage.Object `json:"media" bson:"media"`
-
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 
@@ -101,7 +98,6 @@ func NewTrip(creator Member, name string) Trip {
 		MediaItems: map[string]media.MediaItemList{
 			MediaItemKeyCoverImage: {},
 		},
-		Media:     map[string]storage.Object{},
 		Files:     map[string]storage.Object{},
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
