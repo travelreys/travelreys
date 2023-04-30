@@ -121,13 +121,10 @@ func (svc *service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersM
 
 func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 	for key := range trip.MediaItems {
-		items := media.MediaItemList{}
-		for itemKey := range trip.MediaItems[key] {
-			items = append(items, trip.MediaItems[key][itemKey])
-		}
-		urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, items)
-		for idx, item := range items {
-			trip.MediaItems[key][item.ID].Labels[media.LabelMediaURL] = urls[idx]
+		urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[key])
+
+		for i := 0; i < len(trip.MediaItems[key]); i++ {
+			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i]
 		}
 	}
 }
@@ -153,7 +150,12 @@ func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 	// Select CoverImage URL
 	coverImageURL := trip.CoverImage.WebImage.Urls.Regular
 	if trip.CoverImage.Source == CoverImageSourceTrip {
-		mediaItem := trip.MediaItems[MediaItemKeyCoverImage][trip.CoverImage.TripImage]
+		mediaItem := trip.MediaItems[MediaItemKeyCoverImage][0]
+		for _, item := range trip.MediaItems[MediaItemKeyCoverImage] {
+			if item.ID == trip.CoverImage.TripImage {
+				mediaItem = item
+			}
+		}
 		urls, err := svc.GenerateSignedURLs(ctx, trip.ID, media.MediaItemList{mediaItem})
 		if err != nil {
 			return TripOGP{}, err
@@ -228,5 +230,8 @@ func (svc *service) GenerateMediaItems(ctx context.Context, userID string, param
 }
 
 func (svc *service) GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) ([]string, error) {
+	if _, err := svc.store.Read(ctx, ID); err != nil {
+		return nil, err
+	}
 	return svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, items)
 }
