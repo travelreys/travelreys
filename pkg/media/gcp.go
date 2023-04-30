@@ -23,10 +23,20 @@ type gcpProvider struct {
 	projectID string
 	keyName   string
 	keyFile   string
+	keyData   []byte
 }
 
-func NewDefaultGCPCloudCDNProvider() CDNProvider {
-	return gcpProvider{projectID, gcpCloudCDNKeyName, gcpCloudCDNKeyPath}
+func NewDefaultGCPCloudCDNProvider() (CDNProvider, error) {
+	keyData, err := readKeyFile(gcpCloudCDNKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	return gcpProvider{
+		projectID,
+		gcpCloudCDNKeyName,
+		gcpCloudCDNKeyPath,
+		keyData,
+	}, nil
 }
 
 func (gcp gcpProvider) Domain(ctx context.Context, withScheme bool) string {
@@ -38,8 +48,8 @@ func (gcp gcpProvider) Domain(ctx context.Context, withScheme bool) string {
 }
 
 // readKeyFile reads the base64url-encoded key file and decodes it.
-func (gcp gcpProvider) readKeyFile() ([]byte, error) {
-	b, err := ioutil.ReadFile(gcp.keyFile)
+func readKeyFile(keyFile string) ([]byte, error) {
+	b, err := ioutil.ReadFile(keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %+v", err)
 	}
@@ -60,11 +70,7 @@ func (gcp gcpProvider) PresignedURL(ctx context.Context, url string) (string, er
 	url += fmt.Sprintf("Expires=%d", time.Now().Add(defaultPresignedURLDuration).Unix())
 	url += fmt.Sprintf("&KeyName=%s", gcp.keyName)
 
-	key, err := gcp.readKeyFile()
-	if err != nil {
-		return "", nil
-	}
-	mac := hmac.New(sha1.New, key)
+	mac := hmac.New(sha1.New, gcp.keyData)
 	mac.Write([]byte(url))
 	sig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
 	url += fmt.Sprintf("&Signature=%s", sig)
@@ -94,18 +100,11 @@ func (gcp gcpProvider) signCookie(urlPrefix, keyName string, key []byte, expirat
 }
 
 func (gcp gcpProvider) PresignedCookie(ctx context.Context, domain, path string) (*http.Cookie, error) {
-	// Note: consider using the GCP Secret Manager for managing access to your
-	// signing key(s).
-	key, err := gcp.readKeyFile()
-	if err != nil {
-		return nil, err
-	}
-
 	expiration := defaultPresignedCookieDuration
 	signedValue, err := gcp.signCookie(
 		fmt.Sprintf("https://%s/%s/", domain, path),
 		gcpCloudCDNKeyName,
-		key,
+		gcp.keyData,
 		time.Now().Add(expiration),
 	)
 	if err != nil {

@@ -118,6 +118,7 @@ func (trip Trip) PublicInfo() Trip {
 	newTrip.CoverImage = trip.CoverImage
 	newTrip.Lodgings = trip.Lodgings
 	newTrip.Itineraries = trip.Itineraries
+	newTrip.MediaItems = trip.MediaItems
 	return newTrip
 }
 

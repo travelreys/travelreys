@@ -76,7 +76,12 @@ func (svc *service) Create(ctx context.Context, creator Member, name string, sta
 }
 
 func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {
-	return svc.store.Read(ctx, ID)
+	trip, err := svc.store.Read(ctx, ID)
+	if err != nil {
+		return Trip{}, err
+	}
+	svc.AugmentTripMediaItemURLs(ctx, &trip)
+	return trip, nil
 }
 
 func (svc *service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
@@ -107,7 +112,24 @@ func (svc *service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersM
 		}
 		usersMap[usr.ID] = usr
 	}
-	return trip.PublicInfo(), usersMap, nil
+
+	pubInfo := trip.PublicInfo()
+	svc.AugmentTripMediaItemURLs(ctx, &pubInfo)
+
+	return pubInfo, usersMap, nil
+}
+
+func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
+	for key := range trip.MediaItems {
+		items := media.MediaItemList{}
+		for itemKey := range trip.MediaItems[key] {
+			items = append(items, trip.MediaItems[key][itemKey])
+		}
+		urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, items)
+		for idx, item := range items {
+			trip.MediaItems[key][item.ID].Labels[media.LabelMediaURL] = urls[idx]
+		}
+	}
 }
 
 func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
