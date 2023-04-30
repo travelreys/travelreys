@@ -29,7 +29,7 @@ func NewDefaultCDNProvider() (CDNProvider, error) {
 		provider = defaultCDNProvider
 	}
 	if provider == cdnProviderGcp {
-		return NewDefaultGCPCloudCDNProvider(), nil
+		return NewDefaultGCPCloudCDNProvider()
 	}
 	return NewDefaultMinioProvider()
 }
