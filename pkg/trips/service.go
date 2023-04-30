@@ -89,7 +89,6 @@ func (svc *service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersM
 		trip Trip
 		err  error
 	)
-
 	ti, err := TripInfoFromCtx(ctx)
 	if err == nil {
 		trip = ti.Trip
@@ -173,10 +172,20 @@ func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 }
 
 func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
-	trip, err := svc.Read(ctx, ID)
-	if err != nil {
-		return trip, nil, err
+	var (
+		trip Trip
+		err  error
+	)
+	ti, err := TripInfoFromCtx(ctx)
+	if err == nil {
+		trip = ti.Trip
+	} else {
+		trip, err = svc.store.Read(ctx, ID)
+		if err != nil {
+			return Trip{}, nil, err
+		}
 	}
+
 	ff := auth.ListFilter{IDs: trip.GetAllMembersID()}
 	users, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
@@ -191,9 +200,18 @@ func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.
 }
 
 func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
-	trip, err := svc.Read(ctx, ID)
-	if err != nil {
-		return nil, err
+	var (
+		trip Trip
+		err  error
+	)
+	ti, err := TripInfoFromCtx(ctx)
+	if err == nil {
+		trip = ti.Trip
+	} else {
+		trip, err = svc.store.Read(ctx, ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	ff := auth.ListFilter{IDs: trip.GetAllMembersID()}
 	users, err := svc.authSvc.List(ctx, ff)

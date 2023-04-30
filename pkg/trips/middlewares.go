@@ -39,7 +39,15 @@ func (mw rbacMiddleware) Read(ctx context.Context, ID string) (Trip, error) {
 	if err != nil || ci.HasEmptyID() {
 		return Trip{}, ErrRBAC
 	}
-	return mw.next.Read(ctx, ID)
+
+	trip, err := mw.next.Read(ctx, ID)
+	if err != nil {
+		return Trip{}, err
+	}
+	if !common.StringContains(trip.GetAllMembersID(), ci.UserID) {
+		return Trip{}, ErrRBAC
+	}
+	return trip, nil
 }
 
 func (mw rbacMiddleware) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
@@ -76,7 +84,15 @@ func (mw rbacMiddleware) ReadWithMembers(ctx context.Context, ID string) (Trip, 
 	if err != nil || ci.HasEmptyID() {
 		return Trip{}, nil, ErrRBAC
 	}
-	return mw.next.ReadWithMembers(ctx, ID)
+	trip, err := mw.next.Read(ctx, ID)
+	if err != nil {
+		return Trip{}, nil, err
+	}
+	if !common.StringContains(trip.GetAllMembersID(), ci.UserID) {
+		return Trip{}, nil, ErrRBAC
+	}
+	ctxWithTripInfo := ContextWithTripInfo(ctx, trip)
+	return mw.next.ReadWithMembers(ctxWithTripInfo, ID)
 }
 
 func (mw rbacMiddleware) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
@@ -84,7 +100,15 @@ func (mw rbacMiddleware) ReadMembers(ctx context.Context, ID string) (auth.Users
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
 	}
-	return mw.next.ReadMembers(ctx, ID)
+	trip, err := mw.next.Read(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	if !common.StringContains(trip.GetAllMembersID(), ci.UserID) {
+		return nil, ErrRBAC
+	}
+	ctxWithTripInfo := ContextWithTripInfo(ctx, trip)
+	return mw.next.ReadMembers(ctxWithTripInfo, ID)
 }
 
 func (mw rbacMiddleware) List(ctx context.Context, ff ListFilter) (TripsList, error) {
