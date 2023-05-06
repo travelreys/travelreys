@@ -11,6 +11,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/email"
+	"github.com/travelreys/travelreys/pkg/footprints"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/media"
@@ -104,6 +105,11 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	svc := tripssync.NewService(store, msgStore, tobStore, tripStore)
 	wsSvr := tripssync.NewWebsocketServer(svc, logger)
 
+	// Footprints
+	fpStore := footprints.NewStore(ctx, db, logger)
+	fpSvc := footprints.NewService(fpStore, logger)
+	fpSvc = footprints.ServiceWithRBACMiddleware(fpSvc, logger)
+
 	r := mux.NewRouter()
 	securityMW := api.NewSecureHeadersMiddleware(cfg.CORSOrigin)
 	wrwMW := api.NewWrappedReponseWriterMiddleware()
@@ -125,6 +131,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/media").Handler(media.MakeHandler(mediaSvcWithRBAC))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
+	r.PathPrefix("/api/v1/footprints").Handler(footprints.MakeHandler(fpSvc))
 
 	return &http.Server{
 		Handler: r,

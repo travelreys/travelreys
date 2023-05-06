@@ -1,3 +1,3 @@
 package common
 
-var VERSION = "0.12.1"
+var VERSION = "0.13.0"
