@@ -101,7 +101,7 @@ func (str *store) List(ctx context.Context, ff ListFootprintsFilter) (FootprintL
 		return list, err
 	}
 
-	cursor.All(ctx, list)
+	cursor.All(ctx, &list)
 	return list, err
 }
 

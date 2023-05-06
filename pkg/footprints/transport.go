@@ -62,16 +62,23 @@ func MakeHandler(svc Service) http.Handler {
 	)
 
 	r.Handle("/api/v1/footprints", listHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/footprints/checkin", checkinHandler).Methods(http.MethodPost)
+	r.Handle("/api/v1/footprints/{userid}/checkin", checkinHandler).Methods(http.MethodPost)
 
 	return r
 }
 
 func decodeCheckinRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+
 	req := CheckInRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
 	}
+	req.UserID = userID
 	return req, nil
 }
 
