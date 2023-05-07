@@ -35,8 +35,8 @@ type Service interface {
 	DownloadAttachmentPresignedURL(ctx context.Context, ID, path, fileID string) (string, error)
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
 
-	GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, []string, error)
-	GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) ([]string, error)
+	GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error)
+	GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error)
 }
 
 type service struct {
@@ -122,7 +122,8 @@ func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 	for key := range trip.MediaItems {
 		urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[key])
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
-			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i]
+			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i].ContentURL
+			trip.MediaItems[key][i].Labels[media.LabelPreviewURL] = urls[i].ContentURL
 		}
 	}
 }
@@ -130,7 +131,7 @@ func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 func (svc *service) AugmentTripCoverImageURL(ctx context.Context, trip *Trip) {
 	urls, _ := svc.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[MediaItemKeyCoverImage])
 	for i := 0; i < len(trip.MediaItems[MediaItemKeyCoverImage]); i++ {
-		trip.MediaItems[MediaItemKeyCoverImage][i].Labels[media.LabelMediaURL] = urls[i]
+		trip.MediaItems[MediaItemKeyCoverImage][i].Labels[media.LabelMediaURL] = urls[i].ContentURL
 	}
 }
 
@@ -165,7 +166,7 @@ func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 		if err != nil {
 			return TripOGP{}, err
 		}
-		coverImageURL = urls[0]
+		coverImageURL = urls[0].ContentURL
 	}
 
 	return trip.OGP(creator, coverImageURL), nil
@@ -257,11 +258,11 @@ func (svc *service) DeleteAttachment(ctx context.Context, tripID string, obj sto
 	return svc.storageSvc.Remove(ctx, obj)
 }
 
-func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, []string, error) {
+func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error) {
 	return svc.mediaSvc.GenerateMediaItems(ctx, userID, params)
 }
 
-func (svc *service) GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) ([]string, error) {
+func (svc *service) GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error) {
 	if _, err := svc.store.Read(ctx, ID); err != nil {
 		return nil, err
 	}

@@ -14,12 +14,12 @@ const (
 )
 
 type Service interface {
-	GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, []string, error)
+	GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, MediaPresignedUrlList, error)
 	SaveForUser(ctx context.Context, userID string, items MediaItemList) error
 	List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error)
-	ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, []string, error)
+	ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, MediaPresignedUrlList, error)
 	Delete(ctx context.Context, ff DeleteMediaFilter) error
-	GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) ([]string, error)
+	GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) (MediaPresignedUrlList, error)
 }
 
 type service struct {
@@ -33,9 +33,9 @@ func NewService(store Store, cdnProvider CDNProvider, storageSvc storage.Service
 	return &service{store, cdnProvider, storageSvc, logger.Named(svcLoggerName)}
 }
 
-func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, []string, error) {
+func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, MediaPresignedUrlList, error) {
 	items := MediaItemList{}
-	urls := []string{}
+	urls := MediaPresignedUrlList{}
 	for _, param := range params {
 		item := NewMediaItem(userID, param)
 		items = append(items, item)
@@ -45,7 +45,25 @@ func (svc *service) GenerateMediaItems(ctx context.Context, userID string, param
 		if err != nil {
 			return nil, nil, err
 		}
-		urls = append(urls, signedURL)
+
+		if param.Type == MediaTypePicture {
+			urls = append(urls, MediaPresignedUrl{
+				ContentURL: signedURL,
+				PreviewURL: "",
+			})
+			continue
+		}
+		previewURL, err := svc.storageSvc.PutPresignedURL(
+			ctx, MediaItemBucket, item.PreviewPath(), item.ID,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		urls = append(urls, MediaPresignedUrl{
+			ContentURL: signedURL,
+			PreviewURL: previewURL,
+		})
 	}
 	return items, urls, nil
 }
@@ -61,11 +79,12 @@ func (svc *service) List(ctx context.Context, ff ListMediaFilter, pg ListMediaPa
 	return svc.store.List(ctx, ff, pg)
 }
 
-func (svc *service) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, []string, error) {
+func (svc *service) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, MediaPresignedUrlList, error) {
 	items, lastId, err := svc.store.List(ctx, ff, pg)
 	if err != nil {
 		return nil, "", nil, err
 	}
+
 	urls, err := svc.GenerateGetSignedURLsForItems(ctx, items)
 	return items, lastId, urls, err
 }
@@ -80,20 +99,45 @@ func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
 		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
 			svc.logger.Error("delete", zap.Error(err))
 		}
+		item.Object.Path = item.PreviewPath()
+		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+			svc.logger.Error("delete preview", zap.Error(err))
+		}
 	}
 	return svc.store.Delete(ctx, ff)
 }
 
-func (svc *service) GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) ([]string, error) {
-	urls := []string{}
+func (svc *service) GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) (MediaPresignedUrlList, error) {
+	urls := MediaPresignedUrlList{}
 	for _, item := range items {
-		cdnDomain := svc.cdnProvider.Domain(ctx, true)
-		urlToSign := fmt.Sprintf("%s/%s", cdnDomain, filepath.Join(item.Bucket, item.Path))
-		signedURL, err := svc.cdnProvider.PresignedURL(ctx, urlToSign)
+		signedURL, err := svc.cdnProvider.PresignedURL(ctx, fmt.Sprintf(
+			"%s/%s",
+			svc.cdnProvider.Domain(ctx, true),
+			filepath.Join(item.Bucket, item.Path),
+		))
 		if err != nil {
 			return nil, err
 		}
-		urls = append(urls, signedURL)
+		if item.Type == MediaTypePicture {
+			urls = append(urls, MediaPresignedUrl{
+				ContentURL: signedURL,
+				PreviewURL: signedURL,
+			})
+			continue
+		}
+
+		previewURL, err := svc.cdnProvider.PresignedURL(ctx, fmt.Sprintf(
+			"%s/%s",
+			svc.cdnProvider.Domain(ctx, true),
+			filepath.Join(item.Bucket, item.PreviewPath()),
+		))
+		if err != nil {
+			return nil, err
+		}
+		urls = append(urls, MediaPresignedUrl{
+			ContentURL: signedURL,
+			PreviewURL: previewURL,
+		})
 	}
 	return urls, nil
 }

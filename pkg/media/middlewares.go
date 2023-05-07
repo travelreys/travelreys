@@ -21,7 +21,7 @@ func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
 	return &rbacMiddleware{svc, logger}
 }
 
-func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, []string, error) {
+func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, MediaPresignedUrlList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, nil, ErrRBAC
@@ -41,7 +41,7 @@ func (mw rbacMiddleware) List(ctx context.Context, ff ListMediaFilter, pg ListMe
 	return mw.next.List(ctx, ff, pg)
 }
 
-func (mw rbacMiddleware) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, []string, error) {
+func (mw rbacMiddleware) ListWithSignedURLs(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, MediaPresignedUrlList, error) {
 	return mw.next.ListWithSignedURLs(ctx, ff, pg)
 }
 
@@ -53,7 +53,7 @@ func (mw rbacMiddleware) Delete(ctx context.Context, ff DeleteMediaFilter) error
 	return mw.next.Delete(ctx, ff)
 }
 
-func (mw rbacMiddleware) GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) ([]string, error) {
+func (mw rbacMiddleware) GenerateGetSignedURLsForItems(ctx context.Context, items MediaItemList) (MediaPresignedUrlList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC

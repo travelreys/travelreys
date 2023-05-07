@@ -15,6 +15,7 @@ const (
 
 	UserMediaPathPrefix = "users"
 	LabelMediaURL       = "mediaURL"
+	LabelPreviewURL     = "previewURL"
 	LabelWidth          = "width"
 	LabelHeight         = "height"
 )
@@ -36,6 +37,10 @@ type MediaItem struct {
 
 	UserID string `json:"userID" bson:"userID"`
 	Type   string `json:"type" bson:"type"`
+}
+
+func (item MediaItem) PreviewPath() string {
+	return item.Path + "-preview"
 }
 
 type MediaItemList []MediaItem
@@ -60,3 +65,10 @@ func NewMediaItem(userID string, param NewMediaItemParams) MediaItem {
 		Type:   param.Type,
 	}
 }
+
+type MediaPresignedUrl struct {
+	ContentURL string `json:"contentURL"`
+	PreviewURL string `json:"previewURL"`
+}
+
+type MediaPresignedUrlList []MediaPresignedUrl
