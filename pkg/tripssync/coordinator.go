@@ -395,13 +395,21 @@ func (crd *Coordinator) AugmentMediaItemSignedURL(ctx context.Context, msg *Mess
 		crd.logger.Error("generate signed urls", zap.Error(err))
 		return
 	}
-	jop := jp.MakeAddOp(
+
+	msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jp.MakeAddOp(
 		fmt.Sprintf(
 			"/mediaItems/%s/%d/labels/%s",
 			mediaItemKey,
 			len(toSave.MediaItems[mediaItemKey])-1,
 			media.LabelMediaURL,
-		), urls[0],
-	)
-	msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
+		), urls[0].ContentURL,
+	))
+	msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jp.MakeAddOp(
+		fmt.Sprintf(
+			"/mediaItems/%s/%d/labels/%s",
+			mediaItemKey,
+			len(toSave.MediaItems[mediaItemKey])-1,
+			media.LabelPreviewURL,
+		), urls[0].PreviewURL,
+	))
 }

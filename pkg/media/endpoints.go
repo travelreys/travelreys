@@ -13,9 +13,9 @@ type GenerateMediaItemsRequest struct {
 }
 
 type GenerateMediaItemsResponse struct {
-	Items MediaItemList `json:"items"`
-	URLs  []string      `json:"urls"`
-	Err   error         `json:"error,omitempty"`
+	Items MediaItemList         `json:"items"`
+	URLs  MediaPresignedUrlList `json:"urls"`
+	Err   error                 `json:"error,omitempty"`
 }
 
 func (r GenerateMediaItemsResponse) Error() error {
@@ -75,7 +75,7 @@ func (r ListResponse) Error() error {
 
 type ListWithSignedURLsResponse struct {
 	ListResponse
-	URLs []string `json:"urls"`
+	URLs MediaPresignedUrlList `json:"urls"`
 }
 
 func (r ListWithSignedURLsResponse) Error() error {
