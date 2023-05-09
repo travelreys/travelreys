@@ -87,7 +87,11 @@ func (h *ConnHandler) Run() {
 	for {
 		var msg Message
 		if err := h.ws.ReadJSON(&msg); err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if websocket.IsUnexpectedCloseError(
+				err,
+				websocket.CloseGoingAway,
+				websocket.CloseAbnormalClosure,
+			) {
 				h.logger.Error("h.ws.ReadJSON(&msg)", zap.Error(err))
 			}
 			return
@@ -158,6 +162,7 @@ func (h *ConnHandler) WriteMessage() {
 			if !ok {
 				return
 			}
+			msg.ConnID = h.ID
 			h.logger.Debug("recv tob", zap.String("op", msg.Op))
 			h.ws.WriteJSON(msg)
 		case <-pingTicker.C:
