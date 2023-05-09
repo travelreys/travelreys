@@ -6,18 +6,6 @@ import (
 	"github.com/travelreys/travelreys/pkg/trips"
 )
 
-const (
-	MsgUpdateTripTitleAddMediaItem                = "AddMediaItem"
-	MsgUpdateTripTitleUpdateTripDates             = "UpdateTripDates"
-	MsgUpdateTripTitleUpdateTripMembers           = "UpdateTripMembers"
-	MsgUpdateTripTitleUpdateActivityPlace         = "UpdateActivityPlace"
-	MsgUpdateTripTitleUpdateActivityDisplayImage  = "UpdateActivityDisplayImage"
-	MsgUpdateTripTitleDeleteActivity              = "DeleteActivity"
-	MsgUpdateTripTitleReorderItinerary            = "ReorderItinerary"
-	MsgUpdateTripTitleOptimizeItinerary           = "OptimizeItinerary"
-	MsgUpdateTripTitleReorderActivityToAnotherDay = "ReorderActivityToAnotherDay"
-)
-
 // SessionContext represents a user's participation
 // to the multiplayer collaboration session.
 type SessionContext struct {
@@ -67,6 +55,9 @@ type MessageData struct {
 type MsgDataJoinSession struct {
 	trips.Member
 
+	// Latest Snapshot of the trip
+	Trip trips.Trip `json:"trip"`
+
 	// Updated list of members
 	Members trips.MembersList `json:"members"`
 }
@@ -112,6 +103,18 @@ func NewMsgPing(connID, tripID string) Message {
 		},
 	}
 }
+
+const (
+	MsgUpdateTripTitleAddMediaItem                = "AddMediaItem"
+	MsgUpdateTripTitleUpdateTripDates             = "UpdateTripDates"
+	MsgUpdateTripTitleUpdateTripMembers           = "UpdateTripMembers"
+	MsgUpdateTripTitleUpdateActivityPlace         = "UpdateActivityPlace"
+	MsgUpdateTripTitleUpdateActivityDisplayImage  = "UpdateActivityDisplayImage"
+	MsgUpdateTripTitleDeleteActivity              = "DeleteActivity"
+	MsgUpdateTripTitleReorderItinerary            = "ReorderItinerary"
+	MsgUpdateTripTitleOptimizeItinerary           = "OptimizeItinerary"
+	MsgUpdateTripTitleReorderActivityToAnotherDay = "ReorderActivityToAnotherDay"
+)
 
 type MsgDataUpdateTrip struct {
 	Title string         `json:"title"`

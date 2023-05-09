@@ -28,7 +28,7 @@ type Coordinator struct {
 
 	doneCh chan bool
 
-	// trip is the coordinators' local copy of the trip trip
+	// trip is the coordinators' local copy of the trip
 	trip []byte
 
 	// counter is a monotonically increasing integer
@@ -182,6 +182,11 @@ func (crd *Coordinator) Run() error {
 // SendFirstMemberJoinMsg sends a memberUpdate message to the very first member
 func (crd *Coordinator) SendFirstMemberJoinMsg(ctx context.Context, sess Session) {
 	msg := NewMsgJoinSession(crd.tripID, sess.Members)
+
+	var trip trips.Trip
+	json.Unmarshal(crd.trip, &trip)
+	msg.Data.JoinSession.Trip = trip
+
 	msg.Counter = crd.counter
 	crd.counter++
 	crd.queue <- msg
@@ -190,6 +195,10 @@ func (crd *Coordinator) SendFirstMemberJoinMsg(ctx context.Context, sess Session
 func (crd *Coordinator) HandleMsgOpJoinSession(ctx context.Context, msg *Message) {
 	sess, _ := crd.store.Read(ctx, crd.tripID)
 	msg.Data.JoinSession.Members = sess.Members
+
+	var trip trips.Trip
+	json.Unmarshal(crd.trip, &trip)
+	msg.Data.JoinSession.Trip = trip
 }
 
 func (crd *Coordinator) HandleMsgOpLeaveSession(ctx context.Context, msg *Message) {
