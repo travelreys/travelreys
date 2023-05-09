@@ -182,10 +182,7 @@ func (crd *Coordinator) Run() error {
 // SendFirstMemberJoinMsg sends a memberUpdate message to the very first member
 func (crd *Coordinator) SendFirstMemberJoinMsg(ctx context.Context, sess Session) {
 	msg := NewMsgJoinSession(crd.tripID, sess.Members)
-
-	var trip trips.Trip
-	json.Unmarshal(crd.trip, &trip)
-	msg.Data.JoinSession.Trip = trip
+	crd.AugmentJoinMsgWithTrip(ctx, &msg)
 
 	msg.Counter = crd.counter
 	crd.counter++
@@ -195,9 +192,20 @@ func (crd *Coordinator) SendFirstMemberJoinMsg(ctx context.Context, sess Session
 func (crd *Coordinator) HandleMsgOpJoinSession(ctx context.Context, msg *Message) {
 	sess, _ := crd.store.Read(ctx, crd.tripID)
 	msg.Data.JoinSession.Members = sess.Members
+	crd.AugmentJoinMsgWithTrip(ctx, msg)
+}
 
+func (crd *Coordinator) AugmentJoinMsgWithTrip(ctx context.Context, msg *Message) {
 	var trip trips.Trip
 	json.Unmarshal(crd.trip, &trip)
+
+	for key := range trip.MediaItems {
+		urls, _ := crd.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[key])
+		for i := 0; i < len(trip.MediaItems[key]); i++ {
+			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i].ContentURL
+			trip.MediaItems[key][i].Labels[media.LabelPreviewURL] = urls[i].PreviewURL
+		}
+	}
 	msg.Data.JoinSession.Trip = trip
 }
 
