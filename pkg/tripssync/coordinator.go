@@ -180,9 +180,10 @@ func (crd *Coordinator) Run() error {
 }
 
 // SendFirstMemberJoinMsg sends a memberUpdate message to the very first member
-func (crd *Coordinator) SendFirstMemberJoinMsg(ctx context.Context, sess Session) {
-	msg := NewMsgJoinSession(crd.tripID, sess.Members)
+func (crd *Coordinator) SendFirstMemberJoinMsg(ctx context.Context, msg Message, sess Session) {
+	msg.TripID = crd.tripID
 	crd.AugmentJoinMsgWithTrip(ctx, &msg)
+	msg.Data.JoinSession.Members = sess.Members
 
 	msg.Counter = crd.counter
 	crd.counter++

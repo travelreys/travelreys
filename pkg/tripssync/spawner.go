@@ -103,7 +103,7 @@ func (spwn *Spawner) Run() error {
 			spwn.logger.Error("unable to run coordinator", zap.Error(err))
 			continue
 		}
-		coord.SendFirstMemberJoinMsg(ctx, sess)
+		coord.SendFirstMemberJoinMsg(ctx, msg, sess)
 
 		go func() {
 			<-doneCh
