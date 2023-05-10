@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"html/template"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,14 +21,17 @@ import (
 const (
 	authCookieDuration = 365 * 24 * time.Hour
 	otpDuration        = 60 * time.Second
-	defaultLoginSender = "login@travelreys.com"
 
-	svcLoggerName = "auth.service"
+	defaultLoginSender             = "login@travelreys.com"
+	svcLoggerName                  = "auth.service"
+	defaultWelcomEmailTmplFilePath = "assets/welcomeEmail.tmpl.html"
+	defaultWelcomEmailTmplFileName = "welcomeEmail.tmpl.html"
 )
 
 var (
-	avatarFilePrefix = "avatar"
-	avatarBucket     = os.Getenv("TRAVELREYS_PUBLIC_BUCKET")
+	avatarFilePrefix        = "avatar"
+	avatarBucket            = os.Getenv("TRAVELREYS_PUBLIC_BUCKET")
+	welcomEmailTmplFilePath = os.Getenv("TRAVELREYS_WELCOME_EMAIL_PATH")
 
 	ErrProviderGoogleError   = errors.New("auth.service.google.error")
 	ErrProviderFacebookError = errors.New("auth.service.facebook.error")
@@ -146,6 +151,7 @@ func (svc service) socialLogin(ctx context.Context, authCode, provider string) (
 		if err := svc.store.Save(ctx, usr); err != nil {
 			return User{}, err
 		}
+		go svc.sendWelcomeEmail(ctx, usr.Name, usr.Email)
 	} else if err != nil {
 		return User{}, err
 	} else {
@@ -254,4 +260,34 @@ func (svc service) createUser(ctx context.Context, email string) (User, error) {
 		return User{}, err
 	}
 	return newusr, nil
+}
+
+func (svc service) sendWelcomeEmail(ctx context.Context, name, to string) {
+	svc.logger.Info("sending welcome email", zap.String("to", to))
+
+	if welcomEmailTmplFilePath == "" {
+		welcomEmailTmplFilePath = defaultWelcomEmailTmplFilePath
+	}
+	t, err := template.
+		New(defaultWelcomEmailTmplFileName).
+		ParseFiles(defaultWelcomEmailTmplFilePath)
+	if err != nil {
+		svc.logger.Error("sendWelcomeEmail", zap.Error(err))
+		return
+	}
+
+	var doc bytes.Buffer
+	data := struct {
+		Name string
+	}{name}
+	if err := t.Execute(&doc, data); err != nil {
+		svc.logger.Error("sendWelcomeEmail", zap.Error(err))
+		return
+	}
+
+	mailBody := doc.String()
+	subj := "Welcome to Travelreys!"
+	if err := svc.mailSvc.SendMail(ctx, to, defaultLoginSender, subj, mailBody); err != nil {
+		svc.logger.Error("sendWelcomeEmail", zap.Error(err))
+	}
 }

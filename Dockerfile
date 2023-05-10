@@ -16,4 +16,5 @@ WORKDIR /app
 RUN apt-get update && apt-get -y upgrade
 RUN apt-get install -y ca-certificates && update-ca-certificates
 
+COPY /assets /app/assets/
 COPY --from=build-stage /app/build/ /app
