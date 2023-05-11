@@ -4,10 +4,12 @@ import (
 	context "context"
 	"errors"
 
+	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/trips"
 )
 
 var (
+	ErrRBAC          = errors.New("service.rbac")
 	ErrInvalidOp     = errors.New("service.invalid-sync-op")
 	ErrInvalidOpData = errors.New("service.invalid-sync-op-data")
 )
@@ -38,6 +40,14 @@ func NewService(
 }
 
 func (p *service) JoinSession(ctx context.Context, msg Message) (Session, error) {
+	trip, err := p.tripStore.Read(ctx, msg.TripID)
+	if err != nil {
+		return Session{}, err
+	}
+	if !common.StringContains(trip.GetAllMembersID(), msg.Data.JoinSession.Member.ID) {
+		return Session{}, ErrRBAC
+	}
+
 	sessCtx := SessionContext{
 		ID:     msg.ConnID,
 		TripID: msg.TripID,

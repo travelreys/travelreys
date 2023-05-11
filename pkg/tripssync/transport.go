@@ -28,6 +28,10 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+type ErrMessage struct {
+	Err string `json:"error,omitempty"`
+}
+
 type WebsocketServer struct {
 	svc    Service
 	logger *zap.Logger
@@ -101,6 +105,10 @@ func (h *ConnHandler) Run() {
 			continue
 		}
 		if err := h.ReadMessage(msg); err != nil {
+			if err == ErrRBAC {
+				h.ws.WriteJSON(ErrMessage{Err: err.Error()})
+				return
+			}
 			h.logger.Error("h.HandleMessage(msg)", zap.Error(err))
 			continue
 		}
