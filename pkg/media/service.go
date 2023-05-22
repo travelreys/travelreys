@@ -97,11 +97,11 @@ func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
 	}
 	for _, item := range items {
 		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
-			svc.logger.Error("delete", zap.Error(err))
+			svc.logger.Error("Delete", zap.Error(err))
 		}
 		item.Object.Path = item.PreviewPath()
 		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
-			svc.logger.Error("delete preview", zap.Error(err))
+			svc.logger.Error("Delete", zap.Error(err))
 		}
 	}
 	return svc.store.Delete(ctx, ff)

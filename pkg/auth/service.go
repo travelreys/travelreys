@@ -194,7 +194,7 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 		mailBody, _ := svc.otp.GenerateMagicLinkEmail(usr, otp)
 		loginSubj := "Login to Travelreys!"
 		if err := svc.mailSvc.SendMail(ctx, email, defaultLoginSender, loginSubj, mailBody); err != nil {
-			svc.logger.Error("send mail", zap.Error(err))
+			svc.logger.Error("MagicLink", zap.Error(err))
 		}
 	}()
 	return nil

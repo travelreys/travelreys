@@ -11,6 +11,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/email"
+	"github.com/travelreys/travelreys/pkg/finance"
 	"github.com/travelreys/travelreys/pkg/footprints"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
@@ -78,6 +79,11 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		return nil, err
 	}
 
+	// Finance
+	finStore := finance.NewStore(rdb, logger)
+	finSvc := finance.NewService(finStore, logger)
+	finSvc = finance.ServiceWithRBACMiddleware(finSvc, logger)
+
 	// Ogp
 	ogpSvc := ogp.NewService()
 	ogpSvc = ogp.ServiceWithRBACMiddleware(ogpSvc, logger)
@@ -127,6 +133,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvcWithRBAC))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
+	r.PathPrefix("/api/v1/finance").Handler(finance.MakeHandler(finSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
 	r.PathPrefix("/api/v1/media").Handler(media.MakeHandler(mediaSvcWithRBAC))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
