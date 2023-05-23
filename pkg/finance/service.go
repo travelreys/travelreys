@@ -68,6 +68,6 @@ func (svc service) GetFxRates(ctx context.Context, base string) (ExchangeRates, 
 		return ExchangeRates{}, err
 	}
 
-	svc.store.SaveFxRates(ctx, rates, 60*time.Hour)
+	svc.store.SaveFxRates(ctx, rates, 60*time.Minute)
 	return rates, nil
 }
