@@ -16,12 +16,14 @@ const (
 	UserMediaPathPrefix = "users"
 	LabelMediaURL       = "mediaURL"
 	LabelPreviewURL     = "previewURL"
+	LabelOptimizedURL   = "optimizedURL"
 	LabelWidth          = "width"
 	LabelHeight         = "height"
 )
 
 var (
-	MediaItemBucket = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
+	MediaItemBucket          = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
+	MediaItemOptimizedBucket = os.Getenv("TRAVELREYS_MEDIA_OPTIMIZED_BUCKET")
 )
 
 type NewMediaItemParams struct {
@@ -67,8 +69,9 @@ func NewMediaItem(userID string, param NewMediaItemParams) MediaItem {
 }
 
 type MediaPresignedUrl struct {
-	ContentURL string `json:"contentURL"`
-	PreviewURL string `json:"previewURL"`
+	ContentURL   string `json:"contentURL"`
+	PreviewURL   string `json:"previewURL"`
+	OptimizedURL string `json:"optmizedURL"`
 }
 
 type MediaPresignedUrlList []MediaPresignedUrl

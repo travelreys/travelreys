@@ -159,11 +159,11 @@ func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, userID string, 
 	return mw.next.GenerateMediaItems(ctx, userID, params)
 }
 
-func (mw rbacMiddleware) GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error) {
+func (mw rbacMiddleware) GenerateGetSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
 	}
-	return mw.next.GenerateSignedURLs(ctx, ID, items)
+	return mw.next.GenerateGetSignedURLs(ctx, ID, items)
 
 }

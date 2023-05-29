@@ -316,7 +316,7 @@ func NewGenerateSignedURLsEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return GenerateSignedURLsResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		urls, err := svc.GenerateSignedURLs(ctx, req.ID, req.Items)
+		urls, err := svc.GenerateGetSignedURLs(ctx, req.ID, req.Items)
 		return GenerateSignedURLsResponse{URLs: urls, Err: err}, nil
 	}
 }
