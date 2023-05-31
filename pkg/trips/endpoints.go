@@ -271,6 +271,7 @@ func NewUploadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type GenerateMediaItemsRequest struct {
+	ID     string                     `json:"id"`
 	UserID string                     `json:"userID"`
 	Params []media.NewMediaItemParams `json:"params"`
 }
@@ -291,8 +292,32 @@ func NewGenerateMediaItemsEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return GenerateMediaItemsResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		items, urls, err := svc.GenerateMediaItems(ctx, req.UserID, req.Params)
+		items, urls, err := svc.GenerateMediaItems(ctx, req.ID, req.UserID, req.Params)
 		return GenerateMediaItemsResponse{Items: items, URLs: urls, Err: err}, nil
+	}
+}
+
+type SaveMediaItemsRequest struct {
+	ID    string              `json:"id"`
+	Items media.MediaItemList `json:"items"`
+}
+
+type SaveMediaItemsResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r SaveMediaItemsResponse) Error() error {
+	return r.Err
+}
+
+func NewSaveMediaItemsEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(SaveMediaItemsRequest)
+		if !ok {
+			return SaveMediaItemsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		err := svc.SaveMediaItems(ctx, req.ID, req.Items)
+		return SaveMediaItemsResponse{Err: err}, nil
 	}
 }
 
@@ -316,7 +341,31 @@ func NewGenerateSignedURLsEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return GenerateSignedURLsResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		urls, err := svc.GenerateSignedURLs(ctx, req.ID, req.Items)
+		urls, err := svc.GenerateGetSignedURLs(ctx, req.ID, req.Items)
 		return GenerateSignedURLsResponse{URLs: urls, Err: err}, nil
+	}
+}
+
+type DeleteMediaItemsRequest struct {
+	ID    string              `json:"id"`
+	Items media.MediaItemList `json:"items"`
+}
+
+type DeleteMediaItemsResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r DeleteMediaItemsResponse) Error() error {
+	return r.Err
+}
+
+func NewDeleteMediaItemsEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(DeleteMediaItemsRequest)
+		if !ok {
+			return DeleteMediaItemsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		err := svc.DeleteMediaItems(ctx, req.ID, req.Items)
+		return DeleteMediaItemsResponse{Err: err}, nil
 	}
 }

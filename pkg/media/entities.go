@@ -2,7 +2,6 @@ package media
 
 import (
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/travelreys/travelreys/pkg/common"
@@ -16,12 +15,14 @@ const (
 	UserMediaPathPrefix = "users"
 	LabelMediaURL       = "mediaURL"
 	LabelPreviewURL     = "previewURL"
+	LabelOptimizedURL   = "optimizedURL"
 	LabelWidth          = "width"
 	LabelHeight         = "height"
 )
 
 var (
-	MediaItemBucket = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
+	MediaItemBucket          = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
+	MediaItemOptimizedBucket = os.Getenv("TRAVELREYS_MEDIA_OPTIMIZED_BUCKET")
 )
 
 type NewMediaItemParams struct {
@@ -35,8 +36,9 @@ type NewMediaItemParams struct {
 type MediaItem struct {
 	storage.Object `bson:"inline"`
 
-	UserID string `json:"userID" bson:"userID"`
 	Type   string `json:"type" bson:"type"`
+	TripID string `json:"tripID" bson:"tripID"`
+	UserID string `json:"userID" bson:"userID"`
 }
 
 func (item MediaItem) PreviewPath() string {
@@ -46,9 +48,7 @@ func (item MediaItem) PreviewPath() string {
 type MediaItemList []MediaItem
 type MediaItemMap map[string]MediaItem
 
-func NewMediaItem(userID string, param NewMediaItemParams) MediaItem {
-	objectPath := filepath.Join(UserMediaPathPrefix, userID, param.Hash)
-
+func NewMediaItem(tripID, userID, objectPath string, param NewMediaItemParams) MediaItem {
 	return MediaItem{
 		Object: storage.Object{
 			ID:           param.Hash,
@@ -67,8 +67,9 @@ func NewMediaItem(userID string, param NewMediaItemParams) MediaItem {
 }
 
 type MediaPresignedUrl struct {
-	ContentURL string `json:"contentURL"`
-	PreviewURL string `json:"previewURL"`
+	ContentURL   string `json:"contentURL"`
+	PreviewURL   string `json:"previewURL"`
+	OptimizedURL string `json:"optimizedURL"`
 }
 
 type MediaPresignedUrlList []MediaPresignedUrl

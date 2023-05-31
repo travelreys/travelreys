@@ -1,8 +1,10 @@
 package trips
 
 import (
+	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,7 +29,7 @@ const (
 	LabelUiIcon                   = "ui|icon"
 	LabelActivityDisplayMediaItem = "displayMediaItem"
 
-	MediaItemKeyCoverImage     = "coverImage"
+	MediaItemKeyTrip           = "trip"
 	MediaItemKeyActivityPrefix = "activity"
 )
 
@@ -96,7 +98,7 @@ func NewTrip(creator Member, name string) Trip {
 		Budget:      NewBudget(),
 		Links:       LinkMap{},
 		MediaItems: map[string]media.MediaItemList{
-			MediaItemKeyCoverImage: {},
+			MediaItemKeyTrip: {},
 		},
 		Files:     map[string]storage.Object{},
 		UpdatedAt: time.Now(),
@@ -147,6 +149,14 @@ type CoverImage struct {
 
 	// TripImage is the ID of mediaItem in the mediaItems["coverImage"]
 	TripImage string `json:"tripImage" bson:"tripImage"`
+}
+
+func (ci CoverImage) SplitTripImageKey() (string, string, error) {
+	tkns := strings.Split(ci.TripImage, "@")
+	if len(tkns) != 2 {
+		return "", "", errors.New("invalid trip image key")
+	}
+	return tkns[0], tkns[1], nil
 }
 
 // Members

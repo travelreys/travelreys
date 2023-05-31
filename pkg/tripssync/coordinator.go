@@ -201,10 +201,11 @@ func (crd *Coordinator) AugmentJoinMsgWithTrip(ctx context.Context, msg *Message
 	json.Unmarshal(crd.trip, &trip)
 
 	for key := range trip.MediaItems {
-		urls, _ := crd.mediaSvc.GenerateGetSignedURLsForItems(ctx, trip.MediaItems[key])
+		urls, _ := crd.mediaSvc.GenerateGetSignedURLs(ctx, trip.MediaItems[key])
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
 			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i].ContentURL
 			trip.MediaItems[key][i].Labels[media.LabelPreviewURL] = urls[i].PreviewURL
+			trip.MediaItems[key][i].Labels[media.LabelOptimizedURL] = urls[i].OptimizedURL
 		}
 	}
 	msg.Data.JoinSession.Trip = trip
@@ -408,7 +409,7 @@ func (crd *Coordinator) AugmentMediaItemSignedURL(ctx context.Context, msg *Mess
 		return
 	}
 
-	urls, err := crd.mediaSvc.GenerateGetSignedURLsForItems(ctx, media.MediaItemList{mediaItem})
+	urls, err := crd.mediaSvc.GenerateGetSignedURLs(ctx, media.MediaItemList{mediaItem})
 	if err != nil {
 		crd.logger.Error("generate signed urls", zap.Error(err))
 		return

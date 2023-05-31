@@ -151,19 +151,38 @@ func (mw rbacMiddleware) UploadAttachmentPresignedURL(ctx context.Context, ID, f
 	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename)
 }
 
-func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error) {
+func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, id, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, nil, ErrRBAC
 	}
-	return mw.next.GenerateMediaItems(ctx, userID, params)
+	if ci.UserID != userID {
+		return nil, nil, ErrRBAC
+	}
+	return mw.next.GenerateMediaItems(ctx, id, userID, params)
 }
 
-func (mw rbacMiddleware) GenerateSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error) {
+func (mw rbacMiddleware) SaveMediaItems(ctx context.Context, id string, items media.MediaItemList) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	return mw.next.SaveMediaItems(ctx, id, items)
+}
+
+func (mw rbacMiddleware) DeleteMediaItems(ctx context.Context, id string, items media.MediaItemList) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	return mw.next.DeleteMediaItems(ctx, id, items)
+}
+
+func (mw rbacMiddleware) GenerateGetSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
 	}
-	return mw.next.GenerateSignedURLs(ctx, ID, items)
+	return mw.next.GenerateGetSignedURLs(ctx, ID, items)
 
 }
