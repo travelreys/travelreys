@@ -85,6 +85,22 @@ func MakeHandler(svc Service) http.Handler {
 		NewDownloadAttachmentPresignedURLEndpoint(svc),
 		decodeDownloadAttachmentPresignedURLRequest, encodeResponse, opts...,
 	)
+
+	generateMediaItemsHandler := kithttp.NewServer(
+		NewGenerateMediaItemsEndpoint(svc),
+		decodeGenerateMediaItemsRequest, encodeResponse, opts...,
+	)
+
+	saveMediaItemsHandler := kithttp.NewServer(
+		NewSaveMediaItemsEndpoint(svc),
+		decodeSaveMediaItemsRequest, encodeResponse, opts...,
+	)
+
+	deleteMediaItemsHandler := kithttp.NewServer(
+		NewDeleteMediaItemsEndpoint(svc),
+		decodeDeleteMediaItemsRequest, encodeResponse, opts...,
+	)
+
 	generateSignedURLsHandler := kithttp.NewServer(
 		NewGenerateSignedURLsEndpoint(svc),
 		decodeGenerateSignedURLsRequest, encodeResponse, opts...,
@@ -102,6 +118,9 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/trips/{id}/storage/download/pre-signed", downloadAttachmentPresignedURLHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/trips/{id}/storage/upload/pre-signed", uploadAttachmentPresignedURLHandler).Methods(http.MethodGet)
 
+	r.Handle("/api/v1/trips/{id}/media/items", saveMediaItemsHandler).Methods(http.MethodPost)
+	r.Handle("/api/v1/trips/{id}/media/items", deleteMediaItemsHandler).Methods(http.MethodDelete)
+	r.Handle("/api/v1/trips/{id}/media/items/generate", generateMediaItemsHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/trips/{id}/media/pre-signed", generateSignedURLsHandler).Methods(http.MethodPost)
 
 	return r
@@ -158,6 +177,8 @@ func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error
 	return DeleteRequest{ID}, nil
 }
 
+// Attachments
+
 func decodeDeleteAttachmentRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]
@@ -200,6 +221,53 @@ func decodeUploadAttachmentPresignedURLRequest(_ context.Context, r *http.Reques
 		ID:       ID,
 		Filename: filename,
 	}, nil
+}
+
+// Media
+
+func decodeGenerateMediaItemsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+
+	req := GenerateMediaItemsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, common.ErrInvalidJSONBody
+	}
+	req.ID = ID
+	return req, nil
+}
+
+func decodeSaveMediaItemsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+
+	req := SaveMediaItemsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, common.ErrInvalidJSONBody
+	}
+	req.ID = ID
+	return req, nil
+}
+
+func decodeDeleteMediaItemsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+
+	req := DeleteMediaItemsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, common.ErrInvalidJSONBody
+	}
+	req.ID = ID
+	return req, nil
 }
 
 func decodeGenerateSignedURLsRequest(_ context.Context, r *http.Request) (interface{}, error) {

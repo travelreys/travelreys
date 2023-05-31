@@ -19,7 +19,8 @@ var (
 	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
 	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
 
-	ErrTripSharingNotEnabled = errors.New("trip.service.tripSharingNotEnabled")
+	ErrTripSharingNotEnabled  = errors.New("trip.service.tripSharingNotEnabled")
+	ErrDeleteAnotherTripMedia = errors.New("trip.service.deleteInvalidMedia")
 )
 
 type Service interface {
@@ -36,7 +37,9 @@ type Service interface {
 	DownloadAttachmentPresignedURL(ctx context.Context, ID, path, fileID string) (string, error)
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
 
-	GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error)
+	GenerateMediaItems(ctx context.Context, id, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error)
+	SaveMediaItems(ctx context.Context, id string, items media.MediaItemList) error
+	DeleteMediaItems(ctx context.Context, id string, items media.MediaItemList) error
 	GenerateGetSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error)
 }
 
@@ -275,13 +278,38 @@ func (svc *service) DeleteAttachment(ctx context.Context, tripID string, obj sto
 
 // MediaItems
 
-func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error) {
-	items, err := svc.mediaSvc.GenerateMediaItems(ctx, userID, params)
-	if err != nil {
-		return nil, nil, err
+func (svc *service) GenerateMediaItems(ctx context.Context, tripID, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error) {
+	items := media.MediaItemList{}
+	for _, param := range params {
+		path := filepath.Join("trips", tripID, param.Hash)
+		item := media.NewMediaItem(tripID, userID, path, param)
+		items = append(items, item)
 	}
 	urls, err := svc.mediaSvc.GeneratePutSignedURLs(ctx, items)
 	return items, urls, err
+}
+
+func (svc *service) SaveMediaItems(ctx context.Context, id string, items media.MediaItemList) error {
+	if _, err := svc.Read(ctx, id); err != nil {
+		return err
+	}
+	for i := 0; i < len(items); i++ {
+		items[i].TripID = id
+	}
+	return svc.mediaSvc.Save(ctx, items)
+}
+
+func (svc *service) DeleteMediaItems(ctx context.Context, id string, items media.MediaItemList) error {
+	if _, err := svc.Read(ctx, id); err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if item.TripID != id {
+			return ErrDeleteAnotherTripMedia
+		}
+	}
+	return svc.mediaSvc.Delete(ctx, items)
 }
 
 func (svc *service) GenerateGetSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error) {

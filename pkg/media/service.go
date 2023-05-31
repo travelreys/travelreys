@@ -14,33 +14,27 @@ const (
 )
 
 type Service interface {
-	GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, error)
 	GenerateGetSignedURLs(ctx context.Context, items MediaItemList) (MediaPresignedUrlList, error)
 	GeneratePutSignedURLs(ctx context.Context, items MediaItemList) (MediaPresignedUrlList, error)
-
-	// TO DEPRECATE
-	Delete(ctx context.Context, ff DeleteMediaFilter) error
+	Save(ctx context.Context, items MediaItemList) error
+	Delete(ctx context.Context, items MediaItemList) error
 }
 
 type service struct {
 	store       Store
 	cdnProvider CDNProvider
 	storageSvc  storage.Service
-	logger      *zap.Logger
+
+	logger *zap.Logger
 }
 
-func NewService(store Store, cdnProvider CDNProvider, storageSvc storage.Service, logger *zap.Logger) Service {
+func NewService(
+	store Store,
+	cdnProvider CDNProvider,
+	storageSvc storage.Service,
+	logger *zap.Logger,
+) Service {
 	return &service{store, cdnProvider, storageSvc, logger.Named(svcLoggerName)}
-}
-
-func (svc *service) GenerateMediaItems(ctx context.Context, userID string, params []NewMediaItemParams) (MediaItemList, error) {
-	items := MediaItemList{}
-	for _, param := range params {
-		item := NewMediaItem(userID, param)
-		items = append(items, item)
-
-	}
-	return items, nil
 }
 
 func (svc *service) GeneratePutSignedURLs(ctx context.Context, items MediaItemList) (MediaPresignedUrlList, error) {
@@ -132,15 +126,14 @@ func (svc *service) makeCDNOptimizedURL(ctx context.Context, item MediaItem) (st
 	))
 }
 
-// TO DEPRECATE
+func (svc *service) Save(ctx context.Context, items MediaItemList) error {
+	return svc.store.Save(ctx, items)
+}
 
-func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
-	listFF := ListMediaFilter{ff.UserID, ff.IDs}
-	items, _, err := svc.store.List(ctx, listFF, ListMediaPagination{})
-	if err != nil {
-		return err
-	}
+func (svc *service) Delete(ctx context.Context, items MediaItemList) error {
+	ids := []string{}
 	for _, item := range items {
+		ids = append(ids, item.ID)
 		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
 			svc.logger.Error("Delete", zap.Error(err))
 		}
@@ -148,6 +141,10 @@ func (svc *service) Delete(ctx context.Context, ff DeleteMediaFilter) error {
 		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
 			svc.logger.Error("Delete", zap.Error(err))
 		}
+		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+			svc.logger.Error("Delete", zap.Error(err))
+		}
 	}
-	return svc.store.Delete(ctx, ff)
+
+	return svc.store.Delete(ctx, DeleteMediaFilter{IDs: ids})
 }

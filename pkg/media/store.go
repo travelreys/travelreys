@@ -27,6 +27,7 @@ var (
 
 type ListMediaFilter struct {
 	UserID *string  `json:"userID" bson:"userID"`
+	TripID *string  `json:"tripID" bson:"tripID"`
 	IDs    []string `json:"ids"`
 }
 
@@ -34,6 +35,9 @@ func (ff ListMediaFilter) toBSON() bson.M {
 	bsonM := bson.M{}
 	if ff.UserID != nil || *ff.UserID != "" {
 		bsonM["userID"] = *ff.UserID
+	}
+	if ff.TripID != nil || *ff.TripID != "" {
+		bsonM["tripID"] = *ff.TripID
 	}
 	if len(ff.IDs) > 0 {
 		bsonM["id"] = bson.M{"$in": ff.IDs}
@@ -47,15 +51,11 @@ type ListMediaPagination struct {
 }
 
 type DeleteMediaFilter struct {
-	UserID *string  `json:"userID"`
-	IDs    []string `json:"ids"`
+	IDs []string `json:"ids"`
 }
 
 func (ff DeleteMediaFilter) toBSON() bson.M {
 	bsonM := bson.M{}
-	if ff.UserID != nil || *ff.UserID != "" {
-		bsonM["userID"] = *ff.UserID
-	}
 	if len(ff.IDs) > 0 {
 		bsonM["id"] = bson.M{"$in": ff.IDs}
 	}
@@ -63,9 +63,9 @@ func (ff DeleteMediaFilter) toBSON() bson.M {
 }
 
 type Store interface {
-	SaveForUser(ctx context.Context, userID string, items MediaItemList) error
-	List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error)
+	Save(ctx context.Context, items MediaItemList) error
 	Delete(ctx context.Context, ff DeleteMediaFilter) error
+	List(ctx context.Context, ff ListMediaFilter, pg ListMediaPagination) (MediaItemList, string, error)
 }
 
 type store struct {
@@ -86,7 +86,7 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 	return &store{db, coll, logger.Named(storeLoggerName)}
 }
 
-func (str *store) SaveForUser(ctx context.Context, userID string, items MediaItemList) error {
+func (str *store) Save(ctx context.Context, items MediaItemList) error {
 	writeModels := make([]mongo.WriteModel, len(items))
 	for idx, i := range items {
 		replaceFF := bson.M{bsonKeyID: i.ID}
@@ -97,7 +97,7 @@ func (str *store) SaveForUser(ctx context.Context, userID string, items MediaIte
 	}
 	_, err := str.coll.BulkWrite(ctx, writeModels, options.BulkWrite())
 	if err != nil {
-		str.logger.Error("Save", zap.String("userID", userID), zap.Error(err))
+		str.logger.Error("Save", zap.Error(err))
 	}
 	return err
 }
