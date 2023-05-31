@@ -205,6 +205,7 @@ func (crd *Coordinator) AugmentJoinMsgWithTrip(ctx context.Context, msg *Message
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
 			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i].ContentURL
 			trip.MediaItems[key][i].Labels[media.LabelPreviewURL] = urls[i].PreviewURL
+			trip.MediaItems[key][i].Labels[media.LabelOptimizedURL] = urls[i].OptimizedURL
 		}
 	}
 	msg.Data.JoinSession.Trip = trip

@@ -3,6 +3,7 @@ package trips
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -131,6 +132,7 @@ func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
 			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i].ContentURL
 			trip.MediaItems[key][i].Labels[media.LabelPreviewURL] = urls[i].PreviewURL
+			trip.MediaItems[key][i].Labels[media.LabelOptimizedURL] = urls[i].OptimizedURL
 		}
 	}
 }
@@ -145,12 +147,23 @@ func (svc *service) AugmentTripCoverImageURL(ctx context.Context, trip *Trip) (s
 		svc.logger.Error("AugmentTripCoverImageURL", zap.Error(err))
 		return "", err
 	}
-	mediaItemIdx := 0
+
+	if _, ok := trip.MediaItems[key]; !ok {
+		return "", nil
+	}
+	fmt.Println("ok")
+
+	mediaItemIdx := -1
 	for idx, item := range trip.MediaItems[key] {
 		if item.ID == id {
 			mediaItemIdx = idx
 		}
 	}
+	fmt.Println(mediaItemIdx)
+	if mediaItemIdx < 0 {
+		return "", nil
+	}
+
 	urls, err := svc.GenerateGetSignedURLs(ctx, trip.ID, media.MediaItemList{
 		trip.MediaItems[key][mediaItemIdx],
 	})
@@ -161,7 +174,6 @@ func (svc *service) AugmentTripCoverImageURL(ctx context.Context, trip *Trip) (s
 	trip.MediaItems[key][mediaItemIdx].Labels[media.LabelMediaURL] = urls[0].ContentURL
 	trip.MediaItems[key][mediaItemIdx].Labels[media.LabelPreviewURL] = urls[0].PreviewURL
 	trip.MediaItems[key][mediaItemIdx].Labels[media.LabelOptimizedURL] = urls[0].OptimizedURL
-
 	return urls[0].OptimizedURL, nil
 }
 
