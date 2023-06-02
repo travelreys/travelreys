@@ -114,7 +114,7 @@ func (svc *service) makeCDNPreviewURL(ctx context.Context, item MediaItem) (stri
 	return svc.cdnProvider.PresignedURL(ctx, fmt.Sprintf(
 		"%s/%s",
 		svc.cdnProvider.Domain(ctx, true),
-		filepath.Join(item.Bucket, path),
+		filepath.Join(MediaItemOptimizedBucket, path),
 	))
 }
 
@@ -134,13 +134,17 @@ func (svc *service) Delete(ctx context.Context, items MediaItemList) error {
 	ids := []string{}
 	for _, item := range items {
 		ids = append(ids, item.ID)
+		// content
 		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
 			svc.logger.Error("Delete", zap.Error(err))
 		}
+		// optimised
+		item.Object.Bucket = MediaItemOptimizedBucket
+		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+			svc.logger.Error("Delete", zap.Error(err))
+		}
+		// preview
 		item.Object.Path = item.PreviewPath()
-		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
-			svc.logger.Error("Delete", zap.Error(err))
-		}
 		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
 			svc.logger.Error("Delete", zap.Error(err))
 		}
