@@ -130,9 +130,7 @@ func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 	for key := range trip.MediaItems {
 		urls, _ := svc.mediaSvc.GenerateGetSignedURLs(ctx, trip.MediaItems[key])
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
-			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i].ContentURL
-			trip.MediaItems[key][i].Labels[media.LabelPreviewURL] = urls[i].PreviewURL
-			trip.MediaItems[key][i].Labels[media.LabelOptimizedURL] = urls[i].OptimizedURL
+			trip.MediaItems[key][i].URLs = urls[i]
 		}
 	}
 }
@@ -159,7 +157,6 @@ func (svc *service) AugmentTripCoverImageURL(ctx context.Context, trip *Trip) (s
 			mediaItemIdx = idx
 		}
 	}
-	fmt.Println(mediaItemIdx)
 	if mediaItemIdx < 0 {
 		return "", nil
 	}
@@ -171,10 +168,8 @@ func (svc *service) AugmentTripCoverImageURL(ctx context.Context, trip *Trip) (s
 		svc.logger.Error("AugmentTripCoverImageURL", zap.Error(err))
 		return "", err
 	}
-	trip.MediaItems[key][mediaItemIdx].Labels[media.LabelMediaURL] = urls[0].ContentURL
-	trip.MediaItems[key][mediaItemIdx].Labels[media.LabelPreviewURL] = urls[0].PreviewURL
-	trip.MediaItems[key][mediaItemIdx].Labels[media.LabelOptimizedURL] = urls[0].OptimizedURL
-	return urls[0].OptimizedURL, nil
+	trip.MediaItems[key][mediaItemIdx].URLs = urls[0]
+	return urls[0].Image.OptimizedURL, nil
 }
 
 func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
