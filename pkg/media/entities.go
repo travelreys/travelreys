@@ -2,6 +2,7 @@ package media
 
 import (
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/travelreys/travelreys/pkg/common"
@@ -13,9 +14,6 @@ const (
 	MediaTypeVideo   = "v"
 
 	UserMediaPathPrefix = "users"
-	LabelMediaURL       = "mediaURL"
-	LabelPreviewURL     = "previewURL"
-	LabelOptimizedURL   = "optimizedURL"
 	LabelWidth          = "width"
 	LabelHeight         = "height"
 )
@@ -36,13 +34,24 @@ type NewMediaItemParams struct {
 type MediaItem struct {
 	storage.Object `bson:"inline"`
 
-	Type   string `json:"type" bson:"type"`
-	TripID string `json:"tripID" bson:"tripID"`
-	UserID string `json:"userID" bson:"userID"`
+	Type   string            `json:"type" bson:"type"`
+	TripID string            `json:"tripID" bson:"tripID"`
+	UserID string            `json:"userID" bson:"userID"`
+	URLs   MediaPresignedUrl `json:"urls" bson:"-"`
 }
 
 func (item MediaItem) PreviewPath() string {
 	return item.Path + "-preview"
+}
+
+func (item MediaItem) VideoH264Path() string {
+	inFile := item.Path
+	return inFile[0:len(inFile)-len(filepath.Ext(inFile))] + ".h264.mp4"
+}
+
+func (item MediaItem) VideoH265Path() string {
+	inFile := item.Path
+	return inFile[0:len(inFile)-len(filepath.Ext(inFile))] + ".h265.mp4"
 }
 
 type MediaItemList []MediaItem
@@ -67,9 +76,24 @@ func NewMediaItem(tripID, userID, objectPath string, param NewMediaItemParams) M
 }
 
 type MediaPresignedUrl struct {
-	ContentURL   string `json:"contentURL"`
-	PreviewURL   string `json:"previewURL"`
-	OptimizedURL string `json:"optimizedURL"`
+	ContentURL string `json:"contentURL" bson:"-"`
+
+	Image ImagePresignedUrls `json:"image"`
+	Video VideoPresignedUrls `json:"video"`
 }
 
 type MediaPresignedUrlList []MediaPresignedUrl
+
+type ImagePresignedUrls struct {
+	OptimizedURL string `json:"optimizedURL" bson:"-"`
+}
+
+type VideoPresignedUrls struct {
+	PreviewURL string        `json:"previewURL" bson:"-"`
+	Sources    []VideoSource `json:"sources" bson:"-"`
+}
+
+type VideoSource struct {
+	Source string `json:"source" bson:"-"`
+	Codecs string `json:"codecs" bson:"-"`
+}

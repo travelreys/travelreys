@@ -61,7 +61,9 @@ func (svc *service) GeneratePutSignedURLs(ctx context.Context, items MediaItemLi
 		}
 		urls = append(urls, MediaPresignedUrl{
 			ContentURL: contentURL,
-			PreviewURL: previewURL,
+			Video: VideoPresignedUrls{
+				PreviewURL: previewURL,
+			},
 		})
 	}
 	return urls, nil
@@ -78,9 +80,10 @@ func (svc *service) GenerateGetSignedURLs(ctx context.Context, items MediaItemLi
 
 		if item.Type == MediaTypePicture {
 			urls = append(urls, MediaPresignedUrl{
-				ContentURL:   contentURL,
-				PreviewURL:   optimizedURL,
-				OptimizedURL: optimizedURL,
+				ContentURL: contentURL,
+				Image: ImagePresignedUrls{
+					OptimizedURL: optimizedURL,
+				},
 			})
 			continue
 		}
@@ -89,10 +92,27 @@ func (svc *service) GenerateGetSignedURLs(ctx context.Context, items MediaItemLi
 		if err != nil {
 			return nil, err
 		}
+
+		vidH264 := MediaItem{Object: storage.Object{Path: item.VideoH264Path()}}
+		sourceH264, err := svc.makeCDNOptimizedURL(ctx, vidH264)
+		if err != nil {
+			return nil, err
+		}
+		vidH265 := MediaItem{Object: storage.Object{Path: item.VideoH265Path()}}
+		sourceH265, err := svc.makeCDNOptimizedURL(ctx, vidH265)
+		if err != nil {
+			return nil, err
+		}
+
 		urls = append(urls, MediaPresignedUrl{
-			ContentURL:   contentURL,
-			PreviewURL:   previewURL,
-			OptimizedURL: optimizedURL,
+			ContentURL: contentURL,
+			Video: VideoPresignedUrls{
+				PreviewURL: previewURL,
+				Sources: []VideoSource{
+					{Source: sourceH265, Codecs: "hvc1"},
+					{Source: sourceH264, Codecs: "avc1"},
+				},
+			},
 		})
 	}
 	return urls, nil

@@ -203,9 +203,7 @@ func (crd *Coordinator) AugmentJoinMsgWithTrip(ctx context.Context, msg *Message
 	for key := range trip.MediaItems {
 		urls, _ := crd.mediaSvc.GenerateGetSignedURLs(ctx, trip.MediaItems[key])
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
-			trip.MediaItems[key][i].Labels[media.LabelMediaURL] = urls[i].ContentURL
-			trip.MediaItems[key][i].Labels[media.LabelPreviewURL] = urls[i].PreviewURL
-			trip.MediaItems[key][i].Labels[media.LabelOptimizedURL] = urls[i].OptimizedURL
+			trip.MediaItems[key][i].URLs = urls[i]
 		}
 	}
 	msg.Data.JoinSession.Trip = trip
@@ -417,18 +415,9 @@ func (crd *Coordinator) AugmentMediaItemSignedURL(ctx context.Context, msg *Mess
 
 	msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jp.MakeAddOp(
 		fmt.Sprintf(
-			"/mediaItems/%s/%d/labels/%s",
+			"/mediaItems/%s/%d/urls",
 			mediaItemKey,
 			len(toSave.MediaItems[mediaItemKey])-1,
-			media.LabelMediaURL,
-		), urls[0].ContentURL,
-	))
-	msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jp.MakeAddOp(
-		fmt.Sprintf(
-			"/mediaItems/%s/%d/labels/%s",
-			mediaItemKey,
-			len(toSave.MediaItems[mediaItemKey])-1,
-			media.LabelPreviewURL,
-		), urls[0].PreviewURL,
+		), urls[0],
 	))
 }
