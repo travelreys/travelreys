@@ -47,6 +47,10 @@ func (prv minioProvider) PresignedURL(ctx context.Context, url string) (string, 
 	return url, nil
 }
 
+func (prv minioProvider) PresignedOptURL(ctx context.Context, url string) (string, error) {
+	return url, nil
+}
+
 func (prv minioProvider) PresignedCookie(ctx context.Context, domain, path string) (*http.Cookie, error) {
 	return &http.Cookie{}, nil
 }

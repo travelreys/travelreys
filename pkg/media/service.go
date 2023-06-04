@@ -54,7 +54,7 @@ func (svc *service) GeneratePutSignedURLs(ctx context.Context, items MediaItemLi
 		}
 
 		previewURL, err := svc.storageSvc.PutPresignedURL(
-			ctx, MediaItemOptimizedBucket, item.PreviewPath(), item.ID,
+			ctx, MediaItemBucket, item.PreviewPath(), item.ID,
 		)
 		if err != nil {
 			return nil, err
@@ -127,11 +127,8 @@ func (svc *service) makeCDNContentURL(ctx context.Context, item MediaItem) (stri
 }
 
 func (svc *service) makeCDNPreviewURL(ctx context.Context, item MediaItem) (string, error) {
-	path := item.Path
-	if item.Type == MediaTypeVideo {
-		path = item.PreviewPath()
-	}
-	return svc.cdnProvider.PresignedURL(ctx, fmt.Sprintf(
+	path := item.PreviewPath()
+	return svc.cdnProvider.PresignedOptURL(ctx, fmt.Sprintf(
 		"%s/%s",
 		svc.cdnProvider.Domain(ctx, true),
 		filepath.Join(MediaItemOptimizedBucket, path),
@@ -139,10 +136,11 @@ func (svc *service) makeCDNPreviewURL(ctx context.Context, item MediaItem) (stri
 }
 
 func (svc *service) makeCDNOptimizedURL(ctx context.Context, item MediaItem) (string, error) {
-	return svc.cdnProvider.PresignedURL(ctx, fmt.Sprintf(
+	path := item.OptimizedPath()
+	return svc.cdnProvider.PresignedOptURL(ctx, fmt.Sprintf(
 		"%s/%s",
 		svc.cdnProvider.Domain(ctx, true),
-		filepath.Join(MediaItemOptimizedBucket, item.Path),
+		filepath.Join(MediaItemOptimizedBucket, path),
 	))
 }
 

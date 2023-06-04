@@ -1,6 +1,7 @@
 package media
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -40,8 +41,18 @@ type MediaItem struct {
 	URLs   MediaPresignedUrl `json:"urls" bson:"-"`
 }
 
+func (item MediaItem) OptimizedPath() string {
+	if item.Type == MediaTypePicture {
+		return fmt.Sprintf("%s.jpeg", item.Path)
+	}
+	return item.Path
+}
+
 func (item MediaItem) PreviewPath() string {
-	return item.Path + "-preview"
+	if item.Type == MediaTypePicture {
+		return fmt.Sprintf("%s.jpeg", item.Path)
+	}
+	return fmt.Sprintf("%s-preview.jpeg", item.Path)
 }
 
 func (item MediaItem) VideoH264Path() string {
