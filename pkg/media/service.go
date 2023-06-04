@@ -54,7 +54,7 @@ func (svc *service) GeneratePutSignedURLs(ctx context.Context, items MediaItemLi
 		}
 
 		previewURL, err := svc.storageSvc.PutPresignedURL(
-			ctx, MediaItemBucket, item.PreviewPath(), item.ID,
+			ctx, MediaItemBucket, item.UploadPreviewPath(), item.ID,
 		)
 		if err != nil {
 			return nil, err
