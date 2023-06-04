@@ -48,6 +48,10 @@ func (item MediaItem) OptimizedPath() string {
 	return item.Path
 }
 
+func (item MediaItem) UploadPreviewPath() string {
+	return item.Path + "-preview"
+}
+
 func (item MediaItem) PreviewPath() string {
 	if item.Type == MediaTypePicture {
 		return fmt.Sprintf("%s.jpeg", item.Path)
