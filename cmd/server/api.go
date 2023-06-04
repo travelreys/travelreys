@@ -96,7 +96,6 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		return nil, err
 	}
 	mediaSvc := media.NewService(mediaStore, mediaCDNProvider, storageSvc, logger)
-	mediaSvc = media.ServiceWithRBACMiddleware(mediaSvc, logger)
 
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
