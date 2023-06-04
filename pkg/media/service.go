@@ -158,15 +158,33 @@ func (svc *service) Delete(ctx context.Context, items MediaItemList) error {
 		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
 			svc.logger.Error("Delete", zap.Error(err))
 		}
-		// optimised
-		item.Object.Bucket = MediaItemOptimizedBucket
-		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
-			svc.logger.Error("Delete", zap.Error(err))
-		}
-		// preview
-		item.Object.Path = item.PreviewPath()
-		if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
-			svc.logger.Error("Delete", zap.Error(err))
+
+		if item.Type == MediaTypePicture {
+			// optimised
+			item.Object.Bucket = MediaItemOptimizedBucket
+			if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+				svc.logger.Error("Delete", zap.Error(err))
+			}
+		} else {
+			// preview
+			item.Object.Path = item.PreviewPath()
+			if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+				svc.logger.Error("Delete", zap.Error(err))
+			}
+			// preview in optimised
+			item.Object.Bucket = MediaItemOptimizedBucket
+			if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+				svc.logger.Error("Delete", zap.Error(err))
+			}
+			// codecs in optimised
+			item.Object.Path = item.VideoH264Path()
+			if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+				svc.logger.Error("Delete", zap.Error(err))
+			}
+			item.Object.Path = item.VideoH265Path()
+			if err := svc.storageSvc.Remove(ctx, item.Object); err != nil {
+				svc.logger.Error("Delete", zap.Error(err))
+			}
 		}
 	}
 

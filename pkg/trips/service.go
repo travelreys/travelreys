@@ -129,6 +129,11 @@ func (svc *service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersM
 func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 	for key := range trip.MediaItems {
 		urls, _ := svc.mediaSvc.GenerateGetSignedURLs(ctx, trip.MediaItems[key])
+
+		fmt.Println(trip.MediaItems[key])
+		fmt.Println(len(trip.MediaItems[key]))
+		fmt.Println(len(urls))
+
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
 			trip.MediaItems[key][i].URLs = urls[i]
 		}
