@@ -20,6 +20,7 @@ const (
 type CDNProvider interface {
 	Domain(ctx context.Context, withScheme bool) string
 	PresignedURL(ctx context.Context, url string) (string, error)
+	PresignedOptURL(ctx context.Context, url string) (string, error)
 	PresignedCookie(ctx context.Context, domain, path string) (*http.Cookie, error)
 }
 

@@ -14,16 +14,23 @@ import (
 )
 
 var (
-	projectID          = os.Getenv("TRAVELREYS_GCP_PROJECT")
-	gcpCloudCDNKeyName = os.Getenv("TRAVELREYS_GCP_CLOUD_CDN_KEY_NAME")
-	gcpCloudCDNKeyPath = os.Getenv("TRAVELREYS_GCP_CLOUD_CDN_KEY_PATH")
+	projectID             = os.Getenv("TRAVELREYS_GCP_PROJECT")
+	gcpCloudCDNKeyName    = os.Getenv("TRAVELREYS_GCP_CLOUD_CDN_KEY_NAME")
+	gcpCloudCDNKeyPath    = os.Getenv("TRAVELREYS_GCP_CLOUD_CDN_KEY_PATH")
+	gcpCloudCDNOptKeyName = os.Getenv("TRAVELREYS_GCP_CLOUD_CDN_OPT_KEY_NAME")
+	gcpCloudCDNOptKeyPath = os.Getenv("TRAVELREYS_GCP_CLOUD_CDN_OPT_KEY_PATH")
 )
 
 type gcpProvider struct {
 	projectID string
-	keyName   string
-	keyFile   string
-	keyData   []byte
+
+	keyName string
+	keyFile string
+	keyData []byte
+
+	optKeyName string
+	optKeyFile string
+	optKeyData []byte
 }
 
 func NewDefaultGCPCloudCDNProvider() (CDNProvider, error) {
@@ -31,11 +38,20 @@ func NewDefaultGCPCloudCDNProvider() (CDNProvider, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	optKeyData, err := readKeyFile(gcpCloudCDNOptKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
 	return gcpProvider{
 		projectID,
 		gcpCloudCDNKeyName,
 		gcpCloudCDNKeyPath,
 		keyData,
+		gcpCloudCDNOptKeyName,
+		gcpCloudCDNOptKeyPath,
+		optKeyData,
 	}, nil
 }
 
@@ -71,6 +87,22 @@ func (gcp gcpProvider) PresignedURL(ctx context.Context, url string) (string, er
 	url += fmt.Sprintf("&KeyName=%s", gcp.keyName)
 
 	mac := hmac.New(sha1.New, gcp.keyData)
+	mac.Write([]byte(url))
+	sig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
+	url += fmt.Sprintf("&Signature=%s", sig)
+	return url, nil
+}
+
+func (gcp gcpProvider) PresignedOptURL(ctx context.Context, url string) (string, error) {
+	sep := "?"
+	if strings.Contains(url, "?") {
+		sep = "&"
+	}
+	url += sep
+	url += fmt.Sprintf("Expires=%d", time.Now().Add(defaultPresignedURLDuration).Unix())
+	url += fmt.Sprintf("&KeyName=%s", gcp.optKeyName)
+
+	mac := hmac.New(sha1.New, gcp.optKeyData)
 	mac.Write([]byte(url))
 	sig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
 	url += fmt.Sprintf("&Signature=%s", sig)
