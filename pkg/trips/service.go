@@ -3,7 +3,6 @@ package trips
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -129,11 +128,6 @@ func (svc *service) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersM
 func (svc *service) AugmentTripMediaItemURLs(ctx context.Context, trip *Trip) {
 	for key := range trip.MediaItems {
 		urls, _ := svc.mediaSvc.GenerateGetSignedURLs(ctx, trip.MediaItems[key])
-
-		fmt.Println(trip.MediaItems[key])
-		fmt.Println(len(trip.MediaItems[key]))
-		fmt.Println(len(urls))
-
 		for i := 0; i < len(trip.MediaItems[key]); i++ {
 			trip.MediaItems[key][i].URLs = urls[i]
 		}
@@ -154,7 +148,6 @@ func (svc *service) AugmentTripCoverImageURL(ctx context.Context, trip *Trip) (s
 	if _, ok := trip.MediaItems[key]; !ok {
 		return "", nil
 	}
-	fmt.Println("ok")
 
 	mediaItemIdx := -1
 	for idx, item := range trip.MediaItems[key] {
