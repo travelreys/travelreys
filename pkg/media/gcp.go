@@ -99,7 +99,18 @@ func (gcp gcpProvider) PresignedOptURL(ctx context.Context, url string) (string,
 		sep = "&"
 	}
 	url += sep
-	url += fmt.Sprintf("Expires=%d", time.Now().Add(defaultPresignedURLDuration).Unix())
+
+	now := time.Now()
+	expires := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		now.Hour()+2,
+		0, 0, 0,
+		now.Location(),
+	)
+
+	url += fmt.Sprintf("Expires=%d", expires.Unix())
 	url += fmt.Sprintf("&KeyName=%s", gcp.optKeyName)
 
 	mac := hmac.New(sha1.New, gcp.optKeyData)
