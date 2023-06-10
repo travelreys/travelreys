@@ -33,10 +33,10 @@ type ListMediaFilter struct {
 
 func (ff ListMediaFilter) toBSON() bson.M {
 	bsonM := bson.M{}
-	if ff.UserID != nil || *ff.UserID != "" {
+	if ff.UserID != nil && *ff.UserID != "" {
 		bsonM["userID"] = *ff.UserID
 	}
-	if ff.TripID != nil || *ff.TripID != "" {
+	if ff.TripID != nil && *ff.TripID != "" {
 		bsonM["tripID"] = *ff.TripID
 	}
 	if len(ff.IDs) > 0 {
