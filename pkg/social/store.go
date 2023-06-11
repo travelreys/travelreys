@@ -34,14 +34,14 @@ type ListFriendRequestsFilter struct {
 }
 
 func (ff ListFriendRequestsFilter) toBSON() bson.M {
-	bsonM := bson.M{}
+	bsonA := bson.A{}
 	if ff.InitiatorID != nil && *ff.InitiatorID != "" {
-		bsonM["initiatorID"] = *ff.InitiatorID
+		bsonA = append(bsonA, bson.M{"initiatorID": *ff.InitiatorID})
 	}
 	if ff.TargetID != nil && *ff.TargetID != "" {
-		bsonM["targetID"] = *ff.TargetID
+		bsonA = append(bsonA, bson.M{"targetID": *ff.TargetID})
 	}
-	return bsonM
+	return bson.M{"$or": bsonA}
 }
 
 type Store interface {
@@ -50,6 +50,7 @@ type Store interface {
 	DeleteFriendRequest(ctx context.Context, id string) error
 	ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error)
 
+	GetFriendByUserIDs(ctx context.Context, userOneID, userTwoID string) (Friend, error)
 	SaveFriend(ctx context.Context, friend Friend) error
 	ListFriends(ctx context.Context, userID string) (FriendsList, error)
 	DeleteFriend(ctx context.Context, bindingKey string) error
@@ -70,7 +71,7 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 	friendsColl := db.Collection(friendsColl)
 	friendsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys:    bson.M{bsonKeyBindingKey: 1, bsonKeyRevBindingKey: 1},
+			Keys:    bson.M{"userOneID": 1, "userTwoID": 1},
 			Options: options.Index().SetUnique(true),
 		},
 	})
@@ -129,12 +130,35 @@ func (store *store) ListFriendRequests(ctx context.Context, ff ListFriendRequest
 
 func (store *store) SaveFriend(ctx context.Context, friend Friend) error {
 	ff := bson.M{bsonKeyBindingKey: friend.BindingKey}
-	_, err := store.friendsColl.ReplaceOne(ctx, ff, friend)
+	opts := options.Replace().SetUpsert(true)
+	_, err := store.friendsColl.ReplaceOne(ctx, ff, friend, opts)
 	if err != nil {
 		store.logger.Error("SaveFriend", zap.Error(err))
 		return ErrUnexpectedStoreError
 	}
 	return nil
+}
+
+func (store *store) GetFriendByUserIDs(ctx context.Context, userOneID, userTwoID string) (Friend, error) {
+	var friend Friend
+	ff := bson.M{"$or": bson.A{
+		bson.M{"userOneID": userOneID},
+		bson.M{"userTwoID": userTwoID},
+	}}
+
+	res := store.friendsColl.FindOne(ctx, ff)
+	if res.Err() != nil {
+		store.logger.Error("GetFriendByUserIDs",
+			zap.String("useOneID", userOneID),
+			zap.String("userTwoID", userTwoID),
+			zap.Error(res.Err()),
+		)
+		return friend, ErrUnexpectedStoreError
+	}
+	if err := res.Decode(&friend); err != nil {
+		return friend, ErrUnexpectedStoreError
+	}
+	return friend, nil
 }
 
 func (store *store) ListFriends(ctx context.Context, userID string) (FriendsList, error) {
@@ -151,7 +175,6 @@ func (store *store) ListFriends(ctx context.Context, userID string) (FriendsList
 		return list, ErrUnexpectedStoreError
 	}
 	return list, nil
-
 }
 
 func (store *store) DeleteFriend(ctx context.Context, bindingKey string) error {

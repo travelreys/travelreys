@@ -18,6 +18,7 @@ const (
 	bsonKeyID          = "id"
 	bsonKeyEmail       = "email"
 	bsonKeyName        = "name"
+	bsonKeyUsername    = "username"
 	bsonKeyPhoneNumber = "phonenumber"
 	bsonKeyLabels      = "labels"
 	collectionUsers    = "users"
@@ -37,6 +38,7 @@ type ReadFilter struct {
 type UpdateFilter struct {
 	Email       *string
 	Name        *string
+	Username    *string
 	PhoneNumber *PhoneNumber
 	Labels      *common.Labels `json:"labels" bson:"labels"`
 }
@@ -44,14 +46,14 @@ type UpdateFilter struct {
 func (ff UpdateFilter) toBson() bson.M {
 	bsonM := bson.M{}
 
-	if ff.Email != nil {
+	if ff.Email != nil && *ff.Email != "" {
 		bsonM[bsonKeyEmail] = ff.Email
 	}
-	if ff.Name != nil {
+	if ff.Name != nil && *ff.Name != "" {
 		bsonM[bsonKeyName] = ff.Name
 	}
-	if ff.PhoneNumber != nil {
-		bsonM[bsonKeyPhoneNumber] = ff.PhoneNumber
+	if ff.Username != nil && *ff.Username != "" {
+		bsonM[bsonKeyUsername] = ff.Username
 	}
 	if ff.Labels != nil {
 		bsonM[bsonKeyLabels] = ff.Labels
@@ -99,8 +101,11 @@ func NewStore(ctx context.Context, db *mongo.Database, rdb redis.UniversalClient
 	defer cancel()
 
 	usrsColl := db.Collection(collectionUsers)
-	idIdx := mongo.IndexModel{Keys: bson.M{bsonKeyID: 1}}
-	usrsColl.Indexes().CreateOne(ctx, idIdx)
+	usrsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.M{bsonKeyID: 1}},
+		{Keys: bson.M{bsonKeyEmail: 1}, Options: options.Index().SetUnique(true)},
+		{Keys: bson.M{bsonKeyUsername: 1}, Options: options.Index().SetUnique(true)},
+	})
 
 	return &store{db, usrsColl, rdb, logger.Named(storeLoggerName)}
 }

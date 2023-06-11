@@ -11,10 +11,10 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
+	github.com/lucasepe/codename v0.2.0
 	github.com/minio/minio-go/v7 v7.0.49
 	github.com/nats-io/nats.go v1.22.1
 	github.com/otiai10/opengraph/v2 v2.1.0
-	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.14.0
@@ -32,7 +32,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect

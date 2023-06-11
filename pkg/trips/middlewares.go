@@ -9,6 +9,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/social"
 	"github.com/travelreys/travelreys/pkg/storage"
 	"go.uber.org/zap"
 )
@@ -18,12 +19,17 @@ var (
 )
 
 type rbacMiddleware struct {
-	next   Service
-	logger *zap.Logger
+	next      Service
+	socialSvc social.Service
+	logger    *zap.Logger
 }
 
-func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
-	return &rbacMiddleware{svc, logger}
+func ServiceWithRBACMiddleware(
+	svc Service,
+	socialSvc social.Service,
+	logger *zap.Logger,
+) Service {
+	return &rbacMiddleware{svc, socialSvc, logger}
 }
 
 func (mw rbacMiddleware) Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error) {
@@ -50,17 +56,19 @@ func (mw rbacMiddleware) Read(ctx context.Context, ID string) (Trip, error) {
 	return trip, nil
 }
 
-func (mw rbacMiddleware) ReadShare(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+func (mw rbacMiddleware) ReadShare(ctx context.Context, ID, referrerID string) (Trip, auth.UsersMap, error) {
 	trip, err := mw.next.Read(ctx, ID)
 	if err != nil {
 		return Trip{}, nil, err
 	}
-
 	ctxWithTripInfo := ContextWithTripInfo(ctx, trip)
+
+	// Allow access if the trip is public
 	if trip.IsSharingEnabled() {
-		return mw.next.ReadShare(ctxWithTripInfo, ID)
+		return mw.next.ReadShare(ctxWithTripInfo, ID, referrerID)
 	}
 
+	// Allow access if you are a member of the trip
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return Trip{}, nil, ErrTripSharingNotEnabled
@@ -69,10 +77,19 @@ func (mw rbacMiddleware) ReadShare(ctx context.Context, ID string) (Trip, auth.U
 	for _, mem := range trip.Members {
 		membersID = append(membersID, mem.ID)
 	}
-	if !common.StringContains(membersID, ci.UserID) {
-		return Trip{}, nil, ErrTripSharingNotEnabled
+	if common.StringContains(membersID, ci.UserID) {
+		return mw.next.ReadShare(ctxWithTripInfo, ID, referrerID)
 	}
-	return mw.next.ReadShare(ctxWithTripInfo, ID)
+
+	// ReferrerID should be a member ID.
+	// Allow access if you are friend of the member of the trip
+	if common.StringContains(membersID, referrerID) {
+		if err := mw.socialSvc.AreTheyFriends(ctx, ci.UserID, referrerID); err != nil {
+			return mw.next.ReadShare(ctxWithTripInfo, ID, referrerID)
+		}
+	}
+
+	return Trip{}, nil, ErrTripSharingNotEnabled
 }
 
 func (mw rbacMiddleware) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {

@@ -71,6 +71,12 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse, opts...,
 	)
 
+	deleteFriendReqHandler := kithttp.NewServer(
+		NewDeleteFriendRequestEndpoint(svc),
+		decodeDeleteFriendRequestRequest,
+		encodeResponse, opts...,
+	)
+
 	listFriendsHandler := kithttp.NewServer(
 		NewListFriendsRequestEndpoint(svc),
 		decodeListFriendsRequest,
@@ -85,6 +91,7 @@ func MakeHandler(svc Service) http.Handler {
 
 	r.Handle("/api/v1/social/requests", sendFriendReqHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/social/requests", listFriendReqHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/requests/{id}", deleteFriendReqHandler).Methods(http.MethodDelete)
 	r.Handle("/api/v1/social/requests/{id}/accept", acceptFriendReqHandler).Methods(http.MethodPut)
 
 	r.Handle("/api/v1/social/friends", listFriendsHandler).Methods(http.MethodGet)
@@ -93,11 +100,17 @@ func MakeHandler(svc Service) http.Handler {
 	return r
 }
 
-func decodeSendFriendRequestRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeSendFriendRequestRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil {
+		return nil, common.ErrInvalidRequest
+	}
+
 	req := SendFriendRequestRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
 	}
+	req.InitiatorID = ci.UserID
 	return req, nil
 }
 
@@ -108,6 +121,16 @@ func decodeAcceptFriendRequestRequest(_ context.Context, r *http.Request) (inter
 		return nil, common.ErrInvalidRequest
 	}
 	req := AcceptFriendRequestRequest{ID: ID}
+	return req, nil
+}
+
+func decodeDeleteFriendRequestRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	req := DeleteFriendRequestRequest{ID: ID}
 	return req, nil
 }
 

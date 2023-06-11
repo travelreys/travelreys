@@ -29,8 +29,11 @@ type Service interface {
 	GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error)
 	AcceptFriendRequest(ctx context.Context, id string) error
 	ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error)
+	DeleteFriendRequest(ctx context.Context, id string) error
+
 	ListFriends(ctx context.Context, userID string) (FriendsList, error)
 	DeleteFriend(ctx context.Context, userID, friendID string) error
+	AreTheyFriends(ctx context.Context, userOneID, userTwoID string) error
 }
 
 type service struct {
@@ -106,6 +109,10 @@ func (svc service) GetFriendRequestByID(ctx context.Context, id string) (FriendR
 	return svc.store.GetFriendRequestByID(ctx, id)
 }
 
+func (svc service) DeleteFriendRequest(ctx context.Context, id string) error {
+	return svc.store.DeleteFriendRequest(ctx, id)
+}
+
 func (svc service) ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error) {
 	return svc.store.ListFriendRequests(ctx, ff)
 }
@@ -116,6 +123,11 @@ func (svc service) ListFriends(ctx context.Context, userID string) (FriendsList,
 
 func (svc service) DeleteFriend(ctx context.Context, userID, friendID string) error {
 	return svc.store.DeleteFriend(ctx, fmt.Sprintf("%s|%s", userID, friendID))
+}
+
+func (svc service) AreTheyFriends(ctx context.Context, userOneID, userTwoID string) error {
+	_, err := svc.store.GetFriendByUserIDs(ctx, userOneID, userTwoID)
+	return err
 }
 
 func (svc service) sendFriendRequestEmail(ctx context.Context, initiator, target auth.User) {

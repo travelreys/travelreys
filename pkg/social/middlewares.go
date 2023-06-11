@@ -56,6 +56,22 @@ func (mw rbacMiddleware) GetFriendRequestByID(ctx context.Context, id string) (F
 	return mw.next.GetFriendRequestByID(ctx, id)
 }
 
+func (mw rbacMiddleware) DeleteFriendRequest(ctx context.Context, id string) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	req, err := mw.next.GetFriendRequestByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if req.TargetID != ci.UserID {
+		return ErrRBAC
+	}
+	ctxWithFriendRequestInfo := ContextWithFriendRequestInfo(ctx, req)
+	return mw.next.DeleteFriendRequest(ctxWithFriendRequestInfo, id)
+}
+
 func (mw rbacMiddleware) ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {

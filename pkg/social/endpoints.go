@@ -52,6 +52,28 @@ func NewAcceptFriendRequestEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
+type DeleteFriendRequestRequest struct {
+	ID string `json:"id"`
+}
+type DeleteFriendRequestResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r DeleteFriendRequestResponse) Error() error {
+	return r.Err
+}
+
+func NewDeleteFriendRequestEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(DeleteFriendRequestRequest)
+		if !ok {
+			return DeleteFriendRequestResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		err := svc.DeleteFriendRequest(ctx, req.ID)
+		return DeleteFriendRequestResponse{Err: err}, nil
+	}
+}
+
 type ListFriendRequestsRequest struct {
 	ListFriendRequestsFilter
 }

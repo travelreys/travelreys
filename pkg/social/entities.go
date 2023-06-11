@@ -7,9 +7,9 @@ import (
 )
 
 type FriendRequest struct {
-	ID          string `json:"id"`
-	InitiatorID string `json:"initiatorID"`
-	TargetID    string `json:"targetID"`
+	ID          string `json:"id" bson:"id"`
+	InitiatorID string `json:"initiatorID" bson:"initiatorID"`
+	TargetID    string `json:"targetID" bson:"targetID"`
 }
 
 func NewFriendRequest(initiator, target string) FriendRequest {
@@ -23,11 +23,11 @@ func NewFriendRequest(initiator, target string) FriendRequest {
 type FriendRequestList []FriendRequest
 
 type Friend struct {
-	ID            string `json:"id"`
-	BindingKey    string `json:"binding"`
-	RevBindingKey string `json:"revbinding"`
-	UserOneID     string `json:"userOneID"`
-	UserTwoID     string `json:"userTwoID"`
+	ID            string `json:"id" bson:"id"`
+	BindingKey    string `json:"binding" bson:"binding"`
+	RevBindingKey string `json:"revbinding" bson:"revbinding"`
+	UserOneID     string `json:"userOneID" bson:"userOneID"`
+	UserTwoID     string `json:"userTwoID" bson:"userTwoID"`
 }
 
 func NewFriendFromRequest(req FriendRequest) Friend {
