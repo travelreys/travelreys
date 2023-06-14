@@ -50,6 +50,7 @@ func NewCreateEndpoint(svc Service) endpoint.Endpoint {
 type ReadRequest struct {
 	ID          string `json:"id"`
 	WithMembers bool   `json:"withMembers"`
+	ReferrerID  string `json:"referrerID"`
 }
 
 type ReadResponse struct {
@@ -94,7 +95,7 @@ func NewReadShareEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ReadWithMembersResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		trip, members, err := svc.ReadShare(ctx, req.ID)
+		trip, members, err := svc.ReadShare(ctx, req.ID, req.ReferrerID)
 		return ReadWithMembersResponse{Trip: trip, Members: members, Err: err}, nil
 	}
 }
@@ -144,7 +145,7 @@ func NewReadOGPEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type ListRequest struct {
-	FF ListFilter
+	ListFilter
 }
 type ListResponse struct {
 	Trips TripsList `json:"trips"`
@@ -161,7 +162,7 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		trips, err := svc.List(ctx, req.FF)
+		trips, err := svc.List(ctx, req.ListFilter)
 		return ListResponse{Trips: trips, Err: err}, nil
 	}
 }

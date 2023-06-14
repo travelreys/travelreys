@@ -4,7 +4,22 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/travelreys/travelreys/pkg/auth"
 )
+
+type UserProfile struct {
+	ID         string `json:"id"`
+	Username   string `json:"username"`
+	ProfileImg string `json:"profileImg"`
+}
+
+func UserProfileFromUser(user auth.User) UserProfile {
+	return UserProfile{
+		ID:         user.ID,
+		Username:   user.Username,
+		ProfileImg: user.GetProfileImgURL(),
+	}
+}
 
 type FriendRequest struct {
 	ID          string `json:"id" bson:"id"`

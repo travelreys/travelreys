@@ -41,6 +41,7 @@ var (
 type Service interface {
 	Login(context.Context, string, string, string) (User, *http.Cookie, error)
 	MagicLink(ctx context.Context, email string) error
+
 	Read(context.Context, string) (User, error)
 	List(ctx context.Context, ff ListFilter) (UsersList, error)
 	Update(context.Context, string, UpdateFilter) error

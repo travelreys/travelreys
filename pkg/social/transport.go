@@ -3,6 +3,7 @@ package social
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -55,6 +56,11 @@ func MakeHandler(svc Service) http.Handler {
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode())),
 	}
 
+	getProfileHandler := kithttp.NewServer(
+		NewGetProfileRequestEndpoint(svc),
+		decodeGetProfileRequest,
+		encodeResponse, opts...,
+	)
 	sendFriendReqHandler := kithttp.NewServer(
 		NewSendFriendRequestEndpoint(svc),
 		decodeSendFriendRequestRequest,
@@ -89,15 +95,26 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse, opts...,
 	)
 
+	r.Handle("/api/v1/social/profile/{id}", getProfileHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/requests", sendFriendReqHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/social/requests", listFriendReqHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/requests/{id}", deleteFriendReqHandler).Methods(http.MethodDelete)
 	r.Handle("/api/v1/social/requests/{id}/accept", acceptFriendReqHandler).Methods(http.MethodPut)
-
 	r.Handle("/api/v1/social/friends", listFriendsHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/friends/{friendId}", deleteFriendHandler).Methods(http.MethodDelete)
 
 	return r
+}
+
+func decodeGetProfileRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	fmt.Println("here")
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	req := GetProfileRequest{ID: ID}
+	return req, nil
 }
 
 func decodeSendFriendRequestRequest(ctx context.Context, r *http.Request) (interface{}, error) {

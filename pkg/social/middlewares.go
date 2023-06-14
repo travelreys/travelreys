@@ -21,6 +21,10 @@ func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
 	return &rbacMiddleware{svc, logger}
 }
 
+func (mw rbacMiddleware) GetProfile(ctx context.Context, id string) (UserProfile, error) {
+	return mw.next.GetProfile(ctx, id)
+}
+
 func (mw rbacMiddleware) SendFriendRequest(ctx context.Context, initiatorID, targetID string) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
@@ -107,4 +111,8 @@ func (mw rbacMiddleware) DeleteFriend(ctx context.Context, userID, targetID stri
 		return ErrRBAC
 	}
 	return mw.next.DeleteFriend(ctx, userID, targetID)
+}
+
+func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, userOneID, userTwoID string) error {
+	return ErrRBAC
 }

@@ -25,6 +25,8 @@ var (
 )
 
 type Service interface {
+	GetProfile(ctx context.Context, id string) (UserProfile, error)
+
 	SendFriendRequest(ctx context.Context, initiatorID, targetID string) error
 	GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error)
 	AcceptFriendRequest(ctx context.Context, id string) error
@@ -51,6 +53,14 @@ func NewService(
 	logger *zap.Logger,
 ) Service {
 	return &service{store, authSvc, mailSvc, logger}
+}
+
+func (svc service) GetProfile(ctx context.Context, ID string) (UserProfile, error) {
+	user, err := svc.authSvc.Read(ctx, ID)
+	if err != nil {
+		return UserProfile{}, err
+	}
+	return UserProfileFromUser(user), nil
 }
 
 func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID string) error {

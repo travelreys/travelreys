@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-redis/redis/v9"
@@ -63,4 +64,16 @@ func MakeMongoDatabase(uri, dbName string) (*mongo.Database, error) {
 		return nil, err
 	}
 	return client.Database(dbName), nil
+}
+
+func MongoIsDupError(err error) bool {
+	var e mongo.WriteException
+	if errors.As(err, &e) {
+		for _, we := range e.WriteErrors {
+			if we.Code == 11000 {
+				return true
+			}
+		}
+	}
+	return false
 }

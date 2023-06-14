@@ -140,7 +140,10 @@ func decodeReadRequest(_ context.Context, r *http.Request) (interface{}, error) 
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	req := ReadRequest{ID: ID}
+
+	referrerID := r.URL.Query().Get("referrerID")
+	req := ReadRequest{ID: ID, ReferrerID: referrerID}
+
 	if r.URL.Query().Get("withMembers") == "true" {
 		req.WithMembers = true
 	}
@@ -157,6 +160,13 @@ func decodeReadMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 }
 
 func decodeListRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	ff := ListFilter{}
+
+	if userID := r.URL.Query().Get("userID"); userID != "" {
+		ff.UserID = common.StringPtr(userID)
+		return ListRequest{ff}, nil
+	}
+
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil {
 		return nil, err
@@ -164,7 +174,6 @@ func decodeListRequest(ctx context.Context, r *http.Request) (interface{}, error
 	if ci.UserID == "" {
 		return nil, ErrRBAC
 	}
-	ff := ListFilter{UserID: common.StringPtr(ci.UserID)}
 	return ListRequest{ff}, nil
 }
 

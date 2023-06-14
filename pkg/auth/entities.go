@@ -45,6 +45,16 @@ type User struct {
 	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
+func (user User) GetProfileImgURL() string {
+	if user.Labels[LabelAvatarImage] != "" {
+		return user.Labels[LabelAvatarImage]
+	}
+	if user.Labels[LabelGoogleUserPicture] != "" {
+		return user.Labels[LabelGoogleUserPicture]
+	}
+	return ""
+}
+
 type UsersList []User
 type UsersMap map[string]User
 

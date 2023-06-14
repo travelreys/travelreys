@@ -7,6 +7,30 @@ import (
 	"github.com/travelreys/travelreys/pkg/common"
 )
 
+type GetProfileRequest struct {
+	ID string `json:"id"`
+}
+
+type GetProfileResponse struct {
+	Profile UserProfile `json:"profile"`
+	Err     error
+}
+
+func (r GetProfileResponse) Error() error {
+	return r.Err
+}
+
+func NewGetProfileRequestEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(GetProfileRequest)
+		if !ok {
+			return GetProfileResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		profile, err := svc.GetProfile(ctx, req.ID)
+		return GetProfileResponse{Profile: profile, Err: err}, nil
+	}
+}
+
 type SendFriendRequestRequest struct {
 	InitiatorID string `json:"initiatorID"`
 	TargetID    string `json:"targetID"`
