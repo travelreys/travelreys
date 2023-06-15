@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/trips"
 )
 
 type GetProfileRequest struct {
@@ -55,7 +57,8 @@ func NewSendFriendRequestEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type AcceptFriendRequestRequest struct {
-	ID string `json:"id"`
+	UserID    string `json:"uid"`
+	RequestID string `json:"rid"`
 }
 type AcceptFriendRequestResponse struct {
 	Err error `json:"error,omitempty"`
@@ -71,13 +74,14 @@ func NewAcceptFriendRequestEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return AcceptFriendRequestResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		err := svc.AcceptFriendRequest(ctx, req.ID)
+		err := svc.AcceptFriendRequest(ctx, req.UserID, req.RequestID)
 		return AcceptFriendRequestResponse{Err: err}, nil
 	}
 }
 
 type DeleteFriendRequestRequest struct {
-	ID string `json:"id"`
+	UserID    string `json:"uid"`
+	RequestID string `json:"rid"`
 }
 type DeleteFriendRequestResponse struct {
 	Err error `json:"error,omitempty"`
@@ -93,7 +97,7 @@ func NewDeleteFriendRequestEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return DeleteFriendRequestResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		err := svc.DeleteFriendRequest(ctx, req.ID)
+		err := svc.DeleteFriendRequest(ctx, req.UserID, req.RequestID)
 		return DeleteFriendRequestResponse{Err: err}, nil
 	}
 }
@@ -121,6 +125,31 @@ func NewListFriendRequestsRequestEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
+type AreTheyFriendsRequest struct {
+	InitiatorID string `json:"initiatorID"`
+	TargetID    string `json:"targetID"`
+}
+
+type AreTheyFriendsResponse struct {
+	OK  bool  `json:"ok"`
+	Err error `json:"error,omitempty"`
+}
+
+func (r AreTheyFriendsResponse) Error() error {
+	return r.Err
+}
+
+func NewAreTheyFriendsResponseEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(AreTheyFriendsRequest)
+		if !ok {
+			return ListFriendRequestsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		err := svc.AreTheyFriends(ctx, req.InitiatorID, req.TargetID)
+		return AreTheyFriendsResponse{OK: err == nil, Err: err}, nil
+	}
+}
+
 type ListFriendsRequest struct {
 	UserID string `json:"userID"`
 }
@@ -145,8 +174,8 @@ func NewListFriendsRequestEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type DeleteFriendRequest struct {
-	UserID   string `json:"userID"`
-	FriendID string `json:"friendID"`
+	UserID     string `json:"userID"`
+	BindingKey string `json:"bindingKey"`
 }
 type DeleteFriendResponse struct {
 	Err error `json:"error,omitempty"`
@@ -162,7 +191,54 @@ func NewDeleteFriendEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return DeleteFriendResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		err := svc.DeleteFriend(ctx, req.UserID, req.FriendID)
+		err := svc.DeleteFriend(ctx, req.UserID, req.BindingKey)
 		return DeleteFriendResponse{Err: err}, nil
+	}
+}
+
+type ReadRequest struct {
+	ID         string `json:"id"`
+	ReferrerID string `json:"referrerID"`
+}
+type ReadResponse struct {
+	Trip    trips.Trip    `json:"trip"`
+	Members auth.UsersMap `json:"members"`
+	Err     error         `json:"error,omitempty"`
+}
+
+func (r ReadResponse) Error() error {
+	return r.Err
+}
+
+func NewReadPublicInfoEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ReadRequest)
+		if !ok {
+			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		trip, members, err := svc.ReadPublicInfo(ctx, req.ID, req.ReferrerID)
+		return ReadResponse{Trip: trip, Members: members, Err: err}, nil
+	}
+}
+
+type ListRequest struct {
+	trips.ListFilter
+}
+type ListResponse struct {
+	Trips trips.TripsList `json:"trips"`
+	Err   error           `json:"error,omitempty"`
+}
+
+func (r ListResponse) Error() error {
+	return r.Err
+}
+func NewListPublicInfoEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ListRequest)
+		if !ok {
+			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		tripslist, err := svc.ListPublicInfo(ctx, req.ListFilter)
+		return ListResponse{Trips: tripslist, Err: err}, nil
 	}
 }

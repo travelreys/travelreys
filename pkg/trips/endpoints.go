@@ -50,7 +50,6 @@ func NewCreateEndpoint(svc Service) endpoint.Endpoint {
 type ReadRequest struct {
 	ID          string `json:"id"`
 	WithMembers bool   `json:"withMembers"`
-	ReferrerID  string `json:"referrerID"`
 }
 
 type ReadResponse struct {
@@ -86,17 +85,6 @@ func NewReadEndpoint(svc Service) endpoint.Endpoint {
 		}
 		trip, err := svc.Read(ctx, req.ID)
 		return ReadResponse{Trip: trip, Err: err}, nil
-	}
-}
-
-func NewReadShareEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(ReadRequest)
-		if !ok {
-			return ReadWithMembersResponse{Err: common.ErrorEndpointReqMismatch}, nil
-		}
-		trip, members, err := svc.ReadShare(ctx, req.ID, req.ReferrerID)
-		return ReadWithMembersResponse{Trip: trip, Members: members, Err: err}, nil
 	}
 }
 

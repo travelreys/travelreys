@@ -98,15 +98,10 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	}
 	mediaSvc := media.NewService(mediaStore, mediaCDNProvider, storageSvc, logger)
 
-	// Social
-	socialStore := social.NewStore(ctx, db, logger)
-	socialSvc := social.NewService(socialStore, authSvc, mailSvc, logger)
-	socialSvc = social.ServiceWithRBACMiddleware(socialSvc, logger)
-
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
 	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, mediaSvc, storageSvc, logger)
-	tripSvc = trips.ServiceWithRBACMiddleware(tripSvc, socialSvc, logger)
+	tripSvc = trips.ServiceWithRBACMiddleware(tripSvc, logger)
 
 	// TripSync
 	store := tripssync.NewStore(rdb, logger)
@@ -115,6 +110,11 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	svc := tripssync.NewService(store, msgStore, tobStore, tripStore)
 	wsSvr := tripssync.NewWebsocketServer(svc, logger)
+
+	// Social
+	socialStore := social.NewStore(ctx, db, logger)
+	socialSvc := social.NewService(socialStore, authSvc, tripSvc, mailSvc, logger)
+	socialSvc = social.ServiceWithRBACMiddleware(socialSvc, tripSvc, logger)
 
 	// Footprints
 	fpStore := footprints.NewStore(ctx, db, logger)

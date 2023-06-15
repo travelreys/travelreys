@@ -3,27 +3,33 @@ package social
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/trips"
 
 	"github.com/gorilla/mux"
 )
 
 const (
-	URLPathVarID = "id"
+	URLPathVarUserID    = "uid"
+	URLPathVarTripID    = "tid"
+	URLPathVarRequestID = "rid"
+	URLPathBindingKey   = "bindingKey"
 )
 
 func errToHttpCode() func(err error) int {
-	notFoundErrors := []error{}
+	notFoundErrors := []error{ErrFriendNotFound}
 	appErrors := []error{
 		ErrInvalidFriendRequest,
 		ErrUnexpectedStoreError,
 	}
-	authErrors := []error{ErrRBAC}
+	authErrors := []error{
+		ErrTripSharingNotEnabled,
+		ErrRBAC,
+	}
 
 	return func(err error) int {
 		if common.ErrorContains(notFoundErrors, err) {
@@ -83,6 +89,12 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse, opts...,
 	)
 
+	getFriendHandler := kithttp.NewServer(
+		NewAreTheyFriendsResponseEndpoint(svc),
+		decodeAreTheyFriendsRequest,
+		encodeResponse, opts...,
+	)
+
 	listFriendsHandler := kithttp.NewServer(
 		NewListFriendsRequestEndpoint(svc),
 		decodeListFriendsRequest,
@@ -95,21 +107,34 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse, opts...,
 	)
 
-	r.Handle("/api/v1/social/profile/{id}", getProfileHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/social/requests", sendFriendReqHandler).Methods(http.MethodPost)
-	r.Handle("/api/v1/social/requests", listFriendReqHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/social/requests/{id}", deleteFriendReqHandler).Methods(http.MethodDelete)
-	r.Handle("/api/v1/social/requests/{id}/accept", acceptFriendReqHandler).Methods(http.MethodPut)
-	r.Handle("/api/v1/social/friends", listFriendsHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/social/friends/{friendId}", deleteFriendHandler).Methods(http.MethodDelete)
+	listPublicInfo := kithttp.NewServer(
+		NewListPublicInfoEndpoint(svc), decodeListPublicInfoRequest, encodeResponse, opts...,
+	)
+
+	readPublicInfoHandler := kithttp.NewServer(
+		NewReadPublicInfoEndpoint(svc), decodeReadPublicInfoRequest, encodeResponse, opts...,
+	)
+
+	r.Handle("/api/v1/social/{uid}/profile", getProfileHandler).Methods(http.MethodGet)
+
+	r.Handle("/api/v1/social/{uid}/requests", sendFriendReqHandler).Methods(http.MethodPost)
+	r.Handle("/api/v1/social/{uid}/requests", listFriendReqHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/requests/{rid}/accept", acceptFriendReqHandler).Methods(http.MethodPut)
+	r.Handle("/api/v1/social/{uid}/requests/{rid}", deleteFriendReqHandler).Methods(http.MethodDelete)
+
+	r.Handle("/api/v1/social/{uid}/friends", listFriendsHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/friends/{targetID}", getFriendHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/friends/{bindingKey}", deleteFriendHandler).Methods(http.MethodDelete)
+
+	r.Handle("/api/v1/social/{uid}/trips", listPublicInfo).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/trips/{tid}", readPublicInfoHandler).Methods(http.MethodGet)
 
 	return r
 }
 
 func decodeGetProfileRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	fmt.Println("here")
 	vars := mux.Vars(r)
-	ID, ok := vars[URLPathVarID]
+	ID, ok := vars[URLPathVarUserID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
@@ -118,78 +143,133 @@ func decodeGetProfileRequest(ctx context.Context, r *http.Request) (interface{},
 }
 
 func decodeSendFriendRequestRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-
 	req := SendFriendRequestRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
 	}
-	req.InitiatorID = ci.UserID
+	req.InitiatorID = userID
 	return req, nil
 }
 
 func decodeAcceptFriendRequestRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
-	ID, ok := vars[URLPathVarID]
+	userID, ok := vars[URLPathVarUserID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	req := AcceptFriendRequestRequest{ID: ID}
+	requestID, ok := vars[URLPathVarRequestID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	req := AcceptFriendRequestRequest{
+		UserID:    userID,
+		RequestID: requestID,
+	}
 	return req, nil
 }
 
 func decodeDeleteFriendRequestRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
-	ID, ok := vars[URLPathVarID]
+	userID, ok := vars[URLPathVarUserID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	req := DeleteFriendRequestRequest{ID: ID}
+	requestID, ok := vars[URLPathVarRequestID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	req := DeleteFriendRequestRequest{UserID: userID, RequestID: requestID}
 	return req, nil
 }
 
 func decodeListFriendRequestsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-
 	req := ListFriendRequestsRequest{
 		ListFriendRequestsFilter: ListFriendRequestsFilter{
-			InitiatorID: common.StringPtr(ci.UserID),
-			TargetID:    common.StringPtr(ci.UserID),
+			TargetID: common.StringPtr(userID),
 		},
 	}
 	return req, nil
 }
 
-func decodeListFriendsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil {
+func decodeAreTheyFriendsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	targetID, ok := vars["targetID"]
+	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
 
-	req := ListFriendsRequest{UserID: ci.UserID}
+	req := AreTheyFriendsRequest{
+		InitiatorID: userID,
+		TargetID:    targetID,
+	}
+	return req, nil
+}
+
+func decodeListFriendsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	req := ListFriendsRequest{UserID: userID}
 	return req, nil
 }
 
 func decodeDeleteFriendRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-
-	vars := mux.Vars(r)
-	friendID, ok := vars["friendId"]
+	bindingKey, ok := vars[URLPathBindingKey]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
 	req := DeleteFriendRequest{
-		UserID:   ci.UserID,
-		FriendID: friendID,
+		UserID:     userID,
+		BindingKey: bindingKey,
 	}
 	return req, nil
+}
+
+func decodeReadPublicInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	ID, ok := vars[URLPathVarTripID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+
+	return ReadRequest{
+		ID:         ID,
+		ReferrerID: userID,
+	}, nil
+}
+
+func decodeListPublicInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+
+	ff := trips.ListFilter{UserID: common.StringPtr(userID)}
+	return ListRequest{ff}, nil
 }

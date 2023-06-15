@@ -16,27 +16,26 @@ import (
 )
 
 var (
-	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
-	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
-
-	ErrTripSharingNotEnabled  = errors.New("trip.service.tripSharingNotEnabled")
+	attachmentBucket          = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
+	mediaBucket               = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
 	ErrDeleteAnotherTripMedia = errors.New("trip.service.deleteInvalidMedia")
 )
 
 type Service interface {
 	Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error)
 	Read(ctx context.Context, ID string) (Trip, error)
-	ReadShare(ctx context.Context, ID, referrerID string) (Trip, auth.UsersMap, error)
 	ReadOGP(ctx context.Context, ID string) (TripOGP, error)
 	ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
 	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	Delete(ctx context.Context, ID string) error
 
+	// Attachments
 	UploadAttachmentPresignedURL(ctx context.Context, ID, fileID string) (string, error)
 	DownloadAttachmentPresignedURL(ctx context.Context, ID, path, fileID string) (string, error)
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
 
+	// Media Items
 	GenerateMediaItems(ctx context.Context, id, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error)
 	SaveMediaItems(ctx context.Context, id string, items media.MediaItemList) error
 	DeleteMediaItems(ctx context.Context, id string, items media.MediaItemList) error
@@ -89,30 +88,6 @@ func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {
 	}
 	svc.augmentMediaItemURLs(ctx, &trip)
 	return trip, nil
-}
-
-func (svc *service) ReadShare(ctx context.Context, ID, referrerID string) (Trip, auth.UsersMap, error) {
-	trip, err := svc.readTripWithContext(ctx, ID)
-	if err != nil {
-		return Trip{}, nil, err
-	}
-
-	ff := auth.ListFilter{IDs: []string{trip.Creator.ID}}
-	users, err := svc.authSvc.List(ctx, ff)
-	if err != nil {
-		return trip, nil, err
-	}
-	usersMap := auth.UsersMap{}
-	for _, usr := range users {
-		if usr.ID == referrerID {
-			usersMap[usr.ID] = usr
-			break
-		}
-	}
-
-	pubInfo := trip.PublicInfo()
-	svc.augmentMediaItemURLs(ctx, &pubInfo)
-	return pubInfo, usersMap, nil
 }
 
 func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {

@@ -25,6 +25,7 @@ const (
 )
 
 var (
+	ErrFriendNotFound       = errors.New("social.store.friendNotFound")
 	ErrUnexpectedStoreError = errors.New("social.store.unexpected-error")
 )
 
@@ -50,7 +51,7 @@ type Store interface {
 	DeleteFriendRequest(ctx context.Context, id string) error
 	ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error)
 
-	GetFriendByUserIDs(ctx context.Context, userOneID, userTwoID string) (Friend, error)
+	GetFriend(ctx context.Context, bindingKey string) (Friend, error)
 	SaveFriend(ctx context.Context, friend Friend) error
 	ListFriends(ctx context.Context, userID string) (FriendsList, error)
 	DeleteFriend(ctx context.Context, bindingKey string) error
@@ -71,7 +72,7 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 	friendsColl := db.Collection(friendsColl)
 	friendsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys:    bson.M{"userOneID": 1, "userTwoID": 1},
+			Keys:    bson.M{"initiatorID": 1, "targetID": 1},
 			Options: options.Index().SetUnique(true),
 		},
 	})
@@ -139,18 +140,16 @@ func (store *store) SaveFriend(ctx context.Context, friend Friend) error {
 	return nil
 }
 
-func (store *store) GetFriendByUserIDs(ctx context.Context, userOneID, userTwoID string) (Friend, error) {
+func (store *store) GetFriend(ctx context.Context, bindingKey string) (Friend, error) {
 	var friend Friend
-	ff := bson.M{"$or": bson.A{
-		bson.M{"userOneID": userOneID},
-		bson.M{"userTwoID": userTwoID},
-	}}
 
-	res := store.friendsColl.FindOne(ctx, ff)
+	res := store.friendsColl.FindOne(ctx, bson.M{bsonKeyBindingKey: bindingKey})
+	if res.Err() == mongo.ErrNoDocuments {
+		return Friend{}, ErrFriendNotFound
+	}
 	if res.Err() != nil {
-		store.logger.Error("GetFriendByUserIDs",
-			zap.String("useOneID", userOneID),
-			zap.String("userTwoID", userTwoID),
+		store.logger.Error("GetFriend",
+			zap.String("bindingKey", bindingKey),
 			zap.Error(res.Err()),
 		)
 		return friend, ErrUnexpectedStoreError
@@ -163,7 +162,7 @@ func (store *store) GetFriendByUserIDs(ctx context.Context, userOneID, userTwoID
 
 func (store *store) ListFriends(ctx context.Context, userID string) (FriendsList, error) {
 	list := FriendsList{}
-	ff := bson.M{"$or": bson.A{bson.M{"userOneID": userID}, bson.M{"userTwoID": userID}}}
+	ff := bson.M{"$or": bson.A{bson.M{"initiatorID": userID}}}
 
 	cursor, err := store.friendsColl.Find(ctx, ff)
 	if err != nil {

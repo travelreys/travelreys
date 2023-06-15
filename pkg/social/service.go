@@ -10,6 +10,7 @@ import (
 
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/email"
+	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 
@@ -21,6 +22,7 @@ const (
 
 var (
 	ErrInvalidFriendRequest    = errors.New("social.svc.InvalidFriendRequest")
+	ErrAlreadyFriends          = errors.New("social.svc.AlreadyFriends")
 	friendReqEmailTmplFilePath = os.Getenv("TRAVELREYS_FRIEND_REQ_EMAIL_PATH")
 )
 
@@ -29,18 +31,22 @@ type Service interface {
 
 	SendFriendRequest(ctx context.Context, initiatorID, targetID string) error
 	GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error)
-	AcceptFriendRequest(ctx context.Context, id string) error
+	AcceptFriendRequest(ctx context.Context, userid, reqid string) error
 	ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error)
-	DeleteFriendRequest(ctx context.Context, id string) error
+	DeleteFriendRequest(ctx context.Context, userid, reqid string) error
 
 	ListFriends(ctx context.Context, userID string) (FriendsList, error)
 	DeleteFriend(ctx context.Context, userID, friendID string) error
-	AreTheyFriends(ctx context.Context, userOneID, userTwoID string) error
+	AreTheyFriends(ctx context.Context, initiatorID, targetID string) error
+
+	ReadPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, auth.UsersMap, error)
+	ListPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error)
 }
 
 type service struct {
 	store   Store
 	authSvc auth.Service
+	tripSvc trips.Service
 	mailSvc email.Service
 
 	logger *zap.Logger
@@ -49,10 +55,11 @@ type service struct {
 func NewService(
 	store Store,
 	authSvc auth.Service,
+	tripSvc trips.Service,
 	mailSvc email.Service,
 	logger *zap.Logger,
 ) Service {
-	return &service{store, authSvc, mailSvc, logger}
+	return &service{store, authSvc, tripSvc, mailSvc, logger}
 }
 
 func (svc service) GetProfile(ctx context.Context, ID string) (UserProfile, error) {
@@ -87,6 +94,10 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 		target = users[0]
 	}
 
+	if err := svc.AreTheyFriends(ctx, initiatorID, targetID); err == nil {
+		return ErrAlreadyFriends
+	}
+
 	req := NewFriendRequest(initiatorID, targetID)
 	if err := svc.store.InsertFriendRequest(ctx, req); err != nil {
 		return err
@@ -96,47 +107,80 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 
 }
 
-func (svc service) AcceptFriendRequest(ctx context.Context, id string) error {
+func (svc service) GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error) {
+	return svc.store.GetFriendRequestByID(ctx, id)
+}
+
+func (svc service) AcceptFriendRequest(ctx context.Context, userid, reqid string) error {
 	var req FriendRequest
 	info, err := FriendRequestInfoFromCtx(ctx)
 	if err == nil {
 		req = info.Req
 	} else {
-		req, err = svc.store.GetFriendRequestByID(ctx, id)
+		req, err = svc.store.GetFriendRequestByID(ctx, reqid)
 		if err != nil {
 			return err
 		}
 	}
-
-	if err := svc.store.SaveFriend(ctx, NewFriendFromRequest(req)); err != nil {
+	if err := svc.DeleteFriendRequest(ctx, userid, reqid); err != nil {
 		return err
 	}
-	go svc.store.DeleteFriendRequest(ctx, id)
-	return nil
+	return svc.store.SaveFriend(ctx, NewFriendFromRequest(req))
 }
 
-func (svc service) GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error) {
-	return svc.store.GetFriendRequestByID(ctx, id)
-}
-
-func (svc service) DeleteFriendRequest(ctx context.Context, id string) error {
-	return svc.store.DeleteFriendRequest(ctx, id)
+func (svc service) DeleteFriendRequest(ctx context.Context, userid, reqid string) error {
+	return svc.store.DeleteFriendRequest(ctx, reqid)
 }
 
 func (svc service) ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error) {
-	return svc.store.ListFriendRequests(ctx, ff)
+	reqs, err := svc.store.ListFriendRequests(ctx, ff)
+	if err != nil {
+		return nil, err
+	}
+
+	initiatorIDs := reqs.GetInitiatorIDs()
+	users, err := svc.authSvc.List(ctx, auth.ListFilter{IDs: initiatorIDs})
+	if err != nil {
+		return nil, err
+	}
+	profiles := map[string]UserProfile{}
+	for _, usr := range users {
+		profiles[usr.ID] = UserProfileFromUser(usr)
+	}
+	for i := 0; i < len(reqs); i++ {
+		reqs[i].InitiatorProfile = profiles[reqs[i].InitiatorID]
+	}
+	return reqs, nil
 }
 
 func (svc service) ListFriends(ctx context.Context, userID string) (FriendsList, error) {
-	return svc.store.ListFriends(ctx, userID)
+	friends, err := svc.store.ListFriends(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	userIDs := friends.GetUsersID()
+	users, err := svc.authSvc.List(ctx, auth.ListFilter{IDs: userIDs})
+	if err != nil {
+		return nil, err
+	}
+	profiles := map[string]UserProfile{}
+	for _, usr := range users {
+		profiles[usr.ID] = UserProfileFromUser(usr)
+	}
+	for i := 0; i < len(friends); i++ {
+		friends[i].TargetProfile = profiles[friends[i].TargetID]
+	}
+
+	return friends, err
 }
 
-func (svc service) DeleteFriend(ctx context.Context, userID, friendID string) error {
-	return svc.store.DeleteFriend(ctx, fmt.Sprintf("%s|%s", userID, friendID))
+func (svc service) DeleteFriend(ctx context.Context, userID, bindingKey string) error {
+	return svc.store.DeleteFriend(ctx, bindingKey)
 }
 
-func (svc service) AreTheyFriends(ctx context.Context, userOneID, userTwoID string) error {
-	_, err := svc.store.GetFriendByUserIDs(ctx, userOneID, userTwoID)
+func (svc service) AreTheyFriends(ctx context.Context, initiatorID, targetID string) error {
+	_, err := svc.store.GetFriend(ctx, fmt.Sprintf("%s|%s", initiatorID, targetID))
 	return err
 }
 
@@ -171,4 +215,50 @@ func (svc service) sendFriendRequestEmail(ctx context.Context, initiator, target
 	); err != nil {
 		svc.logger.Error("sendFriendRequestEmail", zap.Error(err))
 	}
+}
+
+func (svc *service) ReadPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, auth.UsersMap, error) {
+	var (
+		trip trips.Trip
+		err  error
+	)
+	ti, err := trips.TripInfoFromCtx(ctx)
+	if err == nil {
+		trip = ti.Trip
+	} else {
+		trip, err = svc.tripSvc.Read(ctx, tripID)
+		if err != nil {
+			return trips.Trip{}, nil, err
+		}
+	}
+
+	ff := auth.ListFilter{IDs: []string{trip.Creator.ID}}
+	users, err := svc.authSvc.List(ctx, ff)
+	if err != nil {
+		return trip, nil, err
+	}
+	usersMap := auth.UsersMap{}
+	for _, usr := range users {
+		if usr.ID == referrerID {
+			usersMap[usr.ID] = usr
+			break
+		}
+	}
+
+	pubInfo := MakeTripPublicInfo(&trip)
+	return pubInfo, usersMap, nil
+}
+
+func (svc *service) ListPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error) {
+	tripslist, err := svc.tripSvc.List(ctx, ff)
+	if err != nil {
+		return nil, err
+	}
+
+	publicInfo := trips.TripsList{}
+	for _, t := range tripslist {
+		publicInfo = append(publicInfo, MakeTripPublicInfo(&t))
+	}
+
+	return publicInfo, nil
 }

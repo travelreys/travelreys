@@ -3,22 +3,28 @@ package social
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"github.com/travelreys/travelreys/pkg/auth"
+	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
+	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 
 var (
-	ErrRBAC = errors.New("auth.rbac.error")
+	ErrRBAC                  = errors.New("auth.rbac.error")
+	ErrTripSharingNotEnabled = errors.New("trip.service.tripSharingNotEnabled")
 )
 
 type rbacMiddleware struct {
-	next   Service
-	logger *zap.Logger
+	next    Service
+	tripSvc trips.Service
+	logger  *zap.Logger
 }
 
-func ServiceWithRBACMiddleware(svc Service, logger *zap.Logger) Service {
-	return &rbacMiddleware{svc, logger}
+func ServiceWithRBACMiddleware(svc Service, tripSvc trips.Service, logger *zap.Logger) Service {
+	return &rbacMiddleware{svc, tripSvc, logger}
 }
 
 func (mw rbacMiddleware) GetProfile(ctx context.Context, id string) (UserProfile, error) {
@@ -36,22 +42,6 @@ func (mw rbacMiddleware) SendFriendRequest(ctx context.Context, initiatorID, tar
 	return mw.next.SendFriendRequest(ctx, initiatorID, targetID)
 }
 
-func (mw rbacMiddleware) AcceptFriendRequest(ctx context.Context, id string) error {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil || ci.HasEmptyID() {
-		return ErrRBAC
-	}
-	req, err := mw.next.GetFriendRequestByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if req.TargetID != ci.UserID {
-		return ErrRBAC
-	}
-	ctxWithFriendRequestInfo := ContextWithFriendRequestInfo(ctx, req)
-	return mw.next.AcceptFriendRequest(ctxWithFriendRequestInfo, id)
-}
-
 func (mw rbacMiddleware) GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
@@ -60,20 +50,36 @@ func (mw rbacMiddleware) GetFriendRequestByID(ctx context.Context, id string) (F
 	return mw.next.GetFriendRequestByID(ctx, id)
 }
 
-func (mw rbacMiddleware) DeleteFriendRequest(ctx context.Context, id string) error {
+func (mw rbacMiddleware) AcceptFriendRequest(ctx context.Context, userid, reqid string) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	req, err := mw.next.GetFriendRequestByID(ctx, id)
+	req, err := mw.next.GetFriendRequestByID(ctx, reqid)
 	if err != nil {
 		return err
 	}
-	if req.TargetID != ci.UserID {
+	if !(req.TargetID == ci.UserID && ci.UserID == userid) {
 		return ErrRBAC
 	}
 	ctxWithFriendRequestInfo := ContextWithFriendRequestInfo(ctx, req)
-	return mw.next.DeleteFriendRequest(ctxWithFriendRequestInfo, id)
+	return mw.next.AcceptFriendRequest(ctxWithFriendRequestInfo, userid, reqid)
+}
+
+func (mw rbacMiddleware) DeleteFriendRequest(ctx context.Context, userid, reqid string) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	req, err := mw.next.GetFriendRequestByID(ctx, reqid)
+	if err != nil {
+		return err
+	}
+	if !(req.TargetID == ci.UserID && ci.UserID == userid) {
+		return ErrRBAC
+	}
+	ctxWithFriendRequestInfo := ContextWithFriendRequestInfo(ctx, req)
+	return mw.next.DeleteFriendRequest(ctxWithFriendRequestInfo, userid, reqid)
 }
 
 func (mw rbacMiddleware) ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error) {
@@ -102,17 +108,78 @@ func (mw rbacMiddleware) ListFriends(ctx context.Context, userID string) (Friend
 	return mw.next.ListFriends(ctx, userID)
 }
 
-func (mw rbacMiddleware) DeleteFriend(ctx context.Context, userID, targetID string) error {
+func (mw rbacMiddleware) DeleteFriend(ctx context.Context, userID, bindingKey string) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	if ci.UserID != ci.UserID {
+	if ci.UserID != userID {
 		return ErrRBAC
 	}
-	return mw.next.DeleteFriend(ctx, userID, targetID)
+	return mw.next.DeleteFriend(ctx, userID, bindingKey)
 }
 
-func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, userOneID, userTwoID string) error {
-	return ErrRBAC
+func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, initiatorID, targetID string) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	if ci.UserID != initiatorID && ci.UserID != targetID {
+		return ErrRBAC
+	}
+	return mw.next.AreTheyFriends(ctx, initiatorID, targetID)
+}
+
+func (mw rbacMiddleware) ReadPublicInfo(ctx context.Context, ID, referrerID string) (trips.Trip, auth.UsersMap, error) {
+	trip, err := mw.tripSvc.Read(ctx, ID)
+	if err != nil {
+		return trips.Trip{}, nil, err
+	}
+	ctxWithTripInfo := trips.ContextWithTripInfo(ctx, trip)
+
+	// Allow access if the trip is public
+	if trip.IsSharingEnabled() {
+		return mw.next.ReadPublicInfo(ctxWithTripInfo, ID, referrerID)
+	}
+
+	// Allow access if you are a member of the trip
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return trips.Trip{}, nil, ErrTripSharingNotEnabled
+	}
+	membersID := []string{trip.Creator.ID}
+	for _, mem := range trip.Members {
+		membersID = append(membersID, mem.ID)
+	}
+	if common.StringContains(membersID, ci.UserID) {
+		return mw.next.ReadPublicInfo(ctxWithTripInfo, ID, ci.UserID)
+	}
+
+	// ReferrerID should be a member ID.
+	// Allow access if you are friend of the member of the trip
+	if common.StringContains(membersID, referrerID) {
+		fmt.Println(referrerID)
+		if err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
+			return mw.next.ReadPublicInfo(ctxWithTripInfo, ID, referrerID)
+		}
+	}
+
+	return trips.Trip{}, nil, ErrTripSharingNotEnabled
+}
+
+func (mw rbacMiddleware) ListPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return trips.TripsList{}, ErrRBAC
+	}
+
+	if ci.UserID == *ff.UserID {
+		return mw.next.ListPublicInfo(ctx, ff)
+	}
+
+	if err := mw.next.AreTheyFriends(ctx, ci.UserID, *ff.UserID); err == nil {
+		return mw.next.ListPublicInfo(ctx, ff)
+	}
+
+	return nil, ErrRBAC
 }
