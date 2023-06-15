@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lucasepe/codename"
 )
 
 const (
@@ -33,9 +34,10 @@ type PhoneNumber struct {
 }
 
 type User struct {
-	ID    string `json:"id" bson:"id"`
-	Email string `json:"email" bson:"email"`
-	Name  string `json:"name" bson:"name"`
+	ID       string `json:"id" bson:"id"`
+	Email    string `json:"email" bson:"email"`
+	Name     string `json:"name" bson:"name"`
+	Username string `json:"username" bson:"username"`
 
 	CreatedAt   time.Time   `json:"createdAt" bson:"createdAt"`
 	PhoneNumber PhoneNumber `json:"phoneNumber" bson:"phonenumber"`
@@ -43,8 +45,27 @@ type User struct {
 	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
+func (user User) GetProfileImgURL() string {
+	if user.Labels[LabelAvatarImage] != "" {
+		return user.Labels[LabelAvatarImage]
+	}
+	if user.Labels[LabelGoogleUserPicture] != "" {
+		return user.Labels[LabelGoogleUserPicture]
+	}
+	return ""
+}
+
 type UsersList []User
 type UsersMap map[string]User
+
+func RandomUsernameGenerator() string {
+	rng, err := codename.DefaultRNG()
+	if err != nil {
+		panic(err)
+	}
+
+	return codename.Generate(rng, 8)
+}
 
 type GoogleUser struct {
 	ID            string `json:"id"`
@@ -63,6 +84,7 @@ func UserFromGoogleUser(gusr GoogleUser) User {
 		Email:       gusr.Email,
 		Name:        gusr.Name,
 		PhoneNumber: PhoneNumber{},
+		Username:    RandomUsernameGenerator(),
 		Labels: map[string]string{
 			LabelGoogleID:            gusr.ID,
 			LabelGoogleUserPicture:   gusr.Picture,
@@ -101,6 +123,7 @@ func UserFromFBUser(fbUsr FacebookUser) User {
 		Email:       fbUsr.Email,
 		Name:        fbUsr.Name,
 		PhoneNumber: PhoneNumber{},
+		Username:    RandomUsernameGenerator(),
 		Labels: map[string]string{
 			LabelFacebookID:          fbUsr.ID,
 			LabelFacebookUserPicture: fbUsr.Picture.Data.URL,

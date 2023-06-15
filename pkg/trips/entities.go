@@ -115,15 +115,6 @@ func NewTripWithDates(creator Member, name string, start, end time.Time) Trip {
 	return plan
 }
 
-func (trip Trip) PublicInfo() Trip {
-	newTrip := NewTrip(trip.Creator, trip.Name)
-	newTrip.CoverImage = trip.CoverImage
-	newTrip.Lodgings = trip.Lodgings
-	newTrip.Itineraries = trip.Itineraries
-	newTrip.MediaItems = trip.MediaItems
-	return newTrip
-}
-
 func (trip Trip) OGP(creator auth.User, coverImageURL string) TripOGP {
 	return TripOGP{
 		ID:            trip.ID,

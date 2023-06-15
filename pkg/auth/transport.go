@@ -171,8 +171,8 @@ func decodeUpdateRequest(_ context.Context, r *http.Request) (interface{}, error
 
 func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	req := ListRequest{ListFilter{}}
-	if r.URL.Query().Has(bsonKeyEmail) {
-		req.FF.Email = common.StringPtr(r.URL.Query().Get(bsonKeyEmail))
+	if r.URL.Query().Has(bsonKeyUsername) {
+		req.FF.Username = common.StringPtr(r.URL.Query().Get(bsonKeyUsername))
 	}
 	return req, nil
 }

@@ -88,17 +88,6 @@ func NewReadEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-func NewReadShareEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(ReadRequest)
-		if !ok {
-			return ReadWithMembersResponse{Err: common.ErrorEndpointReqMismatch}, nil
-		}
-		trip, members, err := svc.ReadShare(ctx, req.ID)
-		return ReadWithMembersResponse{Trip: trip, Members: members, Err: err}, nil
-	}
-}
-
 type ReadMembersRequest struct {
 	ID string `json:"id"`
 }
@@ -144,7 +133,7 @@ func NewReadOGPEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type ListRequest struct {
-	FF ListFilter
+	ListFilter
 }
 type ListResponse struct {
 	Trips TripsList `json:"trips"`
@@ -161,7 +150,7 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		trips, err := svc.List(ctx, req.FF)
+		trips, err := svc.List(ctx, req.ListFilter)
 		return ListResponse{Trips: trips, Err: err}, nil
 	}
 }

@@ -18,6 +18,7 @@ const (
 	bsonKeyID          = "id"
 	bsonKeyEmail       = "email"
 	bsonKeyName        = "name"
+	bsonKeyUsername    = "username"
 	bsonKeyPhoneNumber = "phonenumber"
 	bsonKeyLabels      = "labels"
 	collectionUsers    = "users"
@@ -26,6 +27,7 @@ const (
 
 var (
 	ErrUserNotFound         = errors.New("auth.store.user-not-found")
+	ErrDuplicateUsername    = errors.New("auth.store.duplicateUsername")
 	ErrUnexpectedStoreError = errors.New("auth.store.unexpected-error")
 )
 
@@ -35,23 +37,24 @@ type ReadFilter struct {
 }
 
 type UpdateFilter struct {
-	Email       *string
-	Name        *string
+	Email       *string `json:"email" bson:"email"`
+	Name        *string `json:"name" bson:"name"`
+	Username    *string `json:"username" bson:"username"`
 	PhoneNumber *PhoneNumber
 	Labels      *common.Labels `json:"labels" bson:"labels"`
 }
 
-func (ff UpdateFilter) toBson() bson.M {
+func (ff UpdateFilter) toBSON() bson.M {
 	bsonM := bson.M{}
 
-	if ff.Email != nil {
+	if ff.Email != nil && *ff.Email != "" {
 		bsonM[bsonKeyEmail] = ff.Email
 	}
-	if ff.Name != nil {
+	if ff.Name != nil && *ff.Name != "" {
 		bsonM[bsonKeyName] = ff.Name
 	}
-	if ff.PhoneNumber != nil {
-		bsonM[bsonKeyPhoneNumber] = ff.PhoneNumber
+	if ff.Username != nil && *ff.Username != "" {
+		bsonM[bsonKeyUsername] = ff.Username
 	}
 	if ff.Labels != nil {
 		bsonM[bsonKeyLabels] = ff.Labels
@@ -60,17 +63,21 @@ func (ff UpdateFilter) toBson() bson.M {
 }
 
 type ListFilter struct {
-	IDs   []string `json:"ids" bson:"id"`
-	Email *string  `json:"email" bson:"email"`
+	IDs      []string `json:"ids" bson:"id"`
+	Username *string  `json:"username" bson:"username"`
+	Email    *string  `json:"email" bson:"email"`
 }
 
-func (ff ListFilter) toBson() bson.M {
+func (ff ListFilter) toBSON() bson.M {
 	bsonM := bson.M{}
 	if len(ff.IDs) > 0 {
 		bsonM[bsonKeyID] = bson.M{"$in": ff.IDs}
 	}
-	if ff.Email != nil {
+	if ff.Email != nil && *ff.Username != "" {
 		bsonM[bsonKeyEmail] = ff.Email
+	}
+	if ff.Username != nil && *ff.Username != "" {
+		bsonM[bsonKeyUsername] = ff.Username
 	}
 	return bsonM
 }
@@ -94,13 +101,23 @@ type store struct {
 	logger *zap.Logger
 }
 
-func NewStore(ctx context.Context, db *mongo.Database, rdb redis.UniversalClient, logger *zap.Logger) Store {
+func NewStore(
+	ctx context.Context,
+	db *mongo.Database,
+	rdb redis.UniversalClient,
+	logger *zap.Logger,
+) Store {
 	ctx, cancel := context.WithTimeout(ctx, common.DbReqTimeout)
 	defer cancel()
 
 	usrsColl := db.Collection(collectionUsers)
-	idIdx := mongo.IndexModel{Keys: bson.M{bsonKeyID: 1}}
-	usrsColl.Indexes().CreateOne(ctx, idIdx)
+	if _, err := usrsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.M{bsonKeyID: 1}},
+		{Keys: bson.M{bsonKeyEmail: 1}, Options: options.Index().SetUnique(true)},
+		{Keys: bson.M{bsonKeyUsername: 1}, Options: options.Index().SetUnique(true)},
+	}); err != nil {
+		fmt.Println(err)
+	}
 
 	return &store{db, usrsColl, rdb, logger.Named(storeLoggerName)}
 }
@@ -121,7 +138,8 @@ func (s store) Read(ctx context.Context, ff ReadFilter) (User, error) {
 
 func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	list := UsersList{}
-	cursor, err := s.usrsColl.Find(ctx, ff.toBson())
+	cursor, err := s.usrsColl.Find(ctx, ff.toBSON())
+
 	if err != nil {
 		s.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return list, err
@@ -131,7 +149,7 @@ func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 }
 
 func (s store) Update(ctx context.Context, ID string, ff UpdateFilter) error {
-	_, err := s.usrsColl.UpdateOne(ctx, bson.M{bsonKeyID: ID}, bson.M{"$set": ff.toBson()})
+	_, err := s.usrsColl.UpdateOne(ctx, bson.M{bsonKeyID: ID}, bson.M{"$set": ff.toBSON()})
 	if err == mongo.ErrNoDocuments {
 		return ErrUserNotFound
 	}
@@ -141,8 +159,13 @@ func (s store) Update(ctx context.Context, ID string, ff UpdateFilter) error {
 			zap.String("ff", common.FmtString(ff)),
 			zap.Error(err),
 		)
+		if common.MongoIsDupError(err) {
+			return ErrDuplicateUsername
+		}
+		return ErrUnexpectedStoreError
 	}
-	return err
+
+	return nil
 }
 
 func (s store) Save(ctx context.Context, usr User) error {
@@ -156,8 +179,7 @@ func (s store) Save(ctx context.Context, usr User) error {
 }
 
 func (s store) GetOTP(ctx context.Context, ID string) (string, error) {
-	key := fmt.Sprintf("otp:%s", ID)
-	cmd := s.rdb.Get(ctx, key)
+	cmd := s.rdb.Get(ctx, fmt.Sprintf("otp:%s", ID))
 	if cmd.Err() != nil {
 		return "", cmd.Err()
 	}
@@ -165,7 +187,6 @@ func (s store) GetOTP(ctx context.Context, ID string) (string, error) {
 }
 
 func (s store) SaveOTP(ctx context.Context, ID, otp string, ttl time.Duration) error {
-	key := fmt.Sprintf("otp:%s", ID)
-	cmd := s.rdb.Set(ctx, key, otp, ttl)
+	cmd := s.rdb.Set(ctx, fmt.Sprintf("otp:%s", ID), otp, ttl)
 	return cmd.Err()
 }

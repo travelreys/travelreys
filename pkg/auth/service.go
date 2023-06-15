@@ -41,6 +41,7 @@ var (
 type Service interface {
 	Login(context.Context, string, string, string) (User, *http.Cookie, error)
 	MagicLink(ctx context.Context, email string) error
+
 	Read(context.Context, string) (User, error)
 	List(ctx context.Context, ff ListFilter) (UsersList, error)
 	Update(context.Context, string, UpdateFilter) error
@@ -171,8 +172,9 @@ func (svc service) socialLogin(ctx context.Context, authCode, provider string) (
 
 func (svc service) MagicLink(ctx context.Context, email string) error {
 	var (
-		usr User
-		err error
+		usr             User
+		sendWelcomEmail bool
+		err             error
 	)
 	usr, err = svc.store.Read(ctx, ReadFilter{Email: email})
 	if err == ErrUserNotFound {
@@ -181,6 +183,7 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 			return err
 		}
 		usr = newUsr
+		sendWelcomEmail = true
 	}
 
 	otp, hashedOTP, err := svc.otp.GenerateOTP(6)
@@ -195,6 +198,9 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 		loginSubj := "Login to Travelreys!"
 		if err := svc.mailSvc.SendMail(ctx, email, defaultLoginSender, loginSubj, mailBody); err != nil {
 			svc.logger.Error("MagicLink", zap.Error(err))
+		}
+		if sendWelcomEmail {
+			svc.sendWelcomeEmail(ctx, usr.Name, email)
 		}
 	}()
 	return nil
@@ -249,6 +255,7 @@ func (svc service) createUser(ctx context.Context, email string) (User, error) {
 		ID:          uuid.NewString(),
 		Email:       email,
 		Name:        email,
+		Username:    RandomUsernameGenerator(),
 		CreatedAt:   time.Now(),
 		PhoneNumber: PhoneNumber{},
 		Labels: common.Labels{

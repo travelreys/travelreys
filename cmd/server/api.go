@@ -17,6 +17,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/ogp"
+	"github.com/travelreys/travelreys/pkg/social"
 	"github.com/travelreys/travelreys/pkg/storage"
 	"github.com/travelreys/travelreys/pkg/trips"
 	"github.com/travelreys/travelreys/pkg/tripssync"
@@ -110,6 +111,11 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	svc := tripssync.NewService(store, msgStore, tobStore, tripStore)
 	wsSvr := tripssync.NewWebsocketServer(svc, logger)
 
+	// Social
+	socialStore := social.NewStore(ctx, db, logger)
+	socialSvc := social.NewService(socialStore, authSvc, tripSvc, mailSvc, logger)
+	socialSvc = social.ServiceWithRBACMiddleware(socialSvc, tripSvc, logger)
+
 	// Footprints
 	fpStore := footprints.NewStore(ctx, db, logger)
 	fpSvc := footprints.NewService(fpStore, logger)
@@ -135,6 +141,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/finance").Handler(finance.MakeHandler(finSvc))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
+	r.PathPrefix("/api/v1/social").Handler(social.MakeHandler(socialSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
 	r.PathPrefix("/api/v1/footprints").Handler(footprints.MakeHandler(fpSvc))
 
