@@ -162,13 +162,24 @@ func (r ListFriendsResponse) Error() error {
 	return r.Err
 }
 
-func NewListFriendsRequestEndpoint(svc Service) endpoint.Endpoint {
+func NewListFollowersRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListFriendsRequest)
 		if !ok {
 			return ListFriendsResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		friends, err := svc.ListFriends(ctx, req.UserID)
+		friends, err := svc.ListFollowers(ctx, req.UserID)
+		return ListFriendsResponse{Friends: friends, Err: err}, nil
+	}
+}
+
+func NewListFollowingRequestEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ListFriendsRequest)
+		if !ok {
+			return ListFriendsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		friends, err := svc.ListFollowing(ctx, req.UserID)
 		return ListFriendsResponse{Friends: friends, Err: err}, nil
 	}
 }

@@ -53,7 +53,8 @@ type Store interface {
 
 	GetFriend(ctx context.Context, bindingKey string) (Friend, error)
 	SaveFriend(ctx context.Context, friend Friend) error
-	ListFriends(ctx context.Context, userID string) (FriendsList, error)
+	ListFollowers(ctx context.Context, userID string) (FriendsList, error)
+	ListFollowing(ctx context.Context, userID string) (FriendsList, error)
 	DeleteFriend(ctx context.Context, bindingKey string) error
 }
 
@@ -160,17 +161,29 @@ func (store *store) GetFriend(ctx context.Context, bindingKey string) (Friend, e
 	return friend, nil
 }
 
-func (store *store) ListFriends(ctx context.Context, userID string) (FriendsList, error) {
+func (store *store) ListFollowers(ctx context.Context, userID string) (FriendsList, error) {
 	list := FriendsList{}
-	ff := bson.M{"$or": bson.A{bson.M{"initiatorID": userID}}}
-
-	cursor, err := store.friendsColl.Find(ctx, ff)
+	cursor, err := store.friendsColl.Find(ctx, bson.M{"targetID": userID})
 	if err != nil {
-		store.logger.Error("ListFriends", zap.String("userID", userID), zap.Error(err))
+		store.logger.Error("ListFollowers", zap.String("userID", userID), zap.Error(err))
 		return list, ErrUnexpectedStoreError
 	}
 	if err := cursor.All(ctx, &list); err != nil {
-		store.logger.Error("ListFriends", zap.String("userID", userID), zap.Error(err))
+		store.logger.Error("ListFollowers", zap.String("userID", userID), zap.Error(err))
+		return list, ErrUnexpectedStoreError
+	}
+	return list, nil
+}
+
+func (store *store) ListFollowing(ctx context.Context, userID string) (FriendsList, error) {
+	list := FriendsList{}
+	cursor, err := store.friendsColl.Find(ctx, bson.M{"initiatorID": userID})
+	if err != nil {
+		store.logger.Error("ListFollowing", zap.String("userID", userID), zap.Error(err))
+		return list, ErrUnexpectedStoreError
+	}
+	if err := cursor.All(ctx, &list); err != nil {
+		store.logger.Error("ListFollowing", zap.String("userID", userID), zap.Error(err))
 		return list, ErrUnexpectedStoreError
 	}
 	return list, nil

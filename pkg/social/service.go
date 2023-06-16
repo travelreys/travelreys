@@ -35,7 +35,8 @@ type Service interface {
 	ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error)
 	DeleteFriendRequest(ctx context.Context, userid, reqid string) error
 
-	ListFriends(ctx context.Context, userID string) (FriendsList, error)
+	ListFollowers(ctx context.Context, userID string) (FriendsList, error)
+	ListFollowing(ctx context.Context, userID string) (FriendsList, error)
 	DeleteFriend(ctx context.Context, userID, friendID string) error
 	AreTheyFriends(ctx context.Context, initiatorID, targetID string) error
 
@@ -153,19 +154,40 @@ func (svc service) ListFriendRequests(ctx context.Context, ff ListFriendRequests
 	return reqs, nil
 }
 
-func (svc service) ListFriends(ctx context.Context, userID string) (FriendsList, error) {
-	friends, err := svc.store.ListFriends(ctx, userID)
+func (svc service) ListFollowers(ctx context.Context, userID string) (FriendsList, error) {
+	friends, err := svc.store.ListFollowers(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	userIDs := friends.GetUsersID()
-	users, err := svc.authSvc.List(ctx, auth.ListFilter{IDs: userIDs})
+	initiatorIDs := friends.GetInitiatorIDs()
+	initiators, err := svc.authSvc.List(ctx, auth.ListFilter{IDs: initiatorIDs})
 	if err != nil {
 		return nil, err
 	}
 	profiles := map[string]UserProfile{}
-	for _, usr := range users {
+	for _, usr := range initiators {
+		profiles[usr.ID] = UserProfileFromUser(usr)
+	}
+	for i := 0; i < len(friends); i++ {
+		friends[i].InitiatorProfile = profiles[friends[i].InitiatorID]
+	}
+	return friends, err
+}
+
+func (svc service) ListFollowing(ctx context.Context, userID string) (FriendsList, error) {
+	friends, err := svc.store.ListFollowing(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	targetIDs := friends.GetTargetIDs()
+	targets, err := svc.authSvc.List(ctx, auth.ListFilter{IDs: targetIDs})
+	if err != nil {
+		return nil, err
+	}
+	profiles := map[string]UserProfile{}
+	for _, usr := range targets {
 		profiles[usr.ID] = UserProfileFromUser(usr)
 	}
 	for i := 0; i < len(friends); i++ {

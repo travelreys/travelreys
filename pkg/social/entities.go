@@ -56,7 +56,8 @@ type Friend struct {
 	InitiatorID string `json:"initiatorID" bson:"initiatorID"`
 	TargetID    string `json:"targetID" bson:"targetID"`
 
-	TargetProfile UserProfile `json:"targetProfile" bson:"-"`
+	InitiatorProfile UserProfile `json:"initiatorProfile" bson:"-"`
+	TargetProfile    UserProfile `json:"targetProfile" bson:"-"`
 }
 
 func NewFriendFromRequest(req FriendRequest) Friend {
@@ -70,10 +71,18 @@ func NewFriendFromRequest(req FriendRequest) Friend {
 
 type FriendsList []Friend
 
-func (l FriendsList) GetUsersID() []string {
+func (l FriendsList) GetTargetIDs() []string {
 	ids := []string{}
 	for _, req := range l {
 		ids = append(ids, req.TargetID)
+	}
+	return ids
+}
+
+func (l FriendsList) GetInitiatorIDs() []string {
+	ids := []string{}
+	for _, req := range l {
+		ids = append(ids, req.InitiatorID)
 	}
 	return ids
 }
