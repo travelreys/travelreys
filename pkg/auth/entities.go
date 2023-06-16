@@ -98,7 +98,6 @@ func (gUsr GoogleUser) AddLabelsToUser(usr *User) {
 	usr.Labels[LabelGoogleID] = gUsr.ID
 	usr.Labels[LabelGoogleUserPicture] = gUsr.Picture
 	usr.Labels[LabelGoogleVerifiedEmail] = fmt.Sprintf("%t", gUsr.VerifiedEmail)
-	usr.Labels[LabelDefaultLocale] = gUsr.Locale
 }
 
 type FacebookUser struct {

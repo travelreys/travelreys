@@ -26,6 +26,7 @@ func UserProfileFromUser(user auth.User) UserProfile {
 
 type FriendRequest struct {
 	ID          string `json:"id" bson:"id"`
+	BindingKey  string `json:"binding" bson:"binding"`
 	InitiatorID string `json:"initiatorID" bson:"initiatorID"`
 	TargetID    string `json:"targetID" bson:"targetID"`
 
@@ -35,6 +36,7 @@ type FriendRequest struct {
 func NewFriendRequest(initiator, target string) FriendRequest {
 	return FriendRequest{
 		ID:          uuid.NewString(),
+		BindingKey:  fmt.Sprintf("%s|%s", initiator, target),
 		InitiatorID: initiator,
 		TargetID:    target,
 	}
@@ -94,6 +96,7 @@ type Statistic struct {
 
 func MakeTripPublicInfo(trip *trips.Trip) trips.Trip {
 	newTrip := trips.NewTrip(trip.Creator, trip.Name)
+	newTrip.ID = trip.ID
 	newTrip.CoverImage = trip.CoverImage
 	newTrip.Lodgings = trip.Lodgings
 	newTrip.MediaItems = trip.MediaItems

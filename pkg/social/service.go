@@ -17,7 +17,7 @@ import (
 const (
 	defaultLoginSender                = "login@travelreys.com"
 	defaultFriendReqEmailTmplFilePath = "assets/friendReqEmail.tmpl.html"
-	defaultFriendReqEmailTmplFileName = "friendRequest.tmpl.html"
+	defaultFriendReqEmailTmplFileName = "friendReqEmail.tmpl.html"
 )
 
 var (
@@ -100,7 +100,7 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 	}
 
 	req := NewFriendRequest(initiatorID, targetID)
-	if err := svc.store.InsertFriendRequest(ctx, req); err != nil {
+	if err := svc.store.UpsertFriendRequest(ctx, req); err != nil {
 		return err
 	}
 	go svc.sendFriendRequestEmail(ctx, initiator, target)
@@ -210,11 +210,11 @@ func (svc service) sendFriendRequestEmail(ctx context.Context, initiator, target
 	svc.logger.Info("sending friend req email", zap.String("to", target.Email))
 
 	if friendReqEmailTmplFilePath == "" {
-		friendReqEmailTmplFilePath = defaultFriendReqEmailTmplFileName
+		friendReqEmailTmplFilePath = defaultFriendReqEmailTmplFilePath
 	}
 	t, err := template.
 		New(defaultFriendReqEmailTmplFileName).
-		ParseFiles(defaultFriendReqEmailTmplFilePath)
+		ParseFiles(friendReqEmailTmplFilePath)
 	if err != nil {
 		svc.logger.Error("sendFriendRequestEmail", zap.Error(err))
 		return
@@ -253,8 +253,7 @@ func (svc *service) ReadPublicInfo(ctx context.Context, tripID, referrerID strin
 			return trips.Trip{}, nil, err
 		}
 	}
-
-	ff := auth.ListFilter{IDs: []string{trip.Creator.ID}}
+	ff := auth.ListFilter{IDs: []string{referrerID}}
 	users, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
 		return trip, nil, err

@@ -3,7 +3,6 @@ package social
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
@@ -142,8 +141,8 @@ func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, initiatorID, target
 	return mw.next.AreTheyFriends(ctx, initiatorID, targetID)
 }
 
-func (mw rbacMiddleware) ReadPublicInfo(ctx context.Context, ID, referrerID string) (trips.Trip, auth.UsersMap, error) {
-	trip, err := mw.tripSvc.Read(ctx, ID)
+func (mw rbacMiddleware) ReadPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, auth.UsersMap, error) {
+	trip, err := mw.tripSvc.Read(ctx, tripID)
 	if err != nil {
 		return trips.Trip{}, nil, err
 	}
@@ -151,7 +150,7 @@ func (mw rbacMiddleware) ReadPublicInfo(ctx context.Context, ID, referrerID stri
 
 	// Allow access if the trip is public
 	if trip.IsSharingEnabled() {
-		return mw.next.ReadPublicInfo(ctxWithTripInfo, ID, referrerID)
+		return mw.next.ReadPublicInfo(ctxWithTripInfo, tripID, referrerID)
 	}
 
 	// Allow access if you are a member of the trip
@@ -164,15 +163,14 @@ func (mw rbacMiddleware) ReadPublicInfo(ctx context.Context, ID, referrerID stri
 		membersID = append(membersID, mem.ID)
 	}
 	if common.StringContains(membersID, ci.UserID) {
-		return mw.next.ReadPublicInfo(ctxWithTripInfo, ID, ci.UserID)
+		return mw.next.ReadPublicInfo(ctxWithTripInfo, tripID, ci.UserID)
 	}
 
 	// ReferrerID should be a member ID.
 	// Allow access if you are friend of the member of the trip
 	if common.StringContains(membersID, referrerID) {
-		fmt.Println(referrerID)
 		if err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
-			return mw.next.ReadPublicInfo(ctxWithTripInfo, ID, referrerID)
+			return mw.next.ReadPublicInfo(ctxWithTripInfo, tripID, referrerID)
 		}
 	}
 

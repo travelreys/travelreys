@@ -208,7 +208,7 @@ func NewDeleteFriendEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type ReadRequest struct {
-	ID         string `json:"id"`
+	TripID     string `json:"id"`
 	ReferrerID string `json:"referrerID"`
 }
 type ReadResponse struct {
@@ -227,7 +227,7 @@ func NewReadPublicInfoEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		trip, members, err := svc.ReadPublicInfo(ctx, req.ID, req.ReferrerID)
+		trip, members, err := svc.ReadPublicInfo(ctx, req.TripID, req.ReferrerID)
 		return ReadResponse{Trip: trip, Members: members, Err: err}, nil
 	}
 }
