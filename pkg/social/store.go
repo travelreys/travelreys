@@ -46,7 +46,7 @@ func (ff ListFriendRequestsFilter) toBSON() bson.M {
 }
 
 type Store interface {
-	InsertFriendRequest(ctx context.Context, freq FriendRequest) error
+	UpsertFriendRequest(ctx context.Context, freq FriendRequest) error
 	GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error)
 	DeleteFriendRequest(ctx context.Context, id string) error
 	ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error)
@@ -73,23 +73,28 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 	friendsColl := db.Collection(friendsColl)
 	friendsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys:    bson.M{"initiatorID": 1, "targetID": 1},
+			Keys:    bson.M{bsonKeyBindingKey: 1},
 			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.M{"initiatorID": 1, "targetID": 1},
 		},
 	})
 	friendReqColl := db.Collection(friendsReqColl)
 	friendReqColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		{Keys: bson.M{bsonKeyInitiatorID: 1}},
-		{Keys: bson.M{bsonKeyTargetID: 1}},
+		{Keys: bson.M{bsonKeyBindingKey: 1}},
 	})
 
 	return &store{db, friendsColl, friendReqColl, logger}
 }
 
-func (store *store) InsertFriendRequest(ctx context.Context, freq FriendRequest) error {
-	_, err := store.friendReqsColl.InsertOne(ctx, freq)
+func (store *store) UpsertFriendRequest(ctx context.Context, freq FriendRequest) error {
+	opts := options.Replace().SetUpsert(true)
+	_, err := store.friendReqsColl.ReplaceOne(
+		ctx, bson.M{"binding": freq.BindingKey}, freq, opts,
+	)
 	if err != nil {
-		store.logger.Error("InsertFriendRequest", zap.String("freq", common.FmtString(freq)), zap.Error(err))
+		store.logger.Error("UpsertFriendRequest", zap.String("freq", common.FmtString(freq)), zap.Error(err))
 		return ErrUnexpectedStoreError
 	}
 	return nil

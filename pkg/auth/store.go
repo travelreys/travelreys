@@ -111,14 +111,11 @@ func NewStore(
 	defer cancel()
 
 	usrsColl := db.Collection(collectionUsers)
-	if _, err := usrsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	usrsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{bsonKeyID: 1}},
 		{Keys: bson.M{bsonKeyEmail: 1}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.M{bsonKeyUsername: 1}, Options: options.Index().SetUnique(true)},
-	}); err != nil {
-		fmt.Println(err)
-	}
-
+	})
 	return &store{db, usrsColl, rdb, logger.Named(storeLoggerName)}
 }
 

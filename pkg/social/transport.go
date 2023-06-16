@@ -21,7 +21,10 @@ const (
 )
 
 func errToHttpCode() func(err error) int {
-	notFoundErrors := []error{ErrFriendNotFound}
+	notFoundErrors := []error{
+		ErrFriendNotFound,
+		trips.ErrTripNotFound,
+	}
 	appErrors := []error{
 		ErrInvalidFriendRequest,
 		ErrUnexpectedStoreError,
@@ -259,13 +262,12 @@ func decodeReadPublicInfoRequest(_ context.Context, r *http.Request) (interface{
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	ID, ok := vars[URLPathVarTripID]
+	tripID, ok := vars[URLPathVarTripID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-
 	return ReadRequest{
-		ID:         ID,
+		TripID:     tripID,
 		ReferrerID: userID,
 	}, nil
 }
