@@ -95,8 +95,14 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse, opts...,
 	)
 
-	listFriendsHandler := kithttp.NewServer(
-		NewListFriendsRequestEndpoint(svc),
+	listFollowersHandler := kithttp.NewServer(
+		NewListFollowersRequestEndpoint(svc),
+		decodeListFriendsRequest,
+		encodeResponse, opts...,
+	)
+
+	listFollowingHandler := kithttp.NewServer(
+		NewListFollowingRequestEndpoint(svc),
 		decodeListFriendsRequest,
 		encodeResponse, opts...,
 	)
@@ -122,7 +128,8 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/social/{uid}/requests/{rid}/accept", acceptFriendReqHandler).Methods(http.MethodPut)
 	r.Handle("/api/v1/social/{uid}/requests/{rid}", deleteFriendReqHandler).Methods(http.MethodDelete)
 
-	r.Handle("/api/v1/social/{uid}/friends", listFriendsHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/friends/following", listFollowingHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/friends/followers", listFollowersHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/{uid}/friends/{targetID}", getFriendHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/{uid}/friends/{bindingKey}", deleteFriendHandler).Methods(http.MethodDelete)
 

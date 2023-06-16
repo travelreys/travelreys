@@ -96,7 +96,7 @@ func (mw rbacMiddleware) ListFriendRequests(ctx context.Context, ff ListFriendRe
 	return mw.next.ListFriendRequests(ctx, ff)
 }
 
-func (mw rbacMiddleware) ListFriends(ctx context.Context, userID string) (FriendsList, error) {
+func (mw rbacMiddleware) ListFollowers(ctx context.Context, userID string) (FriendsList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
@@ -105,7 +105,19 @@ func (mw rbacMiddleware) ListFriends(ctx context.Context, userID string) (Friend
 	if ci.UserID != ci.UserID {
 		return nil, ErrRBAC
 	}
-	return mw.next.ListFriends(ctx, userID)
+	return mw.next.ListFollowers(ctx, userID)
+}
+
+func (mw rbacMiddleware) ListFollowing(ctx context.Context, userID string) (FriendsList, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+
+	if ci.UserID != ci.UserID {
+		return nil, ErrRBAC
+	}
+	return mw.next.ListFollowing(ctx, userID)
 }
 
 func (mw rbacMiddleware) DeleteFriend(ctx context.Context, userID, bindingKey string) error {
