@@ -101,7 +101,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
 	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, mediaSvc, storageSvc, logger)
-	tripSvc = trips.ServiceWithRBACMiddleware(tripSvc, logger)
+	tripSvcWithRBAC := trips.ServiceWithRBACMiddleware(tripSvc, logger)
 
 	// TripSync
 	store := tripssync.NewStore(rdb, logger)
@@ -142,7 +142,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
 	r.PathPrefix("/api/v1/social").Handler(social.MakeHandler(socialSvc))
-	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvc))
+	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvcWithRBAC))
 	r.PathPrefix("/api/v1/footprints").Handler(footprints.MakeHandler(fpSvc))
 
 	return &http.Server{

@@ -168,6 +168,7 @@ func (mw rbacMiddleware) ReadPublicInfo(ctx context.Context, tripID, referrerID 
 
 	// ReferrerID should be a member ID.
 	// Allow access if you are friend of the member of the trip
+
 	if common.StringContains(membersID, referrerID) {
 		if err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
 			return mw.next.ReadPublicInfo(ctxWithTripInfo, tripID, referrerID)
