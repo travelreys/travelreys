@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/trips"
 )
@@ -212,23 +211,23 @@ type ReadRequest struct {
 	ReferrerID string `json:"referrerID"`
 }
 type ReadResponse struct {
-	Trip    trips.Trip    `json:"trip"`
-	Members auth.UsersMap `json:"members"`
-	Err     error         `json:"error,omitempty"`
+	Trip        trips.Trip  `json:"trip"`
+	UserProfile UserProfile `json:"profile"`
+	Err         error       `json:"error,omitempty"`
 }
 
 func (r ReadResponse) Error() error {
 	return r.Err
 }
 
-func NewReadPublicInfoEndpoint(svc Service) endpoint.Endpoint {
+func NewReadTripPublicInfoEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ReadRequest)
 		if !ok {
 			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		trip, members, err := svc.ReadPublicInfo(ctx, req.TripID, req.ReferrerID)
-		return ReadResponse{Trip: trip, Members: members, Err: err}, nil
+		trip, profile, err := svc.ReadTripPublicInfo(ctx, req.TripID, req.ReferrerID)
+		return ReadResponse{Trip: trip, UserProfile: profile, Err: err}, nil
 	}
 }
 
@@ -243,13 +242,39 @@ type ListResponse struct {
 func (r ListResponse) Error() error {
 	return r.Err
 }
-func NewListPublicInfoEndpoint(svc Service) endpoint.Endpoint {
+
+func NewListTripPublicInfoEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListRequest)
 		if !ok {
 			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		tripslist, err := svc.ListPublicInfo(ctx, req.ListFilter)
+		tripslist, err := svc.ListTripPublicInfo(ctx, req.ListFilter)
 		return ListResponse{Trips: tripslist, Err: err}, nil
+	}
+}
+
+type ListFollowingTripsRequest struct {
+	InitiatorID string `json:"initiatorID"`
+}
+
+type ListFollowingTripsResponse struct {
+	Trips          trips.TripsList `json:"trips"`
+	UserProfileMap UserProfileMap  `json:"profiles"`
+	Err            error           `json:"error,omitempty"`
+}
+
+func (r ListFollowingTripsResponse) Error() error {
+	return r.Err
+}
+
+func NewListFollowingTripsEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(ListFollowingTripsRequest)
+		if !ok {
+			return ListFollowingTripsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		tripslist, profiles, err := svc.ListFollowingTrips(ctx, req.InitiatorID)
+		return ListFollowingTripsResponse{Trips: tripslist, UserProfileMap: profiles, Err: err}, nil
 	}
 }

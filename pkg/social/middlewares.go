@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
 	"github.com/travelreys/travelreys/pkg/trips"
@@ -141,29 +140,29 @@ func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, initiatorID, target
 	return mw.next.AreTheyFriends(ctx, initiatorID, targetID)
 }
 
-func (mw rbacMiddleware) ReadPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, auth.UsersMap, error) {
+func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, UserProfile, error) {
 	trip, err := mw.tripSvc.Read(ctx, tripID)
 	if err != nil {
-		return trips.Trip{}, nil, err
+		return trips.Trip{}, UserProfile{}, err
 	}
 	ctxWithTripInfo := trips.ContextWithTripInfo(ctx, trip)
 
 	// Allow access if the trip is public
 	if trip.IsSharingEnabled() {
-		return mw.next.ReadPublicInfo(ctxWithTripInfo, tripID, referrerID)
+		return mw.next.ReadTripPublicInfo(ctxWithTripInfo, tripID, referrerID)
 	}
 
 	// Allow access if you are a member of the trip
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return trips.Trip{}, nil, ErrTripSharingNotEnabled
+		return trips.Trip{}, UserProfile{}, ErrTripSharingNotEnabled
 	}
 	membersID := []string{trip.Creator.ID}
 	for _, mem := range trip.Members {
 		membersID = append(membersID, mem.ID)
 	}
 	if common.StringContains(membersID, ci.UserID) {
-		return mw.next.ReadPublicInfo(ctxWithTripInfo, tripID, ci.UserID)
+		return mw.next.ReadTripPublicInfo(ctxWithTripInfo, tripID, referrerID)
 	}
 
 	// ReferrerID should be a member ID.
@@ -171,26 +170,38 @@ func (mw rbacMiddleware) ReadPublicInfo(ctx context.Context, tripID, referrerID 
 
 	if common.StringContains(membersID, referrerID) {
 		if err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
-			return mw.next.ReadPublicInfo(ctxWithTripInfo, tripID, referrerID)
+			return mw.next.ReadTripPublicInfo(ctxWithTripInfo, tripID, referrerID)
 		}
 	}
 
-	return trips.Trip{}, nil, ErrTripSharingNotEnabled
+	return trips.Trip{}, UserProfile{}, ErrTripSharingNotEnabled
 }
 
-func (mw rbacMiddleware) ListPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error) {
+func (mw rbacMiddleware) ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return trips.TripsList{}, ErrRBAC
+		return nil, ErrRBAC
 	}
 
 	if ci.UserID == *ff.UserID {
-		return mw.next.ListPublicInfo(ctx, ff)
+		return mw.next.ListTripPublicInfo(ctx, ff)
 	}
 
 	if err := mw.next.AreTheyFriends(ctx, ci.UserID, *ff.UserID); err == nil {
-		return mw.next.ListPublicInfo(ctx, ff)
+		return mw.next.ListTripPublicInfo(ctx, ff)
 	}
 
 	return nil, ErrRBAC
+}
+
+func (mw rbacMiddleware) ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, nil, ErrRBAC
+	}
+
+	if ci.UserID != initiatorID {
+		return nil, nil, ErrRBAC
+	}
+	return mw.next.ListFollowingTrips(ctx, initiatorID)
 }
