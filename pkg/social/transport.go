@@ -70,6 +70,13 @@ func MakeHandler(svc Service) http.Handler {
 		decodeGetProfileRequest,
 		encodeResponse, opts...,
 	)
+
+	listFollowingTripsHandler := kithttp.NewServer(
+		NewListFollowingTripsEndpoint(svc),
+		decodeListFollowingTripsRequest,
+		encodeResponse, opts...,
+	)
+
 	sendFriendReqHandler := kithttp.NewServer(
 		NewSendFriendRequestEndpoint(svc),
 		decodeSendFriendRequestRequest,
@@ -116,14 +123,15 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse, opts...,
 	)
 
-	listPublicInfo := kithttp.NewServer(
-		NewListPublicInfoEndpoint(svc), decodeListPublicInfoRequest, encodeResponse, opts...,
+	ListTripPublicInfo := kithttp.NewServer(
+		NewListTripPublicInfoEndpoint(svc), decodeListTripPublicInfoRequest, encodeResponse, opts...,
 	)
 
-	readPublicInfoHandler := kithttp.NewServer(
-		NewReadPublicInfoEndpoint(svc), decodeReadPublicInfoRequest, encodeResponse, opts...,
+	ReadTripPublicInfoHandler := kithttp.NewServer(
+		NewReadTripPublicInfoEndpoint(svc), decodeReadTripPublicInfoRequest, encodeResponse, opts...,
 	)
 
+	r.Handle("/api/v1/social/{uid}", listFollowingTripsHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/{uid}/profile", getProfileHandler).Methods(http.MethodGet)
 
 	r.Handle("/api/v1/social/{uid}/requests", sendFriendReqHandler).Methods(http.MethodPost)
@@ -136,8 +144,8 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/social/{uid}/friends/{targetID}", getFriendHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/{uid}/friends/{bindingKey}", deleteFriendHandler).Methods(http.MethodDelete)
 
-	r.Handle("/api/v1/social/{uid}/trips", listPublicInfo).Methods(http.MethodGet)
-	r.Handle("/api/v1/social/{uid}/trips/{tid}", readPublicInfoHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/trips", ListTripPublicInfo).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/trips/{tid}", ReadTripPublicInfoHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -149,6 +157,16 @@ func decodeGetProfileRequest(ctx context.Context, r *http.Request) (interface{},
 		return nil, common.ErrInvalidRequest
 	}
 	req := GetProfileRequest{ID: ID}
+	return req, nil
+}
+
+func decodeListFollowingTripsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarUserID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	req := ListFollowingTripsRequest{InitiatorID: ID}
 	return req, nil
 }
 
@@ -256,7 +274,7 @@ func decodeDeleteFriendRequest(ctx context.Context, r *http.Request) (interface{
 	return req, nil
 }
 
-func decodeReadPublicInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeReadTripPublicInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID, ok := vars[URLPathVarUserID]
 	if !ok {
@@ -272,7 +290,7 @@ func decodeReadPublicInfoRequest(_ context.Context, r *http.Request) (interface{
 	}, nil
 }
 
-func decodeListPublicInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeListTripPublicInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID, ok := vars[URLPathVarUserID]
 	if !ok {

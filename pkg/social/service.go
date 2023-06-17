@@ -40,8 +40,9 @@ type Service interface {
 	DeleteFriend(ctx context.Context, userID, friendID string) error
 	AreTheyFriends(ctx context.Context, initiatorID, targetID string) error
 
-	ReadPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, auth.UsersMap, error)
-	ListPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error)
+	ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, UserProfile, error)
+	ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error)
+	ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error)
 }
 
 type service struct {
@@ -239,7 +240,7 @@ func (svc service) sendFriendRequestEmail(ctx context.Context, initiator, target
 	}
 }
 
-func (svc *service) ReadPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, auth.UsersMap, error) {
+func (svc *service) ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, UserProfile, error) {
 	var (
 		trip trips.Trip
 		err  error
@@ -250,27 +251,22 @@ func (svc *service) ReadPublicInfo(ctx context.Context, tripID, referrerID strin
 	} else {
 		trip, err = svc.tripSvc.Read(ctx, tripID)
 		if err != nil {
-			return trips.Trip{}, nil, err
+			return trips.Trip{}, UserProfile{}, err
 		}
 	}
+
 	ff := auth.ListFilter{IDs: []string{referrerID}}
 	users, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
-		return trip, nil, err
-	}
-	usersMap := auth.UsersMap{}
-	for _, usr := range users {
-		if usr.ID == referrerID {
-			usersMap[usr.ID] = usr
-			break
-		}
+		return trip, UserProfile{}, err
 	}
 
+	profile := UserProfileFromUser(users[0])
 	pubInfo := MakeTripPublicInfo(&trip)
-	return pubInfo, usersMap, nil
+	return pubInfo, profile, nil
 }
 
-func (svc *service) ListPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error) {
+func (svc *service) ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error) {
 	tripslist, err := svc.tripSvc.List(ctx, ff)
 	if err != nil {
 		return nil, err
@@ -282,4 +278,36 @@ func (svc *service) ListPublicInfo(ctx context.Context, ff trips.ListFilter) (tr
 	}
 
 	return publicInfo, nil
+}
+
+func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error) {
+	followings, err := svc.ListFollowing(ctx, initiatorID)
+	if err != nil {
+		return nil, nil, err
+	}
+	targetIDs := followings.GetTargetIDs()
+	if len(targetIDs) == 0 {
+		return nil, nil, err
+	}
+	ff := auth.ListFilter{IDs: targetIDs}
+	targets, err := svc.authSvc.List(ctx, ff)
+	if err != nil {
+		return nil, nil, err
+	}
+	profileMap := UserProfileMap{}
+	for _, target := range targets {
+		profileMap[target.ID] = UserProfileFromUser(target)
+	}
+
+	tripslist, err := svc.tripSvc.List(ctx, trips.ListFilter{UserIDs: targetIDs})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	publicInfo := trips.TripsList{}
+	for _, t := range tripslist {
+		publicInfo = append(publicInfo, MakeTripPublicInfoWithUserProfiles(&t, profileMap))
+	}
+
+	return publicInfo, profileMap, nil
 }

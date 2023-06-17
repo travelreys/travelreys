@@ -24,16 +24,28 @@ var (
 )
 
 type ListFilter struct {
-	UserID *string
+	UserID  *string
+	UserIDs []string
 }
 
 func (f ListFilter) toBSON() bson.M {
 	bsonM := bson.M{}
+
 	if f.UserID != nil {
 		bsonM["$or"] = bson.A{
 			bson.M{"creator.id": *f.UserID},
 			bson.M{fmt.Sprintf("membersId.%s", *f.UserID): *f.UserID},
 		}
+	}
+
+	if f.UserIDs != nil && len(f.UserIDs) > 0 {
+		bsonA := bson.A{
+			bson.M{"creator.id": bson.M{"$in": f.UserIDs}},
+		}
+		for _, userID := range f.UserIDs {
+			bsonA = append(bsonA, bson.M{fmt.Sprintf("membersId.%s", userID): userID})
+		}
+		bsonM["$or"] = bsonA
 	}
 	return bsonM
 }

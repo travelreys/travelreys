@@ -21,8 +21,11 @@ func UserProfileFromUser(user auth.User) UserProfile {
 		ID:         user.ID,
 		Username:   user.Username,
 		ProfileImg: user.GetProfileImgURL(),
+		Labels:     common.Labels{},
 	}
 }
+
+type UserProfileMap map[string]UserProfile
 
 type FriendRequest struct {
 	ID          string `json:"id" bson:"id"`
@@ -89,11 +92,6 @@ func (l FriendsList) GetInitiatorIDs() []string {
 	return ids
 }
 
-type Statistic struct {
-	ID         string `json:"id"`
-	NumFriends uint64 `json:"numFriends"`
-}
-
 func MakeTripPublicInfo(trip *trips.Trip) trips.Trip {
 	newTrip := trips.NewTrip(trip.Creator, trip.Name)
 	newTrip.ID = trip.ID
@@ -105,6 +103,20 @@ func MakeTripPublicInfo(trip *trips.Trip) trips.Trip {
 	sortedItinKey := trips.GetSortedItineraryKeys(trip)
 	for idx, key := range sortedItinKey {
 		newTrip.Itineraries[fmt.Sprintf("%d", idx)] = trip.Itineraries[key]
+	}
+	return newTrip
+}
+
+func MakeTripPublicInfoWithUserProfiles(trip *trips.Trip, profiles UserProfileMap) trips.Trip {
+	newTrip := MakeTripPublicInfo(trip)
+
+	if _, ok := profiles[trip.Creator.ID]; ok {
+		newTrip.Members[trip.Creator.ID] = trips.Member{}
+	}
+	for key := range trip.Members {
+		if _, ok := profiles[key]; ok {
+			newTrip.Members[key] = trips.Member{}
+		}
 	}
 	return newTrip
 }
