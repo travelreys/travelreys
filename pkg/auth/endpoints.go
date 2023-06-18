@@ -180,6 +180,7 @@ type UploadAvatarPresignedURLRequest struct {
 
 type UploadAvatarPresignedURLResponse struct {
 	PresignedURL string `json:"presignedURL"`
+	SuffixToken  string `json:"suffixToken"`
 	Err          error  `json:"error,omitempty"`
 }
 
@@ -193,9 +194,10 @@ func NewUploadAvatarPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return UploadAvatarPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		presignedURL, err := svc.UploadAvatarPresignedURL(ctx, req.ID)
+		suffixToken, presignedURL, err := svc.UploadAvatarPresignedURL(ctx, req.ID)
 		return UploadAvatarPresignedURLResponse{
 			PresignedURL: presignedURL,
+			SuffixToken:  suffixToken,
 			Err:          err,
 		}, nil
 	}

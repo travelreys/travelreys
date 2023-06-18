@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"github.com/lucasepe/codename"
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/email"
 	"github.com/travelreys/travelreys/pkg/storage"
@@ -47,7 +49,7 @@ type Service interface {
 	Update(context.Context, string, UpdateFilter) error
 	Delete(context.Context, string) error
 
-	UploadAvatarPresignedURL(context.Context, string) (string, error)
+	UploadAvatarPresignedURL(context.Context, string) (string, string, error)
 }
 
 type service struct {
@@ -211,7 +213,20 @@ func (svc service) Read(ctx context.Context, ID string) (User, error) {
 }
 
 func (svc service) Update(ctx context.Context, ID string, ff UpdateFilter) error {
-	return svc.store.Update(ctx, ID, ff)
+	origUser, err := svc.store.Read(ctx, ReadFilter{ID: ID})
+	if err != nil {
+		return err
+	}
+	if err := svc.store.Update(ctx, ID, ff); err != nil {
+		return err
+	}
+
+	if ff.Labels != nil &&
+		(*ff.Labels)[LabelAvatarImage] != origUser.GetAvatarImgURL() &&
+		origUser.GetAvatarImgURL() != "" {
+		svc.storageSvc.Remove(ctx, origUser.MakeUserAvatarObject())
+	}
+	return nil
 }
 
 func (svc service) List(ctx context.Context, ff ListFilter) (UsersList, error) {
@@ -228,13 +243,16 @@ func (svc service) Delete(ctx context.Context, ID string) error {
 	return svc.store.Update(ctx, ID, ff)
 }
 
-func (svc service) UploadAvatarPresignedURL(ctx context.Context, ID string) (string, error) {
-	return svc.storageSvc.PutPresignedURL(
+func (svc service) UploadAvatarPresignedURL(ctx context.Context, ID string) (string, string, error) {
+	rng, _ := codename.DefaultRNG()
+	suffixToken := common.RandomToken(rng, 8)
+	presignedURL, err := svc.storageSvc.PutPresignedURL(
 		ctx,
 		avatarBucket,
-		filepath.Join(avatarFilePrefix, ID),
+		filepath.Join(avatarFilePrefix, fmt.Sprintf("%s-%s", ID, suffixToken)),
 		ID,
 	)
+	return suffixToken, presignedURL, err
 }
 
 func (svc service) issueJwtToken(usr User) (string, error) {

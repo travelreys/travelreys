@@ -2,10 +2,13 @@ package auth
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/lucasepe/codename"
+	"github.com/travelreys/travelreys/pkg/storage"
 )
 
 const (
@@ -45,6 +48,20 @@ type User struct {
 	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
+func (user User) MakeUserAvatarObject() storage.Object {
+	avatarImgURL := user.GetAvatarImgURL()
+	tkns := strings.Split(avatarImgURL, "/")
+
+	return storage.Object{
+		Bucket: avatarBucket,
+		Path:   filepath.Join(avatarFilePrefix, tkns[len(tkns)-1]),
+	}
+}
+
+func (user User) GetAvatarImgURL() string {
+	return user.Labels[LabelAvatarImage]
+}
+
 func (user User) GetProfileImgURL() string {
 	if user.Labels[LabelAvatarImage] != "" {
 		return user.Labels[LabelAvatarImage]
@@ -59,11 +76,7 @@ type UsersList []User
 type UsersMap map[string]User
 
 func RandomUsernameGenerator() string {
-	rng, err := codename.DefaultRNG()
-	if err != nil {
-		panic(err)
-	}
-
+	rng, _ := codename.DefaultRNG()
 	return codename.Generate(rng, 8)
 }
 
