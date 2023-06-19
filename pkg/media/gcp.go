@@ -83,18 +83,18 @@ func (gcp gcpProvider) PresignedURL(ctx context.Context, url string) (string, er
 		sep = "&"
 	}
 
-	now := time.Now()
-	expires := time.Date(
-		now.Year(),
-		now.Month(),
-		now.Day(),
-		(now.Hour()+2)%24,
-		0, 0, 0,
-		now.Location(),
-	)
+	// now := time.Now()
+	// expires := time.Date(
+	// 	now.Year(),
+	// 	now.Month(),
+	// 	now.Day(),
+	// 	(now.Hour()+2)%24,
+	// 	0, 0, 0,
+	// 	now.Location(),
+	// )
 
 	url += sep
-	url += fmt.Sprintf("Expires=%d", expires.Unix())
+	url += fmt.Sprintf("Expires=%d", time.Now().Add(defaultPresignedURLDuration).Unix())
 	url += fmt.Sprintf("&KeyName=%s", gcp.keyName)
 
 	mac := hmac.New(sha1.New, gcp.keyData)
@@ -110,18 +110,8 @@ func (gcp gcpProvider) PresignedOptURL(ctx context.Context, url string) (string,
 		sep = "&"
 	}
 
-	now := time.Now()
-	expires := time.Date(
-		now.Year(),
-		now.Month(),
-		now.Day(),
-		(now.Hour()+2)%24,
-		0, 0, 0,
-		now.Location(),
-	)
-
 	url += sep
-	url += fmt.Sprintf("Expires=%d", expires.Unix())
+	url += fmt.Sprintf("Expires=%d", time.Now().Add(defaultPresignedURLDuration).Unix())
 	url += fmt.Sprintf("&KeyName=%s", gcp.optKeyName)
 
 	mac := hmac.New(sha1.New, gcp.optKeyData)
