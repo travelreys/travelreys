@@ -26,7 +26,7 @@ func (m *SecureHeadersMiddleware) Handler(next http.Handler) http.Handler {
 			// CORS
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, sentry-trace, baggage")
+			w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Encoding, Authorization, sentry-trace, baggage")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}
 

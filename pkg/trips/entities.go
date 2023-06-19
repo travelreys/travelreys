@@ -162,6 +162,8 @@ type Member struct {
 	ID     string            `json:"id" bson:"id"`
 	Role   string            `json:"role" bson:"role"`
 	Labels map[string]string `json:"labels" bson:"labels"`
+
+	User auth.User `json:"user" bson:"-"`
 }
 
 type MembersList []Member
