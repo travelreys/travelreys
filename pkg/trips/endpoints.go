@@ -134,6 +134,7 @@ func NewReadOGPEndpoint(svc Service) endpoint.Endpoint {
 
 type ListRequest struct {
 	ListFilter
+	WithMembers bool `json:"withMembers"`
 }
 type ListResponse struct {
 	Trips TripsList `json:"trips"`
@@ -144,11 +145,27 @@ func (r ListResponse) Error() error {
 	return r.Err
 }
 
+type ListWithMembersResponse struct {
+	Trips   TripsList     `json:"trips"`
+	Members auth.UsersMap `json:"members"`
+	Err     error         `json:"error,omitempty"`
+}
+
+func (r ListWithMembersResponse) Error() error {
+	return r.Err
+}
+
 func NewListEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListRequest)
 		if !ok {
 			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		if req.WithMembers {
+			trips, members, err := svc.ListWithMembers(ctx, req.ListFilter)
+			return ListWithMembersResponse{
+				Trips: trips, Members: members, Err: err,
+			}, nil
 		}
 		trips, err := svc.List(ctx, req.ListFilter)
 		return ListResponse{Trips: trips, Err: err}, nil
