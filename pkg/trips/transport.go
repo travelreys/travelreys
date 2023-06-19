@@ -170,7 +170,11 @@ func decodeListRequest(ctx context.Context, r *http.Request) (interface{}, error
 		return nil, ErrRBAC
 	}
 	ff := ListFilter{UserID: &ci.UserID}
-	return ListRequest{ff}, nil
+	req := ListRequest{ListFilter: ff}
+	if r.URL.Query().Get("withMembers") == "true" {
+		req.WithMembers = true
+	}
+	return req, nil
 }
 
 func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {

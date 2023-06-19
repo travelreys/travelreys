@@ -97,6 +97,14 @@ func (mw rbacMiddleware) List(ctx context.Context, ff ListFilter) (TripsList, er
 	return mw.next.List(ctx, ff)
 }
 
+func (mw rbacMiddleware) ListWithMembers(ctx context.Context, ff ListFilter) (TripsList, auth.UsersMap, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, nil, ErrRBAC
+	}
+	return mw.next.ListWithMembers(ctx, ff)
+}
+
 func (mw rbacMiddleware) Delete(ctx context.Context, ID string) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {

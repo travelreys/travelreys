@@ -28,6 +28,7 @@ type Service interface {
 	ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
 	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
+	ListWithMembers(ctx context.Context, ff ListFilter) (TripsList, auth.UsersMap, error)
 	Delete(ctx context.Context, ID string) error
 
 	// Attachments
@@ -127,6 +128,8 @@ func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.
 	for _, usr := range users {
 		usersMap[usr.ID] = usr
 	}
+	usersMap.Scrub()
+
 	svc.augmentMediaItemURLs(ctx, &trip)
 	return trip, usersMap, nil
 }
@@ -166,6 +169,31 @@ func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) 
 		svc.augmentCoverImageURL(ctx, &trips[i])
 	}
 	return trips, nil
+}
+
+func (svc *service) ListWithMembers(ctx context.Context, ff ListFilter) (TripsList, auth.UsersMap, error) {
+	trips, err := svc.List(ctx, ff)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	usersID := []string{}
+	for _, t := range trips {
+		usersID = append(usersID, t.GetAllMembersID()...)
+	}
+
+	authff := auth.ListFilter{IDs: usersID}
+	users, err := svc.authSvc.List(ctx, authff)
+	if err != nil {
+		return nil, nil, err
+	}
+	usersMap := auth.UsersMap{}
+	for _, usr := range users {
+		usersMap[usr.ID] = usr
+	}
+	usersMap.Scrub()
+
+	return trips, usersMap, nil
 }
 
 func (svc *service) Delete(ctx context.Context, ID string) error {

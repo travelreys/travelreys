@@ -75,6 +75,14 @@ func (user User) GetProfileImgURL() string {
 type UsersList []User
 type UsersMap map[string]User
 
+func (m UsersMap) Scrub() {
+	for k := range m {
+		copy := m[k]
+		copy.Email = ""
+		m[k] = copy
+	}
+}
+
 func RandomUsernameGenerator() string {
 	rng, _ := codename.DefaultRNG()
 	return codename.Generate(rng, 8)
