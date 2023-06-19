@@ -2,6 +2,7 @@ package social
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/auth"
@@ -97,12 +98,26 @@ func MakeTripPublicInfo(trip *trips.Trip) trips.Trip {
 	newTrip.ID = trip.ID
 	newTrip.CoverImage = trip.CoverImage
 	newTrip.Lodgings = trip.Lodgings
+	for key, lod := range newTrip.Lodgings {
+		lod.CheckinTime = time.Time{}
+		lod.CheckoutTime = time.Time{}
+		newTrip.Lodgings[key] = lod
+	}
 	newTrip.MediaItems = trip.MediaItems
 
 	newTrip.Itineraries = map[string]trips.Itinerary{}
 	sortedItinKey := trips.GetSortedItineraryKeys(trip)
 	for idx, key := range sortedItinKey {
-		newTrip.Itineraries[fmt.Sprintf("%d", idx)] = trip.Itineraries[key]
+		itin := trip.Itineraries[key]
+		itin.Date = time.Time{}
+		newActivities := map[string]trips.Activity{}
+		for aKey, act := range trip.Itineraries[key].Activities {
+			act.StartTime = time.Time{}
+			act.EndTime = time.Time{}
+			newActivities[aKey] = act
+		}
+		itin.Activities = newActivities
+		newTrip.Itineraries[fmt.Sprintf("%d", idx)] = itin
 	}
 	return newTrip
 }
