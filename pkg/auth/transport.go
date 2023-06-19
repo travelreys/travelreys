@@ -194,22 +194,6 @@ func encodeDeleteResponse(ctx context.Context, w http.ResponseWriter, response i
 		Expires:  time.Now(),
 	}
 	http.SetCookie(w, accessCookie)
-	mediaCookie := &http.Cookie{
-		Name:     mediaValidCookie,
-		Value:    "",
-		HttpOnly: true,
-		Path:     "/",
-		Expires:  time.Now(),
-	}
-	http.SetCookie(w, mediaCookie)
-	cdnCookie := &http.Cookie{
-		Name:     cdnCookie,
-		Value:    "",
-		HttpOnly: true,
-		Path:     "/",
-		Expires:  time.Now(),
-	}
-	http.SetCookie(w, cdnCookie)
 	return nil
 }
 

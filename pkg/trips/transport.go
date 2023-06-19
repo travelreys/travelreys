@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -41,7 +42,12 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	return json.NewEncoder(w).Encode(response)
+	w.Header().Set("Content-Encoding", "gzip")
+
+	gw := gzip.NewWriter(w)
+	defer gw.Close()
+
+	return json.NewEncoder(gw).Encode(response)
 }
 
 func MakeHandler(svc Service) http.Handler {
