@@ -26,7 +26,7 @@ type Service interface {
 	PlacesAutocomplete(context.Context, string, string, string, string) (AutocompletePredictionList, error)
 	PlaceDetails(context.Context, string, []string, string, string) (Place, error)
 	PlaceAtmosphere(ctx context.Context, placeID string, fields []string, sessiontoken, lang string) (PlaceAtmosphere, error)
-	Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error)
+	Directions(ctx context.Context, originPlaceID, destPlaceID string, modes []string) (RouteList, error)
 	OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error)
 }
 
@@ -135,28 +135,37 @@ func (svc *service) PlaceAtmosphere(ctx context.Context, placeID string, fields 
 	return PlaceAtmosphere{result}, err
 }
 
-func (svc *service) Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error) {
-	req := &maps.DirectionsRequest{
-		Origin:      fmt.Sprintf("place_id:%s", originPlaceID),
-		Destination: fmt.Sprintf("place_id:%s", destPlaceID),
-	}
-
-	groutes, _, err := svc.c.Directions(ctx, req)
-	if err != nil {
-		svc.logger.Error("Directions",
-			zap.String("originPlaceID", originPlaceID),
-			zap.String("destPlaceID", destPlaceID),
-			zap.String("mode", mode),
-			zap.Error(err),
-		)
-		return RouteList{}, err
-	}
-
+func (svc *service) Directions(
+	ctx context.Context,
+	originPlaceID,
+	destPlaceID string,
+	modes []string,
+) (RouteList, error) {
 	routes := RouteList{}
-	for _, r := range groutes {
-		routes = append(routes, RouteFromRouteResult(r, mode))
+	for _, mode := range modes {
+		req := &maps.DirectionsRequest{
+			Origin:      fmt.Sprintf("place_id:%s", originPlaceID),
+			Destination: fmt.Sprintf("place_id:%s", destPlaceID),
+			Mode:        maps.Mode(mode),
+		}
+
+		groutes, _, err := svc.c.Directions(ctx, req)
+		if err != nil {
+			svc.logger.Error("Directions",
+				zap.String("originPlaceID", originPlaceID),
+				zap.String("destPlaceID", destPlaceID),
+				zap.String("modes", strings.Join(modes, ",")),
+				zap.Error(err),
+			)
+			return RouteList{}, err
+		}
+		if len(groutes) <= 0 {
+			continue
+		}
+		route, _ := GetShortestDurationGMapsRoute(groutes)
+		routes = append(routes, RouteFromRouteResult(route, mode))
 	}
-	return routes, err
+	return routes, nil
 }
 
 func (svc *service) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error) {

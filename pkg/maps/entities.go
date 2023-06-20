@@ -1,6 +1,7 @@
 package maps
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +15,20 @@ const (
 	LabelCountry        = "country"
 	LabelCity           = "city"
 	LabelState          = "state"
+
+	DirectionModeDriving = "driving"
+	DirectionModeWalking = "walking"
+	DirectionModeTransit = "transit"
+	DefaultDirectionMode = DirectionModeDriving
+)
+
+var (
+	ErrRouteListEmpty     = errors.New("maps.entities.RouteListEmpty")
+	DirectionModesAllList = []string{
+		DirectionModeDriving,
+		DirectionModeTransit,
+		DirectionModeWalking,
+	}
 )
 
 type LatLng struct {
@@ -111,7 +126,7 @@ func RouteFromRouteResult(result maps.Route, mode string) Route {
 			Points: result.OverviewPolyline.Points,
 		},
 		Distance:      result.Legs[0].Distance.Meters,
-		Duration:      result.Legs[0].Duration,
+		Duration:      result.Legs[0].Duration, // seconds
 		StartLocation: LatLng(result.Legs[0].StartLocation),
 		EndLocation:   LatLng(result.Legs[0].EndLocation),
 		TravelMode:    mode,
@@ -120,3 +135,57 @@ func RouteFromRouteResult(result maps.Route, mode string) Route {
 }
 
 type RouteList []Route
+
+func (l RouteList) GetMostCommonSenseRoute() (Route, error) {
+	if len(l) <= 0 {
+		return Route{}, ErrRouteListEmpty
+	}
+
+	walkingIdx := -1
+	for idx, r := range l {
+		if r.TravelMode == DirectionModeWalking {
+			walkingIdx = idx
+			break
+		}
+	}
+
+	// Driving or Transit
+	shortest := l[0].Duration
+	shortestIdx := 0
+	for idx, r := range l {
+		if idx == walkingIdx {
+			continue
+		}
+		if r.Duration < shortest {
+			shortest = r.Duration
+			shortestIdx = idx
+		}
+	}
+
+	// Walking not available, return shorter of transit or driving
+	if walkingIdx <= 0 {
+		return l[shortestIdx], nil
+	}
+
+	walkingRoute := l[walkingIdx]
+	if walkingRoute.Duration < 20*time.Minute {
+		return walkingRoute, nil
+	}
+	return l[shortestIdx], nil
+
+}
+
+func GetShortestDurationGMapsRoute(routes []maps.Route) (maps.Route, error) {
+	if len(routes) <= 0 {
+		return maps.Route{}, ErrRouteListEmpty
+	}
+	shortest := routes[0].Legs[0].Duration
+	shortestIdx := 0
+	for idx, r := range routes {
+		if r.Legs[0].Duration < shortest {
+			shortest = r.Legs[0].Duration
+			shortestIdx = idx
+		}
+	}
+	return routes[shortestIdx], nil
+}

@@ -327,11 +327,17 @@ func (crd *Coordinator) CalculateRoute(ctx context.Context, dtKey string, msg *M
 		if !(orig.HasPlace() && dest.HasPlace()) {
 			continue
 		}
-		routes, err := crd.mapsSvc.Directions(ctx, orig.Place.PlaceID(), dest.Place.PlaceID(), "")
+
+		routes, err := crd.mapsSvc.Directions(
+			ctx, orig.Place.PlaceID(), dest.Place.PlaceID(), maps.DirectionModesAllList,
+		)
 		if err != nil {
 			continue
 		}
-
+		if len(routes) > 0 {
+			shortestRoute, _ := routes.GetMostCommonSenseRoute()
+			routes = maps.RouteList{shortestRoute}
+		}
 		toSave.Itineraries[dtKey].Routes[pair] = routes
 		jop := jp.MakeAddOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
 		msg.Data.UpdateTrip.Ops = append(

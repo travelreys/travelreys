@@ -45,12 +45,12 @@ func (mw rbacMiddleware) PlaceAtmosphere(ctx context.Context, placeID string, fi
 	return mw.next.PlaceAtmosphere(ctx, placeID, fields, sessiontoken, lang)
 }
 
-func (mw rbacMiddleware) Directions(ctx context.Context, originPlaceID, destPlaceID, mode string) (RouteList, error) {
+func (mw rbacMiddleware) Directions(ctx context.Context, originPlaceID, destPlaceID string, modes []string) (RouteList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return RouteList{}, ErrRBAC
 	}
-	return mw.next.Directions(ctx, originPlaceID, destPlaceID, mode)
+	return mw.next.Directions(ctx, originPlaceID, destPlaceID, modes)
 }
 
 func (mw rbacMiddleware) OptimizeRoute(ctx context.Context, originPlaceID, destPlaceID string, waypointsPlaceID []string) (RouteList, []int, error) {
