@@ -92,3 +92,31 @@ func NewPlaceAtmosphereEndpoint(svc Service) endpoint.Endpoint {
 		return PlaceAtmosphereResponse{Place: place, Err: err}, nil
 	}
 }
+
+type DirectionsRequest struct {
+	OriginPlaceID string   `json:"originPlaceID"`
+	DestPlaceID   string   `json:"destPlaceID"`
+	Modes         []string `json:"modes"`
+}
+
+type DirectionsResponse struct {
+	RouteList RouteList `json:"routeList"`
+	Err       error     `json:"error,omitempty"`
+}
+
+func (r DirectionsResponse) Error() error {
+	return r.Err
+}
+
+func NewDirectionsEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(DirectionsRequest)
+		if !ok {
+			return DirectionsResponse{
+				Err: common.ErrorEndpointReqMismatch,
+			}, nil
+		}
+		routeList, err := svc.Directions(ctx, req.OriginPlaceID, req.DestPlaceID, req.Modes)
+		return DirectionsResponse{RouteList: routeList, Err: err}, nil
+	}
+}
