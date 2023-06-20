@@ -51,10 +51,12 @@ func MakeHandler(svc Service) http.Handler {
 	placeAutocompleteHandler := kithttp.NewServer(NewPlacesAutocompleteEndpoint(svc), decodePlaceAutocompleteRequest, encodeResponse, opts...)
 	placeDetailsHandler := kithttp.NewServer(NewPlaceDetailsEndpoint(svc), decodePlaceDetailsRequest, encodeResponse, opts...)
 	placeAtmosphereHandler := kithttp.NewServer(NewPlaceAtmosphereEndpoint(svc), decodePlaceAtmosphereRequest, encodeResponse, opts...)
+	directionsHandler := kithttp.NewServer(NewDirectionsEndpoint(svc), decodeDirectionRequest, encodeResponse, opts...)
 
 	r.Handle("/api/v1/maps/place/autocomplete", placeAutocompleteHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/maps/place/details", placeDetailsHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/maps/place/atmosphere", placeAtmosphereHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/maps/place/directions", directionsHandler).Methods(http.MethodGet)
 
 	return r
 }
@@ -86,5 +88,14 @@ func decodePlaceAtmosphereRequest(_ context.Context, r *http.Request) (interface
 		Sessiontoken: q.Get("sessiontoken"),
 		Fields:       strings.Split(q.Get("fields"), ","),
 		Lang:         q.Get("language"),
+	}, nil
+}
+
+func decodeDirectionRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	q := r.URL.Query()
+	return DirectionsRequest{
+		OriginPlaceID: q.Get("originPlaceID"),
+		DestPlaceID:   q.Get("destPlaceID"),
+		Modes:         strings.Split(q.Get("modes"), ","),
 	}, nil
 }
