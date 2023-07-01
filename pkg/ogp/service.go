@@ -26,14 +26,23 @@ func (svc service) Fetch(ctx context.Context, queryUrl string) (Opengraph, error
 	intent := opengraph.Intent{
 		Context:     ctx,
 		HTTPClient:  &http.Client{Timeout: httpTimeout},
-		Strict:      true,
+		Strict:      false,
 		TrustedTags: []string{"meta", "title"},
 	}
 
-	graph, err := opengraph.Fetch(queryUrl, intent)
+	c := &http.Client{Timeout: httpTimeout}
+	req, _ := http.NewRequest(http.MethodGet, queryUrl, nil)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+
+	resp, err := c.Do(req)
 	if err != nil {
 		return Opengraph{}, err
 	}
 
-	return OpengraphFromRawGraph(graph), nil
+	ogp := &opengraph.OpenGraph{Intent: intent}
+	if err := ogp.Parse(resp.Body); err != nil {
+		return Opengraph{}, err
+	}
+
+	return OpengraphFromRawGraph(ogp), nil
 }
