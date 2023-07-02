@@ -144,8 +144,8 @@ func NewAreTheyFriendsResponseEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return ListFriendRequestsResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		err := svc.AreTheyFriends(ctx, req.InitiatorID, req.TargetID)
-		return AreTheyFriendsResponse{OK: err == nil, Err: err}, nil
+		ok, err := svc.AreTheyFriends(ctx, req.InitiatorID, req.TargetID)
+		return AreTheyFriendsResponse{OK: ok, Err: err}, nil
 	}
 }
 

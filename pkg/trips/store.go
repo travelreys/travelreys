@@ -24,30 +24,37 @@ var (
 )
 
 type ListFilter struct {
-	UserID  *string
-	UserIDs []string
+	UserID     *string
+	UserIDs    []string
+	OnlyPublic bool
 }
 
 func (f ListFilter) toBSON() bson.M {
-	bsonM := bson.M{}
+	bsonAnd := bson.A{}
 
 	if f.UserID != nil {
-		bsonM["$or"] = bson.A{
+		bsonUserOr := bson.A{
 			bson.M{"creator.id": *f.UserID},
 			bson.M{fmt.Sprintf("membersId.%s", *f.UserID): *f.UserID},
 		}
+		bsonAnd = append(bsonAnd, bson.M{"$or": bsonUserOr})
 	}
 
 	if f.UserIDs != nil && len(f.UserIDs) > 0 {
-		bsonA := bson.A{
+		bsonUserOr := bson.A{
 			bson.M{"creator.id": bson.M{"$in": f.UserIDs}},
 		}
 		for _, userID := range f.UserIDs {
-			bsonA = append(bsonA, bson.M{fmt.Sprintf("membersId.%s", userID): userID})
+			bsonUserOr = append(bsonUserOr, bson.M{fmt.Sprintf("membersId.%s", userID): userID})
 		}
-		bsonM["$or"] = bsonA
+		bsonAnd = append(bsonAnd, bson.M{"$or": bsonUserOr})
 	}
-	return bsonM
+
+	if f.OnlyPublic {
+		bsonAnd = append(bsonAnd, bson.M{"labels." + LabelSharingAccess: SharingAccessViewer})
+	}
+
+	return bson.M{"$and": bsonAnd}
 }
 
 type Store interface {
