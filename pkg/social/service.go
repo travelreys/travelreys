@@ -38,7 +38,7 @@ type Service interface {
 	ListFollowers(ctx context.Context, userID string) (FriendsList, error)
 	ListFollowing(ctx context.Context, userID string) (FriendsList, error)
 	DeleteFriend(ctx context.Context, userID, friendID string) error
-	AreTheyFriends(ctx context.Context, initiatorID, targetID string) error
+	AreTheyFriends(ctx context.Context, initiatorID, targetID string) (bool, error)
 
 	ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, UserProfile, error)
 	ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error)
@@ -96,7 +96,11 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 		target = users[0]
 	}
 
-	if err := svc.AreTheyFriends(ctx, initiatorID, targetID); err == nil {
+	ok, err := svc.AreTheyFriends(ctx, initiatorID, targetID)
+	if err != nil {
+		return err
+	}
+	if ok {
 		return ErrAlreadyFriends
 	}
 
@@ -106,7 +110,6 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 	}
 	go svc.sendFriendRequestEmail(ctx, initiator, target)
 	return nil
-
 }
 
 func (svc service) GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error) {
@@ -202,9 +205,15 @@ func (svc service) DeleteFriend(ctx context.Context, userID, bindingKey string) 
 	return svc.store.DeleteFriend(ctx, bindingKey)
 }
 
-func (svc service) AreTheyFriends(ctx context.Context, initiatorID, targetID string) error {
+func (svc service) AreTheyFriends(ctx context.Context, initiatorID, targetID string) (bool, error) {
 	_, err := svc.store.GetFriend(ctx, fmt.Sprintf("%s|%s", initiatorID, targetID))
-	return err
+	if err == ErrFriendNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (svc service) sendFriendRequestEmail(ctx context.Context, initiator, target auth.User) {

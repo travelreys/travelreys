@@ -18,9 +18,6 @@ import (
 )
 
 const (
-	JSONPathLabelUiColor = "labels/ui|color"
-	JSONPathLabelUiIcon  = "labels/ui|icon"
-
 	LabelCreatedBy                = "createdBy"
 	LabelDelimeter                = "|"
 	LabelFractionalIndex          = "fIndex"
@@ -34,8 +31,7 @@ const (
 )
 
 const (
-	SharingAccessViewer  = "view"
-	SharingAccessComment = "comment"
+	SharingAccessViewer = "view"
 )
 
 type Trip struct {
@@ -125,8 +121,11 @@ func (trip Trip) OGP(creator auth.User, coverImageURL string) TripOGP {
 }
 
 func (trip Trip) IsSharingEnabled() bool {
-	_, ok := trip.Labels[LabelSharingAccess]
-	return ok
+	value, ok := trip.Labels[LabelSharingAccess]
+	if !ok {
+		return false
+	}
+	return value == SharingAccessViewer
 }
 
 const (

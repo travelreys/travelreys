@@ -119,6 +119,9 @@ func MakeTripPublicInfo(trip *trips.Trip) trips.Trip {
 		itin.Activities = newActivities
 		newTrip.Itineraries[fmt.Sprintf("%d", idx)] = itin
 	}
+	if _, ok := trip.Labels[trips.LabelSharingAccess]; ok {
+		newTrip.Labels[trips.LabelSharingAccess] = trip.Labels[trips.LabelSharingAccess]
+	}
 	return newTrip
 }
 

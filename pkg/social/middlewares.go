@@ -129,13 +129,13 @@ func (mw rbacMiddleware) DeleteFriend(ctx context.Context, userID, bindingKey st
 	return mw.next.DeleteFriend(ctx, userID, bindingKey)
 }
 
-func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, initiatorID, targetID string) error {
+func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, initiatorID, targetID string) (bool, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return ErrRBAC
+		return false, ErrRBAC
 	}
 	if ci.UserID != initiatorID && ci.UserID != targetID {
-		return ErrRBAC
+		return false, ErrRBAC
 	}
 	return mw.next.AreTheyFriends(ctx, initiatorID, targetID)
 }
@@ -169,7 +169,7 @@ func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referre
 	// Allow access if you are friend of the member of the trip
 
 	if common.StringContains(membersID, referrerID) {
-		if err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
+		if _, err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
 			return mw.next.ReadTripPublicInfo(ctxWithTripInfo, tripID, referrerID)
 		}
 	}
@@ -187,11 +187,12 @@ func (mw rbacMiddleware) ListTripPublicInfo(ctx context.Context, ff trips.ListFi
 		return mw.next.ListTripPublicInfo(ctx, ff)
 	}
 
-	if err := mw.next.AreTheyFriends(ctx, ci.UserID, *ff.UserID); err == nil {
-		return mw.next.ListTripPublicInfo(ctx, ff)
+	ok, err := mw.next.AreTheyFriends(ctx, ci.UserID, *ff.UserID)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, ErrRBAC
+	ff.OnlyPublic = !ok
+	return mw.next.ListTripPublicInfo(ctx, ff)
 }
 
 func (mw rbacMiddleware) ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error) {
