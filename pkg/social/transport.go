@@ -1,6 +1,7 @@
 package social
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -54,7 +55,13 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 		return nil
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	return json.NewEncoder(w).Encode(response)
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Encoding", "gzip")
+
+	gw := gzip.NewWriter(w)
+	defer gw.Close()
+
+	return json.NewEncoder(gw).Encode(response)
 }
 
 func MakeHandler(svc Service) http.Handler {
@@ -124,11 +131,15 @@ func MakeHandler(svc Service) http.Handler {
 	)
 
 	ListTripPublicInfo := kithttp.NewServer(
-		NewListTripPublicInfoEndpoint(svc), decodeListTripPublicInfoRequest, encodeResponse, opts...,
+		NewListTripPublicInfoEndpoint(svc),
+		decodeListTripPublicInfoRequest,
+		encodeResponse, opts...,
 	)
 
 	ReadTripPublicInfoHandler := kithttp.NewServer(
-		NewReadTripPublicInfoEndpoint(svc), decodeReadTripPublicInfoRequest, encodeResponse, opts...,
+		NewReadTripPublicInfoEndpoint(svc),
+		decodeReadTripPublicInfoRequest,
+		encodeResponse, opts...,
 	)
 
 	r.Handle("/api/v1/social/{uid}", listFollowingTripsHandler).Methods(http.MethodGet)
