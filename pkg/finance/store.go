@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	ErrRatesNotFound = errors.New("exchange rate not found")
+	ErrRatesNotFound = errors.New("finance.ErrRatesNotFound")
 )
 
 type Store interface {

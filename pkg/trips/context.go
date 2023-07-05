@@ -7,6 +7,10 @@ import (
 	"github.com/travelreys/travelreys/pkg/common"
 )
 
+var (
+	ErrNoTripInfoSet = errors.New("trips.ErrNoTripInfoSet")
+)
+
 type TripInfo struct {
 	Trip Trip
 }
@@ -18,7 +22,7 @@ func ContextWithTripInfo(ctx context.Context, trip Trip) context.Context {
 func TripInfoFromCtx(ctx context.Context) (TripInfo, error) {
 	val := ctx.Value(common.ContextKeyTripInfo)
 	if val == nil {
-		return TripInfo{}, errors.New("no tripinfo set")
+		return TripInfo{}, ErrNoTripInfoSet
 	}
 	ti, _ := val.(TripInfo)
 	return ti, nil

@@ -35,9 +35,9 @@ var (
 	avatarBucket            = os.Getenv("TRAVELREYS_PUBLIC_BUCKET")
 	welcomEmailTmplFilePath = os.Getenv("TRAVELREYS_WELCOME_EMAIL_PATH")
 
-	ErrProviderGoogleError   = errors.New("auth.service.google.error")
-	ErrProviderFacebookError = errors.New("auth.service.facebook.error")
-	ErrProviderNotSupported  = errors.New("auth.service.provider.notsupported")
+	ErrProviderGoogleError   = errors.New("auth.ErrProviderGoogleError")
+	ErrProviderFacebookError = errors.New("auth.ErrProviderFacebookError")
+	ErrProviderNotSupported  = errors.New("auth.ErrProviderNotSupported")
 )
 
 type Service interface {

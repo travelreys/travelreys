@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	ErrUnexpectedStoreError = errors.New("media.store.unexpected-error")
+	ErrUnexpectedStoreError = errors.New("media.ErrUnexpectedStoreError")
 )
 
 type ListMediaFilter struct {

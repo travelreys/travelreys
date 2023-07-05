@@ -25,8 +25,8 @@ const (
 )
 
 var (
-	ErrFriendNotFound       = errors.New("social.store.friendNotFound")
-	ErrUnexpectedStoreError = errors.New("social.store.unexpected-error")
+	ErrFriendNotFound       = errors.New("social.ErrFriendNotFound")
+	ErrUnexpectedStoreError = errors.New("social.ErrUnexpectedStoreError")
 )
 
 type ListFriendRequestsFilter struct {

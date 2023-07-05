@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	ErrRBAC                  = errors.New("auth.rbac.error")
-	ErrTripSharingNotEnabled = errors.New("trip.service.tripSharingNotEnabled")
+	ErrRBAC                  = errors.New("trip.ErrRBAC")
+	ErrTripSharingNotEnabled = errors.New("trip.ErrTripSharingNotEnabled")
 )
 
 type rbacMiddleware struct {

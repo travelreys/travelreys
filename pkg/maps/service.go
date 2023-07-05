@@ -18,8 +18,8 @@ const (
 )
 
 var (
-	ErrInvalidSessionToken = errors.New("maps.service.invalidsessiontoken")
-	ErrInvalidField        = errors.New("maps.service.invalidfield")
+	ErrInvalidSessionToken = errors.New("maps.ErrInvalidSessionToken")
+	ErrInvalidField        = errors.New("maps.ErrInvalidField")
 )
 
 type Service interface {

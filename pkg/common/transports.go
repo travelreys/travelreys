@@ -8,15 +8,15 @@ import (
 )
 
 var (
-	ErrBadPath                 = errors.New("http.badpath")
-	ErrInvalidRequest          = errors.New("http.invalidrequest")
-	ErrInvalidJSONBody         = errors.New("http.invalidjson")
-	ErrMissingAuthHeader       = errors.New("jwt.missing-auth-header")
-	ErrInvalidAuthToken        = errors.New("jwt.invalid-auth-token")
-	ErrInvalidSigningMethod    = errors.New("jwt.invalid-signing-method")
-	ErrMissingJWTClaims        = errors.New("jwt.missing-claims")
-	ErrorEndpointReqMismatch   = errors.New("endpoint.invalidrequest")
-	ErrorEncodeInvalidResponse = errors.New("encode.invalidresponse")
+	ErrBadPath                 = errors.New("common.ErrBadPath")
+	ErrInvalidRequest          = errors.New("common.ErrInvalidRequest")
+	ErrInvalidJSONBody         = errors.New("common.ErrInvalidJSONBody")
+	ErrMissingAuthHeader       = errors.New("common.ErrMissingAuthHeader")
+	ErrInvalidAuthToken        = errors.New("common.ErrInvalidAuthToken")
+	ErrInvalidSigningMethod    = errors.New("common.ErrInvalidSigningMethod")
+	ErrMissingJWTClaims        = errors.New("common.ErrMissingJWTClaims")
+	ErrorEndpointReqMismatch   = errors.New("common.ErrorEndpointReqMismatch")
+	ErrorEncodeInvalidResponse = errors.New("common.ErrorEncodeInvalidResponse")
 )
 
 func EncodeErrorFactory(errToCode func(error) int) func(context.Context, error, http.ResponseWriter) {

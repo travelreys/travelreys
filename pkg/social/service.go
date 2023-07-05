@@ -21,8 +21,8 @@ const (
 )
 
 var (
-	ErrInvalidFriendRequest    = errors.New("social.svc.InvalidFriendRequest")
-	ErrAlreadyFriends          = errors.New("social.svc.AlreadyFriends")
+	ErrInvalidFriendRequest    = errors.New("social.ErrInvalidFriendRequest")
+	ErrAlreadyFriends          = errors.New("social.ErrAlreadyFriends")
 	friendReqEmailTmplFilePath = os.Getenv("TRAVELREYS_FRIEND_REQ_EMAIL_PATH")
 )
 

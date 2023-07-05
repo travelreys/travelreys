@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	attachmentBucket          = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
-	mediaBucket               = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
-	ErrDeleteAnotherTripMedia = errors.New("trip.service.deleteInvalidMedia")
+	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
+	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
+
+	ErrDeleteAnotherTripMedia = errors.New("trips.ErrDeleteAnotherTripMedia")
 )
 
 type Service interface {

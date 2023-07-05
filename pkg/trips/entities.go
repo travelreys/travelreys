@@ -28,10 +28,11 @@ const (
 
 	MediaItemKeyTrip           = "trip"
 	MediaItemKeyActivityPrefix = "activity"
+	SharingAccessViewer        = "view"
 )
 
-const (
-	SharingAccessViewer = "view"
+var (
+	ErrInvalidTripImageKey = errors.New("trips.ErrInvalidTripImageKey")
 )
 
 type Trip struct {
@@ -144,7 +145,7 @@ type CoverImage struct {
 func (ci CoverImage) SplitTripImageKey() (string, string, error) {
 	tkns := strings.Split(ci.TripImage, "@")
 	if len(tkns) != 2 {
-		return "", "", errors.New("invalid trip image key")
+		return "", "", ErrInvalidTripImageKey
 	}
 	return tkns[0], tkns[1], nil
 }

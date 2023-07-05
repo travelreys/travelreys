@@ -26,9 +26,9 @@ const (
 )
 
 var (
-	ErrUserNotFound         = errors.New("auth.store.user-not-found")
-	ErrDuplicateUsername    = errors.New("auth.store.duplicateUsername")
-	ErrUnexpectedStoreError = errors.New("auth.store.unexpected-error")
+	ErrUserNotFound         = errors.New("auth.ErrUserNotFound")
+	ErrDuplicateUsername    = errors.New("auth.ErrDuplicateUsername")
+	ErrUnexpectedStoreError = errors.New("auth.ErrUnexpectedStoreError")
 )
 
 type ReadFilter struct {

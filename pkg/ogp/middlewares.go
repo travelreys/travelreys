@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	ErrRBAC = errors.New("auth.rbac.error")
+	ErrRBAC = errors.New("ogp.ErrRBAC")
 )
 
 type rbacMiddleware struct {

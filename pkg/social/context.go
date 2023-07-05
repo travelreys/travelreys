@@ -7,6 +7,10 @@ import (
 	"github.com/travelreys/travelreys/pkg/common"
 )
 
+var (
+	ErrNoInfoSet = errors.New("social.ErrNoInfoSet")
+)
+
 type FriendRequestInfo struct {
 	Req FriendRequest
 }
@@ -18,7 +22,7 @@ func ContextWithFriendRequestInfo(ctx context.Context, req FriendRequest) contex
 func FriendRequestInfoFromCtx(ctx context.Context) (FriendRequestInfo, error) {
 	val := ctx.Value(common.ContextKeyFriendRequestInfo)
 	if val == nil {
-		return FriendRequestInfo{}, errors.New("no info set")
+		return FriendRequestInfo{}, ErrNoInfoSet
 	}
 	fi, _ := val.(FriendRequestInfo)
 	return fi, nil

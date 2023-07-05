@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	ErrProviderUnsplashError = errors.New("images.webapi.unsplash.error")
+	ErrProviderUnsplashError = errors.New("images.ErrProviderUnsplashError")
 )
 
 type WebAPI interface {
