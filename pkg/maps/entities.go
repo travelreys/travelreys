@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	ErrRouteListEmpty     = errors.New("maps.entities.RouteListEmpty")
+	ErrRouteListEmpty     = errors.New("maps.ErrRouteListEmpty")
 	DirectionModesAllList = []string{
 		DirectionModeDriving,
 		DirectionModeTransit,

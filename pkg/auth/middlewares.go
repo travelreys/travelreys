@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ErrRBAC = errors.New("auth.rbac.error")
+	ErrRBAC = errors.New("auth.ErrRBAC")
 )
 
 type rbacMiddleware struct {

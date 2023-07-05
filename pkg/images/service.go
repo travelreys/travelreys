@@ -8,7 +8,7 @@ import (
 // Service
 
 var (
-	ErrEmptySearchQuery = errors.New("images.service.search.emptyquery")
+	ErrEmptySearchQuery = errors.New("images.ErrEmptySearchQuery")
 )
 
 type Service interface {

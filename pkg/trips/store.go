@@ -19,8 +19,8 @@ const (
 )
 
 var (
-	ErrTripNotFound         = errors.New("trip.store.not-found")
-	ErrUnexpectedStoreError = errors.New("trip.store.unexpected-error")
+	ErrTripNotFound         = errors.New("trips.ErrTripNotFound")
+	ErrUnexpectedStoreError = errors.New("trips.ErrUnexpectedStoreError")
 )
 
 type ListFilter struct {

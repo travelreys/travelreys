@@ -25,13 +25,13 @@ const (
 )
 
 var (
-	ErrProviderOTPError         = errors.New("auth.service.otp.error")
-	ErrProviderOTPEmailNotFound = errors.New("auth.service.otp.notfound")
-	ErrProviderOTPEmailExists   = errors.New("auth.service.otp.exists")
-	ErrProviderOTPNotSet        = errors.New("auth.service.otp.notset")
-	ErrProviderOTPInvalidEmail  = errors.New("auth.service.otp.invalidemail")
-	ErrProviderOTPInvalidPw     = errors.New("auth.service.otp.invalidpw")
-	ErrProviderOTPInvalidSig    = errors.New("auth.service.otp.invalidsig")
+	ErrProviderOTPError         = errors.New("auth.ErrProviderOTPError")
+	ErrProviderOTPEmailNotFound = errors.New("auth.ErrProviderOTPEmailNotFound")
+	ErrProviderOTPEmailExists   = errors.New("auth.ErrProviderOTPEmailExists")
+	ErrProviderOTPNotSet        = errors.New("auth.ErrProviderOTPNotSet")
+	ErrProviderOTPInvalidEmail  = errors.New("auth.ErrProviderOTPInvalidEmail")
+	ErrProviderOTPInvalidPw     = errors.New("auth.ErrProviderOTPInvalidPw")
+	ErrProviderOTPInvalidSig    = errors.New("auth.ErrProviderOTPInvalidSig")
 
 	defaultOTPPeriod = 60
 	b32NoPadding     = base32.StdEncoding.WithPadding(base32.NoPadding)

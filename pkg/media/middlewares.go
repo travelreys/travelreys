@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	ErrRBAC = errors.New("media.rbac.error")
+	ErrRBAC = errors.New("media.ErrRBAC")
 )
 
 type rbacMiddleware struct {
