@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	ErrRBAC          = errors.New("tripsync.ErrRBAC")
-	ErrInvalidOp     = errors.New("tripsync.ErrInvalidOp")
-	ErrInvalidOpData = errors.New("tripsync.ErrInvalidOpData")
+	ErrRBAC          = errors.New("tripssync.ErrRBAC")
+	ErrInvalidOp     = errors.New("tripssync.ErrInvalidOp")
+	ErrInvalidOpData = errors.New("tripssync.ErrInvalidOpData")
 )
 
 // Service handles the control & data updates made by users in the collaboration session.
