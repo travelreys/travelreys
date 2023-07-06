@@ -86,10 +86,10 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 	return &store{db, tripsColl, logger.Named(storeLoggerName)}
 }
 
-func (s *store) Save(ctx context.Context, plan Trip) error {
-	saveFF := bson.M{bsonKeyID: plan.ID}
+func (s *store) Save(ctx context.Context, trip Trip) error {
+	saveFF := bson.M{bsonKeyID: trip.ID}
 	opts := options.Replace().SetUpsert(true)
-	_, err := s.tripsColl.ReplaceOne(ctx, saveFF, plan, opts)
+	_, err := s.tripsColl.ReplaceOne(ctx, saveFF, trip, opts)
 	if err != nil {
 		s.logger.Error("Save", zap.Error(err))
 		return ErrUnexpectedStoreError

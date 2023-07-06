@@ -101,6 +101,7 @@ func NewTrip(creator Member, name string) Trip {
 		Files:     map[string]storage.Object{},
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
+		Deleted:   false,
 		Labels:    common.Labels{},
 		Tags:      common.Tags{},
 	}

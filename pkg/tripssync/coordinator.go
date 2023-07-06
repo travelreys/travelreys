@@ -234,17 +234,17 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 
 	switch msg.Data.UpdateTrip.Title {
 
-	case MsgUpdateTripTitleUpdateTripDates:
+	case UpdateTripTitleUpdateTripDates:
 		crd.ChangeDates(ctx, msg, &toSave)
-	case MsgUpdateTripTitleReorderItinerary,
-		MsgUpdateTripTitleUpdateActivityPlace,
-		MsgUpdateTripTitleDeleteActivity:
+	case UpdateTripTitleReorderItinerary,
+		UpdateTripTitleUpdateActivityPlace,
+		UpdateTripTitleDeleteActivity:
 		dtKey := crd.FindItineraryDtKey(msg.Data.UpdateTrip.Ops)
 		if dtKey == "" {
 			break
 		}
 		crd.CalculateRoute(ctx, dtKey, msg, &toSave)
-	case MsgUpdateTripTitleReorderActivityToAnotherDay:
+	case UpdateTripTitleReorderActivityToAnotherDay:
 		origDtKey := crd.FindItineraryDtKey(msg.Data.UpdateTrip.Ops)
 		if origDtKey == "" {
 			break
@@ -256,9 +256,9 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 			break
 		}
 		crd.CalculateRoute(ctx, destDtKey, msg, &toSave)
-	case MsgUpdateTripTitleOptimizeItinerary:
+	case UpdateTripTitleOptimizeItinerary:
 		crd.OptimizeRoute(ctx, msg, &toSave)
-	case MsgUpdateTripTitleAddMediaItem:
+	case UpdateTripTitleAddMediaItem:
 		crd.AugmentMediaItemSignedURL(ctx, msg, &toSave)
 	}
 
