@@ -45,20 +45,23 @@ func (f ListFilter) toBSON() bson.M {
 			bson.M{"creator.id": bson.M{"$in": f.UserIDs}},
 		}
 		for _, userID := range f.UserIDs {
-			bsonUserOr = append(bsonUserOr, bson.M{fmt.Sprintf("membersId.%s", userID): userID})
+			bsonUserOr = append(bsonUserOr, bson.M{
+				fmt.Sprintf("membersId.%s", userID): userID,
+			})
 		}
 		bsonAnd = append(bsonAnd, bson.M{"$or": bsonUserOr})
 	}
 
 	if f.OnlyPublic {
-		bsonAnd = append(bsonAnd, bson.M{"labels." + LabelSharingAccess: SharingAccessViewer})
+		sharingAccessLabel := "labels." + LabelSharingAccess
+		bsonAnd = append(bsonAnd, bson.M{sharingAccessLabel: SharingAccessViewer})
 	}
-
+	bsonAnd = append(bsonAnd, bson.M{"deleted": false})
 	return bson.M{"$and": bsonAnd}
 }
 
 type Store interface {
-	Save(ctx context.Context, plan Trip) error
+	Save(ctx context.Context, trip Trip) error
 	Read(ctx context.Context, ID string) (Trip, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	Delete(ctx context.Context, ID string) error
@@ -67,8 +70,7 @@ type Store interface {
 type store struct {
 	db        *mongo.Database
 	tripsColl *mongo.Collection
-
-	logger *zap.Logger
+	logger    *zap.Logger
 }
 
 func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store {

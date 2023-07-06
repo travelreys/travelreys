@@ -197,8 +197,19 @@ func (svc *service) ListWithMembers(ctx context.Context, ff ListFilter) (TripsLi
 	return trips, usersMap, nil
 }
 
+// Delete performs a logical delete on the trip by updating
+// the delete flag
 func (svc *service) Delete(ctx context.Context, ID string) error {
-	return svc.store.Delete(ctx, ID)
+	trip, err := svc.store.Read(ctx, ID)
+	if err == ErrTripNotFound {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	trip.Deleted = true
+	return svc.store.Save(ctx, trip)
 }
 
 // Attachments

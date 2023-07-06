@@ -18,10 +18,11 @@ const (
 )
 
 const (
+	LabelAvatarImage     = "avatarImage"
 	LabelBaseCountry     = "basecountry"
 	LabelDefaultCurrency = "currency"
 	LabelDefaultLocale   = "locale"
-	LabelAvatarImage     = "avatarImage"
+	LabelOnboarded       = "onboarded"
 
 	LabelGoogleID            = "google|id"
 	LabelGoogleUserPicture   = "google|picture"
