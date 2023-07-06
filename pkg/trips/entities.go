@@ -64,8 +64,9 @@ type Trip struct {
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 
-	Labels common.Labels `json:"labels" bson:"labels"`
-	Tags   common.Tags   `json:"tags" bson:"tags"`
+	Deleted bool          `json:"deleted" bson:"deleted"`
+	Labels  common.Labels `json:"labels" bson:"labels"`
+	Tags    common.Tags   `json:"tags" bson:"tags"`
 }
 
 type TripOGP struct {
@@ -100,6 +101,7 @@ func NewTrip(creator Member, name string) Trip {
 		Files:     map[string]storage.Object{},
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
+		Deleted:   false,
 		Labels:    common.Labels{},
 		Tags:      common.Tags{},
 	}

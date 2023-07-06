@@ -45,20 +45,23 @@ func (f ListFilter) toBSON() bson.M {
 			bson.M{"creator.id": bson.M{"$in": f.UserIDs}},
 		}
 		for _, userID := range f.UserIDs {
-			bsonUserOr = append(bsonUserOr, bson.M{fmt.Sprintf("membersId.%s", userID): userID})
+			bsonUserOr = append(bsonUserOr, bson.M{
+				fmt.Sprintf("membersId.%s", userID): userID,
+			})
 		}
 		bsonAnd = append(bsonAnd, bson.M{"$or": bsonUserOr})
 	}
 
 	if f.OnlyPublic {
-		bsonAnd = append(bsonAnd, bson.M{"labels." + LabelSharingAccess: SharingAccessViewer})
+		sharingAccessLabel := "labels." + LabelSharingAccess
+		bsonAnd = append(bsonAnd, bson.M{sharingAccessLabel: SharingAccessViewer})
 	}
-
+	bsonAnd = append(bsonAnd, bson.M{"deleted": false})
 	return bson.M{"$and": bsonAnd}
 }
 
 type Store interface {
-	Save(ctx context.Context, plan Trip) error
+	Save(ctx context.Context, trip Trip) error
 	Read(ctx context.Context, ID string) (Trip, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	Delete(ctx context.Context, ID string) error
@@ -67,8 +70,7 @@ type Store interface {
 type store struct {
 	db        *mongo.Database
 	tripsColl *mongo.Collection
-
-	logger *zap.Logger
+	logger    *zap.Logger
 }
 
 func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store {
@@ -84,10 +86,10 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 	return &store{db, tripsColl, logger.Named(storeLoggerName)}
 }
 
-func (s *store) Save(ctx context.Context, plan Trip) error {
-	saveFF := bson.M{bsonKeyID: plan.ID}
+func (s *store) Save(ctx context.Context, trip Trip) error {
+	saveFF := bson.M{bsonKeyID: trip.ID}
 	opts := options.Replace().SetUpsert(true)
-	_, err := s.tripsColl.ReplaceOne(ctx, saveFF, plan, opts)
+	_, err := s.tripsColl.ReplaceOne(ctx, saveFF, trip, opts)
 	if err != nil {
 		s.logger.Error("Save", zap.Error(err))
 		return ErrUnexpectedStoreError
