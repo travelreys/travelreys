@@ -73,9 +73,8 @@ func (svc service) GetProfile(ctx context.Context, ID string) (UserProfile, erro
 }
 
 func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID string) error {
-	userFF := auth.ListFilter{
-		IDs: []string{initiatorID, targetID},
-	}
+	// 1. Validate IDs exist
+	userFF := auth.ListFilter{IDs: []string{initiatorID, targetID}}
 	users, err := svc.authSvc.List(ctx, userFF)
 	if err != nil {
 		return err
@@ -96,6 +95,7 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 		target = users[0]
 	}
 
+	// 2. Validate if following relationship already exists
 	ok, err := svc.AreTheyFriends(ctx, initiatorID, targetID)
 	if err != nil {
 		return err
@@ -105,6 +105,16 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 	}
 
 	req := NewFriendRequest(initiatorID, targetID)
+
+	// 3. If target has verified, can automatically follow,
+	// no need to wait for acceptance.
+	targetProfile := UserProfileFromUser(target)
+	if targetProfile.IsVerified() {
+		return svc.store.SaveFriend(ctx, NewFriendFromRequest(req))
+	}
+
+	// 4. Else, send request
+
 	if err := svc.store.UpsertFriendRequest(ctx, req); err != nil {
 		return err
 	}
