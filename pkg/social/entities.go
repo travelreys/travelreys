@@ -10,6 +10,10 @@ import (
 	"github.com/travelreys/travelreys/pkg/trips"
 )
 
+const (
+	LabelVerified = "verified"
+)
+
 type UserProfile struct {
 	ID         string        `json:"id"`
 	Username   string        `json:"username"`
@@ -22,8 +26,14 @@ func UserProfileFromUser(user auth.User) UserProfile {
 		ID:         user.ID,
 		Username:   user.Username,
 		ProfileImg: user.GetProfileImgURL(),
-		Labels:     common.Labels{},
+		Labels: common.Labels{
+			LabelVerified: user.Labels[LabelVerified],
+		},
 	}
+}
+
+func (up UserProfile) IsVerified() bool {
+	return up.Labels[LabelVerified] == "true"
 }
 
 type UserProfileMap map[string]UserProfile
