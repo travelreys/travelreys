@@ -24,12 +24,16 @@ var (
 
 type Service interface {
 	Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error)
+	Save(ctx context.Context, trip Trip) error
+
 	Read(ctx context.Context, ID string) (Trip, error)
 	ReadOGP(ctx context.Context, ID string) (TripOGP, error)
 	ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
 	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
+
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	ListWithMembers(ctx context.Context, ff ListFilter) (TripsList, auth.UsersMap, error)
+
 	Delete(ctx context.Context, ID string) error
 
 	// Attachments
@@ -81,6 +85,10 @@ func (svc *service) Create(ctx context.Context, creator Member, name string, sta
 	}
 	err := svc.store.Save(ctx, trip)
 	return trip, err
+}
+
+func (svc *service) Save(ctx context.Context, trip Trip) error {
+	return svc.store.Save(ctx, trip)
 }
 
 func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {

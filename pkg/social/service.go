@@ -6,10 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"math/rand"
 	"os"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/auth"
+	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/email"
+	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
@@ -43,6 +48,8 @@ type Service interface {
 	ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, UserProfile, error)
 	ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error)
 	ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error)
+
+	DuplicateTrip(ctx context.Context, initiatorID, referrerID, tripID, name string) (string, error)
 }
 
 type service struct {
@@ -302,16 +309,16 @@ func (svc *service) ListTripPublicInfo(ctx context.Context, ff trips.ListFilter)
 func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error) {
 	followings, err := svc.ListFollowing(ctx, initiatorID)
 	if err != nil {
-		return trips.TripsList{}, UserProfileMap{}, err
+		return nil, nil, err
 	}
 	targetIDs := followings.GetTargetIDs()
 	if len(targetIDs) == 0 {
-		return trips.TripsList{}, UserProfileMap{}, err
+		return nil, nil, err
 	}
 	ff := auth.ListFilter{IDs: targetIDs}
 	targets, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
-		return trips.TripsList{}, UserProfileMap{}, err
+		return nil, nil, err
 	}
 	profileMap := UserProfileMap{}
 	for _, target := range targets {
@@ -320,7 +327,7 @@ func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) 
 
 	tripslist, err := svc.tripSvc.List(ctx, trips.ListFilter{UserIDs: targetIDs})
 	if err != nil {
-		return trips.TripsList{}, UserProfileMap{}, err
+		return nil, nil, err
 	}
 	publicInfo := trips.TripsList{}
 	for _, t := range tripslist {
@@ -328,4 +335,74 @@ func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) 
 	}
 
 	return publicInfo, profileMap, nil
+}
+
+func (svc *service) DuplicateTrip(ctx context.Context, initiatorID, referrerID, tripID, name string) (string, error) {
+	var (
+		trip trips.Trip
+		err  error
+	)
+	ti, err := trips.TripInfoFromCtx(ctx)
+	if err == nil {
+		trip = ti.Trip
+	} else {
+		trip, err = svc.tripSvc.Read(ctx, tripID)
+		if err != nil {
+			return "", err
+		}
+	}
+	creator := trips.NewMember(initiatorID, trips.MemberRoleCreator)
+	newTrip := trips.NewTripWithDates(creator, name, trip.StartDate, trip.EndDate)
+	newTrip.CoverImage = trips.CoverImage{
+		Source:   trips.CoverImageSourceWeb,
+		WebImage: images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))],
+	}
+
+	for _, lodging := range trip.Lodgings {
+		newLodging := trips.Lodging{
+			ID:           uuid.NewString(),
+			CheckinTime:  lodging.CheckinTime,
+			CheckoutTime: lodging.CheckoutTime,
+			PriceItem:    lodging.PriceItem,
+			Notes:        lodging.Notes,
+			Place:        lodging.Place,
+			Labels: common.Labels{
+				trips.LabelCreatedBy: initiatorID,
+			},
+		}
+		newTrip.Lodgings[newLodging.ID] = newLodging
+	}
+
+	for key, itin := range trip.Itineraries {
+		newItin := trips.NewItinerary(itin.Date)
+		actIDMap := map[string]string{}
+
+		for actKey, act := range itin.Activities {
+			newAct := trips.Activity{
+				ID:        uuid.NewString(),
+				Title:     act.Title,
+				Place:     act.Place,
+				Notes:     act.Notes,
+				PriceItem: act.PriceItem,
+				StartTime: act.StartTime,
+				EndTime:   act.EndTime,
+				Labels: common.Labels{
+					trips.LabelCreatedBy:       initiatorID,
+					trips.LabelFractionalIndex: act.Labels[trips.LabelFractionalIndex],
+				},
+			}
+			newItin.Activities[actKey] = newAct
+			actIDMap[act.ID] = newAct.ID
+		}
+
+		for rKey, route := range itin.Routes {
+			tkns := strings.Split(rKey, "|")
+			newKey := fmt.Sprintf("%s|%s", actIDMap[tkns[0]], actIDMap[tkns[1]])
+			newItin.Routes[newKey] = route
+		}
+
+		newTrip.Itineraries[key] = newItin
+	}
+
+	return newTrip.ID, svc.tripSvc.Save(ctx, newTrip)
 }
