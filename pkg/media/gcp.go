@@ -21,6 +21,10 @@ var (
 	gcpCloudCDNOptKeyPath = os.Getenv("TRAVELREYS_GCP_CLOUD_CDN_OPT_KEY_PATH")
 )
 
+const (
+	presignedCookieHeader = "_travelreysCookie"
+)
+
 type gcpProvider struct {
 	projectID string
 

@@ -37,7 +37,7 @@ type Service interface {
 	Delete(ctx context.Context, ID string) error
 
 	// Attachments
-	UploadAttachmentPresignedURL(ctx context.Context, ID, fileID string) (string, error)
+	UploadAttachmentPresignedURL(ctx context.Context, ID, fileID, fileType string) (string, error)
 	DownloadAttachmentPresignedURL(ctx context.Context, ID, path, fileID string) (string, error)
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
 
@@ -222,12 +222,10 @@ func (svc *service) Delete(ctx context.Context, ID string) error {
 
 // Attachments
 
-func (svc *service) UploadAttachmentPresignedURL(ctx context.Context, tripID, fileID string) (string, error) {
+func (svc *service) UploadAttachmentPresignedURL(ctx context.Context, tripID, fileID, fileType string) (string, error) {
 	return svc.storageSvc.PutPresignedURL(
-		ctx,
-		attachmentBucket,
-		filepath.Join(tripID, fileID),
-		fileID)
+		ctx, attachmentBucket, filepath.Join(tripID, fileID), fileID, fileType,
+	)
 }
 
 func (svc *service) DownloadAttachmentPresignedURL(ctx context.Context, tripID, path, fileID string) (string, error) {

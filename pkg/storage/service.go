@@ -18,7 +18,7 @@ type Service interface {
 	Stat(ctx context.Context, bucket, path string) (Object, error)
 	Remove(ctx context.Context, obj Object) error
 	GetPresignedURL(ctx context.Context, bucket, path, filename string) (string, error)
-	PutPresignedURL(ctx context.Context, bucket, path, filename string) (string, error)
+	PutPresignedURL(ctx context.Context, bucket, path, filename, contentType string) (string, error)
 }
 
 func NewDefaultStorageService(ctx context.Context) (Service, error) {

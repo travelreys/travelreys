@@ -8,13 +8,12 @@ import (
 )
 
 const (
-	cdnProviderMinio               = "minio"
-	cdnProviderGcp                 = "gcpcloudcdn"
-	defaultCDNProvider             = "minio"
+	cdnProviderMinio   = "minio"
+	cdnProviderGcp     = "gcpcloudcdn"
+	defaultCDNProvider = cdnProviderMinio
+
 	defaultPresignedURLDuration    = 60 * time.Minute
 	defaultPresignedCookieDuration = 24 * time.Hour
-
-	presignedCookieHeader = "_travelreysCookie"
 )
 
 type CDNProvider interface {

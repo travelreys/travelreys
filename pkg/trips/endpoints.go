@@ -251,6 +251,7 @@ func NewDownloadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 type UploadAttachmentPresignedURLRequest struct {
 	ID       string `json:"id"`
 	Filename string `json:"filename"`
+	Filetype string `json:"filetype"`
 }
 
 type UploadAttachmentPresignedURLResponse struct {
@@ -268,7 +269,7 @@ func NewUploadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return UploadAttachmentPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		presignedURL, err := svc.UploadAttachmentPresignedURL(ctx, req.ID, req.Filename)
+		presignedURL, err := svc.UploadAttachmentPresignedURL(ctx, req.ID, req.Filename, req.Filetype)
 		return UploadAttachmentPresignedURLResponse{
 			PresignedURL: presignedURL,
 			Err:          err,

@@ -199,8 +199,10 @@ func encodeDeleteResponse(ctx context.Context, w http.ResponseWriter, response i
 
 func decodeUploadAvatarPresignedURLRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
+	query := r.URL.Query()
 	req := UploadAvatarPresignedURLRequest{
-		ID: vars[bsonKeyID],
+		ID:       vars[bsonKeyID],
+		MIMEType: query.Get("mimeType"),
 	}
 	return req, nil
 }
