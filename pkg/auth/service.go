@@ -49,7 +49,7 @@ type Service interface {
 	Update(context.Context, string, UpdateFilter) error
 	Delete(context.Context, string) error
 
-	UploadAvatarPresignedURL(context.Context, string) (string, string, error)
+	UploadAvatarPresignedURL(context.Context, string, string) (string, string, error)
 }
 
 type service struct {
@@ -243,7 +243,7 @@ func (svc service) Delete(ctx context.Context, ID string) error {
 	return svc.store.Update(ctx, ID, ff)
 }
 
-func (svc service) UploadAvatarPresignedURL(ctx context.Context, ID string) (string, string, error) {
+func (svc service) UploadAvatarPresignedURL(ctx context.Context, ID, mimeType string) (string, string, error) {
 	rng, _ := codename.DefaultRNG()
 	suffixToken := common.RandomToken(rng, 8)
 	presignedURL, err := svc.storageSvc.PutPresignedURL(
@@ -251,6 +251,7 @@ func (svc service) UploadAvatarPresignedURL(ctx context.Context, ID string) (str
 		avatarBucket,
 		filepath.Join(avatarFilePrefix, fmt.Sprintf("%s-%s", ID, suffixToken)),
 		ID,
+		mimeType,
 	)
 	return suffixToken, presignedURL, err
 }

@@ -175,7 +175,8 @@ func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type UploadAvatarPresignedURLRequest struct {
-	ID string
+	ID       string
+	MIMEType string
 }
 
 type UploadAvatarPresignedURLResponse struct {
@@ -194,7 +195,7 @@ func NewUploadAvatarPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return UploadAvatarPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		suffixToken, presignedURL, err := svc.UploadAvatarPresignedURL(ctx, req.ID)
+		suffixToken, presignedURL, err := svc.UploadAvatarPresignedURL(ctx, req.ID, req.MIMEType)
 		return UploadAvatarPresignedURLResponse{
 			PresignedURL: presignedURL,
 			SuffixToken:  suffixToken,

@@ -68,7 +68,7 @@ func (mw rbacMiddleware) Delete(ctx context.Context, ID string) error {
 	return mw.next.Delete(ctx, ID)
 }
 
-func (mw rbacMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID string) (string, string, error) {
+func (mw rbacMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID, mimeType string) (string, string, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil {
 		return "", "", ErrRBAC
@@ -76,5 +76,5 @@ func (mw rbacMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID string
 	if ci.UserID != ID {
 		return "", "", ErrRBAC
 	}
-	return mw.next.UploadAvatarPresignedURL(ctx, ID)
+	return mw.next.UploadAvatarPresignedURL(ctx, ID, mimeType)
 }
