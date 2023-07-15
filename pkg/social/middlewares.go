@@ -155,7 +155,7 @@ func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referre
 	// Allow access if you are a member of the trip
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return trips.Trip{}, UserProfile{}, ErrTripSharingNotEnabled
+		return trips.Trip{}, UserProfile{}, ErrRBAC
 	}
 	membersID := []string{trip.Creator.ID}
 	for _, mem := range trip.Members {
@@ -205,4 +205,41 @@ func (mw rbacMiddleware) ListFollowingTrips(ctx context.Context, initiatorID str
 		return nil, nil, ErrRBAC
 	}
 	return mw.next.ListFollowingTrips(ctx, initiatorID)
+}
+
+func (mw rbacMiddleware) DuplicateTrip(ctx context.Context, initiatorID, referrerID, tripID, name string) (string, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return "", ErrRBAC
+	}
+
+	trip, err := mw.tripSvc.Read(ctx, tripID)
+	if err != nil {
+		return "", err
+	}
+	ctxWithTripInfo := trips.ContextWithTripInfo(ctx, trip)
+
+	// Allow access if the trip is public
+	if trip.IsSharingEnabled() {
+		return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name)
+	}
+
+	// Allow access if you are a member of the trip
+	membersID := []string{trip.Creator.ID}
+	for _, mem := range trip.Members {
+		membersID = append(membersID, mem.ID)
+	}
+	if common.StringContains(membersID, ci.UserID) {
+		return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name)
+	}
+
+	// ReferrerID should be a member ID.
+	// Allow access if you are friend of the member of the trip
+	if common.StringContains(membersID, referrerID) {
+		if _, err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
+			return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name)
+		}
+	}
+
+	return "", ErrTripSharingNotEnabled
 }

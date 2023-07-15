@@ -278,3 +278,28 @@ func NewListFollowingTripsEndpoint(svc Service) endpoint.Endpoint {
 		return ListFollowingTripsResponse{Trips: tripslist, UserProfileMap: profiles, Err: err}, nil
 	}
 }
+
+type DuplicateRequest struct {
+	TripID     string `json:"id"`
+	Name       string `json:"name"`
+	ReferrerID string `json:"referrerID"`
+}
+type DuplicateResponse struct {
+	ID  string `json:"id"`
+	Err error  `json:"error,omitempty"`
+}
+
+func (r DuplicateResponse) Error() error {
+	return r.Err
+}
+
+func NewDuplicateTripEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(DuplicateRequest)
+		if !ok {
+			return DuplicateResponse{Err: common.ErrorEndpointReqMismatch}, nil
+		}
+		id, err := svc.DuplicateTrip(ctx, "", req.ReferrerID, req.TripID, req.Name)
+		return DuplicateResponse{ID: id, Err: err}, nil
+	}
+}

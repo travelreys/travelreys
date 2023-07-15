@@ -37,6 +37,10 @@ func (mw rbacMiddleware) Create(ctx context.Context, creator Member, name string
 	return mw.next.Create(ctx, creator, name, start, end)
 }
 
+func (mw rbacMiddleware) Save(ctx context.Context, trip Trip) error {
+	return ErrRBAC
+}
+
 func (mw rbacMiddleware) Read(ctx context.Context, ID string) (Trip, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {

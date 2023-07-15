@@ -136,9 +136,15 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse, opts...,
 	)
 
-	ReadTripPublicInfoHandler := kithttp.NewServer(
+	readTripPublicInfoHandler := kithttp.NewServer(
 		NewReadTripPublicInfoEndpoint(svc),
 		decodeReadTripPublicInfoRequest,
+		encodeResponse, opts...,
+	)
+
+	duplicateTripHandler := kithttp.NewServer(
+		NewDuplicateTripEndpoint(svc),
+		decodeDuplicateTripRequest,
 		encodeResponse, opts...,
 	)
 
@@ -156,7 +162,8 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/social/{uid}/friends/{bindingKey}", deleteFriendHandler).Methods(http.MethodDelete)
 
 	r.Handle("/api/v1/social/{uid}/trips", ListTripPublicInfo).Methods(http.MethodGet)
-	r.Handle("/api/v1/social/{uid}/trips/{tid}", ReadTripPublicInfoHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/trips/{tid}", readTripPublicInfoHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/trips/{tid}/duplicate", duplicateTripHandler).Methods(http.MethodPost)
 
 	return r
 }
@@ -310,4 +317,24 @@ func decodeListTripPublicInfoRequest(_ context.Context, r *http.Request) (interf
 
 	ff := trips.ListFilter{UserID: common.StringPtr(userID)}
 	return ListRequest{ff}, nil
+}
+
+func decodeDuplicateTripRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID, ok := vars[URLPathVarUserID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	tripID, ok := vars[URLPathVarTripID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+
+	req := DuplicateRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, common.ErrInvalidJSONBody
+	}
+	req.TripID = tripID
+	req.ReferrerID = userID
+	return req, nil
 }
