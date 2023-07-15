@@ -82,6 +82,7 @@ func (svc gcsService) GetPresignedURL(ctx context.Context, bucket, path, filenam
 	}
 
 	u, err := svc.cl.Bucket(bucket).SignedURL(path, opts)
+
 	if err != nil {
 		return "", fmt.Errorf("Bucket(%q).SignedURL: %v", bucket, err)
 	}
@@ -100,12 +101,14 @@ func (svc gcsService) GetPresignedURL(ctx context.Context, bucket, path, filenam
 // function attempts to use the same authentication that was used to instantiate
 // the Storage client. This authentication must include a private key or have
 // iam.serviceAccounts.signBlob permissions.
-func (svc gcsService) PutPresignedURL(ctx context.Context, bucket, path, filename string) (string, error) {
+func (svc gcsService) PutPresignedURL(ctx context.Context, bucket, path, filename, contentType string) (string, error) {
 
 	opts := &storage.SignedURLOptions{
-		Scheme:  storage.SigningSchemeV4,
-		Method:  "PUT",
-		Expires: time.Now().Add(15 * time.Minute),
+		Scheme:      storage.SigningSchemeV4,
+		Method:      "POST",
+		ContentType: contentType,
+		Headers:     []string{"x-goog-resumable:start"}, // Resumable Upload
+		Expires:     time.Now().Add(15 * time.Minute),
 	}
 
 	u, err := svc.cl.Bucket(bucket).SignedURL(path, opts)

@@ -133,12 +133,12 @@ func (mw rbacMiddleware) DownloadAttachmentPresignedURL(ctx context.Context, ID,
 	return mw.next.DownloadAttachmentPresignedURL(ctx, ID, path, filename)
 }
 
-func (mw rbacMiddleware) UploadAttachmentPresignedURL(ctx context.Context, ID, filename string) (string, error) {
+func (mw rbacMiddleware) UploadAttachmentPresignedURL(ctx context.Context, ID, filename, fileType string) (string, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return "", ErrRBAC
 	}
-	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename)
+	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename, fileType)
 }
 
 func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, id, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error) {

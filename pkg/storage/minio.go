@@ -63,7 +63,7 @@ func (svc minioService) GetPresignedURL(ctx context.Context, bucket, path, filen
 	return presignedURL.String(), nil
 }
 
-func (svc minioService) PutPresignedURL(ctx context.Context, bucket, path, filename string) (string, error) {
+func (svc minioService) PutPresignedURL(ctx context.Context, bucket, path, filename, contentType string) (string, error) {
 	presignedURL, err := svc.mc.PresignedPutObject(
 		ctx,
 		bucket,
