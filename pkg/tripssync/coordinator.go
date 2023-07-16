@@ -234,6 +234,12 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 
 	switch msg.Data.UpdateTrip.Title {
 
+	case UpdateTripTitleAddLodging,
+		UpdateTripTitleUpdateLodging,
+		UpdateTripTitleDeleteLodging:
+		for dtKey := range toSave.Itineraries {
+			crd.CalculateRoute(ctx, dtKey, msg, &toSave)
+		}
 	case UpdateTripTitleUpdateTripDates:
 		crd.ChangeDates(ctx, msg, &toSave)
 	case UpdateTripTitleReorderItinerary,
@@ -272,7 +278,6 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 
 func (crd *Coordinator) FindItineraryDtKey(ops []jp.Op) string {
 	// /itineraries/2023-03-26/activities/9935afee-8bfd-4148-8be8-79fdb2f12b8e
-
 	var dtKey string
 	for _, op := range ops {
 		if !strings.HasPrefix(op.Path, "/itineraries/") {
@@ -313,16 +318,29 @@ func (crd *Coordinator) ChangeDates(ctx context.Context, msg *Message, toSave *t
 }
 
 func (crd *Coordinator) CalculateRoute(ctx context.Context, dtKey string, msg *Message, toSave *trips.Trip) {
-	itin := toSave.Itineraries[dtKey]
-	pairings := itin.MakeRoutePairings()
+	itin, ok := toSave.Itineraries[dtKey]
+	if !ok {
+		return
+	}
+
+	dt, _ := time.Parse("2006-01-02", dtKey)
+	lodgings := toSave.Lodgings.GetLodgingsForDate(dt)
+	pairings := itin.MakeRoutePairings(lodgings)
 	routesToRemove := []string{}
 
 	for pair := range pairings {
 		if _, ok := itin.Routes[pair]; ok {
 			continue
 		}
+
 		actIds := strings.Split(pair, trips.LabelDelimeter)
-		orig := itin.Activities[actIds[0]]
+
+		// Origin could be lodging
+		orig, ok := itin.Activities[actIds[0]]
+		if !ok {
+			lod := lodgings[actIds[0]]
+			orig = trips.Activity{ID: lod.ID, Place: lod.Place}
+		}
 		dest := itin.Activities[actIds[1]]
 		if !(orig.HasPlace() && dest.HasPlace()) {
 			continue

@@ -95,16 +95,25 @@ func NewMsgPing(connID, tripID string) Message {
 }
 
 const (
-	UpdateTripTitleAddMediaItem                = "AddMediaItem"
-	UpdateTripTitleUpdateTripDates             = "UpdateTripDates"
-	UpdateTripTitleUpdateTripMembers           = "UpdateTripMembers"
-	UpdateTripTitleUpdateActivityPlace         = "UpdateActivityPlace"
-	UpdateTripTitleUpdateActivityDisplayImage  = "UpdateActivityDisplayImage"
+	// Trip
+	UpdateTripTitleDeleteTrip        = "DeleteTrip"
+	UpdateTripTitleUpdateTripDates   = "UpdateTripDates"
+	UpdateTripTitleUpdateTripMembers = "UpdateTripMembers"
+
+	// Lodgings
+	UpdateTripTitleAddLodging    = "AddLodging"
+	UpdateTripTitleDeleteLodging = "DeleteLodging"
+	UpdateTripTitleUpdateLodging = "UpdateLodging"
+
+	// Itinerary
 	UpdateTripTitleDeleteActivity              = "DeleteActivity"
-	UpdateTripTitleReorderItinerary            = "ReorderItinerary"
 	UpdateTripTitleOptimizeItinerary           = "OptimizeItinerary"
 	UpdateTripTitleReorderActivityToAnotherDay = "ReorderActivityToAnotherDay"
-	UpdateTripTitleDeleteTrip                  = "DeleteTrip"
+	UpdateTripTitleReorderItinerary            = "ReorderItinerary"
+	UpdateTripTitleUpdateActivityPlace         = "UpdateActivityPlace"
+
+	// Media
+	UpdateTripTitleAddMediaItem = "AddMediaItem"
 )
 
 type MsgDataUpdateTrip struct {
