@@ -51,7 +51,7 @@ type Trip struct {
 	// Logistics
 	Notes    string                 `json:"notes" bson:"notes"`
 	Transits map[string]BaseTransit `json:"transits" bson:"transits"`
-	Lodgings map[string]Lodging     `json:"lodgings" bson:"lodgings"`
+	Lodgings LodgingsMap            `json:"lodgings" bson:"lodgings"`
 	Budget   Budget                 `json:"budget" bson:"budget"`
 	Links    map[string]Link        `json:"links" bson:"links"`
 
@@ -91,7 +91,7 @@ func NewTrip(creator Member, name string) Trip {
 		Members:     map[string]Member{},
 		MembersID:   map[string]string{},
 		Transits:    map[string]BaseTransit{},
-		Lodgings:    map[string]Lodging{},
+		Lodgings:    LodgingsMap{},
 		Itineraries: map[string]Itinerary{},
 		Budget:      NewBudget(),
 		Links:       LinkMap{},
@@ -221,6 +221,19 @@ type Lodging struct {
 	Labels         common.Labels    `json:"labels" bson:"labels"`
 }
 
+type LodgingsMap map[string]Lodging
+
+func (m LodgingsMap) GetLodgingsForDate(dt time.Time) LodgingsMap {
+	results := LodgingsMap{}
+	for _, l := range m {
+		if (dt.Equal(l.CheckinTime) || dt.After(l.CheckinTime)) &&
+			(dt.Before(l.CheckoutTime) || dt.Equal(l.CheckoutTime)) {
+			results[l.ID] = l
+		}
+	}
+	return results
+}
+
 type ActivityComment struct {
 	ID        string    `json:"id" bson:"id"`
 	Comment   string    `json:"comment" bson:"comment"`
@@ -287,9 +300,9 @@ func GetSortedItineraryKeys(trip *Trip) []string {
 }
 
 // SortActivities returns Activities sorted by their fractional index
-func (l Itinerary) SortActivities() []Activity {
+func (itin Itinerary) SortActivities() []Activity {
 	sorted := ActivityList{}
-	for _, act := range l.Activities {
+	for _, act := range itin.Activities {
 		sorted = append(sorted, act)
 	}
 	sort.Sort(sorted)
@@ -304,19 +317,34 @@ func GetFracIndexes(acts []Activity) []string {
 	return result
 }
 
-func (l Itinerary) routePairingKey(a1 Activity, a2 Activity) string {
+func (itin Itinerary) routePairingKey(a1 Activity, a2 Activity) string {
 	return fmt.Sprintf("%s%s%s", a1.ID, LabelDelimeter, a2.ID)
 }
 
-func (l Itinerary) MakeRoutePairings() map[string]bool {
+func (itin Itinerary) MakeRoutePairings(lodgings LodgingsMap) map[string]bool {
+
 	pairings := map[string]bool{}
-	sorted := l.SortActivities()
+	sorted := itin.SortActivities()
+
+	if len(sorted) <= 0 {
+		return pairings
+	}
+
+	// Find routes between lodging and first activity
+	if sorted[0].Place.ID != "" {
+		for _, l := range lodgings {
+			act := Activity{ID: l.ID, Place: l.Place}
+			pairings[itin.routePairingKey(act, sorted[0])] = true
+		}
+	}
+
+	// Find route between activities
 	for i := 1; i < len(sorted); i++ {
 		// We need the origin and destination to have a place
 		if sorted[i-1].Place.ID == "" || sorted[i].Place.ID == "" {
 			continue
 		}
-		pairings[l.routePairingKey(sorted[i-1], sorted[i])] = true
+		pairings[itin.routePairingKey(sorted[i-1], sorted[i])] = true
 	}
 	return pairings
 }
