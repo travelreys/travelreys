@@ -309,16 +309,16 @@ func (svc *service) ListTripPublicInfo(ctx context.Context, ff trips.ListFilter)
 func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error) {
 	followings, err := svc.ListFollowing(ctx, initiatorID)
 	if err != nil {
-		return nil, nil, err
+		return trips.TripsList{}, UserProfileMap{}, err
 	}
 	targetIDs := followings.GetTargetIDs()
 	if len(targetIDs) == 0 {
-		return nil, nil, err
+		return trips.TripsList{}, UserProfileMap{}, err
 	}
 	ff := auth.ListFilter{IDs: targetIDs}
 	targets, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
-		return nil, nil, err
+		return trips.TripsList{}, UserProfileMap{}, err
 	}
 	profileMap := UserProfileMap{}
 	for _, target := range targets {
@@ -327,7 +327,7 @@ func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) 
 
 	tripslist, err := svc.tripSvc.List(ctx, trips.ListFilter{UserIDs: targetIDs})
 	if err != nil {
-		return nil, nil, err
+		return trips.TripsList{}, UserProfileMap{}, err
 	}
 	publicInfo := trips.TripsList{}
 	for _, t := range tripslist {
