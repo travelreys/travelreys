@@ -112,7 +112,8 @@ func (s *store) Read(ctx context.Context, ID string) (Trip, error) {
 
 func (s *store) List(ctx context.Context, ff ListFilter) (TripsList, error) {
 	list := TripsList{}
-	cursor, err := s.tripsColl.Find(ctx, ff.toBSON())
+	opts := options.Find().SetSort(bson.M{"startDate": -1})
+	cursor, err := s.tripsColl.Find(ctx, ff.toBSON(), opts)
 	if err != nil {
 		s.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return list, err
