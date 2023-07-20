@@ -20,6 +20,8 @@ const (
 	DirectionModeWalking = "walking"
 	DirectionModeTransit = "transit"
 	DefaultDirectionMode = DirectionModeDriving
+
+	DefaultWalkingMaxDuration = 20 * time.Minute
 )
 
 var (
@@ -136,6 +138,9 @@ func RouteFromRouteResult(result maps.Route, mode string) Route {
 
 type RouteList []Route
 
+// GetMostCommonSenseRoute returns the "most common sense" route
+// amongs multiple route options, that is, when walking is avaliable and
+// less than 20 mins. Else, it returns the shorter of driving or transit.
 func (l RouteList) GetMostCommonSenseRoute() (Route, error) {
 	if len(l) <= 0 {
 		return Route{}, ErrRouteListEmpty
@@ -167,8 +172,9 @@ func (l RouteList) GetMostCommonSenseRoute() (Route, error) {
 		return l[shortestIdx], nil
 	}
 
+	// If walking takes less than 20 mins, return walking
 	walkingRoute := l[walkingIdx]
-	if walkingRoute.Duration < 20*time.Minute {
+	if walkingRoute.Duration < DefaultWalkingMaxDuration {
 		return walkingRoute, nil
 	}
 	return l[shortestIdx], nil

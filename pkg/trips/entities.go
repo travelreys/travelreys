@@ -270,6 +270,14 @@ func (l ActivityList) Less(i, j int) bool {
 	return l[i].Labels[LabelFractionalIndex] < l[j].Labels[LabelFractionalIndex]
 }
 
+func (l ActivityList) GetFracIndexes() []string {
+	result := []string{}
+	for _, a := range l {
+		result = append(result, a.Labels[LabelFractionalIndex])
+	}
+	return result
+}
+
 type Itinerary struct {
 	ID          string                    `json:"id" bson:"id"`
 	Date        time.Time                 `json:"date" bson:"date"`
@@ -299,8 +307,12 @@ func GetSortedItineraryKeys(trip *Trip) []string {
 	return list
 }
 
+func (itin Itinerary) GetDate() time.Time {
+	return time.Date(itin.Date.Year(), itin.Date.Month(), itin.Date.Day(), 0, 0, 0, 0, itin.Date.Location())
+}
+
 // SortActivities returns Activities sorted by their fractional index
-func (itin Itinerary) SortActivities() []Activity {
+func (itin Itinerary) SortActivities() ActivityList {
 	sorted := ActivityList{}
 	for _, act := range itin.Activities {
 		sorted = append(sorted, act)
@@ -309,20 +321,11 @@ func (itin Itinerary) SortActivities() []Activity {
 	return sorted
 }
 
-func GetFracIndexes(acts []Activity) []string {
-	result := []string{}
-	for _, a := range acts {
-		result = append(result, a.Labels[LabelFractionalIndex])
-	}
-	return result
-}
-
 func (itin Itinerary) routePairingKey(a1 Activity, a2 Activity) string {
 	return fmt.Sprintf("%s%s%s", a1.ID, LabelDelimeter, a2.ID)
 }
 
 func (itin Itinerary) MakeRoutePairings(lodgings LodgingsMap) map[string]bool {
-
 	pairings := map[string]bool{}
 	sorted := itin.SortActivities()
 

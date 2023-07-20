@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
@@ -237,9 +238,26 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 	case UpdateTripTitleAddLodging,
 		UpdateTripTitleUpdateLodging,
 		UpdateTripTitleDeleteLodging:
+
+		mutex := sync.Mutex{}
+		wg := sync.WaitGroup{}
+		wg.Add(len(toSave.Itineraries))
 		for dtKey := range toSave.Itineraries {
-			crd.CalculateRoute(ctx, dtKey, msg, &toSave)
+			dtKey := dtKey
+			go func(dtKey string) {
+				itin, ok := toSave.Itineraries[dtKey]
+				if !ok {
+					return
+				}
+				routesMap := crd.CalculateRoute(ctx, &itin, &toSave)
+				mutex.Lock()
+				crd.UpdateRoutes(ctx, dtKey, routesMap, msg, &toSave)
+				mutex.Unlock()
+				wg.Done()
+			}(dtKey)
 		}
+		wg.Wait()
+
 	case UpdateTripTitleUpdateTripDates:
 		crd.ChangeDates(ctx, msg, &toSave)
 	case UpdateTripTitleReorderItinerary,
@@ -249,19 +267,28 @@ func (crd *Coordinator) HandleTobOpUpdateTrip(ctx context.Context, msg *Message)
 		if dtKey == "" {
 			break
 		}
-		crd.CalculateRoute(ctx, dtKey, msg, &toSave)
+		if itin, ok := toSave.Itineraries[dtKey]; ok {
+			routesMap := crd.CalculateRoute(ctx, &itin, &toSave)
+			crd.UpdateRoutes(ctx, dtKey, routesMap, msg, &toSave)
+		}
 	case UpdateTripTitleReorderActivityToAnotherDay:
 		origDtKey := crd.FindItineraryDtKey(msg.Data.UpdateTrip.Ops)
 		if origDtKey == "" {
 			break
 		}
-		crd.CalculateRoute(ctx, origDtKey, msg, &toSave)
+		if itin, ok := toSave.Itineraries[origDtKey]; ok {
+			routesMap := crd.CalculateRoute(ctx, &itin, &toSave)
+			crd.UpdateRoutes(ctx, origDtKey, routesMap, msg, &toSave)
+		}
 		lessOneOps := msg.Data.UpdateTrip.Ops[1:]
 		destDtKey := crd.FindItineraryDtKey(lessOneOps)
 		if destDtKey == "" {
 			break
 		}
-		crd.CalculateRoute(ctx, destDtKey, msg, &toSave)
+		if itin, ok := toSave.Itineraries[destDtKey]; ok {
+			routesMap := crd.CalculateRoute(ctx, &itin, &toSave)
+			crd.UpdateRoutes(ctx, destDtKey, routesMap, msg, &toSave)
+		}
 	case UpdateTripTitleOptimizeItinerary:
 		crd.OptimizeRoute(ctx, msg, &toSave)
 	case UpdateTripTitleAddMediaItem:
@@ -317,22 +344,17 @@ func (crd *Coordinator) ChangeDates(ctx context.Context, msg *Message, toSave *t
 	crd.trip, _ = json.Marshal(toSave)
 }
 
-func (crd *Coordinator) CalculateRoute(ctx context.Context, dtKey string, msg *Message, toSave *trips.Trip) {
-	itin, ok := toSave.Itineraries[dtKey]
-	if !ok {
-		return
-	}
+func (crd *Coordinator) CalculateRoute(ctx context.Context, itin *trips.Itinerary, toSave *trips.Trip) map[string]maps.RouteList {
+	result := map[string]maps.RouteList{}
 
-	dt, _ := time.Parse("2006-01-02", dtKey)
-	lodgings := toSave.Lodgings.GetLodgingsForDate(dt)
+	lodgings := toSave.Lodgings.GetLodgingsForDate(itin.GetDate())
 	pairings := itin.MakeRoutePairings(lodgings)
-	routesToRemove := []string{}
 
 	for pair := range pairings {
 		if _, ok := itin.Routes[pair]; ok {
+			result[pair] = itin.Routes[pair]
 			continue
 		}
-
 		actIds := strings.Split(pair, trips.LabelDelimeter)
 
 		// Origin could be lodging
@@ -356,6 +378,19 @@ func (crd *Coordinator) CalculateRoute(ctx context.Context, dtKey string, msg *M
 			shortestRoute, _ := routes.GetMostCommonSenseRoute()
 			routes = maps.RouteList{shortestRoute}
 		}
+		result[pair] = routes
+	}
+	return result
+}
+
+func (crd *Coordinator) UpdateRoutes(
+	ctx context.Context,
+	dtKey string,
+	routesMap map[string]maps.RouteList,
+	msg *Message,
+	toSave *trips.Trip,
+) {
+	for pair, routes := range routesMap {
 		toSave.Itineraries[dtKey].Routes[pair] = routes
 		jop := jp.MakeAddOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
 		msg.Data.UpdateTrip.Ops = append(
@@ -363,8 +398,9 @@ func (crd *Coordinator) CalculateRoute(ctx context.Context, dtKey string, msg *M
 		)
 	}
 
-	for pair := range itin.Routes {
-		if _, ok := pairings[pair]; ok {
+	routesToRemove := []string{}
+	for pair := range toSave.Itineraries[dtKey].Routes {
+		if _, ok := routesMap[pair]; ok {
 			continue
 		}
 		routesToRemove = append(routesToRemove, pair)
@@ -388,7 +424,7 @@ func (crd *Coordinator) OptimizeRoute(ctx context.Context, msg *Message, toSave 
 	dtKey := pathTokens[2]
 	itin := toSave.Itineraries[dtKey]
 	sorted := itin.SortActivities()
-	sortedFracIndexes := trips.GetFracIndexes(sorted)
+	sortedFracIndexes := sorted.GetFracIndexes()
 	placeIDs := []string{}
 	for _, act := range sorted {
 		placeIDs = append(placeIDs, act.Place.PlaceID())
@@ -411,7 +447,8 @@ func (crd *Coordinator) OptimizeRoute(ctx context.Context, msg *Message, toSave 
 		msg.Data.UpdateTrip.Ops = append(msg.Data.UpdateTrip.Ops, jop)
 	}
 
-	crd.CalculateRoute(ctx, dtKey, msg, toSave)
+	routeMaps := crd.CalculateRoute(ctx, &itin, toSave)
+	crd.UpdateRoutes(ctx, dtKey, routeMaps, msg, toSave)
 }
 
 func (crd *Coordinator) AugmentMediaItemSignedURL(ctx context.Context, msg *Message, toSave *trips.Trip) {
