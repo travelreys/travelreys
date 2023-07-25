@@ -66,7 +66,8 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		authStore, cfg.SecureCookie,
 		mailSvc, storageSvc, logger,
 	)
-	authSvcWithRBAC := auth.ServiceWithRBACMiddleware(authSvc, logger)
+	authSvc = auth.SvcWithValidationMw(authSvc, logger)
+	authSvcWithRBAC := auth.SvcWithRBACMw(authSvc, logger)
 
 	// Images
 	imageSvc := images.NewService(images.NewDefaultWebAPI(logger))
