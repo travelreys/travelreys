@@ -53,7 +53,7 @@ func NewLoginEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return LoginResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		usr, cookie, err := svc.Login(ctx, req.Code, req.Provider, req.Signature)
+		usr, cookie, err := svc.Login(ctx, req.Code, req.Signature, req.Provider)
 		return LoginResponse{User: usr, Cookie: cookie, Err: err}, nil
 	}
 }

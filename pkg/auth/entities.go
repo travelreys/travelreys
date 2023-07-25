@@ -153,7 +153,7 @@ func UserFromFBUser(fbUsr FacebookUser) User {
 	}
 }
 
-var UsernameRegexp = regexp.MustCompile("^[a-zA-Z0-9_]*$")
+var UsernameRegexp = regexp.MustCompile("^[a-zA-Z0-9_\\-]*$")
 
 func IsValidUsername(userName string) bool {
 	if len(userName) < 5 && len(userName) > 255 {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/go-redis/redis/v9"
@@ -90,8 +91,11 @@ func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	if !ok {
 		return UsersList{}, nil
 	}
-	cursor, err := s.usrsColl.Find(ctx, bsonM)
-
+	opts := options.Find()
+	if ff.PageCount != nil {
+		opts.SetLimit(int64(math.Min(float64(*ff.PageCount), 20)))
+	}
+	cursor, err := s.usrsColl.Find(ctx, bsonM, opts)
 	if err != nil {
 		s.logger.Error(
 			"List",

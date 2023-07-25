@@ -27,10 +27,14 @@ func SvcWithValidationMw(svc Service, logger *zap.Logger) Service {
 
 func (mw validationMiddleware) Login(
 	ctx context.Context,
-	authCode, provider,
-	signature string,
+	authCode,
+	signature,
+	provider string,
 ) (User, *http.Cookie, error) {
-	if authCode == "" || signature == "" || provider == "" {
+	if provider == "" || authCode == "" {
+		return User{}, nil, ErrValidation
+	}
+	if provider == OIDCProviderOTP && signature == "" {
 		return User{}, nil, ErrValidation
 	}
 	return mw.next.Login(ctx, authCode, signature, provider)
@@ -90,7 +94,7 @@ func SvcWithRBACMw(svc Service, logger *zap.Logger) Service {
 	return &rbacMiddleware{svc, logger.Named("auth.rbacMiddleware")}
 }
 
-func (mw rbacMiddleware) Login(ctx context.Context, authCode, provider, signature string) (User, *http.Cookie, error) {
+func (mw rbacMiddleware) Login(ctx context.Context, authCode, signature, provider string) (User, *http.Cookie, error) {
 	return mw.next.Login(ctx, authCode, signature, provider)
 }
 
@@ -109,6 +113,9 @@ func (mw rbacMiddleware) Read(ctx context.Context, ID string) (User, error) {
 func (mw rbacMiddleware) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
+		return UsersList{}, ErrRBAC
+	}
+	if ff.Email != nil || len(ff.IDs) > 0 {
 		return UsersList{}, ErrRBAC
 	}
 	return mw.next.List(ctx, ff)

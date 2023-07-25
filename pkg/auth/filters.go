@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"fmt"
+
 	"github.com/travelreys/travelreys/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -54,9 +56,10 @@ func (ff *UpdateFilter) Validate() error {
 }
 
 type ListFilter struct {
-	IDs      []string `json:"ids" bson:"id"`
-	Username *string  `json:"username" bson:"username"`
-	Email    *string  `json:"email" bson:"email"`
+	IDs       []string `json:"ids" bson:"id"`
+	Username  *string  `json:"username" bson:"username"`
+	Email     *string  `json:"email" bson:"email"`
+	PageCount *int     `json:"pageCount" bson:"pageCount"`
 }
 
 func (ff *ListFilter) Validate() error {
@@ -70,7 +73,7 @@ func (ff *ListFilter) Validate() error {
 }
 
 func (ff *ListFilter) toBSON() (bson.M, bool) {
-	var bsonM bson.M
+	bsonM := bson.M{}
 	isSet := false
 
 	if len(ff.IDs) > 0 {
@@ -82,7 +85,9 @@ func (ff *ListFilter) toBSON() (bson.M, bool) {
 		isSet = true
 	}
 	if ff.Username != nil && *ff.Username != "" {
-		bsonM[bsonKeyUsername] = ff.Username
+		bsonM[bsonKeyUsername] = bson.M{
+			"$regex": fmt.Sprintf("^%s", *ff.Username),
+		}
 		isSet = true
 	}
 	return bsonM, isSet
