@@ -68,18 +68,23 @@ type ListFilter struct {
 	Email    *string  `json:"email" bson:"email"`
 }
 
-func (ff ListFilter) toBSON() bson.M {
+func (ff ListFilter) toBSON() (bson.M, bool) {
 	bsonM := bson.M{}
+	isSet := false
+
 	if len(ff.IDs) > 0 {
 		bsonM[bsonKeyID] = bson.M{"$in": ff.IDs}
+		isSet = true
 	}
 	if ff.Email != nil && *ff.Username != "" {
 		bsonM[bsonKeyEmail] = ff.Email
+		isSet = true
 	}
 	if ff.Username != nil && *ff.Username != "" {
 		bsonM[bsonKeyUsername] = ff.Username
+		isSet = true
 	}
-	return bsonM
+	return bsonM, isSet
 }
 
 type Store interface {
@@ -135,7 +140,11 @@ func (s store) Read(ctx context.Context, ff ReadFilter) (User, error) {
 
 func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	list := UsersList{}
-	cursor, err := s.usrsColl.Find(ctx, ff.toBSON())
+	bsonM, ok := ff.toBSON()
+	if !ok {
+		return UsersList{}, nil
+	}
+	cursor, err := s.usrsColl.Find(ctx, bsonM)
 
 	if err != nil {
 		s.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
@@ -161,7 +170,6 @@ func (s store) Update(ctx context.Context, ID string, ff UpdateFilter) error {
 		}
 		return ErrUnexpectedStoreError
 	}
-
 	return nil
 }
 

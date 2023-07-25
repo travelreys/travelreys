@@ -29,8 +29,9 @@ type ListFilter struct {
 	OnlyPublic bool
 }
 
-func (f ListFilter) toBSON() bson.M {
+func (f ListFilter) toBSON() (bson.M, bool) {
 	bsonAnd := bson.A{}
+	isSet := false
 
 	if f.UserID != nil {
 		bsonUserOr := bson.A{
@@ -38,6 +39,7 @@ func (f ListFilter) toBSON() bson.M {
 			bson.M{fmt.Sprintf("membersId.%s", *f.UserID): *f.UserID},
 		}
 		bsonAnd = append(bsonAnd, bson.M{"$or": bsonUserOr})
+		isSet = true
 	}
 
 	if f.UserIDs != nil && len(f.UserIDs) > 0 {
@@ -50,14 +52,17 @@ func (f ListFilter) toBSON() bson.M {
 			})
 		}
 		bsonAnd = append(bsonAnd, bson.M{"$or": bsonUserOr})
+		isSet = true
 	}
 
 	if f.OnlyPublic {
 		sharingAccessLabel := "labels." + LabelSharingAccess
 		bsonAnd = append(bsonAnd, bson.M{sharingAccessLabel: SharingAccessViewer})
+		isSet = true
 	}
+
 	bsonAnd = append(bsonAnd, bson.M{"deleted": false})
-	return bson.M{"$and": bsonAnd}
+	return bson.M{"$and": bsonAnd}, isSet
 }
 
 type Store interface {
@@ -112,8 +117,13 @@ func (s *store) Read(ctx context.Context, ID string) (Trip, error) {
 
 func (s *store) List(ctx context.Context, ff ListFilter) (TripsList, error) {
 	list := TripsList{}
+	bsonM, ok := ff.toBSON()
+	if !ok {
+		return list, nil
+	}
+
 	opts := options.Find().SetSort(bson.M{"startDate": -1})
-	cursor, err := s.tripsColl.Find(ctx, ff.toBSON(), opts)
+	cursor, err := s.tripsColl.Find(ctx, bsonM, opts)
 	if err != nil {
 		s.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return list, err
