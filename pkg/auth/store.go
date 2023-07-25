@@ -22,70 +22,14 @@ const (
 	bsonKeyPhoneNumber = "phonenumber"
 	bsonKeyLabels      = "labels"
 	collectionUsers    = "users"
-	storeLoggerName    = "auth.store"
 )
 
 var (
+	ErrInvalidFilter        = errors.New("auth.InvalidFilter")
 	ErrUserNotFound         = errors.New("auth.ErrUserNotFound")
 	ErrDuplicateUsername    = errors.New("auth.ErrDuplicateUsername")
 	ErrUnexpectedStoreError = errors.New("auth.ErrUnexpectedStoreError")
 )
-
-type ReadFilter struct {
-	ID    string `json:"id" bson:"id,omitempty"`
-	Email string `json:"email" bson:"email,omitempty"`
-}
-
-type UpdateFilter struct {
-	Email       *string `json:"email" bson:"email"`
-	Name        *string `json:"name" bson:"name"`
-	Username    *string `json:"username" bson:"username"`
-	PhoneNumber *PhoneNumber
-	Labels      *common.Labels `json:"labels" bson:"labels"`
-}
-
-func (ff UpdateFilter) toBSON() bson.M {
-	bsonM := bson.M{}
-
-	if ff.Email != nil && *ff.Email != "" {
-		bsonM[bsonKeyEmail] = ff.Email
-	}
-	if ff.Name != nil && *ff.Name != "" {
-		bsonM[bsonKeyName] = ff.Name
-	}
-	if ff.Username != nil && *ff.Username != "" {
-		bsonM[bsonKeyUsername] = ff.Username
-	}
-	if ff.Labels != nil {
-		bsonM[bsonKeyLabels] = ff.Labels
-	}
-	return bsonM
-}
-
-type ListFilter struct {
-	IDs      []string `json:"ids" bson:"id"`
-	Username *string  `json:"username" bson:"username"`
-	Email    *string  `json:"email" bson:"email"`
-}
-
-func (ff ListFilter) toBSON() (bson.M, bool) {
-	bsonM := bson.M{}
-	isSet := false
-
-	if len(ff.IDs) > 0 {
-		bsonM[bsonKeyID] = bson.M{"$in": ff.IDs}
-		isSet = true
-	}
-	if ff.Email != nil && *ff.Username != "" {
-		bsonM[bsonKeyEmail] = ff.Email
-		isSet = true
-	}
-	if ff.Username != nil && *ff.Username != "" {
-		bsonM[bsonKeyUsername] = ff.Username
-		isSet = true
-	}
-	return bsonM, isSet
-}
 
 type Store interface {
 	Read(context.Context, ReadFilter) (User, error)
@@ -101,8 +45,7 @@ type store struct {
 	db       *mongo.Database
 	usrsColl *mongo.Collection
 
-	rdb redis.UniversalClient
-
+	rdb    redis.UniversalClient
 	logger *zap.Logger
 }
 
@@ -121,18 +64,21 @@ func NewStore(
 		{Keys: bson.M{bsonKeyEmail: 1}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.M{bsonKeyUsername: 1}, Options: options.Index().SetUnique(true)},
 	})
-	return &store{db, usrsColl, rdb, logger.Named(storeLoggerName)}
+	return &store{db, usrsColl, rdb, logger.Named("auth.store")}
 }
 
 func (s store) Read(ctx context.Context, ff ReadFilter) (User, error) {
 	var usr User
-
 	err := s.usrsColl.FindOne(ctx, ff).Decode(&usr)
 	if err == mongo.ErrNoDocuments {
 		return usr, ErrUserNotFound
 	}
 	if err != nil {
-		s.logger.Error("Read", zap.String("ff", common.FmtString(ff)), zap.Error(err))
+		s.logger.Error(
+			"Read",
+			zap.String("ff", common.FmtString(ff)),
+			zap.Error(err),
+		)
 		return usr, ErrUnexpectedStoreError
 	}
 	return usr, err
@@ -147,7 +93,11 @@ func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	cursor, err := s.usrsColl.Find(ctx, bsonM)
 
 	if err != nil {
-		s.logger.Error("List", zap.String("ff", common.FmtString(ff)), zap.Error(err))
+		s.logger.Error(
+			"List",
+			zap.String("ff", common.FmtString(ff)),
+			zap.Error(err),
+		)
 		return list, err
 	}
 	err = cursor.All(ctx, &list)
@@ -155,12 +105,21 @@ func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 }
 
 func (s store) Update(ctx context.Context, ID string, ff UpdateFilter) error {
-	_, err := s.usrsColl.UpdateOne(ctx, bson.M{bsonKeyID: ID}, bson.M{"$set": ff.toBSON()})
+	uBsonM, ok := ff.toBSON()
+	if !ok {
+		return nil
+	}
+	_, err := s.usrsColl.UpdateOne(
+		ctx,
+		bson.M{bsonKeyID: ID},
+		bson.M{"$set": uBsonM},
+	)
 	if err == mongo.ErrNoDocuments {
 		return ErrUserNotFound
 	}
 	if err != nil {
-		s.logger.Error("Update",
+		s.logger.Error(
+			"Update",
 			zap.String("ID", ID),
 			zap.String("ff", common.FmtString(ff)),
 			zap.Error(err),
@@ -178,7 +137,11 @@ func (s store) Save(ctx context.Context, usr User) error {
 	opts := options.Replace().SetUpsert(true)
 	_, err := s.usrsColl.ReplaceOne(ctx, saveFF, usr, opts)
 	if err != nil {
-		s.logger.Error("Save", zap.String("usr", common.FmtString(usr)), zap.Error(err))
+		s.logger.Error(
+			"Save",
+			zap.String("usr", common.FmtString(usr)),
+			zap.Error(err),
+		)
 	}
 	return err
 }

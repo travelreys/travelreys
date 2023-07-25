@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -150,4 +151,13 @@ func UserFromFBUser(fbUsr FacebookUser) User {
 			LabelFacebookUserPicture: fbUsr.Picture.Data.URL,
 		},
 	}
+}
+
+var UsernameRegexp = regexp.MustCompile("^[a-zA-Z0-9_]*$")
+
+func IsValidUsername(userName string) bool {
+	if len(userName) < 5 && len(userName) > 255 {
+		return false
+	}
+	return UsernameRegexp.MatchString(userName)
 }
