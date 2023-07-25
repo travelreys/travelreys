@@ -38,7 +38,6 @@ func (svc service) Fetch(ctx context.Context, queryUrl string) (Opengraph, error
 	if err != nil {
 		return Opengraph{}, err
 	}
-
 	ogp := &opengraph.OpenGraph{Intent: intent}
 	if err := ogp.Parse(resp.Body); err != nil {
 		return Opengraph{}, err

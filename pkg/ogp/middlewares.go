@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/url"
 
 	"github.com/travelreys/travelreys/pkg/reqctx"
 	"go.uber.org/zap"
@@ -23,11 +24,16 @@ func SvcWithValidation(svc Service, logger *zap.Logger) Service {
 	return &validationMiddleware{svc, logger.Named("ogp.validationMiddleware")}
 }
 
-func (mw validationMiddleware) Fetch(ctx context.Context, url string) (Opengraph, error) {
-	if url == "" {
+func (mw validationMiddleware) Fetch(ctx context.Context, queryURL string) (Opengraph, error) {
+	if queryURL == "" {
 		return Opengraph{}, ErrValidation
 	}
-	ips, err := net.LookupIP(url)
+	u, err := url.Parse(queryURL)
+	if err != nil {
+		return Opengraph{}, ErrValidation
+	}
+
+	ips, err := net.LookupIP(u.Host)
 	if err != nil {
 		return Opengraph{}, ErrValidation
 	}
@@ -36,7 +42,7 @@ func (mw validationMiddleware) Fetch(ctx context.Context, url string) (Opengraph
 			return Opengraph{}, ErrValidation
 		}
 	}
-	return mw.next.Fetch(ctx, url)
+	return mw.next.Fetch(ctx, queryURL)
 }
 
 type rbacMiddleware struct {
@@ -48,10 +54,10 @@ func SvcWithRBACMw(svc Service, logger *zap.Logger) Service {
 	return &rbacMiddleware{svc, logger.Named("ogp.rbacMiddleware")}
 }
 
-func (mw rbacMiddleware) Fetch(ctx context.Context, url string) (Opengraph, error) {
+func (mw rbacMiddleware) Fetch(ctx context.Context, queryURL string) (Opengraph, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return Opengraph{}, ErrRBAC
 	}
-	return mw.next.Fetch(ctx, url)
+	return mw.next.Fetch(ctx, queryURL)
 }
