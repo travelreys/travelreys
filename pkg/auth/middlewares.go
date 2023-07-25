@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
 	"go.uber.org/zap"
 )
@@ -12,6 +13,65 @@ import (
 var (
 	ErrRBAC = errors.New("auth.ErrRBAC")
 )
+
+type validationMiddleware struct {
+	next   Service
+	logger *zap.Logger
+}
+
+func ServiceWithSecurityMiddleware(svc Service, logger *zap.Logger) Service {
+	namedLogger := logger.Named("auth.ServiceWithSecurityMiddleware")
+	return &validationMiddleware{svc, namedLogger}
+}
+
+func (mw validationMiddleware) Login(
+	ctx context.Context,
+	authCode, provider,
+	signature string,
+) (User, *http.Cookie, error) {
+	return mw.next.Login(ctx, authCode, signature, provider)
+}
+
+func (mw validationMiddleware) MagicLink(ctx context.Context, email string) error {
+	if !common.IsEmailValid(email) {
+		return ErrProviderOTPInvalidEmail
+	}
+	return mw.next.MagicLink(ctx, email)
+}
+
+func (mw validationMiddleware) Read(ctx context.Context, ID string) (User, error) {
+	return mw.next.Read(ctx, ID)
+}
+
+func (mw validationMiddleware) List(ctx context.Context, ff ListFilter) (UsersList, error) {
+	return mw.next.List(ctx, ff)
+}
+
+func (mw validationMiddleware) Update(ctx context.Context, ID string, ff UpdateFilter) error {
+	return mw.next.Update(ctx, ID, ff)
+}
+
+func (mw validationMiddleware) Delete(ctx context.Context, ID string) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil {
+		return ErrRBAC
+	}
+	if ci.UserID != ID {
+		return ErrRBAC
+	}
+	return mw.next.Delete(ctx, ID)
+}
+
+func (mw validationMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID, mimeType string) (string, string, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil {
+		return "", "", ErrRBAC
+	}
+	if ci.UserID != ID {
+		return "", "", ErrRBAC
+	}
+	return mw.next.UploadAvatarPresignedURL(ctx, ID, mimeType)
+}
 
 type rbacMiddleware struct {
 	next   Service
