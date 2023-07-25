@@ -87,7 +87,8 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	// Ogp
 	ogpSvc := ogp.NewService()
-	ogpSvc = ogp.ServiceWithRBACMiddleware(ogpSvc, logger)
+	ogpSvc = ogp.SvcWithValidation(ogpSvc, logger)
+	ogpSvc = ogp.SvcWithRBACMw(ogpSvc, logger)
 
 	// Media
 	mediaStore := media.NewStore(ctx, db, logger)
