@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/auth"
@@ -49,7 +50,7 @@ type Service interface {
 	ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error)
 	ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error)
 
-	DuplicateTrip(ctx context.Context, initiatorID, referrerID, tripID, name string) (string, error)
+	DuplicateTrip(ctx context.Context, initiatorID, referrerID, tripID, name string, startDate time.Time) (string, error)
 }
 
 type service struct {
@@ -337,7 +338,14 @@ func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) 
 	return publicInfo, profileMap, nil
 }
 
-func (svc *service) DuplicateTrip(ctx context.Context, initiatorID, referrerID, tripID, name string) (string, error) {
+func (svc *service) DuplicateTrip(
+	ctx context.Context,
+	initiatorID,
+	referrerID,
+	tripID,
+	name string,
+	startDate time.Time,
+) (string, error) {
 	var (
 		trip trips.Trip
 		err  error
@@ -351,18 +359,32 @@ func (svc *service) DuplicateTrip(ctx context.Context, initiatorID, referrerID, 
 			return "", err
 		}
 	}
+
+	numDays := int(trip.EndDate.Sub(trip.StartDate).Hours() / 24)
+	endDate := startDate.Add(time.Duration(numDays*24) * time.Hour)
+
 	creator := trips.NewMember(initiatorID, trips.MemberRoleCreator)
-	newTrip := trips.NewTripWithDates(creator, name, trip.StartDate, trip.EndDate)
+	newTrip := trips.NewTripWithDates(creator, name, startDate, endDate)
 	newTrip.CoverImage = trips.CoverImage{
 		Source:   trips.CoverImageSourceWeb,
 		WebImage: images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))],
 	}
 
 	for _, lodging := range trip.Lodgings {
+		numDays := int(lodging.CheckoutTime.Sub(lodging.CheckinTime).Hours() / 24)
+		checkinDtDiff := int(lodging.CheckinTime.Sub(trip.StartDate).Hours() / 24)
+		checkinDt := startDate
+		if checkinDtDiff < 0 {
+			checkinDt = checkinDt.Add(time.Duration(checkinDtDiff*-24) * time.Hour)
+		} else {
+			checkinDt = checkinDt.Add(time.Duration(checkinDtDiff*24) * time.Hour)
+		}
+		checkoutDt := checkinDt.Add(time.Duration(numDays*24) * time.Hour)
+
 		newLodging := trips.Lodging{
 			ID:           uuid.NewString(),
-			CheckinTime:  lodging.CheckinTime,
-			CheckoutTime: lodging.CheckoutTime,
+			CheckinTime:  checkinDt,
+			CheckoutTime: checkoutDt,
 			PriceItem:    lodging.PriceItem,
 			Notes:        lodging.Notes,
 			Place:        lodging.Place,
@@ -373,8 +395,11 @@ func (svc *service) DuplicateTrip(ctx context.Context, initiatorID, referrerID, 
 		newTrip.Lodgings[newLodging.ID] = newLodging
 	}
 
-	for key, itin := range trip.Itineraries {
-		newItin := trips.NewItinerary(itin.Date)
+	for _, itin := range trip.Itineraries {
+		daysDiff := int(itin.Date.Sub(trip.StartDate).Hours() / 24)
+		newDate := startDate.Add(time.Duration(daysDiff*24) * time.Hour)
+
+		newItin := trips.NewItinerary(newDate)
 		actIDMap := map[string]string{}
 
 		for actKey, act := range itin.Activities {
@@ -401,7 +426,7 @@ func (svc *service) DuplicateTrip(ctx context.Context, initiatorID, referrerID, 
 			newItin.Routes[newKey] = route
 		}
 
-		newTrip.Itineraries[key] = newItin
+		newTrip.Itineraries[newDate.Format("2006-01-02")] = newItin
 	}
 
 	return newTrip.ID, svc.tripSvc.Save(ctx, newTrip)

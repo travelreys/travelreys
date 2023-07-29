@@ -2,6 +2,7 @@ package social
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/travelreys/travelreys/pkg/common"
@@ -280,9 +281,10 @@ func NewListFollowingTripsEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type DuplicateRequest struct {
-	TripID     string `json:"id"`
-	Name       string `json:"name"`
-	ReferrerID string `json:"referrerID"`
+	TripID     string    `json:"id"`
+	Name       string    `json:"name"`
+	StartDate  time.Time `json:"startDate"`
+	ReferrerID string    `json:"referrerID"`
 }
 type DuplicateResponse struct {
 	ID  string `json:"id"`
@@ -299,7 +301,9 @@ func NewDuplicateTripEndpoint(svc Service) endpoint.Endpoint {
 		if !ok {
 			return DuplicateResponse{Err: common.ErrorEndpointReqMismatch}, nil
 		}
-		id, err := svc.DuplicateTrip(ctx, "", req.ReferrerID, req.TripID, req.Name)
+		id, err := svc.DuplicateTrip(
+			ctx, "", req.ReferrerID, req.TripID, req.Name, req.StartDate,
+		)
 		return DuplicateResponse{ID: id, Err: err}, nil
 	}
 }

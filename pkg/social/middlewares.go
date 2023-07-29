@@ -3,6 +3,7 @@ package social
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
@@ -207,7 +208,14 @@ func (mw rbacMiddleware) ListFollowingTrips(ctx context.Context, initiatorID str
 	return mw.next.ListFollowingTrips(ctx, initiatorID)
 }
 
-func (mw rbacMiddleware) DuplicateTrip(ctx context.Context, initiatorID, referrerID, tripID, name string) (string, error) {
+func (mw rbacMiddleware) DuplicateTrip(
+	ctx context.Context,
+	initiatorID,
+	referrerID,
+	tripID,
+	name string,
+	startDate time.Time,
+) (string, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return "", ErrRBAC
@@ -221,7 +229,7 @@ func (mw rbacMiddleware) DuplicateTrip(ctx context.Context, initiatorID, referre
 
 	// Allow access if the trip is public
 	if trip.IsSharingEnabled() {
-		return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name)
+		return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name, startDate)
 	}
 
 	// Allow access if you are a member of the trip
@@ -230,14 +238,14 @@ func (mw rbacMiddleware) DuplicateTrip(ctx context.Context, initiatorID, referre
 		membersID = append(membersID, mem.ID)
 	}
 	if common.StringContains(membersID, ci.UserID) {
-		return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name)
+		return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name, startDate)
 	}
 
 	// ReferrerID should be a member ID.
 	// Allow access if you are friend of the member of the trip
 	if common.StringContains(membersID, referrerID) {
 		if _, err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
-			return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name)
+			return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name, startDate)
 		}
 	}
 
