@@ -13,10 +13,18 @@ type SessionContext struct {
 	TripID string
 
 	// Participating member
-	Member Member
+	MemberID string
 }
 
 type SessionContextList []SessionContext
+
+func (l SessionContextList) ToMembers() []string {
+	mList := []string{}
+	for _, ctx := range l {
+		mList = append(mList, ctx.MemberID)
+	}
+	return mList
+}
 
 const (
 	SyncMsgTypeControl = "control"
@@ -24,11 +32,10 @@ const (
 )
 
 type SyncMsg struct {
-	Type   string `json:"type"`
-	ConnID string `json:"connId"`
-	TripID string `json:"tripId"`
-
-	Member Member `json:"member"`
+	Type     string `json:"type"`
+	ConnID   string `json:"connId"`
+	TripID   string `json:"tripId"`
+	MemberID string `json:"memberId"`
 }
 
 const (
@@ -44,9 +51,9 @@ type SyncMsgControl struct {
 
 	Topic string `json:"topic"`
 
-	JoinSession  SyncMsgControlPayloadJoin  `json:"join"`
-	LeaveSession SyncMsgControlPayloadLeave `json:"leave"`
-	Ping         SyncMsgControlPayloadPing  `json:"ping"`
+	Join  SyncMsgControlPayloadJoin  `json:"join"`
+	Leave SyncMsgControlPayloadLeave `json:"leave"`
+	Ping  SyncMsgControlPayloadPing  `json:"ping"`
 }
 
 type SyncMsgControlPayloadJoin struct {
@@ -54,7 +61,7 @@ type SyncMsgControlPayloadJoin struct {
 	Trip *Trip `json:"trip"`
 
 	// List of members updated (presence)
-	Members MembersList `json:"members"`
+	Members []string `json:"members"`
 }
 
 type SyncMsgControlPayloadLeave struct {
@@ -73,14 +80,14 @@ type SyncMsgControlPayloadFormPresence struct {
 func MakeSyncMsgControlTopicLeave(
 	connID,
 	tripID string,
-	mem Member,
+	mem string,
 ) SyncMsgControl {
 	return SyncMsgControl{
 		SyncMsg: SyncMsg{
-			Type:   SyncMsgTypeControl,
-			ConnID: connID,
-			TripID: tripID,
-			Member: mem,
+			Type:     SyncMsgTypeControl,
+			ConnID:   connID,
+			TripID:   tripID,
+			MemberID: mem,
 		},
 		Topic: SyncMsgControlTopicLeave,
 	}
@@ -89,14 +96,14 @@ func MakeSyncMsgControlTopicLeave(
 func MakeSyncMsgControlTopicPing(
 	connID,
 	tripID string,
-	mem Member,
+	mem string,
 ) SyncMsgControl {
 	return SyncMsgControl{
 		SyncMsg: SyncMsg{
-			Type:   SyncMsgTypeControl,
-			ConnID: connID,
-			TripID: tripID,
-			Member: mem,
+			Type:     SyncMsgTypeControl,
+			ConnID:   connID,
+			TripID:   tripID,
+			MemberID: mem,
 		},
 		Topic: SyncMsgControlTopicPing,
 	}
@@ -127,11 +134,7 @@ const (
 type SyncMsgData struct {
 	SyncMsg
 
-	Topic   string             `json:"topic"`
-	Counter uint64             `json:"counter"`
-	Payload SyncMsgDataPayload `json:"payload"`
-}
-
-type SyncMsgDataPayload struct {
-	Ops []jsonpatch.Op `json:"ops"`
+	Topic   string         `json:"topic"`
+	Counter uint64         `json:"counter"`
+	Ops     []jsonpatch.Op `json:"ops"`
 }

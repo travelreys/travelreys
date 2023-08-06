@@ -24,19 +24,24 @@ var (
 const (
 	LabelDelimeter = "|"
 
+	LabelActivityDisplayMediaItem = "displayMediaItem"
 	LabelCreatedBy                = "createdBy"
 	LabelFractionalIndex          = "fIndex"
+	LabelSharingAccess            = "sharing|access"
 	LabelUiColor                  = "ui|color"
-	LabelActivityDisplayMediaItem = "displayMediaItem"
 
-	LabelSharingAccess  = "sharing|access"
+	// Sharing Access Permissions
 	SharingAccessViewer = "view"
-)
 
-const (
+	// Media Items
 	MediaItemKeyTrip           = "trip"
 	MediaItemKeyActivityPrefix = "activity"
+
+	// JSON Patch Paths
+	JSONPathItineraryRoot = "/itineraries"
 )
+
+const ()
 
 type Trip struct {
 	ID   string `json:"id" bson:"id"`
@@ -58,7 +63,7 @@ type Trip struct {
 	Budget   Budget      `json:"budget" bson:"budget"`
 	Links    LinksMap    `json:"links" bson:"links"`
 
-	Itineraries map[string]Itinerary `json:"itineraries" bson:"itineraries"`
+	Itineraries ItineraryMap `json:"itineraries" bson:"itineraries"`
 
 	// Media, Attachements
 	MediaItems map[string]media.MediaItemList `json:"mediaItems" bson:"mediaItems"`
@@ -95,7 +100,7 @@ func NewTrip(creator Member, name string) *Trip {
 		MembersID:   map[string]string{},
 		Transits:    TransitsMap{},
 		Lodgings:    LodgingsMap{},
-		Itineraries: map[string]Itinerary{},
+		Itineraries: ItineraryMap{},
 		Budget:      NewBudget(),
 		Links:       LinksMap{},
 		MediaItems: map[string]media.MediaItemList{
@@ -241,6 +246,8 @@ type LodgingsMap map[string]*Lodging
 func (m LodgingsMap) GetLodgingsForDate(dt time.Time) LodgingsMap {
 	results := LodgingsMap{}
 	for _, l := range m {
+		// TODO: fix this checkout and checking should be the same then show
+		// else only show checkin or staying
 		if (dt.Equal(l.CheckinTime) || dt.After(l.CheckinTime)) &&
 			(dt.Before(l.CheckoutTime) || dt.Equal(l.CheckoutTime)) {
 			results[l.ID] = l

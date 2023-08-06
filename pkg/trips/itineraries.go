@@ -11,6 +11,10 @@ import (
 	"github.com/travelreys/travelreys/pkg/maps"
 )
 
+const (
+	ItineraryDtKeyFormat = "2006-01-02"
+)
+
 type Activity struct {
 	ID        string            `json:"id" bson:"id"`
 	Title     string            `json:"title" bson:"title"`
@@ -58,8 +62,8 @@ type Itinerary struct {
 	Labels      common.Labels `json:"labels" bson:"labels"`
 }
 
-func NewItinerary(date time.Time) Itinerary {
-	return Itinerary{
+func NewItinerary(date time.Time) *Itinerary {
+	return &Itinerary{
 		ID:          uuid.New().String(),
 		Date:        date,
 		Description: "",
@@ -128,3 +132,5 @@ func (itin Itinerary) RoutePairings(lodgings LodgingsMap) map[string]bool {
 	}
 	return pairings
 }
+
+type ItineraryMap map[string]*Itinerary

@@ -104,7 +104,7 @@ func (svc *service) Create(
 	for i := 0; i <= int(numDays); i++ {
 		dt := trip.StartDate.Add(time.Duration(i*24) * time.Hour)
 		itin := NewItinerary(dt)
-		trip.Itineraries[dt.Format("2006-01-02")] = itin
+		trip.Itineraries[dt.Format(ItineraryDtKeyFormat)] = itin
 	}
 	err := svc.Save(ctx, trip)
 	return trip, err

@@ -424,7 +424,7 @@ func (svc *service) DuplicateTrip(
 			newItin.Routes[newKey] = route
 		}
 
-		newTrip.Itineraries[newDate.Format("2006-01-02")] = newItin
+		newTrip.Itineraries[newDate.Format(trips.ItineraryDtKeyFormat)] = newItin
 	}
 
 	return newTrip.ID, svc.tripSvc.Save(ctx, newTrip)

@@ -115,7 +115,7 @@ func MakeTripPublicInfo(trip *trips.Trip) *trips.Trip {
 	}
 	newTrip.MediaItems = trip.MediaItems
 
-	newTrip.Itineraries = map[string]trips.Itinerary{}
+	newTrip.Itineraries = trips.ItineraryMap{}
 	sortedItinKey := trips.GetSortedItineraryKeys(trip)
 	for idx, key := range sortedItinKey {
 		itin := trip.Itineraries[key]

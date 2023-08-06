@@ -172,10 +172,10 @@ func (s *sessionStore) RefreshCounterTTL(ctx context.Context, tripID string, lea
 }
 
 type SyncMsgControlStore interface {
-	PublishRequest(tripID string, msg SyncMsgControl) error
-	SubscribeRequest(tripID string) (<-chan SyncMsgControl, chan<- bool, error)
-	PublishResponse(tripID string, msg SyncMsgControl) error
-	SubscribeResponse(tripID string) (<-chan SyncMsgControl, chan<- bool, error)
+	PubReq(tripID string, msg SyncMsgControl) error
+	SubReq(tripID string) (<-chan SyncMsgControl, chan<- bool, error)
+	PubRes(tripID string, msg SyncMsgControl) error
+	SubRes(tripID string) (<-chan SyncMsgControl, chan<- bool, error)
 }
 
 type syncMsgControlStore struct {
@@ -230,29 +230,29 @@ func (s *syncMsgControlStore) subscribe(subj, tripID string) (<-chan SyncMsgCont
 	return msgCh, done, nil
 }
 
-func (s *syncMsgControlStore) PublishRequest(tripID string, msg SyncMsgControl) error {
+func (s *syncMsgControlStore) PubReq(tripID string, msg SyncMsgControl) error {
 	return s.publish(SubjControlRequest(tripID), tripID, msg)
 }
 
-func (s *syncMsgControlStore) SubscribeRequest(tripID string) (<-chan SyncMsgControl, chan<- bool, error) {
+func (s *syncMsgControlStore) SubReq(tripID string) (<-chan SyncMsgControl, chan<- bool, error) {
 	return s.subscribe(SubjControlRequest(tripID), tripID)
 }
 
-func (s *syncMsgControlStore) PublishResponse(tripID string, msg SyncMsgControl) error {
+func (s *syncMsgControlStore) PubRes(tripID string, msg SyncMsgControl) error {
 	return s.publish(SubjControlResponse(tripID), tripID, msg)
 }
 
-func (s *syncMsgControlStore) SubscribeResponse(tripID string) (<-chan SyncMsgControl, chan<- bool, error) {
+func (s *syncMsgControlStore) SubRes(tripID string) (<-chan SyncMsgControl, chan<- bool, error) {
 	return s.subscribe(SubjControlResponse(tripID), tripID)
 }
 
 type SyncMsgDataStore interface {
-	PublishRequest(tripID string, msg SyncMsgData) error
-	SubscribeRequest(tripID string) (<-chan SyncMsgData, chan<- bool, error)
-	SubscribeRequestQueue(tripID, groupName string) (<-chan SyncMsgData, chan<- bool, error)
+	PubReq(tripID string, msg SyncMsgData) error
+	SubReq(tripID string) (<-chan SyncMsgData, chan<- bool, error)
+	SubReqQueue(tripID, groupName string) (<-chan SyncMsgData, chan<- bool, error)
 
-	PublishResponse(tripID string, msg SyncMsgData) error
-	SubscribeResponse(tripID string) (<-chan SyncMsgData, chan<- bool, error)
+	PubRes(tripID string, msg SyncMsgData) error
+	SubRes(tripID string) (<-chan SyncMsgData, chan<- bool, error)
 }
 
 type syncMsgDataStore struct {
@@ -334,23 +334,23 @@ func (s *syncMsgDataStore) subscribeQueue(subj, tripID, groupName string) (<-cha
 	return msgCh, done, nil
 }
 
-func (s *syncMsgDataStore) PublishRequest(tripID string, msg SyncMsgData) error {
+func (s *syncMsgDataStore) PubReq(tripID string, msg SyncMsgData) error {
 	return s.publish(SubjDataRequest(tripID), tripID, msg)
 }
 
-func (s *syncMsgDataStore) SubscribeRequest(tripID string) (<-chan SyncMsgData, chan<- bool, error) {
+func (s *syncMsgDataStore) SubReq(tripID string) (<-chan SyncMsgData, chan<- bool, error) {
 	return s.subscribe(SubjDataRequest(tripID), tripID)
 }
 
-func (s *syncMsgDataStore) SubscribeRequestQueue(tripID, groupName string) (<-chan SyncMsgData, chan<- bool, error) {
+func (s *syncMsgDataStore) SubReqQueue(tripID, groupName string) (<-chan SyncMsgData, chan<- bool, error) {
 	return s.subscribeQueue(SubjDataRequest(tripID), tripID, groupName)
 }
 
-func (s *syncMsgDataStore) PublishResponse(tripID string, msg SyncMsgData) error {
+func (s *syncMsgDataStore) PubRes(tripID string, msg SyncMsgData) error {
 	return s.publish(SubjDataResponse(tripID), tripID, msg)
 
 }
 
-func (s *syncMsgDataStore) SubscribeResponse(tripID string) (<-chan SyncMsgData, chan<- bool, error) {
+func (s *syncMsgDataStore) SubRes(tripID string) (<-chan SyncMsgData, chan<- bool, error) {
 	return s.subscribe(SubjDataResponse(tripID), tripID)
 }

@@ -137,6 +137,7 @@ func RouteFromRouteResult(result maps.Route, mode string) Route {
 }
 
 type RouteList []Route
+type RouteListMap map[string]RouteList
 
 // GetMostCommonSenseRoute returns the "most common sense" route
 // amongs multiple route options, that is, when walking is avaliable and
