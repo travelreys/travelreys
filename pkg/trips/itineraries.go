@@ -7,18 +7,19 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/finance"
 	"github.com/travelreys/travelreys/pkg/maps"
 )
 
 type Activity struct {
-	ID        string           `json:"id" bson:"id"`
-	Title     string           `json:"title" bson:"title"`
-	Place     maps.Place       `json:"place" bson:"place"`
-	Notes     string           `json:"notes" bson:"notes"`
-	PriceItem common.PriceItem `json:"price" bson:"price"`
-	StartTime time.Time        `json:"startTime" bson:"startTime"`
-	EndTime   time.Time        `json:"endTime" bson:"endTime"`
-	Labels    common.Labels    `json:"labels" bson:"labels"`
+	ID        string            `json:"id" bson:"id"`
+	Title     string            `json:"title" bson:"title"`
+	Place     maps.Place        `json:"place" bson:"place"`
+	Notes     string            `json:"notes" bson:"notes"`
+	PriceItem finance.PriceItem `json:"price" bson:"price"`
+	StartTime time.Time         `json:"startTime" bson:"startTime"`
+	EndTime   time.Time         `json:"endTime" bson:"endTime"`
+	Labels    common.Labels     `json:"labels" bson:"labels"`
 }
 
 func (a Activity) HasPlace() bool {

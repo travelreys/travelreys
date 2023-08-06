@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
+	"github.com/travelreys/travelreys/pkg/finance"
 	"github.com/travelreys/travelreys/pkg/images"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/media"
@@ -205,15 +206,15 @@ const (
 )
 
 type BaseTransit struct {
-	ID              string           `json:"id" bson:"id"`
-	Type            string           `json:"type"`
-	DepartTime      time.Time        `json:"departTime" bson:"departTime"`
-	DepartLocation  maps.Place       `json:"departLocation" bson:"departLocation"`
-	ArrivalTime     time.Time        `json:"arrivalTime" bson:"arrivalTime"`
-	ArrivalLocation maps.Place       `json:"arrivalLocation" bson:"arrivalLocation"`
-	ConfirmationID  string           `json:"confirmationID" bson:"confirmationID"`
-	Notes           string           `json:"notes" bson:"notes"`
-	PriceItem       common.PriceItem `json:"price" bson:"price"`
+	ID              string            `json:"id" bson:"id"`
+	Type            string            `json:"type"`
+	DepartTime      time.Time         `json:"departTime" bson:"departTime"`
+	DepartLocation  maps.Place        `json:"departLocation" bson:"departLocation"`
+	ArrivalTime     time.Time         `json:"arrivalTime" bson:"arrivalTime"`
+	ArrivalLocation maps.Place        `json:"arrivalLocation" bson:"arrivalLocation"`
+	ConfirmationID  string            `json:"confirmationID" bson:"confirmationID"`
+	Notes           string            `json:"notes" bson:"notes"`
+	PriceItem       finance.PriceItem `json:"price" bson:"price"`
 
 	Tags   common.Tags   `json:"tags" bson:"tags"`
 	Labels common.Labels `json:"labels" bson:"labels"`
@@ -222,16 +223,16 @@ type BaseTransit struct {
 type TransitsMap map[string]*BaseTransit
 
 type Lodging struct {
-	ID             string           `json:"id" bson:"id"`
-	NumGuests      int32            `json:"numGuests" bson:"numGuests"`
-	CheckinTime    time.Time        `json:"checkinTime" bson:"checkinTime"`
-	CheckoutTime   time.Time        `json:"checkoutTime" bson:"checkoutTime"`
-	PriceItem      common.PriceItem `json:"price" bson:"price"`
-	ConfirmationID string           `json:"confirmationID" bson:"confirmationID"`
-	Notes          string           `json:"notes" bson:"notes"`
-	Place          maps.Place       `json:"place" bson:"place"`
-	Tags           common.Tags      `json:"tags" bson:"tags"`
-	Labels         common.Labels    `json:"labels" bson:"labels"`
+	ID             string            `json:"id" bson:"id"`
+	NumGuests      int32             `json:"numGuests" bson:"numGuests"`
+	CheckinTime    time.Time         `json:"checkinTime" bson:"checkinTime"`
+	CheckoutTime   time.Time         `json:"checkoutTime" bson:"checkoutTime"`
+	PriceItem      finance.PriceItem `json:"price" bson:"price"`
+	ConfirmationID string            `json:"confirmationID" bson:"confirmationID"`
+	Notes          string            `json:"notes" bson:"notes"`
+	Place          maps.Place        `json:"place" bson:"place"`
+	Tags           common.Tags       `json:"tags" bson:"tags"`
+	Labels         common.Labels     `json:"labels" bson:"labels"`
 }
 
 type LodgingList []*Lodging
@@ -250,7 +251,7 @@ func (m LodgingsMap) GetLodgingsForDate(dt time.Time) LodgingsMap {
 
 type Budget struct {
 	ID     string          `json:"id" bson:"id"`
-	Amount common.Price    `json:"amount" bson:"amount"`
+	Amount finance.Price   `json:"amount" bson:"amount"`
 	Items  BudgetItemsList `json:"items" bson:"items"`
 
 	Labels common.Labels `json:"labels" bson:"labels"`
@@ -259,7 +260,7 @@ type Budget struct {
 
 func NewBudget() Budget {
 	return Budget{
-		Amount: common.Price{},
+		Amount: finance.Price{},
 		Items:  BudgetItemsList{},
 		Labels: common.Labels{},
 		Tags:   common.Tags{},
@@ -267,11 +268,11 @@ func NewBudget() Budget {
 }
 
 type BudgetItem struct {
-	Title     string           `json:"title" bson:"title"`
-	Desc      string           `json:"desc" bson:"desc"`
-	PriceItem common.PriceItem `json:"price" bson:"price"`
-	Labels    common.Labels    `json:"labels" bson:"labels"`
-	Tag       common.Tags      `json:"tags" bson:"tags"`
+	Title     string            `json:"title" bson:"title"`
+	Desc      string            `json:"desc" bson:"desc"`
+	PriceItem finance.PriceItem `json:"price" bson:"price"`
+	Labels    common.Labels     `json:"labels" bson:"labels"`
+	Tag       common.Tags       `json:"tags" bson:"tags"`
 }
 
 type BudgetItemsList []*BudgetItem

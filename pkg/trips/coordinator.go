@@ -1,7 +1,7 @@
-package tripssync
+package trips
 
 import (
-	context "context"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -15,7 +15,6 @@ import (
 	jp "github.com/travelreys/travelreys/pkg/jsonpatch"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/media"
-	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 
@@ -27,32 +26,32 @@ type Coordinator struct {
 	ID     string
 	tripID string
 
-	doneCh chan bool
-
 	// trip is the coordinators' local copy of the trip
 	trip []byte
 
 	// counter is a monotonically increasing integer
 	// for maintaining total order broadcast. All clients
 	// should apply operations in sequence of the counter.
-	counter uint64
+	counter        uint64
+	counterLeaseID int64
 
 	// queue maintains a FIFO Total Order Broadcast together
 	// with Counter.
-	queue chan Message
+	syncMsgDataQueue chan SyncMsg
 
 	// msgCh recevies request message from clients
-	msgCh     <-chan Message
+	msgCh     <-chan SyncMsg
 	msgDoneCh chan<- bool
 
-	refreshCtrTicker *time.Ticker
-	mapsSvc          maps.Service
-	mediaSvc         media.Service
-	store            Store
-	msgStore         MessageStore
-	tobStore         TOBMessageStore
-	tripStore        trips.Store
+	refreshCtrTicker    *time.Ticker
+	mapsSvc             maps.Service
+	mediaSvc            media.Service
+	store               Store
+	sessStore           SessionStore
+	syncMsgControlStore SyncMsgControlStore
+	syncMsgDataStore    SyncMsgDataStore
 
+	doneCh chan bool
 	logger *zap.Logger
 }
 
@@ -61,27 +60,26 @@ func NewCoordinator(
 	mapsSvc maps.Service,
 	mediaSvc media.Service,
 	store Store,
-	msgStore MessageStore,
-	tobStore TOBMessageStore,
-	tripStore trips.Store,
-
+	sessStore SessionStore,
+	syncMsgControlStore SyncMsgControlStore,
+	syncMsgDataStore SyncMsgDataStore,
 	logger *zap.Logger,
 ) *Coordinator {
 	return &Coordinator{
-		ID:               uuid.New().String(),
-		doneCh:           make(chan bool),
-		tripID:           tripID,
-		trip:             []byte{},
-		counter:          1,
-		queue:            make(chan Message, common.DefaultChSize),
-		refreshCtrTicker: time.NewTicker(defaultRefreshCounterTTL),
-		mapsSvc:          mapsSvc,
-		mediaSvc:         mediaSvc,
-		store:            store,
-		msgStore:         msgStore,
-		tobStore:         tobStore,
-		tripStore:        tripStore,
-		logger:           logger.Named("sync.coordinator"),
+		ID:                  uuid.New().String(),
+		tripID:              tripID,
+		trip:                []byte{},
+		counter:             1,
+		syncMsgDataQueue:    make(chan SyncMsg, common.DefaultChSize),
+		refreshCtrTicker:    time.NewTicker(defaultRefreshCounterTTL),
+		mapsSvc:             mapsSvc,
+		mediaSvc:            mediaSvc,
+		store:               store,
+		syncMsgControlStore: syncMsgControlStore,
+		syncMsgDataStore:    syncMsgDataStore,
+		sessStore:           sessStore,
+		doneCh:              make(chan bool),
+		logger:              logger.Named("sync.coordinator"),
 	}
 }
 
@@ -90,7 +88,7 @@ func (crd *Coordinator) Init() (<-chan bool, error) {
 
 	// 1. Initialise trip for coordinator
 	ctx := context.Background()
-	trip, err := crd.tripStore.Read(ctx, crd.tripID)
+	trip, err := crd.store.Read(ctx, crd.tripID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +96,13 @@ func (crd *Coordinator) Init() (<-chan bool, error) {
 	crd.trip = tripBytes
 
 	// 2. Subscribe to updates from clients
-	msgCh, msgDoneCh, err := crd.msgStore.SubscribeQueue(crd.tripID, GroupCoordinators)
+	ctrlMsgCh, ctrlMsgDoneCh, err := crd.syncMsgControlStore.Subscribe(crd.tripID)
+	if err != nil {
+		crd.logger.Error("subscribe fail", zap.Error(err))
+		return nil, err
+	}
+
+	dataMsgCh, dataMsgDoneCh, err := crd.syncMsgDataStore.SubscribeQueue(crd.tripID, GroupCoordinators)
 	if err != nil {
 		crd.logger.Error("subscribe fail", zap.Error(err))
 		return nil, err
@@ -107,7 +111,7 @@ func (crd *Coordinator) Init() (<-chan bool, error) {
 	crd.msgDoneCh = msgDoneCh
 
 	// 3. See if there is stale state in redis
-	ctr, err := crd.store.GetCounter(ctx, crd.tripID)
+	ctr, err := crd.sessStore.GetCounter(ctx, crd.tripID)
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -118,12 +122,12 @@ func (crd *Coordinator) Init() (<-chan bool, error) {
 }
 
 func (crd *Coordinator) Stop() {
-	crd.store.DeleteCounter(context.Background(), crd.tripID)
+	crd.sessStore.DeleteCounter(context.Background(), crd.tripID, crd.counterLeaseID)
 	crd.refreshCtrTicker.Stop()
 	if crd.msgDoneCh != nil {
 		crd.msgDoneCh <- true
 	}
-	close(crd.queue)
+	close(crd.syncMsgDataQueue)
 	crd.doneCh <- true
 }
 
@@ -132,8 +136,21 @@ func (crd *Coordinator) Run() error {
 	go func() {
 		// 3.1. Takes in op msg indicating changes from clients
 		for msg := range crd.msgCh {
-			crd.logger.Debug("recv msg", zap.String("op", msg.Op))
 			ctx := context.Background()
+			if msg.Type == SyncMsgTypeControl {
+				crd.logger.Debug("recv control msg", zap.String("topic", msg.Control.Topic))
+
+				continue
+			}
+
+			if msg.Type == SyncMsgTypeData {
+				crd.logger.Debug("recv data msg", zap.String("topic", msg.Data.Topic))
+
+				continue
+			}
+
+			continue
+
 			switch msg.Op {
 			case OpJoinSession:
 				crd.HandleMsgOpJoinSession(ctx, &msg)
