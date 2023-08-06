@@ -3,7 +3,6 @@ package trips
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -17,49 +16,52 @@ import (
 	"github.com/travelreys/travelreys/pkg/storage"
 )
 
-const (
-	LabelCreatedBy                = "createdBy"
-	LabelDelimeter                = "|"
-	LabelFractionalIndex          = "fIndex"
-	LabelSharingAccess            = "sharing|access"
-	LabelUiColor                  = "ui|color"
-	LabelUiIcon                   = "ui|icon"
-	LabelActivityDisplayMediaItem = "displayMediaItem"
-
-	MediaItemKeyTrip           = "trip"
-	MediaItemKeyActivityPrefix = "activity"
-	SharingAccessViewer        = "view"
-)
-
 var (
 	ErrInvalidTripImageKey = errors.New("trips.ErrInvalidTripImageKey")
+)
+
+const (
+	LabelDelimeter = "|"
+
+	LabelCreatedBy                = "createdBy"
+	LabelFractionalIndex          = "fIndex"
+	LabelUiColor                  = "ui|color"
+	LabelActivityDisplayMediaItem = "displayMediaItem"
+
+	LabelSharingAccess  = "sharing|access"
+	SharingAccessViewer = "view"
+)
+
+const (
+	MediaItemKeyTrip           = "trip"
+	MediaItemKeyActivityPrefix = "activity"
 )
 
 type Trip struct {
 	ID   string `json:"id" bson:"id"`
 	Name string `json:"name" bson:"name"`
 
-	CoverImage CoverImage `json:"coverImage" bson:"coverImage"`
-	StartDate  time.Time  `json:"startDate" bson:"startDate"`
-	EndDate    time.Time  `json:"endDate" bson:"endDate"`
+	CoverImage *CoverImage `json:"coverImage" bson:"coverImage"`
+	StartDate  time.Time   `json:"startDate" bson:"startDate"`
+	EndDate    time.Time   `json:"endDate" bson:"endDate"`
 
 	// Members
 	Creator   Member            `json:"creator" bson:"creator"`
-	Members   map[string]Member `json:"members" bson:"members"`
+	Members   MembersMap        `json:"members" bson:"members"`
 	MembersID map[string]string `json:"membersId" bson:"membersId"`
 
 	// Logistics
-	Notes    string                 `json:"notes" bson:"notes"`
-	Transits map[string]BaseTransit `json:"transits" bson:"transits"`
-	Lodgings LodgingsMap            `json:"lodgings" bson:"lodgings"`
-	Budget   Budget                 `json:"budget" bson:"budget"`
-	Links    map[string]Link        `json:"links" bson:"links"`
+	Notes    string      `json:"notes" bson:"notes"`
+	Transits TransitsMap `json:"transits" bson:"transits"`
+	Lodgings LodgingsMap `json:"lodgings" bson:"lodgings"`
+	Budget   Budget      `json:"budget" bson:"budget"`
+	Links    LinksMap    `json:"links" bson:"links"`
 
 	Itineraries map[string]Itinerary `json:"itineraries" bson:"itineraries"`
 
 	// Media, Attachements
 	MediaItems map[string]media.MediaItemList `json:"mediaItems" bson:"mediaItems"`
-	Files      map[string]storage.Object      `json:"files" bson:"files"`
+	Files      FilesMap                       `json:"files" bson:"files"`
 
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
@@ -69,36 +71,36 @@ type Trip struct {
 	Tags    common.Tags   `json:"tags" bson:"tags"`
 }
 
+type TripsList []*Trip
+
 type TripOGP struct {
-	ID            string    `json:"id"`
-	Name          string    `json:"name"`
-	CoverImageURL string    `json:"coverImageURL" bson:"coverImageURL"`
-	Creator       auth.User `json:"creator"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	CoverImageURL string `json:"coverImageURL"`
+	CreatorName   string `json:"creatorName"`
 }
 
-type TripsList []Trip
-
-func NewTrip(creator Member, name string) Trip {
+func NewTrip(creator Member, name string) *Trip {
 	creator.Role = MemberRoleCreator
 
-	return Trip{
+	return &Trip{
 		ID:          uuid.New().String(),
 		Name:        name,
-		CoverImage:  CoverImage{},
+		CoverImage:  &CoverImage{},
 		StartDate:   time.Time{},
 		EndDate:     time.Time{},
 		Creator:     creator,
-		Members:     map[string]Member{},
+		Members:     MembersMap{},
 		MembersID:   map[string]string{},
-		Transits:    map[string]BaseTransit{},
+		Transits:    TransitsMap{},
 		Lodgings:    LodgingsMap{},
 		Itineraries: map[string]Itinerary{},
 		Budget:      NewBudget(),
-		Links:       LinkMap{},
+		Links:       LinksMap{},
 		MediaItems: map[string]media.MediaItemList{
 			MediaItemKeyTrip: {},
 		},
-		Files:     map[string]storage.Object{},
+		Files:     FilesMap{},
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
 		Deleted:   false,
@@ -107,19 +109,20 @@ func NewTrip(creator Member, name string) Trip {
 	}
 }
 
-func NewTripWithDates(creator Member, name string, start, end time.Time) Trip {
-	plan := NewTrip(creator, name)
-	plan.StartDate = start
-	plan.EndDate = end
-	return plan
+func NewTripWithDates(creator Member, name string, start, end time.Time) *Trip {
+	trip := NewTrip(creator, name)
+	trip.StartDate = start
+	trip.EndDate = end
+
+	return trip
 }
 
-func (trip Trip) OGP(creator auth.User, coverImageURL string) TripOGP {
+func (trip Trip) ToOGP(creatorName, coverImageURL string) TripOGP {
 	return TripOGP{
 		ID:            trip.ID,
 		Name:          trip.Name,
 		CoverImageURL: coverImageURL,
-		Creator:       creator,
+		CreatorName:   creatorName,
 	}
 }
 
@@ -134,6 +137,8 @@ func (trip Trip) IsSharingEnabled() bool {
 const (
 	CoverImageSourceWeb  = "web"
 	CoverImageSourceTrip = "trip"
+
+	TripImageDelimiter = "@"
 )
 
 type CoverImage struct {
@@ -141,11 +146,12 @@ type CoverImage struct {
 	WebImage images.ImageMetadata `json:"webImage" bson:"webImage"`
 
 	// TripImage is the ID of mediaItem in the mediaItems["coverImage"]
+	// e.g trip@<id> or activity@<id>
 	TripImage string `json:"tripImage" bson:"tripImage"`
 }
 
 func (ci CoverImage) SplitTripImageKey() (string, string, error) {
-	tkns := strings.Split(ci.TripImage, "@")
+	tkns := strings.Split(ci.TripImage, TripImageDelimiter)
 	if len(tkns) != 2 {
 		return "", "", ErrInvalidTripImageKey
 	}
@@ -168,17 +174,22 @@ type Member struct {
 	User auth.User `json:"user" bson:"-"`
 }
 
-type MembersList []Member
+type MembersMap map[string]*Member
+type MembersList []*Member
+
+func NewCreator(id string) Member {
+	return NewMember(id, MemberRoleCreator)
+}
 
 func NewMember(id, role string) Member {
 	return Member{
 		ID:     id,
 		Role:   role,
-		Labels: map[string]string{},
+		Labels: common.Labels{},
 	}
 }
 
-func (t Trip) GetAllMembersID() []string {
+func (t Trip) GetMemberIDs() []string {
 	membersIDs := []string{t.Creator.ID}
 	for id := range t.Members {
 		membersIDs = append(membersIDs, id)
@@ -208,6 +219,8 @@ type BaseTransit struct {
 	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
+type TransitsMap map[string]*BaseTransit
+
 type Lodging struct {
 	ID             string           `json:"id" bson:"id"`
 	NumGuests      int32            `json:"numGuests" bson:"numGuests"`
@@ -221,7 +234,8 @@ type Lodging struct {
 	Labels         common.Labels    `json:"labels" bson:"labels"`
 }
 
-type LodgingsMap map[string]Lodging
+type LodgingList []*Lodging
+type LodgingsMap map[string]*Lodging
 
 func (m LodgingsMap) GetLodgingsForDate(dt time.Time) LodgingsMap {
 	results := LodgingsMap{}
@@ -232,124 +246,6 @@ func (m LodgingsMap) GetLodgingsForDate(dt time.Time) LodgingsMap {
 		}
 	}
 	return results
-}
-
-type ActivityComment struct {
-	ID        string    `json:"id" bson:"id"`
-	Comment   string    `json:"comment" bson:"comment"`
-	Member    Member    `json:"member" bson:"member"`
-	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
-}
-
-type Activity struct {
-	ID        string            `json:"id" bson:"id"`
-	Title     string            `json:"title" bson:"title"`
-	Place     maps.Place        `json:"place" bson:"place"`
-	Notes     string            `json:"notes" bson:"notes"`
-	PriceItem common.PriceItem  `json:"price" bson:"price"`
-	StartTime time.Time         `json:"startTime" bson:"startTime"`
-	EndTime   time.Time         `json:"endTime" bson:"endTime"`
-	Comments  []ActivityComment `json:"comments" bson:"comments"`
-	Labels    common.Labels     `json:"labels" bson:"labels"`
-}
-
-func (a Activity) HasPlace() bool {
-	return a.Place.Name != ""
-}
-
-type ActivityList []Activity
-
-func (l ActivityList) Len() int {
-	return len(l)
-}
-func (l ActivityList) Swap(i, j int) {
-	l[i], l[j] = l[j], l[i]
-}
-func (l ActivityList) Less(i, j int) bool {
-	return l[i].Labels[LabelFractionalIndex] < l[j].Labels[LabelFractionalIndex]
-}
-
-func (l ActivityList) GetFracIndexes() []string {
-	result := []string{}
-	for _, a := range l {
-		result = append(result, a.Labels[LabelFractionalIndex])
-	}
-	return result
-}
-
-type Itinerary struct {
-	ID          string                    `json:"id" bson:"id"`
-	Date        time.Time                 `json:"date" bson:"date"`
-	Description string                    `json:"desc" bson:"desc"`
-	Activities  map[string]Activity       `json:"activities" bson:"activities"`
-	Routes      map[string]maps.RouteList `json:"routes" bson:"routes"`
-	Labels      common.Labels             `json:"labels" bson:"labels"`
-}
-
-func NewItinerary(date time.Time) Itinerary {
-	return Itinerary{
-		ID:          uuid.New().String(),
-		Date:        date,
-		Description: "",
-		Activities:  map[string]Activity{},
-		Routes:      map[string]maps.RouteList{},
-		Labels:      common.Labels{},
-	}
-}
-
-func GetSortedItineraryKeys(trip *Trip) []string {
-	list := []string{}
-	for key := range trip.Itineraries {
-		list = append(list, key)
-	}
-	sort.Sort(sort.StringSlice(list))
-	return list
-}
-
-func (itin Itinerary) GetDate() time.Time {
-	return time.Date(itin.Date.Year(), itin.Date.Month(), itin.Date.Day(), 0, 0, 0, 0, itin.Date.Location())
-}
-
-// SortActivities returns Activities sorted by their fractional index
-func (itin Itinerary) SortActivities() ActivityList {
-	sorted := ActivityList{}
-	for _, act := range itin.Activities {
-		sorted = append(sorted, act)
-	}
-	sort.Sort(sorted)
-	return sorted
-}
-
-func (itin Itinerary) routePairingKey(a1 Activity, a2 Activity) string {
-	return fmt.Sprintf("%s%s%s", a1.ID, LabelDelimeter, a2.ID)
-}
-
-func (itin Itinerary) MakeRoutePairings(lodgings LodgingsMap) map[string]bool {
-	pairings := map[string]bool{}
-	sorted := itin.SortActivities()
-
-	if len(sorted) <= 0 {
-		return pairings
-	}
-
-	// Find routes between lodging and first activity
-	if sorted[0].Place.ID != "" {
-		for _, l := range lodgings {
-			act := Activity{ID: l.ID, Place: l.Place}
-			pairings[itin.routePairingKey(act, sorted[0])] = true
-		}
-	}
-
-	// Find route between activities
-	for i := 1; i < len(sorted); i++ {
-		// We need the origin and destination to have a place
-		if sorted[i-1].Place.ID == "" || sorted[i].Place.ID == "" {
-			continue
-		}
-		pairings[itin.routePairingKey(sorted[i-1], sorted[i])] = true
-	}
-	return pairings
 }
 
 type Budget struct {
@@ -374,12 +270,11 @@ type BudgetItem struct {
 	Title     string           `json:"title" bson:"title"`
 	Desc      string           `json:"desc" bson:"desc"`
 	PriceItem common.PriceItem `json:"price" bson:"price"`
-
-	Labels common.Labels `json:"labels" bson:"labels"`
-	Tag    common.Tags   `json:"tags" bson:"tags"`
+	Labels    common.Labels    `json:"labels" bson:"labels"`
+	Tag       common.Tags      `json:"tags" bson:"tags"`
 }
 
-type BudgetItemsList []BudgetItem
+type BudgetItemsList []*BudgetItem
 
 type Link struct {
 	ID     string        `json:"id" bson:"id"`
@@ -389,7 +284,7 @@ type Link struct {
 	Tags   common.Tags   `json:"tags" bson:"tags"`
 }
 
-type LinkMap map[string]Link
+type LinksMap map[string]*Link
 
 const (
 	AttachmentTypeFile  = "file"
@@ -399,3 +294,5 @@ const (
 func MakeActivityMediaItemsKey(actId string) string {
 	return fmt.Sprintf(`%s|%s`, MediaItemKeyActivityPrefix, actId)
 }
+
+type FilesMap map[string]*storage.Object

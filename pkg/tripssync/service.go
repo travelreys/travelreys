@@ -44,7 +44,7 @@ func (p *service) JoinSession(ctx context.Context, msg Message) (Session, error)
 	if err != nil {
 		return Session{}, err
 	}
-	if !common.StringContains(trip.GetAllMembersID(), msg.Data.JoinSession.Member.ID) {
+	if !common.StringContains(trip.GetMemberIDs(), msg.Data.JoinSession.Member.ID) {
 		return Session{}, ErrRBAC
 	}
 
