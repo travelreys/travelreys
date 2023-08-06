@@ -46,7 +46,7 @@ type Service interface {
 	DeleteFriend(ctx context.Context, userID, friendID string) error
 	AreTheyFriends(ctx context.Context, initiatorID, targetID string) (bool, error)
 
-	ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, UserProfile, error)
+	ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (*trips.Trip, UserProfile, error)
 	ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error)
 	ListFollowingTrips(ctx context.Context, initiatorID string) (trips.TripsList, UserProfileMap, error)
 
@@ -70,6 +70,23 @@ func NewService(
 	logger *zap.Logger,
 ) Service {
 	return &service{store, authSvc, tripSvc, mailSvc, logger}
+}
+
+func (svc *service) tripFromContext(ctx context.Context, ID string) (*trips.Trip, error) {
+	var (
+		trip *trips.Trip
+		err  error
+	)
+	ti, err := trips.TripInfoFromCtx(ctx)
+	if err == nil {
+		trip = ti.Trip
+	} else {
+		trip, err = svc.tripSvc.Read(ctx, ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return trip, err
 }
 
 func (svc service) GetProfile(ctx context.Context, ID string) (UserProfile, error) {
@@ -267,19 +284,10 @@ func (svc service) sendFriendRequestEmail(ctx context.Context, initiator, target
 	}
 }
 
-func (svc *service) ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, UserProfile, error) {
-	var (
-		trip trips.Trip
-		err  error
-	)
-	ti, err := trips.TripInfoFromCtx(ctx)
-	if err == nil {
-		trip = ti.Trip
-	} else {
-		trip, err = svc.tripSvc.Read(ctx, tripID)
-		if err != nil {
-			return trips.Trip{}, UserProfile{}, err
-		}
+func (svc *service) ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (*trips.Trip, UserProfile, error) {
+	trip, err := svc.tripFromContext(ctx, tripID)
+	if err != nil {
+		return nil, UserProfile{}, err
 	}
 
 	ff := auth.ListFilter{IDs: []string{referrerID}}
@@ -289,7 +297,7 @@ func (svc *service) ReadTripPublicInfo(ctx context.Context, tripID, referrerID s
 	}
 
 	profile := UserProfileFromUser(users[0])
-	pubInfo := MakeTripPublicInfo(&trip)
+	pubInfo := MakeTripPublicInfo(trip)
 	return pubInfo, profile, nil
 }
 
@@ -301,7 +309,7 @@ func (svc *service) ListTripPublicInfo(ctx context.Context, ff trips.ListFilter)
 
 	publicInfo := trips.TripsList{}
 	for _, t := range tripslist {
-		publicInfo = append(publicInfo, MakeTripPublicInfo(&t))
+		publicInfo = append(publicInfo, MakeTripPublicInfo(t))
 	}
 
 	return publicInfo, nil
@@ -332,7 +340,7 @@ func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) 
 	}
 	publicInfo := trips.TripsList{}
 	for _, t := range tripslist {
-		publicInfo = append(publicInfo, MakeTripPublicInfoWithUserProfiles(&t, profileMap))
+		publicInfo = append(publicInfo, MakeTripPublicInfoWithUserProfiles(t, profileMap))
 	}
 
 	return publicInfo, profileMap, nil
@@ -346,26 +354,16 @@ func (svc *service) DuplicateTrip(
 	name string,
 	startDate time.Time,
 ) (string, error) {
-	var (
-		trip trips.Trip
-		err  error
-	)
-	ti, err := trips.TripInfoFromCtx(ctx)
-	if err == nil {
-		trip = ti.Trip
-	} else {
-		trip, err = svc.tripSvc.Read(ctx, tripID)
-		if err != nil {
-			return "", err
-		}
+	trip, err := svc.tripFromContext(ctx, tripID)
+	if err != nil {
+		return "", err
 	}
-
 	numDays := int(trip.EndDate.Sub(trip.StartDate).Hours() / 24)
 	endDate := startDate.Add(time.Duration(numDays*24) * time.Hour)
 
 	creator := trips.NewMember(initiatorID, trips.MemberRoleCreator)
 	newTrip := trips.NewTripWithDates(creator, name, startDate, endDate)
-	newTrip.CoverImage = trips.CoverImage{
+	newTrip.CoverImage = &trips.CoverImage{
 		Source:   trips.CoverImageSourceWeb,
 		WebImage: images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))],
 	}
@@ -381,7 +379,7 @@ func (svc *service) DuplicateTrip(
 		}
 		checkoutDt := checkinDt.Add(time.Duration(numDays*24) * time.Hour)
 
-		newLodging := trips.Lodging{
+		newLodging := &trips.Lodging{
 			ID:           uuid.NewString(),
 			CheckinTime:  checkinDt,
 			CheckoutTime: checkoutDt,
@@ -403,7 +401,7 @@ func (svc *service) DuplicateTrip(
 		actIDMap := map[string]string{}
 
 		for actKey, act := range itin.Activities {
-			newAct := trips.Activity{
+			newAct := &trips.Activity{
 				ID:        uuid.NewString(),
 				Title:     act.Title,
 				Place:     act.Place,

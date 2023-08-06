@@ -103,7 +103,7 @@ func (l FriendsList) GetInitiatorIDs() []string {
 	return ids
 }
 
-func MakeTripPublicInfo(trip *trips.Trip) trips.Trip {
+func MakeTripPublicInfo(trip *trips.Trip) *trips.Trip {
 	newTrip := trips.NewTrip(trip.Creator, trip.Name)
 	newTrip.ID = trip.ID
 	newTrip.CoverImage = trip.CoverImage
@@ -120,7 +120,7 @@ func MakeTripPublicInfo(trip *trips.Trip) trips.Trip {
 	for idx, key := range sortedItinKey {
 		itin := trip.Itineraries[key]
 		itin.Date = time.Time{}
-		newActivities := map[string]trips.Activity{}
+		newActivities := trips.ActivityMap{}
 		for aKey, act := range trip.Itineraries[key].Activities {
 			act.StartTime = time.Time{}
 			act.EndTime = time.Time{}
@@ -135,15 +135,18 @@ func MakeTripPublicInfo(trip *trips.Trip) trips.Trip {
 	return newTrip
 }
 
-func MakeTripPublicInfoWithUserProfiles(trip *trips.Trip, profiles UserProfileMap) trips.Trip {
+func MakeTripPublicInfoWithUserProfiles(
+	trip *trips.Trip,
+	profiles UserProfileMap,
+) *trips.Trip {
 	newTrip := MakeTripPublicInfo(trip)
 
 	if _, ok := profiles[trip.Creator.ID]; ok {
-		newTrip.Members[trip.Creator.ID] = trips.Member{}
+		newTrip.Members[trip.Creator.ID] = &trips.Member{}
 	}
 	for key := range trip.Members {
 		if _, ok := profiles[key]; ok {
-			newTrip.Members[key] = trips.Member{}
+			newTrip.Members[key] = &trips.Member{}
 		}
 	}
 	return newTrip
