@@ -20,9 +20,8 @@ const (
 
 	defaultSyncSessionConnTTL = 5 * time.Minute
 
-	sessStoreLogger           = "coordinator.sessStore"
-	syncMsgControlStoreLogger = "coordinator.syncMsgControlStore"
-	syncMsgDataStoreLogger    = "coordinator.tobStore"
+	sessStoreLogger    = "coordinator.sessStore"
+	syncMsgStoreLogger = "coordinator.syncMsgStore"
 )
 
 var (
@@ -37,30 +36,6 @@ func sessConnKey(tripID, connID string) string {
 // sessCounterKey is the Redis for TOB counter
 func sessCounterKey(tripID string) string {
 	return fmt.Sprintf("sync-session/%s/counter", tripID)
-}
-
-// SubjControlRequest is the NATS.io subj for client -> coordinator communication
-// for control messages
-func SubjControlRequest(tripID string) string {
-	return fmt.Sprintf("sync.control.requests.%s", tripID)
-}
-
-// SubjControlResponse is the NATS.io subj for client -> coordiator communication
-// for control messages
-func SubjControlResponse(tripID string) string {
-	return fmt.Sprintf("sync.control.response.%s", tripID)
-}
-
-// SubjDataRequest is the NATS.io subj for coordinator -> client communication
-// for data messages
-func SubjDataRequest(tripID string) string {
-	return fmt.Sprintf("sync.data.requests.%s", tripID)
-}
-
-// SubjDataResponse is the NATS.io subj for client -> coordinator communication
-// for data messages
-func SubjDataResponse(tripID string) string {
-	return fmt.Sprintf("sync.data.response.%s", tripID)
 }
 
 type SessionStore interface {
@@ -86,7 +61,8 @@ func NewSessionStore(cli *clientv3.Client, logger *zap.Logger) SessionStore {
 func (s *sessionStore) AddSessCtx(ctx context.Context, sessCtx SessionContext) error {
 	value, _ := msgpack.Marshal(sessCtx)
 	_, err := s.cli.Put(
-		ctx, sessConnKey(sessCtx.TripID, sessCtx.ConnID),
+		ctx,
+		sessConnKey(sessCtx.TripID, sessCtx.ConnID),
 		string(value),
 	)
 	return err
@@ -171,42 +147,68 @@ func (s *sessionStore) RefreshCounterTTL(ctx context.Context, tripID string, lea
 	return err
 }
 
-type SyncMsgControlStore interface {
-	PubReq(tripID string, msg SyncMsgControl) error
-	SubReq(tripID string) (<-chan SyncMsgControl, chan<- bool, error)
-	PubRes(tripID string, msg SyncMsgControl) error
-	SubRes(tripID string) (<-chan SyncMsgControl, chan<- bool, error)
+// SubjBroadcastRequest is the NATS.io subj for client -> coordinator communication
+// for control messages
+func SubjBroadcastRequest(tripID string) string {
+	return fmt.Sprintf("sync.broadcast.requests.%s", tripID)
 }
 
-type syncMsgControlStore struct {
+// SubjBroadcastResponse is the NATS.io subj for client -> coordiator communication
+// for control messages
+func SubjBroadcastResponse(tripID string) string {
+	return fmt.Sprintf("sync.broadcast.response.%s", tripID)
+}
+
+// SubjTOBRequest is the NATS.io subj for coordinator -> client communication
+// for data messages
+func SubjTOBRequest(tripID string) string {
+	return fmt.Sprintf("sync.tob.requests.%s", tripID)
+}
+
+// SubjTOBResponse is the NATS.io subj for client -> coordinator communication
+// for data messages
+func SubjTOBResponse(tripID string) string {
+	return fmt.Sprintf("sync.tob.response.%s", tripID)
+}
+
+type SyncMsgStore interface {
+	PubBroadcastReq(tripID string, msg *SyncMsgBroadcast) error
+	SubBroadcastReq(tripID string) (<-chan SyncMsgBroadcast, chan<- bool, error)
+	PubBroadcastResp(tripID string, msg *SyncMsgBroadcast) error
+	SubBroadcastResp(tripID string) (<-chan SyncMsgBroadcast, chan<- bool, error)
+
+	PubTOBReq(tripID string, msg *SyncMsgTOB) error
+	SubTOBReq(tripID string) (<-chan SyncMsgTOB, chan<- bool, error)
+	SubTOBReqQueue(tripID, groupName string) (<-chan SyncMsgTOB, chan<- bool, error)
+	PubTOBResp(tripID string, msg *SyncMsgTOB) error
+	SubTOBResp(tripID string) (<-chan SyncMsgTOB, chan<- bool, error)
+}
+
+type syncMsgStore struct {
 	nc     *nats.Conn
 	logger *zap.Logger
 }
 
-func NewSyncMsgControlStore(nc *nats.Conn, logger *zap.Logger) SyncMsgControlStore {
-	return &syncMsgControlStore{nc, logger.Named(syncMsgControlStoreLogger)}
+func NewSyncMsgStore(nc *nats.Conn, logger *zap.Logger) SyncMsgStore {
+	return &syncMsgStore{nc, logger.Named(syncMsgStoreLogger)}
 }
 
-func (s *syncMsgControlStore) publish(subj, tripID string, msg SyncMsgControl) error {
-	data, err := msgpack.Marshal(msg)
-	if err != nil {
-		s.logger.Error("Publish", zap.Error(err))
-	}
+func (s *syncMsgStore) publish(subj string, data []byte) error {
 	s.logger.Debug("publish", zap.String("subj", subj))
-	if err = s.nc.Publish(subj, data); err != nil {
+	if err := s.nc.Publish(subj, data); err != nil {
 		return err
 	}
 	return s.nc.Flush()
 }
 
-func (s *syncMsgControlStore) subscribe(subj, tripID string) (<-chan SyncMsgControl, chan<- bool, error) {
+func (s *syncMsgStore) subBroadcast(subj, tripID string) (<-chan SyncMsgBroadcast, chan<- bool, error) {
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan SyncMsgControl, common.DefaultChSize)
+	msgCh := make(chan SyncMsgBroadcast, common.DefaultChSize)
 	done := make(chan bool)
 
 	sub, err := s.nc.ChanSubscribe(subj, natsCh)
 	if err != nil {
-		s.logger.Error("Subscribe", zap.Error(err))
+		s.logger.Error("subBroadcast", zap.Error(err))
 		return nil, nil, err
 	}
 
@@ -218,9 +220,9 @@ func (s *syncMsgControlStore) subscribe(subj, tripID string) (<-chan SyncMsgCont
 				close(msgCh)
 				return
 			case natsMsg := <-natsCh:
-				var msg SyncMsgControl
+				var msg SyncMsgBroadcast
 				if err := msgpack.Unmarshal(natsMsg.Data, &msg); err != nil {
-					s.logger.Error("Subscribe", zap.Error(err))
+					s.logger.Error("subBroadcast", zap.Error(err))
 					continue
 				}
 				msgCh <- msg
@@ -230,58 +232,14 @@ func (s *syncMsgControlStore) subscribe(subj, tripID string) (<-chan SyncMsgCont
 	return msgCh, done, nil
 }
 
-func (s *syncMsgControlStore) PubReq(tripID string, msg SyncMsgControl) error {
-	return s.publish(SubjControlRequest(tripID), tripID, msg)
-}
-
-func (s *syncMsgControlStore) SubReq(tripID string) (<-chan SyncMsgControl, chan<- bool, error) {
-	return s.subscribe(SubjControlRequest(tripID), tripID)
-}
-
-func (s *syncMsgControlStore) PubRes(tripID string, msg SyncMsgControl) error {
-	return s.publish(SubjControlResponse(tripID), tripID, msg)
-}
-
-func (s *syncMsgControlStore) SubRes(tripID string) (<-chan SyncMsgControl, chan<- bool, error) {
-	return s.subscribe(SubjControlResponse(tripID), tripID)
-}
-
-type SyncMsgDataStore interface {
-	PubReq(tripID string, msg SyncMsgData) error
-	SubReq(tripID string) (<-chan SyncMsgData, chan<- bool, error)
-	SubReqQueue(tripID, groupName string) (<-chan SyncMsgData, chan<- bool, error)
-
-	PubRes(tripID string, msg SyncMsgData) error
-	SubRes(tripID string) (<-chan SyncMsgData, chan<- bool, error)
-}
-
-type syncMsgDataStore struct {
-	nc *nats.Conn
-
-	logger *zap.Logger
-}
-
-func NewSyncMsgDataStore(nc *nats.Conn, logger *zap.Logger) SyncMsgDataStore {
-	return &syncMsgDataStore{nc, logger.Named(syncMsgDataStoreLogger)}
-}
-
-func (s *syncMsgDataStore) publish(subj, tripID string, msg SyncMsgData) error {
-	data, _ := msgpack.Marshal(msg)
-
-	if err := s.nc.Publish(subj, data); err != nil {
-		s.logger.Error("Publish", zap.Error(err))
-		return err
-	}
-	return s.nc.Flush()
-}
-
-func (s *syncMsgDataStore) subscribe(subj, tripID string) (<-chan SyncMsgData, chan<- bool, error) {
+func (s *syncMsgStore) subTOB(subj, tripID string) (<-chan SyncMsgTOB, chan<- bool, error) {
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan SyncMsgData, common.DefaultChSize)
+	msgCh := make(chan SyncMsgTOB, common.DefaultChSize)
 	done := make(chan bool)
 
 	sub, err := s.nc.ChanSubscribe(subj, natsCh)
 	if err != nil {
+		s.logger.Error("subTOB", zap.Error(err))
 		return nil, nil, err
 	}
 
@@ -293,9 +251,10 @@ func (s *syncMsgDataStore) subscribe(subj, tripID string) (<-chan SyncMsgData, c
 				close(msgCh)
 				return
 			case natsMsg := <-natsCh:
-				var msg SyncMsgData
+				var msg SyncMsgTOB
 				if err := msgpack.Unmarshal(natsMsg.Data, &msg); err != nil {
-					s.logger.Error("Subscribe", zap.Error(err))
+					s.logger.Error("subTOB", zap.Error(err))
+					continue
 				}
 				msgCh <- msg
 			}
@@ -304,9 +263,9 @@ func (s *syncMsgDataStore) subscribe(subj, tripID string) (<-chan SyncMsgData, c
 	return msgCh, done, nil
 }
 
-func (s *syncMsgDataStore) subscribeQueue(subj, tripID, groupName string) (<-chan SyncMsgData, chan<- bool, error) {
+func (s *syncMsgStore) subTOBQueue(subj, tripID, groupName string) (<-chan SyncMsgTOB, chan<- bool, error) {
 	natsCh := make(chan *nats.Msg, common.DefaultChSize)
-	msgCh := make(chan SyncMsgData, common.DefaultChSize)
+	msgCh := make(chan SyncMsgTOB, common.DefaultChSize)
 
 	done := make(chan bool)
 
@@ -323,9 +282,9 @@ func (s *syncMsgDataStore) subscribeQueue(subj, tripID, groupName string) (<-cha
 				close(msgCh)
 				return
 			case natsMsg := <-natsCh:
-				var msg SyncMsgData
+				var msg SyncMsgTOB
 				if err := msgpack.Unmarshal(natsMsg.Data, &msg); err != nil {
-					s.logger.Error("SubscribeQueue", zap.Error(err))
+					s.logger.Error("subTOBQueue", zap.Error(err))
 				}
 				msgCh <- msg
 			}
@@ -334,23 +293,55 @@ func (s *syncMsgDataStore) subscribeQueue(subj, tripID, groupName string) (<-cha
 	return msgCh, done, nil
 }
 
-func (s *syncMsgDataStore) PubReq(tripID string, msg SyncMsgData) error {
-	return s.publish(SubjDataRequest(tripID), tripID, msg)
+func (s *syncMsgStore) PubBroadcastReq(tripID string, msg *SyncMsgBroadcast) error {
+	data, err := msgpack.Marshal(msg)
+	if err != nil {
+		s.logger.Error("PubBroadcastReq", zap.Error(err))
+	}
+	return s.publish(SubjBroadcastRequest(tripID), data)
 }
 
-func (s *syncMsgDataStore) SubReq(tripID string) (<-chan SyncMsgData, chan<- bool, error) {
-	return s.subscribe(SubjDataRequest(tripID), tripID)
+func (s *syncMsgStore) SubBroadcastReq(tripID string) (<-chan SyncMsgBroadcast, chan<- bool, error) {
+	return s.subBroadcast(SubjBroadcastRequest(tripID), tripID)
 }
 
-func (s *syncMsgDataStore) SubReqQueue(tripID, groupName string) (<-chan SyncMsgData, chan<- bool, error) {
-	return s.subscribeQueue(SubjDataRequest(tripID), tripID, groupName)
+func (s *syncMsgStore) PubBroadcastResp(tripID string, msg *SyncMsgBroadcast) error {
+	data, err := msgpack.Marshal(msg)
+	if err != nil {
+		s.logger.Error("PubBroadcastRes", zap.Error(err))
+	}
+	return s.publish(SubjBroadcastResponse(tripID), data)
 }
 
-func (s *syncMsgDataStore) PubRes(tripID string, msg SyncMsgData) error {
-	return s.publish(SubjDataResponse(tripID), tripID, msg)
+func (s *syncMsgStore) SubBroadcastResp(tripID string) (<-chan SyncMsgBroadcast, chan<- bool, error) {
+	return s.subBroadcast(SubjBroadcastResponse(tripID), tripID)
+}
+
+func (s *syncMsgStore) PubTOBReq(tripID string, msg *SyncMsgTOB) error {
+	data, err := msgpack.Marshal(msg)
+	if err != nil {
+		s.logger.Error("PubTOBReq", zap.Error(err))
+	}
+	return s.publish(SubjTOBRequest(tripID), data)
+}
+
+func (s *syncMsgStore) SubTOBReq(tripID string) (<-chan SyncMsgTOB, chan<- bool, error) {
+	return s.subTOB(SubjTOBRequest(tripID), tripID)
+}
+
+func (s *syncMsgStore) SubTOBReqQueue(tripID, groupName string) (<-chan SyncMsgTOB, chan<- bool, error) {
+	return s.subTOBQueue(SubjTOBRequest(tripID), tripID, groupName)
+}
+
+func (s *syncMsgStore) PubTOBResp(tripID string, msg *SyncMsgTOB) error {
+	data, err := msgpack.Marshal(msg)
+	if err != nil {
+		s.logger.Error("PubTOBRes", zap.Error(err))
+	}
+	return s.publish(SubjTOBResponse(tripID), data)
 
 }
 
-func (s *syncMsgDataStore) SubRes(tripID string) (<-chan SyncMsgData, chan<- bool, error) {
-	return s.subscribe(SubjDataResponse(tripID), tripID)
+func (s *syncMsgStore) SubTOBResp(tripID string) (<-chan SyncMsgTOB, chan<- bool, error) {
+	return s.subTOB(SubjTOBResponse(tripID), tripID)
 }

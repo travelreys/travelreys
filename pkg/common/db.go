@@ -69,8 +69,8 @@ func MakeDefaultEtcdClient() (*clientv3.Client, error) {
 
 func MakeEtcdClient(uri string) (*clientv3.Client, error) {
 	return clientv3.New(clientv3.Config{
-		Endpoints:   []string{uri},
-		DialTimeout: DbReqTimeout,
+		Endpoints:   []string{etcdURL},
+		DialTimeout: 5 * time.Second,
 	})
 }
 

@@ -59,8 +59,8 @@ func MakeCoordinatorSpanwer(logger *zap.Logger) (*trips.Spawner, error) {
 		media.NewService(mediaStore, mediaCDNProvider, storageSvc, logger),
 		trips.NewStore(ctx, db, logger),
 		trips.NewSessionStore(etcd, logger),
-		trips.NewSyncMsgControlStore(nc, logger),
-		trips.NewSyncMsgDataStore(nc, logger),
+		trips.NewSyncMsgBroadcastStore(nc, logger),
+		trips.NewSyncMsgTOBStore(nc, logger),
 		logger,
 	), nil
 }

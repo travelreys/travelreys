@@ -110,8 +110,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	tripSyncSvc := trips.NewSyncService(
 		tripStore,
 		trips.NewSessionStore(etcd, logger),
-		trips.NewSyncMsgControlStore(nc, logger),
-		trips.NewSyncMsgDataStore(nc, logger),
+		trips.NewSyncMsgStore(nc, logger),
 	)
 	wsSvr := trips.NewWebsocketServer(tripSyncSvc, logger)
 

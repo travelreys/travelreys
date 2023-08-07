@@ -15,12 +15,10 @@ type Spawner struct {
 	mapsSvc  maps.Service
 	mediaSvc media.Service
 
-	store        Store
-	sessStore    SessionStore
-	ctrlMsgStore SyncMsgControlStore
-	dataMsgStore SyncMsgDataStore
-
-	logger *zap.Logger
+	store     Store
+	sessStore SessionStore
+	msgStore  SyncMsgStore
+	logger    *zap.Logger
 }
 
 func NewSpawner(
@@ -28,24 +26,22 @@ func NewSpawner(
 	mediaSvc media.Service,
 	store Store,
 	sessStore SessionStore,
-	ctrlMsgStore SyncMsgControlStore,
-	dataMsgStore SyncMsgDataStore,
+	msgStore SyncMsgStore,
 	logger *zap.Logger,
 ) *Spawner {
 	return &Spawner{
-		crds:         make(map[string]struct{}),
-		mapsSvc:      mapsSvc,
-		mediaSvc:     mediaSvc,
-		store:        store,
-		sessStore:    sessStore,
-		ctrlMsgStore: ctrlMsgStore,
-		dataMsgStore: dataMsgStore,
-		logger:       logger.Named("trips.spawner"),
+		crds:      make(map[string]struct{}),
+		mapsSvc:   mapsSvc,
+		mediaSvc:  mediaSvc,
+		store:     store,
+		sessStore: sessStore,
+		msgStore:  msgStore,
+		logger:    logger.Named("trips.spawner"),
 	}
 }
 
-func (spwn *Spawner) shouldSpawnCoordinator(msg SyncMsgControl) bool {
-	if msg.Topic != SyncMsgControlTopicJoin {
+func (spwn *Spawner) shouldSpawnCoordinator(msg SyncMsgTOB) bool {
+	if msg.Topic != SyncMsgTOBTopicJoin {
 		return false
 	}
 
@@ -57,13 +53,13 @@ func (spwn *Spawner) shouldSpawnCoordinator(msg SyncMsgControl) bool {
 		spwn.crds[msg.TripID] = struct{}{}
 	}
 	spwn.mu.Unlock()
-	return exist
+	return !exist
 }
 
 // Run listens to Join requests and spawn a coordinator if there is
 // only 1 member in the session (i.e new session)
 func (spwn *Spawner) Run() error {
-	msgCh, done, err := spwn.ctrlMsgStore.SubReq("*")
+	msgCh, done, err := spwn.msgStore.SubTOBReq("*")
 	if err != nil {
 		return err
 	}
@@ -82,8 +78,7 @@ func (spwn *Spawner) Run() error {
 			spwn.mediaSvc,
 			spwn.store,
 			spwn.sessStore,
-			spwn.ctrlMsgStore,
-			spwn.dataMsgStore,
+			spwn.msgStore,
 			spwn.logger,
 		)
 		doneCh, err := coord.Init()
@@ -95,7 +90,11 @@ func (spwn *Spawner) Run() error {
 			spwn.logger.Error("unable to run coordinator", zap.Error(err))
 			continue
 		}
-		// coord.SendFirstMemberJoinMsg(ctx, msg, sess)
+
+		if err = coord.SendFirstMemberJoinMsg(&msg); err != nil {
+			// TODO: spwn.ctrlMsgStore.PubRes(msg.TripID, msg)
+			continue
+		}
 
 		go func() {
 			<-doneCh

@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"bytes"
 	context "context"
 	"net/http"
 	"time"
@@ -67,9 +68,11 @@ type ConnHandler struct {
 	tripID   string
 	memberID string
 
-	svc       SyncService
-	dataMsgCh <-chan SyncMsgData
-	doneCh    chan<- bool
+	svc        SyncService
+	ctrlMsgCh  <-chan SyncMsgBroadcast
+	ctrlDoneCh chan<- bool
+	dataMsgCh  <-chan SyncMsgTOB
+	dataDoneCh chan<- bool
 
 	pongDeadline time.Time
 
@@ -81,10 +84,11 @@ func (h *ConnHandler) SetPongDeadline(deadline time.Time) {
 }
 
 func (h *ConnHandler) Run() {
-	h.logger.Info("new connection", zap.String("tripID", h.tripID))
+	h.logger.Info("new connection")
 	defer func() {
 		h.logger.Info("closing connection", zap.String("id", h.connID))
-		h.ReadControlMsg(MakeSyncMsgControlTopicLeave(h.connID, h.tripID, h.memberID))
+		msg := MakeSyncMsgTOBTopicLeave(h.connID, h.tripID, h.memberID)
+		h.ProcessDataMessage(&msg)
 		h.ws.Close()
 	}()
 
@@ -104,70 +108,96 @@ func (h *ConnHandler) Run() {
 		}
 
 		var syncMsg SyncMsg
-		if err := msgpack.Unmarshal(p, &syncMsg); err != nil {
+		if err := msgpack.NewDecoder(bytes.NewBuffer(p)).Decode(&syncMsg); err != nil {
 			h.logger.Error("msgpack.Unmarshal", zap.Error(err))
 			continue
 		}
 
-		if syncMsg.Type == SyncMsgTypeControl {
-			var msg SyncMsgControl
-			if err := msgpack.Unmarshal(p, &msg); err != nil {
-				h.logger.Error("msgpack.Unmarshal", zap.Error(err))
+		switch syncMsg.Type {
+		case SyncMsgTypeBroadcast:
+			ctrlmsg, err := h.ParseControlMsg(p)
+			if err != nil {
+				h.logger.Warn("ParseControlMsg", zap.Error(err))
 				continue
 			}
-
-			if err := h.ReadControlMsg(msg); err != nil {
+			if err := h.ProcessControlMsg(ctrlmsg); err != nil {
 				if err == ErrRBAC {
 					b, _ := msgpack.Marshal(ErrMessage{Err: err.Error()})
 					h.ws.WriteMessage(websocket.BinaryMessage, b)
 					return
 				}
-				h.logger.Error("ReadControlMsg", zap.Error(err))
+				h.logger.Error("ProcessControlMsg", zap.Error(err))
 				continue
 			}
-
 			// Close session if client leaves.
-			if msg.Topic == SyncMsgControlTopicLeave {
+			if ctrlmsg.Topic == SyncMsgTOBTopicLeave {
 				return
 			}
 			continue
-		}
+		case SyncMsgTypeTOB:
+			var msg SyncMsgTOB
+			if err := msgpack.Unmarshal(p, &msg); err != nil {
+				h.logger.Error("msgpack.Unmarshal", zap.Error(err))
+				continue
+			}
 
-		var msg SyncMsgData
-		if err := msgpack.Unmarshal(p, &msg); err != nil {
-			h.logger.Error("msgpack.Unmarshal", zap.Error(err))
-			continue
+			if err := h.ProcessDataMessage(&msg); err != nil {
+				h.logger.Error("h.ProcessDataMessage", zap.Error(err))
+				continue
+			}
 		}
-
-		if err := h.ReadDataMessage(msg); err != nil {
-			h.logger.Error("h.ReadDataMessage", zap.Error(err))
-			continue
-		}
-
 	}
 }
 
-func (h *ConnHandler) ReadDataMessage(msg SyncMsgData) error {
-	h.logger.Debug("recv data msg", zap.String("op", msg.Topic))
-	return h.svc.UpdateTrip(context.Background(), msg)
+func (h *ConnHandler) ParseControlMsg(p []byte) (*SyncMsgBroadcast, error) {
+	var msg SyncMsgBroadcast
+	if err := msgpack.Unmarshal(p, &msg); err != nil {
+		h.logger.Error("msgpack.Unmarshal", zap.Error(err))
+		return nil, err
+	}
+	return &msg, nil
 }
 
-func (h *ConnHandler) ReadControlMsg(msg SyncMsgControl) error {
+func (h *ConnHandler) ProcessControlMsg(msg *SyncMsgBroadcast) error {
 	h.logger.Debug("recv control msg", zap.String("topic", msg.Topic))
 
 	ctx := context.Background()
 
 	switch msg.Topic {
-	case SyncMsgControlTopicJoin:
+	case SyncMsgBroadcastTopicPing:
+		h.logger.Debug("pong")
+		h.SetPongDeadline(time.Now().Add(pongWait))
+		msg.MemberID = h.memberID
+		h.svc.Ping(ctx, msg)
+		return nil
+
+	default:
+		return nil
+	}
+}
+
+func (h *ConnHandler) ProcessDataMessage(msg *SyncMsgTOB) error {
+	h.logger.Debug("recv data msg", zap.String("op", msg.Topic))
+
+	ctx := context.Background()
+	switch msg.Topic {
+	case SyncMsgTOBTopicJoin:
 		h.connID = msg.ConnID
 		h.logger.Info("new client", zap.String("connID", msg.ConnID))
-		dataMsgCh, doneCh, err := h.svc.SubSyncMsgDataResp(ctx, msg.TripID)
+
+		ctrlMsgCh, ctrlDoneCh, err := h.svc.SubSyncMsgBroadcastResp(ctx, msg.TripID)
 		if err != nil {
 			return err
 		}
+		h.ctrlMsgCh = ctrlMsgCh
+		h.ctrlDoneCh = ctrlDoneCh
 
+		dataMsgCh, dataDoneCh, err := h.svc.SubSyncMsgTOBResp(ctx, msg.TripID)
+		if err != nil {
+			return err
+		}
 		h.dataMsgCh = dataMsgCh
-		h.doneCh = doneCh
+		h.dataDoneCh = dataDoneCh
 		h.tripID = msg.TripID
 		h.memberID = msg.MemberID
 		if err = h.svc.Join(ctx, msg); err != nil {
@@ -175,18 +205,13 @@ func (h *ConnHandler) ReadControlMsg(msg SyncMsgControl) error {
 		}
 		go h.WriteMessage()
 		return nil
-	case SyncMsgControlTopicPing:
-		h.logger.Debug("pong")
-		h.SetPongDeadline(time.Now().Add(pongWait))
-		msg.MemberID = h.memberID
-		h.svc.Ping(ctx, msg)
-		return nil
-	case SyncMsgControlTopicLeave:
-		h.doneCh <- true
+	case SyncMsgTOBTopicLeave:
+		h.ctrlDoneCh <- true
+		h.dataDoneCh <- true
 		return h.svc.Leave(ctx, msg)
-	default:
-		return nil
 	}
+
+	return h.svc.Update(context.Background(), msg)
 }
 
 func (h *ConnHandler) WriteMessage() {
@@ -197,6 +222,14 @@ func (h *ConnHandler) WriteMessage() {
 
 	for {
 		select {
+		case msg, ok := <-h.ctrlMsgCh:
+			if !ok {
+				return
+			}
+			msg.ConnID = h.connID
+			h.logger.Debug("recv control", zap.String("op", msg.Topic))
+			b, _ := msgpack.Marshal(msg)
+			h.ws.WriteMessage(websocket.BinaryMessage, b)
 		case msg, ok := <-h.dataMsgCh:
 			if !ok {
 				return
@@ -208,7 +241,7 @@ func (h *ConnHandler) WriteMessage() {
 		case <-pingTicker.C:
 			h.logger.Debug("ping")
 			b, _ := msgpack.Marshal(
-				MakeSyncMsgControlTopicPing(h.connID, h.tripID, h.memberID),
+				MakeSyncMsgBroadcastTopicPing(h.connID, h.tripID, h.memberID),
 			)
 			h.ws.WriteMessage(websocket.BinaryMessage, b)
 		}

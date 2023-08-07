@@ -7,13 +7,13 @@ import "github.com/travelreys/travelreys/pkg/jsonpatch"
 type SessionContext struct {
 	// ConnID tracks the connection from an instance of
 	// the travelreys client app.
-	ConnID string
+	ConnID string `json:"connID" msgpack:"connID"`
 
 	// TripID represents the trip currently being updated
-	TripID string
+	TripID string `json:"tripID" msgpack:"tripID"`
 
 	// Participating member
-	MemberID string
+	MemberID string `json:"memberID" msgpack:"memberID"`
 }
 
 type SessionContextList []SessionContext
@@ -27,149 +27,162 @@ func (l SessionContextList) ToMembers() []string {
 }
 
 const (
-	SyncMsgTypeControl = "control"
-	SyncMsgTypeData    = "data"
+	SyncMsgTypeBroadcast = "broadcast"
+	SyncMsgTypeTOB       = "tob"
 )
 
 type SyncMsg struct {
-	Type     string `json:"type"`
-	ConnID   string `json:"connId"`
-	TripID   string `json:"tripId"`
-	MemberID string `json:"memberId"`
+	Type     string `json:"type" msgpack:"type"`
+	ConnID   string `json:"connID" msgpack:"connID"`
+	TripID   string `json:"tripID" msgpack:"tripID"`
+	MemberID string `json:"memberID" msgpack:"memberID"`
 }
 
 const (
-	SyncMsgControlTopicJoin        = "SyncMsgControlTopicJoin"
-	SyncMsgControlTopicLeave       = "SyncMsgControlTopicLeave"
-	SyncMsgControlTopicPing        = "SyncMsgControlTopicPing"
-	SyncMsgControlTopiCursor       = "SyncMsgControlTopicCursor"
-	SyncMsgControlTopiFormPresence = "SyncMsgControlTopicFormPresence"
+	SyncMsgBroadcastTopicPing        = "SyncMsgBroadcastTopicPing"
+	SyncMsgBroadcastTopiCursor       = "SyncMsgBroadcastTopicCursor"
+	SyncMsgBroadcastTopiFormPresence = "SyncMsgBroadcastTopicFormPresence"
 )
 
-type SyncMsgControl struct {
-	SyncMsg
+type SyncMsgBroadcast struct {
+	SyncMsg `msgpack:",inline"`
 
-	Topic string `json:"topic"`
+	Topic string `json:"topic" msgpack:"topic"`
 
-	Join  SyncMsgControlPayloadJoin  `json:"join"`
-	Leave SyncMsgControlPayloadLeave `json:"leave"`
-	Ping  SyncMsgControlPayloadPing  `json:"ping"`
+	Ping         *SyncMsgBroadcastPayloadPing         `json:"ping,omitempty" msgpack:"ping,omitempty"`
+	Cursor       *SyncMsgBroadcastPayloadCursor       `json:"cursor,omitempty" msgpack:"cursor,omitempty"`
+	FormPresence *SyncMsgBroadcastPayloadFormPresence `json:"formPresence,omitempty" msgpack:"formPresence,omitempty"`
 }
 
-type SyncMsgControlPayloadJoin struct {
-	// Latest Snapshot of the trip
-	Trip *Trip `json:"trip"`
-
-	// List of members updated (presence)
-	Members []string `json:"members"`
+type SyncMsgBroadcastPayloadPing struct {
 }
 
-type SyncMsgControlPayloadLeave struct {
+type SyncMsgBroadcastPayloadCursor struct{}
+
+type SyncMsgBroadcastPayloadFormPresence struct {
+	IsActive bool   `json:"isActive" msgpack:"isActive"` // toggle on/off
+	EditPath string `json:"editPath" msgpack:"editPath"`
 }
 
-type SyncMsgControlPayloadPing struct {
-}
-
-type SyncMsgControlPayloadCursor struct{}
-
-type SyncMsgControlPayloadFormPresence struct {
-	IsActive bool   `json:"isActive"` // toggle on/off
-	EditPath string `json:"editPath"`
-}
-
-func MakeSyncMsgControlTopicJoin(
+func MakeSyncMsgBroadcastTopicPing(
 	connID,
 	tripID string,
 	mem string,
-) SyncMsgControl {
-	return SyncMsgControl{
+) SyncMsgBroadcast {
+	return SyncMsgBroadcast{
 		SyncMsg: SyncMsg{
-			Type:     SyncMsgTypeControl,
+			Type:     SyncMsgTypeBroadcast,
 			ConnID:   connID,
 			TripID:   tripID,
 			MemberID: mem,
 		},
-		Topic: SyncMsgControlTopicJoin,
-	}
-}
-
-func MakeSyncMsgControlTopicLeave(
-	connID,
-	tripID string,
-	mem string,
-) SyncMsgControl {
-	return SyncMsgControl{
-		SyncMsg: SyncMsg{
-			Type:     SyncMsgTypeControl,
-			ConnID:   connID,
-			TripID:   tripID,
-			MemberID: mem,
-		},
-		Topic: SyncMsgControlTopicLeave,
-	}
-}
-
-func MakeSyncMsgControlTopicPing(
-	connID,
-	tripID string,
-	mem string,
-) SyncMsgControl {
-	return SyncMsgControl{
-		SyncMsg: SyncMsg{
-			Type:     SyncMsgTypeControl,
-			ConnID:   connID,
-			TripID:   tripID,
-			MemberID: mem,
-		},
-		Topic: SyncMsgControlTopicPing,
+		Topic: SyncMsgBroadcastTopicPing,
 	}
 }
 
 const (
+	SyncMsgTOBTopicJoin   = "SyncMsgTOBTopicJoin"
+	SyncMsgTOBTopicLeave  = "SyncMsgTOBTopicLeave"
+	SyncMsgTOBTopicUpdate = "SyncMsgBroadcastTopicUpdate"
+
 	// Trip
-	SyncMsgDataTopicDeleteTrip        = "SyncMsgDataTopicDeleteTrip"
-	SyncMsgDataTopicUpdateTripDates   = "SyncMsgDataTopicUpdateTripDates"
-	SyncMsgDataTopicUpdateTripMembers = "SyncMsgDataTopicUpdateTripMembers"
+	SyncMsgTOBUpdateOpDeleteTrip        = "SyncMsgTOBTopicDeleteTrip"
+	SyncMsgTOBUpdateOpUpdateTripDates   = "SyncMsgTOBTopicUpdateTripDates"
+	SyncMsgTOBUpdateOpUpdateTripMembers = "SyncMsgTOBTopicUpdateTripMembers"
 
 	// Lodgings
-	SyncMsgDataTopicAddLodging    = "SyncMsgDataTopicAddLodging"
-	SyncMsgDataTopicDeleteLodging = "SyncMsgDataTopicDeleteLodging"
-	SyncMsgDataTopicUpdateLodging = "SyncMsgDataTopicUpdateLodging"
+	SyncMsgTOBUpdateOpAddLodging    = "SyncMsgTOBTopicAddLodging"
+	SyncMsgTOBUpdateOpDeleteLodging = "SyncMsgTOBTopicDeleteLodging"
+	SyncMsgTOBUpdateOpUpdateLodging = "SyncMsgTOBTopicUpdateLodging"
 
 	// Itinerary
-	SyncMsgDataTopicDeleteActivity              = "SyncMsgDataTopicDeleteActivity"
-	SyncMsgDataTopicOptimizeItinerary           = "SyncMsgDataTopicOptimizeItinerary"
-	SyncMsgDataTopicReorderActivityToAnotherDay = "SyncMsgDataTopicReorderActivityToAnotherDay"
-	SyncMsgDataTopicReorderItinerary            = "SyncMsgDataTopicReorderItinerary"
-	SyncMsgDataTopicUpdateActivityPlace         = "SyncMsgDataTopicUpdateActivityPlace"
+	SyncMsgTOBUpdateOpDeleteActivity              = "SyncMsgTOBTopicDeleteActivity"
+	SyncMsgTOBUpdateOpOptimizeItinerary           = "SyncMsgTOBTopicOptimizeItinerary"
+	SyncMsgTOBUpdateOpReorderActivityToAnotherDay = "SyncMsgTOBTopicReorderActivityToAnotherDay"
+	SyncMsgTOBUpdateOpReorderItinerary            = "SyncMsgTOBTopicReorderItinerary"
+	SyncMsgTOBUpdateOpUpdateActivityPlace         = "SyncMsgTOBTopicUpdateActivityPlace"
 
 	// Media
-	SyncMsgDataTopicAddMediaItem = "SyncMsgDataTopicAddMediaItem"
+	SyncMsgTOBUpdateOpAddMediaItem = "SyncMsgTOBTopicAddMediaItem"
 )
 
-type SyncMsgData struct {
+type SyncMsgTOB struct {
 	SyncMsg
 
-	Topic   string         `json:"topic"`
-	Counter uint64         `json:"counter"`
-	Ops     []jsonpatch.Op `json:"ops"`
+	Topic   string `json:"topic" msgpack:"topic"`
+	Counter uint64 `json:"counter" msgpack:"counter"`
+
+	Join   *SyncMsgTOBPayloadJoin   `json:"join,omitempty" msgpack:"join,omitempty"`
+	Leave  *SyncMsgTOBPayloadLeave  `json:"leave,omitempty" msgpack:"leave,omitempty"`
+	Update *SyncMsgTOBPayloadUpdate `json:"update,omitempty" msgpack:"update,omitempty"`
 }
 
-func MakeSyncMsgData(
+type SyncMsgTOBPayloadJoin struct {
+	// Latest Snapshot of the trip
+	Trip *Trip `json:"trip" msgpack:"trip"`
+
+	// List of members updated (presence)
+	Members []string `json:"members" msgpack:"members"`
+}
+
+type SyncMsgTOBPayloadLeave struct {
+}
+
+type SyncMsgTOBPayloadUpdate struct {
+	Op  string         `json:"op" msgpack:"op"`
+	Ops []jsonpatch.Op `json:"ops" msgpack:"ops"`
+}
+
+func MakeSyncMsgTOBTopicJoin(
 	connID,
 	tripID string,
 	mem string,
-	topic string,
-	ops []jsonpatch.Op,
-) SyncMsgData {
-	return SyncMsgData{
+) SyncMsgTOB {
+	return SyncMsgTOB{
 		SyncMsg: SyncMsg{
-			Type:     SyncMsgTypeData,
+			Type:     SyncMsgTypeBroadcast,
 			ConnID:   connID,
 			TripID:   tripID,
 			MemberID: mem,
 		},
-		Topic: topic,
-		Ops:   ops,
+		Topic: SyncMsgTOBTopicJoin,
+	}
+}
+
+func MakeSyncMsgTOBTopicLeave(
+	connID,
+	tripID string,
+	mem string,
+) SyncMsgTOB {
+	return SyncMsgTOB{
+		SyncMsg: SyncMsg{
+			Type:     SyncMsgTypeBroadcast,
+			ConnID:   connID,
+			TripID:   tripID,
+			MemberID: mem,
+		},
+		Topic: SyncMsgTOBTopicLeave,
+	}
+}
+
+func MakeSyncMsgTOBTopicUpdate(
+	connID,
+	tripID,
+	mem,
+	op string,
+	ops []jsonpatch.Op,
+) SyncMsgTOB {
+	return SyncMsgTOB{
+		SyncMsg: SyncMsg{
+			Type:     SyncMsgTypeTOB,
+			ConnID:   connID,
+			TripID:   tripID,
+			MemberID: mem,
+		},
+		Topic: SyncMsgTOBTopicUpdate,
+		Update: &SyncMsgTOBPayloadUpdate{
+			Op:  op,
+			Ops: ops,
+		},
 	}
 }

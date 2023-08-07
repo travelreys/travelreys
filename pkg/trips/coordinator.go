@@ -9,7 +9,6 @@ import (
 	"time"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
-	"github.com/go-redis/redis/v9"
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/common"
 	jp "github.com/travelreys/travelreys/pkg/jsonpatch"
@@ -38,21 +37,17 @@ type Coordinator struct {
 
 	// queue maintains a FIFO Total Order Broadcast together
 	// with Counter.
-	dataFifoMsgQueue chan SyncMsgData
+	dataFifoMsgQueue chan SyncMsgTOB
 
 	// msgCh recevies request message from clients
-	ctrlMsgCh     <-chan SyncMsgControl
-	ctrlMsgDoneCh chan<- bool
+	tobMsgCh  <-chan SyncMsgTOB
+	tobDoneCh chan<- bool
 
-	dataMsgCh     <-chan SyncMsgData
-	dataMsgDoneCh chan<- bool
-
-	mapsSvc      maps.Service
-	mediaSvc     media.Service
-	store        Store
-	sessStore    SessionStore
-	ctrlMsgStore SyncMsgControlStore
-	dataMsgStore SyncMsgDataStore
+	mapsSvc   maps.Service
+	mediaSvc  media.Service
+	store     Store
+	sessStore SessionStore
+	msgStore  SyncMsgStore
 
 	doneCh chan bool
 	logger *zap.Logger
@@ -64,8 +59,7 @@ func NewCoordinator(
 	mediaSvc media.Service,
 	store Store,
 	sessStore SessionStore,
-	ctrlMsgStore SyncMsgControlStore,
-	dataMsgStore SyncMsgDataStore,
+	msgStore SyncMsgStore,
 	logger *zap.Logger,
 ) *Coordinator {
 	return &Coordinator{
@@ -73,12 +67,11 @@ func NewCoordinator(
 		tripID:           tripID,
 		trip:             []byte{},
 		counter:          1,
-		dataFifoMsgQueue: make(chan SyncMsgData, common.DefaultChSize),
+		dataFifoMsgQueue: make(chan SyncMsgTOB, common.DefaultChSize),
 		mapsSvc:          mapsSvc,
 		mediaSvc:         mediaSvc,
 		store:            store,
-		ctrlMsgStore:     ctrlMsgStore,
-		dataMsgStore:     dataMsgStore,
+		msgStore:         msgStore,
 		sessStore:        sessStore,
 		refreshCtrTicker: time.NewTicker(defaultRefreshCounterTTL),
 		doneCh:           make(chan bool),
@@ -99,13 +92,7 @@ func (crd *Coordinator) Init() (<-chan bool, error) {
 	crd.trip = tripBytes
 
 	// 2. Subscribe to updates from clients
-	ctrlMsgCh, ctrlMsgDoneCh, err := crd.ctrlMsgStore.SubReq(crd.tripID)
-	if err != nil {
-		crd.logger.Error("subscribe fail", zap.Error(err))
-		return nil, err
-	}
-
-	dataMsgCh, dataMsgDoneCh, err := crd.dataMsgStore.SubReqQueue(
+	tobMsgCh, tobDoneCh, err := crd.msgStore.SubTOBReqQueue(
 		crd.tripID,
 		GroupCoordinators,
 	)
@@ -113,15 +100,12 @@ func (crd *Coordinator) Init() (<-chan bool, error) {
 		crd.logger.Error("subscribe fail", zap.Error(err))
 		return nil, err
 	}
-
-	crd.ctrlMsgCh = ctrlMsgCh
-	crd.ctrlMsgDoneCh = ctrlMsgDoneCh
-	crd.dataMsgCh = dataMsgCh
-	crd.dataMsgDoneCh = dataMsgDoneCh
+	crd.tobMsgCh = tobMsgCh
+	crd.tobDoneCh = tobDoneCh
 
 	// 3. See if there is stale state in etcd
 	ctr, err := crd.sessStore.GetCounter(ctx, crd.tripID)
-	if err != nil && err != redis.Nil {
+	if err != nil && err != ErrCounterNotFound {
 		return nil, err
 	}
 	if ctr != 0 {
@@ -130,44 +114,37 @@ func (crd *Coordinator) Init() (<-chan bool, error) {
 	return crd.doneCh, nil
 }
 
-func (crd *Coordinator) stopControl() {
-	if crd.dataMsgDoneCh != nil {
-		crd.dataMsgDoneCh <- true
-	}
-}
-
-func (crd *Coordinator) stopData() {
-	if crd.ctrlMsgDoneCh != nil {
-		crd.ctrlMsgDoneCh <- true
-	}
-	close(crd.dataFifoMsgQueue)
-}
-
 func (crd *Coordinator) Stop() {
-	crd.sessStore.DeleteCounter(context.Background(), crd.tripID, crd.counterLeaseID)
+	crd.sessStore.DeleteCounter(
+		context.Background(),
+		crd.tripID,
+		crd.counterLeaseID,
+	)
 	crd.refreshCtrTicker.Stop()
-	crd.stopControl()
-	crd.stopData()
+	if crd.tobDoneCh != nil {
+		crd.tobDoneCh <- true
+	}
 	crd.doneCh <- true
 }
 
-func (crd *Coordinator) runControl() error {
-	crd.logger.Info("running control loop", zap.String("tripID", crd.tripID))
+func (crd *Coordinator) Run() error {
+	crd.logger.Info("running coordinator", zap.String("tripID", crd.tripID))
 
 	go func() {
-		for msg := range crd.ctrlMsgCh {
+		// Takes in msg indicating changes from clients
+		for msg := range crd.tobMsgCh {
+			crd.logger.Debug("recv tob msg", zap.String("topic", msg.Topic))
 			ctx := context.Background()
-			crd.logger.Debug("recv control msg", zap.String("topic", msg.Topic))
 
 			switch msg.Topic {
-			case SyncMsgControlTopicJoin:
-				if err := crd.handleSyncMsgControlJoin(ctx, &msg); err != nil {
-					crd.logger.Error("handleSyncMsgControlJoin", zap.Error(err))
+			case SyncMsgTOBTopicJoin:
+				if err := crd.handleSyncMsgTOBJoin(ctx, &msg); err != nil {
+					crd.logger.Error("handleSyncMsgTOBJoin", zap.Error(err))
 				}
-			case SyncMsgControlTopicLeave:
-				toEnd, err := crd.handleSyncMsgControlLeave(ctx, &msg)
+			case SyncMsgTOBTopicLeave:
+				toEnd, err := crd.handleSyncMsgTOBLeave(ctx, &msg)
 				if err != nil {
-					crd.logger.Error("handleSyncMsgControlLeave", zap.Error(err))
+					crd.logger.Error("handleSyncMsgTOBLeave", zap.Error(err))
 					continue
 				}
 				if toEnd {
@@ -176,17 +153,6 @@ func (crd *Coordinator) runControl() error {
 					return
 				}
 			}
-		}
-	}()
-
-	return nil
-}
-
-func (crd *Coordinator) runData() error {
-	go func() {
-		// Takes in msg indicating changes from clients
-		for msg := range crd.dataMsgCh {
-			crd.logger.Debug("recv data msg", zap.String("topic", msg.Topic))
 
 			// Give each message a counter
 			msg.Counter = crd.counter
@@ -203,23 +169,17 @@ func (crd *Coordinator) runData() error {
 		for msg := range crd.dataFifoMsgQueue {
 			ctx := context.Background()
 
-			// 4.2 Update local trip and persist the data (if required)
-			// Update local copy of trip + validate if the op is valid
-			crd.applyDataFifoMsg(ctx, &msg)
+			switch msg.Topic {
+			case SyncMsgTOBTopicUpdate:
+				// 4.2 Update local trip and persist the data (if required)
+				// Update local copy of trip + validate if the op is valid
+				crd.applyDataFifoMsg(ctx, &msg)
+			}
 
 			// 4.3 Broadcasts the tob msg to all other connected clients
-			crd.dataMsgStore.PubRes(crd.tripID, msg)
+			crd.msgStore.PubTOBResp(crd.tripID, &msg)
 		}
 	}()
-
-	return nil
-}
-
-func (crd *Coordinator) Run() error {
-	crd.logger.Info("running coordinator", zap.String("tripID", crd.tripID))
-
-	crd.runControl()
-	crd.runData()
 
 	go func() {
 		for range crd.refreshCtrTicker.C {
@@ -230,7 +190,7 @@ func (crd *Coordinator) Run() error {
 	return nil
 }
 
-func (crd *Coordinator) handleSyncMsgControlJoin(ctx context.Context, msg *SyncMsgControl) error {
+func (crd *Coordinator) handleSyncMsgTOBJoin(ctx context.Context, msg *SyncMsgTOB) error {
 	ctxs, err := crd.sessStore.ReadTripSessCtx(ctx, crd.tripID)
 	if err != nil {
 		return err
@@ -247,7 +207,7 @@ func (crd *Coordinator) handleSyncMsgControlJoin(ctx context.Context, msg *SyncM
 	return nil
 }
 
-func (crd *Coordinator) handleSyncMsgControlLeave(ctx context.Context, msg *SyncMsgControl) (bool, error) {
+func (crd *Coordinator) handleSyncMsgTOBLeave(ctx context.Context, msg *SyncMsgTOB) (bool, error) {
 	// stop coordinator if no users left in session
 	ctxs, err := crd.sessStore.ReadTripSessCtx(ctx, crd.tripID)
 	if err != nil {
@@ -259,9 +219,9 @@ func (crd *Coordinator) handleSyncMsgControlLeave(ctx context.Context, msg *Sync
 // applyDataFifoMsg handles data messages on crd.dataFifoMsgQueue
 // by applying the json.Op before performing additional processing
 // based on message topic.
-func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgData) {
+func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgTOB) {
 
-	patchOps, _ := json.Marshal(msg.Ops)
+	patchOps, _ := json.Marshal(msg.Update.Ops)
 	patch, _ := jsonpatch.DecodePatch(patchOps)
 	modified, err := patch.Apply(crd.trip)
 	if err != nil {
@@ -276,27 +236,27 @@ func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgData) 
 		crd.logger.Error("json unmarshall fails", zap.Error(err))
 	}
 
-	switch msg.Topic {
-	case SyncMsgDataTopicAddLodging,
-		SyncMsgDataTopicUpdateLodging,
-		SyncMsgDataTopicDeleteLodging:
+	switch msg.Update.Op {
+	case SyncMsgTOBUpdateOpAddLodging,
+		SyncMsgTOBUpdateOpUpdateLodging,
+		SyncMsgTOBUpdateOpDeleteLodging:
 		crd.processLodgingChanged(ctx, &toSave, msg)
 		crd.trip, _ = json.Marshal(toSave)
-	case SyncMsgDataTopicUpdateTripDates:
+	case SyncMsgTOBUpdateOpUpdateTripDates:
 		crd.processDatesChanged(&toSave, msg)
 		crd.trip, _ = json.Marshal(toSave)
-	case SyncMsgDataTopicReorderItinerary,
-		SyncMsgDataTopicUpdateActivityPlace,
-		SyncMsgDataTopicDeleteActivity:
+	case SyncMsgTOBUpdateOpReorderItinerary,
+		SyncMsgTOBUpdateOpUpdateActivityPlace,
+		SyncMsgTOBUpdateOpDeleteActivity:
 		crd.processActivityChangedSameDay(ctx, &toSave, msg)
 		crd.trip, _ = json.Marshal(toSave)
-	case SyncMsgDataTopicReorderActivityToAnotherDay:
+	case SyncMsgTOBUpdateOpReorderActivityToAnotherDay:
 		crd.processActivityChangedAnotherDay(ctx, &toSave, msg)
 		crd.trip, _ = json.Marshal(toSave)
-	case SyncMsgDataTopicOptimizeItinerary:
+	case SyncMsgTOBUpdateOpOptimizeItinerary:
 		crd.processOptimizeRoute(ctx, &toSave, msg)
 		crd.trip, _ = json.Marshal(toSave)
-	case SyncMsgDataTopicAddMediaItem:
+	case SyncMsgTOBUpdateOpAddMediaItem:
 		crd.processAugmentMediaItemSignedURL(ctx, &toSave, msg)
 	}
 
@@ -313,7 +273,7 @@ func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgData) 
 func (crd *Coordinator) processLodgingChanged(
 	ctx context.Context,
 	toSave *Trip,
-	msg *SyncMsgData,
+	msg *SyncMsgTOB,
 ) {
 	mutex := sync.Mutex{}
 	wg := sync.WaitGroup{}
@@ -337,7 +297,7 @@ func (crd *Coordinator) processLodgingChanged(
 
 func (crd *Coordinator) processDatesChanged(
 	toSave *Trip,
-	msg *SyncMsgData,
+	msg *SyncMsgTOB,
 ) {
 	sortedCurrDates := GetSortedItineraryKeys(toSave)
 	newItineraries := ItineraryMap{}
@@ -357,16 +317,16 @@ func (crd *Coordinator) processDatesChanged(
 
 	}
 	toSave.Itineraries = newItineraries
-	msg.Ops = append(msg.Ops, jp.MakeRepOp(JSONPathItineraryRoot, newItineraries))
+	msg.Update.Ops = append(msg.Update.Ops, jp.MakeRepOp(JSONPathItineraryRoot, newItineraries))
 
 }
 
 func (crd *Coordinator) processActivityChangedSameDay(
 	ctx context.Context,
 	toSave *Trip,
-	msg *SyncMsgData,
+	msg *SyncMsgTOB,
 ) {
-	dtKey := crd.parseItinDtKeyFromOps(msg.Ops)
+	dtKey := crd.parseItinDtKeyFromOps(msg.Update.Ops)
 	if dtKey == "" {
 		return
 	}
@@ -379,9 +339,9 @@ func (crd *Coordinator) processActivityChangedSameDay(
 func (crd *Coordinator) processActivityChangedAnotherDay(
 	ctx context.Context,
 	toSave *Trip,
-	msg *SyncMsgData,
+	msg *SyncMsgTOB,
 ) {
-	origDtKey := crd.parseItinDtKeyFromOps(msg.Ops)
+	origDtKey := crd.parseItinDtKeyFromOps(msg.Update.Ops)
 	if origDtKey == "" {
 		return
 	}
@@ -389,7 +349,7 @@ func (crd *Coordinator) processActivityChangedAnotherDay(
 		routesMap := crd.calculateRoute(ctx, itin, toSave)
 		crd.UpdateRoutes(ctx, origDtKey, routesMap, msg, toSave)
 	}
-	lessOneOps := msg.Ops[1:]
+	lessOneOps := msg.Update.Ops[1:]
 	destDtKey := crd.parseItinDtKeyFromOps(lessOneOps)
 	if destDtKey == "" {
 		return
@@ -403,17 +363,17 @@ func (crd *Coordinator) processActivityChangedAnotherDay(
 func (crd *Coordinator) processAugmentMediaItemSignedURL(
 	ctx context.Context,
 	toSave *Trip,
-	msg *SyncMsgData,
+	msg *SyncMsgTOB,
 ) {
 	// /mediaItems/${mediaItemsKey}/-
-	tkns := strings.Split(msg.Ops[0].Path, "/")
+	tkns := strings.Split(msg.Update.Ops[0].Path, "/")
 	if len(tkns) < 4 {
 		crd.logger.Error("invalid number of tokens", zap.Int("count", len(tkns)))
 		return
 	}
 
 	mediaItemKey := tkns[2]
-	bytes, _ := json.Marshal(msg.Ops[0].Value)
+	bytes, _ := json.Marshal(msg.Update.Ops[0].Value)
 
 	var mediaItem media.MediaItem
 	if err := json.Unmarshal(bytes, &mediaItem); err != nil {
@@ -427,7 +387,7 @@ func (crd *Coordinator) processAugmentMediaItemSignedURL(
 		return
 	}
 
-	msg.Ops = append(msg.Ops, jp.MakeAddOp(
+	msg.Update.Ops = append(msg.Update.Ops, jp.MakeAddOp(
 		fmt.Sprintf(
 			"/mediaItems/%s/%d/urls",
 			mediaItemKey,
@@ -439,10 +399,10 @@ func (crd *Coordinator) processAugmentMediaItemSignedURL(
 func (crd *Coordinator) processOptimizeRoute(
 	ctx context.Context,
 	toSave *Trip,
-	msg *SyncMsgData,
+	msg *SyncMsgTOB,
 ) {
 	// /itineraries/2023-03-26
-	op := msg.Ops[0]
+	op := msg.Update.Ops[0]
 	pathTokens := strings.Split(op.Path, "/")
 	if len(pathTokens) < 3 {
 		return
@@ -473,7 +433,7 @@ func (crd *Coordinator) processOptimizeRoute(
 			fmt.Sprintf("/itineraries/%s/activities/%s/labels/fIndex", dtKey, actId),
 			newFIdx,
 		)
-		msg.Ops = append(msg.Ops, jop)
+		msg.Update.Ops = append(msg.Update.Ops, jop)
 	}
 
 	routeMaps := crd.calculateRoute(ctx, itin, toSave)
@@ -545,14 +505,14 @@ func (crd *Coordinator) UpdateRoutes(
 	ctx context.Context,
 	dtKey string,
 	routesMap map[string]maps.RouteList,
-	msg *SyncMsgData,
+	msg *SyncMsgTOB,
 	toSave *Trip,
 ) {
 	for pair, routes := range routesMap {
 		toSave.Itineraries[dtKey].Routes[pair] = routes
 		jop := jp.MakeAddOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
-		msg.Ops = append(
-			msg.Ops, jop,
+		msg.Update.Ops = append(
+			msg.Update.Ops, jop,
 		)
 	}
 
@@ -566,20 +526,35 @@ func (crd *Coordinator) UpdateRoutes(
 
 	for _, pair := range routesToRemove {
 		jop := jp.MakeRemoveOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), "")
-		msg.Ops = append(msg.Ops, jop)
+		msg.Update.Ops = append(msg.Update.Ops, jop)
 		delete(toSave.Itineraries[dtKey].Routes, pair)
 	}
 
 }
 
-// TODO: we need this still
 // SendFirstMemberJoinMsg sends a memberUpdate message to the very first member
-// func (crd *Coordinator) SendFirstMemberJoinMsg(ctx context.Context, msg Message, sess Session) {
-// 	msg.TripID = crd.tripID
-// 	crd.AugmentJoinMsgWithTrip(ctx, &msg)
-// 	msg.Data.JoinSession.Members = sess.Members
+func (crd *Coordinator) SendFirstMemberJoinMsg(msg *SyncMsgTOB) error {
+	var trip Trip
+	json.Unmarshal(crd.trip, &trip)
 
-// 	msg.Counter = crd.counter
-// 	crd.counter++
-// 	crd.queue <- msg
-// }
+	ctx := context.Background()
+	for key := range trip.MediaItems {
+		urls, _ := crd.mediaSvc.GenerateGetSignedURLs(
+			ctx,
+			trip.MediaItems[key],
+		)
+		for i := 0; i < len(trip.MediaItems[key]); i++ {
+			trip.MediaItems[key][i].URLs = urls[i]
+		}
+	}
+	msg.TripID = crd.tripID
+	sessCtx, err := crd.sessStore.ReadTripSessCtx(ctx, crd.tripID)
+	if err != nil {
+		return err
+	}
+	msg.Join = &SyncMsgTOBPayloadJoin{
+		Trip:    &trip,
+		Members: sessCtx.ToMembers(),
+	}
+	return crd.msgStore.PubTOBResp(msg.TripID, msg)
+}

@@ -29,8 +29,7 @@ type AsyncService interface {
 }
 
 type asyncService struct {
-	ctrlMsgStore SyncMsgControlStore
-	dataMsgStore SyncMsgDataStore
+	msgStore SyncMsgStore
 }
 
 // need to check if user has an account or not on frontend
@@ -48,21 +47,21 @@ func (svc *asyncService) JoinTripFromMsg(
 ) {
 	connID := uuid.NewString()
 	// 1. impersonate join
-	joinMsg := MakeSyncMsgControlTopicJoin(
+	joinMsg := MakeSyncMsgTOBTopicJoin(
 		connID,
 		tripID,
 		impersonatee,
 	)
-	svc.ctrlMsgStore.PubReq(tripID, joinMsg)
+	svc.msgStore.PubTOBReq(tripID, &joinMsg)
 	time.Sleep(1 * time.Second)
 
 	// 2. Send Add Member Op
-	addMemMsg := MakeSyncMsgData(
+	addMemMsg := MakeSyncMsgTOBTopicUpdate(
 		connID,
 		tripID,
 		impersonatee,
-		SyncMsgDataTopicUpdateTripMembers,
+		SyncMsgTOBUpdateOpUpdateTripMembers,
 		[]jsonpatch.Op{},
 	)
-	svc.dataMsgStore.PubReq(tripID, addMemMsg)
+	svc.msgStore.PubTOBReq(tripID, &addMemMsg)
 }
