@@ -41,9 +41,6 @@ type store struct {
 }
 
 func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store {
-	ctx, cancel := context.WithTimeout(ctx, common.DbReqTimeout)
-	defer cancel()
-
 	tripsColl := db.Collection(mongoCollTrips)
 	tripsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{bsonKeyID: 1}},

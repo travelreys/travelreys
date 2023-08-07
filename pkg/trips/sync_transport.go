@@ -106,14 +106,14 @@ func (h *ConnHandler) Run() {
 		var syncMsg SyncMsg
 		if err := msgpack.Unmarshal(p, &syncMsg); err != nil {
 			h.logger.Error("msgpack.Unmarshal", zap.Error(err))
-			return
+			continue
 		}
 
 		if syncMsg.Type == SyncMsgTypeControl {
 			var msg SyncMsgControl
 			if err := msgpack.Unmarshal(p, &msg); err != nil {
 				h.logger.Error("msgpack.Unmarshal", zap.Error(err))
-				return
+				continue
 			}
 
 			if err := h.ReadControlMsg(msg); err != nil {
@@ -136,7 +136,7 @@ func (h *ConnHandler) Run() {
 		var msg SyncMsgData
 		if err := msgpack.Unmarshal(p, &msg); err != nil {
 			h.logger.Error("msgpack.Unmarshal", zap.Error(err))
-			return
+			continue
 		}
 
 		if err := h.ReadDataMessage(msg); err != nil {
@@ -207,7 +207,9 @@ func (h *ConnHandler) WriteMessage() {
 			h.ws.WriteMessage(websocket.BinaryMessage, b)
 		case <-pingTicker.C:
 			h.logger.Debug("ping")
-			b, _ := msgpack.Marshal(MakeSyncMsgControlTopicPing(h.connID, h.tripID, h.memberID))
+			b, _ := msgpack.Marshal(
+				MakeSyncMsgControlTopicPing(h.connID, h.tripID, h.memberID),
+			)
 			h.ws.WriteMessage(websocket.BinaryMessage, b)
 		}
 	}

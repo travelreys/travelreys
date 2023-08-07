@@ -572,6 +572,7 @@ func (crd *Coordinator) UpdateRoutes(
 
 }
 
+// TODO: we need this still
 // SendFirstMemberJoinMsg sends a memberUpdate message to the very first member
 // func (crd *Coordinator) SendFirstMemberJoinMsg(ctx context.Context, msg Message, sess Session) {
 // 	msg.TripID = crd.tripID

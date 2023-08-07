@@ -19,25 +19,29 @@ import (
 	"github.com/travelreys/travelreys/pkg/social"
 	"github.com/travelreys/travelreys/pkg/storage"
 	"github.com/travelreys/travelreys/pkg/trips"
-	"github.com/travelreys/travelreys/pkg/tripssync"
 	"go.uber.org/zap"
 )
 
 func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Databases, external services and persistent storage
-	db, err := common.MakeMongoDatabase(cfg.MongoURL, cfg.MongoDBName)
+	db, err := common.MakeDefaultMongoDatabase()
 	if err != nil {
 		logger.Error("cannot connect to mongo db", zap.Error(err))
 		return nil, err
 	}
-	nc, err := common.MakeNATSConn(cfg.NatsURL)
+	nc, err := common.MakeDefaultNATSConn()
 	if err != nil {
 		logger.Error("cannot connect to NATS", zap.Error(err))
 		return nil, err
 	}
-	rdb, err := common.MakeRedisClient(cfg.RedisURL)
+	rdb, err := common.MakeDefaultRedisClient()
 	if err != nil {
 		logger.Error("cannot connect to redis", zap.Error(err))
+		return nil, err
+	}
+	etcd, err := common.MakeDefaultEtcdClient()
+	if err != nil {
+		logger.Error("cannot connect to etcd", zap.Error(err))
 		return nil, err
 	}
 
@@ -103,14 +107,13 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	tripStore := trips.NewStore(ctx, db, logger)
 	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, mediaSvc, storageSvc, logger)
 	tripSvcWithRBAC := trips.ServiceWithRBACMiddleware(tripSvc, logger)
-
-	// TripSync
-	store := tripssync.NewStore(rdb, logger)
-	msgStore := tripssync.NewMessageStore(nc, rdb, logger)
-	tobStore := tripssync.NewTOBMessageStore(nc, rdb, logger)
-
-	svc := tripssync.NewService(store, msgStore, tobStore, tripStore)
-	wsSvr := tripssync.NewWebsocketServer(svc, logger)
+	tripSyncSvc := trips.NewSyncService(
+		tripStore,
+		trips.NewSessionStore(etcd, logger),
+		trips.NewSyncMsgControlStore(nc, logger),
+		trips.NewSyncMsgDataStore(nc, logger),
+	)
+	wsSvr := trips.NewWebsocketServer(tripSyncSvc, logger)
 
 	// Social
 	socialStore := social.NewStore(ctx, db, logger)

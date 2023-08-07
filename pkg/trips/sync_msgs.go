@@ -77,6 +77,22 @@ type SyncMsgControlPayloadFormPresence struct {
 	EditPath string `json:"editPath"`
 }
 
+func MakeSyncMsgControlTopicJoin(
+	connID,
+	tripID string,
+	mem string,
+) SyncMsgControl {
+	return SyncMsgControl{
+		SyncMsg: SyncMsg{
+			Type:     SyncMsgTypeControl,
+			ConnID:   connID,
+			TripID:   tripID,
+			MemberID: mem,
+		},
+		Topic: SyncMsgControlTopicJoin,
+	}
+}
+
 func MakeSyncMsgControlTopicLeave(
 	connID,
 	tripID string,
@@ -137,4 +153,23 @@ type SyncMsgData struct {
 	Topic   string         `json:"topic"`
 	Counter uint64         `json:"counter"`
 	Ops     []jsonpatch.Op `json:"ops"`
+}
+
+func MakeSyncMsgData(
+	connID,
+	tripID string,
+	mem string,
+	topic string,
+	ops []jsonpatch.Op,
+) SyncMsgData {
+	return SyncMsgData{
+		SyncMsg: SyncMsg{
+			Type:     SyncMsgTypeData,
+			ConnID:   connID,
+			TripID:   tripID,
+			MemberID: mem,
+		},
+		Topic: topic,
+		Ops:   ops,
+	}
 }
