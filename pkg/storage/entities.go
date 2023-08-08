@@ -10,15 +10,15 @@ import (
 )
 
 type Object struct {
-	ID           string        `json:"id" bson:"id"`
-	Name         string        `json:"name" bson:"name"`
-	Bucket       string        `json:"bucket" bson:"bucket"`
-	Size         int64         `json:"size" bson:"size"`
-	Path         string        `json:"path" bson:"path"`
-	MIMEType     string        `json:"mimetype" bson:"mimetype"`
-	LastModified time.Time     `json:"lastModified" bson:"lastModified"`
-	Labels       common.Labels `json:"labels" bson:"labels"`
-	Tags         common.Tags   `json:"tags" bson:"tags"`
+	ID           string        `json:"id" bson:"id" msgpack:"id"`
+	Name         string        `json:"name" bson:"name" msgpack:"name"`
+	Bucket       string        `json:"bucket" bson:"bucket" msgpack:"bucket"`
+	Size         int64         `json:"size" bson:"size" msgpack:"size"`
+	Path         string        `json:"path" bson:"path" msgpack:"path"`
+	MIMEType     string        `json:"mimetype" bson:"mimetype" msgpack:"mimetype"`
+	LastModified time.Time     `json:"lastModified" bson:"lastModified" msgpack:"lastModified"`
+	Labels       common.Labels `json:"labels" bson:"labels" msgpack:"labels"`
+	Tags         common.Tags   `json:"tags" bson:"tags" msgpack:"tags"`
 }
 
 func ObjectFromObjectInfo(info minio.ObjectInfo, bucket string) Object {

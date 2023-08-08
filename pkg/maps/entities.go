@@ -34,23 +34,19 @@ var (
 )
 
 type LatLng struct {
-	Lat float64 `json:"lat"`
-	Lng float64 `json:"lng"`
+	Lat float64 `json:"lat" bson:"lat" msgpack:"lat"`
+	Lng float64 `json:"lng" bson:"lng" msgpack:"lng"`
 }
 
 type Place struct {
-	ID          string        `json:"id"`
-	Name        string        `json:"name"`
-	Address     string        `json:"address"`
-	LatLng      LatLng        `json:"latlng"`
-	PhoneNumber string        `json:"phoneNumber"`
-	Types       []string      `json:"types"`
-	Website     string        `json:"website"`
-	Labels      common.Labels `json:"labels"`
-}
-
-func (p Place) isEmpty() bool {
-	return p.ID == ""
+	ID          string        `json:"id" bson:"id" msgpack:"id"`
+	Name        string        `json:"name" bson:"name" msgpack:"name"`
+	Address     string        `json:"address" bson:"address" msgpack:"address"`
+	LatLng      LatLng        `json:"latlng" bson:"latlng" msgpack:"latlng"`
+	PhoneNumber string        `json:"phoneNumber" bson:"phoneNumber" msgpack:"phoneNumber"`
+	Types       []string      `json:"types" bson:"types" msgpack:"types"`
+	Website     string        `json:"website" bson:"website" msgpack:"website"`
+	Labels      common.Labels `json:"labels" bson:"labels" msgpack:"labels"`
 }
 
 func PlaceFromPlaceDetailsResult(result maps.PlaceDetailsResult) Place {
@@ -103,17 +99,17 @@ type AutocompletePredictionList []AutocompletePrediction
 // Polyline represents a list of lat,lng points encoded as a byte array.
 // See: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
 type Polyline struct {
-	Points string `json:"points"`
+	Points string `json:"points" bson:"points" msgpack:"points"`
 }
 
 type Route struct {
-	Polyline      Polyline      `json:"polyline"`
-	Distance      int           `json:"distance"`
-	Duration      time.Duration `json:"duration"`
-	StartLocation LatLng        `json:"start"`
-	EndLocation   LatLng        `json:"end"`
-	TravelMode    string        `json:"travelMode" bson:"travelMode"`
-	Labels        common.Labels `json:"labels"`
+	Polyline      Polyline      `json:"polyline" bson:"polyline" msgpack:"polyline"`
+	Distance      int           `json:"distance" bson:"distance" msgpack:"distance"`
+	Duration      time.Duration `json:"duration" bson:"duration" msgpack:"duration"`
+	StartLocation LatLng        `json:"start" bson:"start" msgpack:"start"`
+	EndLocation   LatLng        `json:"end" bson:"end" msgpack:"end"`
+	TravelMode    string        `json:"travelMode" bson:"travelMode" msgpack:"travelMode"`
+	Labels        common.Labels `json:"labels" bson:"labels" msgpack:"labels"`
 }
 
 func RouteFromRouteResult(result maps.Route, mode string) Route {

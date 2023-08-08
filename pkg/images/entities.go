@@ -1,41 +1,41 @@
 package images
 
 type ImageOwnerLinks struct {
-	Self   string `json:"self"`
-	Html   string `json:"html"`
-	Photos string `json:"photos"`
-	Likes  string `json:"likes"`
+	Self   string `json:"self" bson:"self" msgpack:"self"`
+	Html   string `json:"html" bson:"html" msgpack:"html"`
+	Photos string `json:"photos" bson:"photos" msgpack:"photos"`
+	Likes  string `json:"likes" bson:"likes" msgpack:"likes"`
 }
 
 type ImageOwner struct {
-	ID       string          `json:"id"`
-	Username string          `json:"username"`
-	Name     string          `json:"name"`
-	Links    ImageOwnerLinks `json:"links"`
+	ID       string          `json:"id" bson:"id" msgpack:"id"`
+	Username string          `json:"username" bson:"username" msgpack:"username"`
+	Name     string          `json:"name" bson:"name" msgpack:"name"`
+	Links    ImageOwnerLinks `json:"links" bson:"links" msgpack:"links"`
 }
 
 type ImageURLS struct {
-	Raw     string `json:"raw"`
-	Full    string `json:"full"`
-	Regular string `json:"regular"`
-	Small   string `json:"small"`
-	Thumb   string `json:"thumb"`
+	Raw     string `json:"raw" bson:"raw" msgpack:"raw"`
+	Full    string `json:"full" bson:"full" msgpack:"full"`
+	Regular string `json:"regular" bson:"regular" msgpack:"regular"`
+	Small   string `json:"small" bson:"small" msgpack:"small"`
+	Thumb   string `json:"thumb" bson:"thumb" msgpack:"thumb"`
 }
 
 type ImageMetadataLinks struct {
-	Self     string `json:"self"`
-	Html     string `json:"html"`
-	Download string `json:"download"`
+	Self     string `json:"self" bson:"self" msgpack:"self"`
+	Html     string `json:"html" bson:"html" msgpack:"html"`
+	Download string `json:"download" bson:"download" msgpack:"download"`
 }
 
 type ImageMetadata struct {
-	ID       string             `json:"id"`
-	Width    float64            `json:"width"`
-	Height   float64            `json:"height"`
-	BlurHash string             `json:"blur_hash"`
-	User     ImageOwner         `json:"user"`
-	Urls     ImageURLS          `json:"urls"`
-	Links    ImageMetadataLinks `json:"links"`
+	ID       string             `json:"id" bson:"id" msgpack:"id"`
+	Width    float64            `json:"width" bson:"width" msgpack:"width"`
+	Height   float64            `json:"height" bson:"height" msgpack:"height"`
+	BlurHash string             `json:"blur_hash" bson:"blur_hash" msgpack:"blur_hash"`
+	User     ImageOwner         `json:"user" bson:"user" msgpack:"user"`
+	Urls     ImageURLS          `json:"urls" bson:"urls" msgpack:"urls"`
+	Links    ImageMetadataLinks `json:"links" bson:"links" msgpack:"links"`
 }
 
 type MetadataList []ImageMetadata

@@ -39,15 +39,15 @@ type PhoneNumber struct {
 }
 
 type User struct {
-	ID       string `json:"id" bson:"id"`
-	Email    string `json:"email" bson:"email"`
-	Name     string `json:"name" bson:"name"`
-	Username string `json:"username" bson:"username"`
+	ID       string `json:"id" bson:"id" msgpack:"id"`
+	Email    string `json:"email" bson:"email" msgpack:"email"`
+	Name     string `json:"name" bson:"name" msgpack:"name"`
+	Username string `json:"username" bson:"username" msgpack:"username"`
 
-	CreatedAt   time.Time   `json:"createdAt" bson:"createdAt"`
-	PhoneNumber PhoneNumber `json:"phoneNumber" bson:"phonenumber"`
+	CreatedAt   time.Time   `json:"createdAt" bson:"createdAt" msgpack:"createdAt"`
+	PhoneNumber PhoneNumber `json:"phoneNumber" bson:"phonenumber" msgpack:"phonenumber"`
 
-	Labels map[string]string `json:"labels" bson:"labels"`
+	Labels map[string]string `json:"labels" bson:"labels" msgpack:"labels"`
 }
 
 func (user User) MakeUserAvatarObject() storage.Object {
@@ -153,7 +153,7 @@ func UserFromFBUser(fbUsr FacebookUser) User {
 	}
 }
 
-var UsernameRegexp = regexp.MustCompile("^[a-zA-Z0-9_\\-]*$")
+var UsernameRegexp = regexp.MustCompile(`^[a-zA-Z0-9_\\-]*$`)
 
 func IsValidUsername(userName string) bool {
 	if len(userName) < 5 && len(userName) > 255 {

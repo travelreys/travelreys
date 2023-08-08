@@ -16,14 +16,14 @@ const (
 )
 
 type Activity struct {
-	ID        string            `json:"id" bson:"id"`
-	Title     string            `json:"title" bson:"title"`
-	Place     maps.Place        `json:"place" bson:"place"`
-	Notes     string            `json:"notes" bson:"notes"`
-	PriceItem finance.PriceItem `json:"price" bson:"price"`
-	StartTime time.Time         `json:"startTime" bson:"startTime"`
-	EndTime   time.Time         `json:"endTime" bson:"endTime"`
-	Labels    common.Labels     `json:"labels" bson:"labels"`
+	ID        string            `json:"id" bson:"id" msgpack:"id"`
+	Title     string            `json:"title" bson:"title" msgpack:"title"`
+	Place     maps.Place        `json:"place" bson:"place" msgpack:"place"`
+	Notes     string            `json:"notes" bson:"notes" msgpack:"notes"`
+	PriceItem finance.PriceItem `json:"price" bson:"price" msgpack:"price"`
+	StartTime time.Time         `json:"startTime" bson:"startTime" msgpack:"startTime"`
+	EndTime   time.Time         `json:"endTime" bson:"endTime" msgpack:"endTime"`
+	Labels    common.Labels     `json:"labels" bson:"labels" msgpack:"labels"`
 }
 
 func (a Activity) HasPlace() bool {
@@ -54,12 +54,12 @@ func (l ActivityList) Less(i, j int) bool {
 type RouteMap map[string]maps.RouteList
 
 type Itinerary struct {
-	ID          string        `json:"id" bson:"id"`
-	Date        time.Time     `json:"date" bson:"date"`
-	Description string        `json:"desc" bson:"desc"`
-	Activities  ActivityMap   `json:"activities" bson:"activities"`
-	Routes      RouteMap      `json:"routes" bson:"routes"`
-	Labels      common.Labels `json:"labels" bson:"labels"`
+	ID          string        `json:"id" bson:"id" msgpack:"id"`
+	Date        time.Time     `json:"date" bson:"date" msgpack:"date"`
+	Description string        `json:"desc" bson:"desc" msgpack:"desc"`
+	Activities  ActivityMap   `json:"activities" bson:"activities" msgpack:"activities"`
+	Routes      RouteMap      `json:"routes" bson:"routes" msgpack:"routes"`
+	Labels      common.Labels `json:"labels" bson:"labels" msgpack:"labels"`
 }
 
 func NewItinerary(date time.Time) *Itinerary {

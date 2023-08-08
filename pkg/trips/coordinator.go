@@ -191,11 +191,14 @@ func (crd *Coordinator) Run() error {
 }
 
 func (crd *Coordinator) handleSyncMsgTOBJoin(ctx context.Context, msg *SyncMsgTOB) error {
-	ctxs, err := crd.sessStore.ReadTripSessCtx(ctx, crd.tripID)
+	sessCtx, err := crd.sessStore.ReadTripSessCtx(ctx, crd.tripID)
 	if err != nil {
 		return err
 	}
-	msg.Join.Members = ctxs.ToMembers()
+	msg.Join = &SyncMsgTOBPayloadJoin{
+		Members: sessCtx.ToMembers(),
+	}
+
 	json.Unmarshal(crd.trip, &msg.Join.Trip)
 
 	for key := range msg.Join.Trip.MediaItems {

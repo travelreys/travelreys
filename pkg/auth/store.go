@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	ErrInvalidFilter        = errors.New("auth.InvalidFilter")
+	ErrInvalidFilter        = errors.New("auth.ErrInvalidFilter")
 	ErrUserNotFound         = errors.New("auth.ErrUserNotFound")
 	ErrDuplicateUsername    = errors.New("auth.ErrDuplicateUsername")
 	ErrUnexpectedStoreError = errors.New("auth.ErrUnexpectedStoreError")

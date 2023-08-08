@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/travelreys/travelreys/pkg/maps"
@@ -69,7 +70,9 @@ func (spwn *Spawner) Run() error {
 	}()
 
 	for msg := range msgCh {
+		fmt.Println(msg)
 		if !spwn.shouldSpawnCoordinator(msg) {
+			fmt.Println("skipping")
 			continue
 		}
 		coord := NewCoordinator(
