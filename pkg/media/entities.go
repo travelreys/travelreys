@@ -33,12 +33,12 @@ type NewMediaItemParams struct {
 }
 
 type MediaItem struct {
-	storage.Object `bson:"inline" msgpack:"inline"`
+	storage.Object `bson:"inline"`
 
-	Type   string            `json:"type" bson:"type" msgpack:"type"`
-	TripID string            `json:"tripID" bson:"tripID" msgpack:"tripID"`
-	UserID string            `json:"userID" bson:"userID" msgpack:"userID"`
-	URLs   MediaPresignedUrl `json:"urls" bson:"-" msgpack:"-"`
+	Type   string            `json:"type" bson:"type"`
+	TripID string            `json:"tripID" bson:"tripID"`
+	UserID string            `json:"userID" bson:"userID"`
+	URLs   MediaPresignedUrl `json:"urls" bson:"-"`
 }
 
 func (item MediaItem) OptimizedPath() string {
@@ -91,7 +91,7 @@ func NewMediaItem(tripID, userID, objectPath string, param NewMediaItemParams) M
 }
 
 type MediaPresignedUrl struct {
-	ContentURL string `json:"contentURL" msgpack:"-" bson:"-"`
+	ContentURL string `json:"contentURL"`
 
 	Image ImagePresignedUrls `json:"image"`
 	Video VideoPresignedUrls `json:"video"`
@@ -100,15 +100,15 @@ type MediaPresignedUrl struct {
 type MediaPresignedUrlList []MediaPresignedUrl
 
 type ImagePresignedUrls struct {
-	OptimizedURL string `json:"optimizedURL" msgpack:"-" bson:"-"`
+	OptimizedURL string `json:"optimizedURL"`
 }
 
 type VideoPresignedUrls struct {
-	PreviewURL string        `json:"previewURL" msgpack:"-" bson:"-"`
-	Sources    []VideoSource `json:"sources" msgpack:"-" bson:"-"`
+	PreviewURL string        `json:"previewURL"`
+	Sources    []VideoSource `json:"sources"`
 }
 
 type VideoSource struct {
-	Source string `json:"source" msgpack:"-" bson:"-"`
-	Codecs string `json:"codecs" msgpack:"-" bson:"-"`
+	Source string `json:"source"`
+	Codecs string `json:"codecs"`
 }

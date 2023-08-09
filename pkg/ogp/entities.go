@@ -16,12 +16,12 @@ import "github.com/otiai10/opengraph/v2"
 //   - og:image:height
 //   - og:image:alt
 type Image struct {
-	URL       string `json:"url" bson:"url" msgpack:"url"`
-	SecureURL string `json:"secure_url" bson:"secure_url" msgpack:"secure_url"`
-	Type      string `json:"type" bson:"type" msgpack:"type"`
-	Width     int    `json:"width" bson:"width" msgpack:"width"`
-	Height    int    `json:"height" bson:"height" msgpack:"height"`
-	Alt       string `json:"alt" bson:"alt" msgpack:"alt"`
+	URL       string `json:"url" bson:"url"`
+	SecureURL string `json:"secure_url" bson:"secure_url"`
+	Type      string `json:"type" bson:"type"`
+	Width     int    `json:"width" bson:"width"`
+	Height    int    `json:"height" bson:"height"`
+	Alt       string `json:"alt" bson:"alt"`
 }
 
 // Video represents a structure of "og:video".
@@ -32,12 +32,12 @@ type Image struct {
 //   - og:video:width
 //   - og:video:height
 type Video struct {
-	URL       string `json:"url" bson:"url" msgpack:"url"`
-	SecureURL string `json:"secure_url" bson:"secure_url" msgpack:"secure_url"`
-	Type      string `json:"type" bson:"type" msgpack:"type"` // Content-Type
-	Width     int    `json:"width" bson:"width" msgpack:"width"`
-	Height    int    `json:"height" bson:"height" msgpack:"height"`
-	Duration  int    `json:"duration" bson:"duration" msgpack:"duration"`
+	URL       string `json:"url" bson:"url"`
+	SecureURL string `json:"secure_url" bson:"secure_url"`
+	Type      string `json:"type" bson:"type"` // Content-Type
+	Width     int    `json:"width" bson:"width"`
+	Height    int    `json:"height" bson:"height"`
+	Duration  int    `json:"duration" bson:"duration"`
 }
 
 // Audio represents a structure of "og:audio".
@@ -46,14 +46,14 @@ type Video struct {
 //   - og:audio:secure_url
 //   - og:audio:type
 type Audio struct {
-	URL       string `json:"url" bson:"url" msgpack:"url"`
-	SecureURL string `json:"secure_url" bson:"secure_url" msgpack:"secure_url"`
-	Type      string `json:"type" bson:"type"  msgpack:"type"` // Content-Type
+	URL       string `json:"url" bson:"url"`
+	SecureURL string `json:"secure_url" bson:"secure_url"`
+	Type      string `json:"type" bson:"type"` // Content-Type
 }
 
 // Favicon represents an extra structure for "shortcut icon".
 type Favicon struct {
-	URL string `json:"url" bson:"url" msgpack:"url"`
+	URL string `json:"url" bson:"url"`
 }
 
 type Opengraph struct {

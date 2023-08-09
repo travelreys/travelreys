@@ -1,13 +1,12 @@
 package trips
 
 import (
-	"bytes"
 	context "context"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/vmihailenco/msgpack/v5"
+	"github.com/travelreys/travelreys/pkg/common"
 	"go.uber.org/zap"
 )
 
@@ -108,8 +107,8 @@ func (h *ConnHandler) Run() {
 		}
 
 		var syncMsg SyncMsg
-		if err := msgpack.NewDecoder(bytes.NewBuffer(p)).Decode(&syncMsg); err != nil {
-			h.logger.Error("msgpack.Unmarshal", zap.Error(err))
+		if err := common.MsgpackUnmarshal(p, &syncMsg); err != nil {
+			h.logger.Error("common.MsgpackUnmarshal", zap.Error(err))
 			continue
 		}
 
@@ -122,7 +121,7 @@ func (h *ConnHandler) Run() {
 			}
 			if err := h.ProcessControlMsg(ctrlmsg); err != nil {
 				if err == ErrRBAC {
-					b, _ := msgpack.Marshal(ErrMessage{Err: err.Error()})
+					b, _ := common.MsgpackMarshal(ErrMessage{Err: err.Error()})
 					h.ws.WriteMessage(websocket.BinaryMessage, b)
 					return
 				}
@@ -136,8 +135,8 @@ func (h *ConnHandler) Run() {
 			continue
 		case SyncMsgTypeTOB:
 			var msg SyncMsgTOB
-			if err := msgpack.Unmarshal(p, &msg); err != nil {
-				h.logger.Error("msgpack.Unmarshal", zap.Error(err))
+			if err := common.MsgpackUnmarshal(p, &msg); err != nil {
+				h.logger.Error("common.MsgpackUnmarshal", zap.Error(err))
 				continue
 			}
 
@@ -151,8 +150,8 @@ func (h *ConnHandler) Run() {
 
 func (h *ConnHandler) ParseControlMsg(p []byte) (*SyncMsgBroadcast, error) {
 	var msg SyncMsgBroadcast
-	if err := msgpack.Unmarshal(p, &msg); err != nil {
-		h.logger.Error("msgpack.Unmarshal", zap.Error(err))
+	if err := common.MsgpackUnmarshal(p, &msg); err != nil {
+		h.logger.Error("common.MsgpackUnmarshal", zap.Error(err))
 		return nil, err
 	}
 	return &msg, nil
@@ -228,7 +227,7 @@ func (h *ConnHandler) WriteMessage() {
 			}
 			msg.ConnID = h.connID
 			h.logger.Debug("recv control", zap.String("op", msg.Topic))
-			b, _ := msgpack.Marshal(msg)
+			b, _ := common.MsgpackMarshal(msg)
 			h.ws.WriteMessage(websocket.BinaryMessage, b)
 		case msg, ok := <-h.dataMsgCh:
 			if !ok {
@@ -236,11 +235,11 @@ func (h *ConnHandler) WriteMessage() {
 			}
 			msg.ConnID = h.connID
 			h.logger.Debug("recv tob", zap.String("op", msg.Topic))
-			b, _ := msgpack.Marshal(msg)
+			b, _ := common.MsgpackMarshal(msg)
 			h.ws.WriteMessage(websocket.BinaryMessage, b)
 		case <-pingTicker.C:
 			h.logger.Debug("ping")
-			b, _ := msgpack.Marshal(
+			b, _ := common.MsgpackMarshal(
 				MakeSyncMsgBroadcastTopicPing(h.connID, h.tripID, h.memberID),
 			)
 			h.ws.WriteMessage(websocket.BinaryMessage, b)

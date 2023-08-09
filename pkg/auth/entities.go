@@ -39,15 +39,15 @@ type PhoneNumber struct {
 }
 
 type User struct {
-	ID       string `json:"id" bson:"id" msgpack:"id"`
-	Email    string `json:"email" bson:"email" msgpack:"email"`
-	Name     string `json:"name" bson:"name" msgpack:"name"`
-	Username string `json:"username" bson:"username" msgpack:"username"`
+	ID       string `json:"id" bson:"id"`
+	Email    string `json:"email" bson:"email"`
+	Name     string `json:"name" bson:"name"`
+	Username string `json:"username" bson:"username"`
 
-	CreatedAt   time.Time   `json:"createdAt" bson:"createdAt" msgpack:"createdAt"`
-	PhoneNumber PhoneNumber `json:"phoneNumber" bson:"phonenumber" msgpack:"phonenumber"`
+	CreatedAt   time.Time   `json:"createdAt" bson:"createdAt"`
+	PhoneNumber PhoneNumber `json:"phoneNumber" bson:"phonenumber"`
 
-	Labels map[string]string `json:"labels" bson:"labels" msgpack:"labels"`
+	Labels map[string]string `json:"labels" bson:"labels"`
 }
 
 func (user User) MakeUserAvatarObject() storage.Object {

@@ -44,37 +44,37 @@ const (
 const ()
 
 type Trip struct {
-	ID   string `json:"id" bson:"id" msgpack:"id"`
-	Name string `json:"name" bson:"name" msgpack:"name"`
+	ID   string `json:"id" bson:"id"`
+	Name string `json:"name" bson:"name"`
 
-	CoverImage *CoverImage `json:"coverImage" bson:"coverImage" msgpack:"coverImage"`
-	StartDate  time.Time   `json:"startDate" bson:"startDate" msgpack:"startDate"`
-	EndDate    time.Time   `json:"endDate" bson:"endDate" msgpack:"endDate"`
+	CoverImage *CoverImage `json:"coverImage" bson:"coverImage"`
+	StartDate  time.Time   `json:"startDate" bson:"startDate"`
+	EndDate    time.Time   `json:"endDate" bson:"endDate"`
 
 	// Members
-	Creator   Member            `json:"creator" bson:"creator" msgpack:"creator"`
-	Members   MembersMap        `json:"members" bson:"members" msgpack:"members"`
-	MembersID map[string]string `json:"membersId" bson:"membersId" msgpack:"membersId"`
+	Creator   Member            `json:"creator" bson:"creator"`
+	Members   MembersMap        `json:"members" bson:"members"`
+	MembersID map[string]string `json:"membersId" bson:"membersId"`
 
 	// Logistics
-	Notes    string      `json:"notes" bson:"notes" msgpack:"notes"`
-	Transits TransitsMap `json:"transits" bson:"transits" msgpack:"transits"`
-	Lodgings LodgingsMap `json:"lodgings" bson:"lodgings" msgpack:"lodgings"`
-	Budget   Budget      `json:"budget" bson:"budget" msgpack:"budget"`
-	Links    LinksMap    `json:"links" bson:"links" msgpack:"links"`
+	Notes    string      `json:"notes" bson:"notes"`
+	Transits TransitsMap `json:"transits" bson:"transits"`
+	Lodgings LodgingsMap `json:"lodgings" bson:"lodgings"`
+	Budget   Budget      `json:"budget" bson:"budget"`
+	Links    LinksMap    `json:"links" bson:"links"`
 
-	Itineraries ItineraryMap `json:"itineraries" bson:"itineraries" msgpack:"itineraries"`
+	Itineraries ItineraryMap `json:"itineraries" bson:"itineraries"`
 
 	// Media, Attachements
-	MediaItems map[string]media.MediaItemList `json:"mediaItems" bson:"mediaItems" msgpack:"mediaItems"`
-	Files      FilesMap                       `json:"files" bson:"files" msgpack:"files"`
+	MediaItems map[string]media.MediaItemList `json:"mediaItems" bson:"mediaItems"`
+	Files      FilesMap                       `json:"files" bson:"files"`
 
-	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt" msgpack:"updatedAt"`
-	CreatedAt time.Time `json:"createdAt" bson:"createdAt" msgpack:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
+	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 
-	Deleted bool          `json:"deleted" bson:"deleted" msgpack:"deleted"`
-	Labels  common.Labels `json:"labels" bson:"labels" msgpack:"labels"`
-	Tags    common.Tags   `json:"tags" bson:"tags" msgpack:"tags"`
+	Deleted bool          `json:"deleted" bson:"deleted"`
+	Labels  common.Labels `json:"labels" bson:"labels"`
+	Tags    common.Tags   `json:"tags" bson:"tags"`
 }
 
 type TripsList []*Trip
@@ -148,12 +148,12 @@ const (
 )
 
 type CoverImage struct {
-	Source   string               `json:"source" bson:"source" msgpack:"source"`
-	WebImage images.ImageMetadata `json:"webImage" bson:"webImage" msgpack:"webImage"`
+	Source   string               `json:"source" bson:"source"`
+	WebImage images.ImageMetadata `json:"webImage" bson:"webImage"`
 
 	// TripImage is the ID of mediaItem in the mediaItems["coverImage"]
 	// e.g trip@<id> or activity@<id>
-	TripImage string `json:"tripImage" bson:"tripImage" msgpack:"tripImage"`
+	TripImage string `json:"tripImage" bson:"tripImage"`
 }
 
 func (ci CoverImage) SplitTripImageKey() (string, string, error) {
@@ -173,11 +173,11 @@ const (
 )
 
 type Member struct {
-	ID     string            `json:"id" bson:"id" msgpack:"id"`
-	Role   string            `json:"role" bson:"role" msgpack:"role"`
-	Labels map[string]string `json:"labels" bson:"labels" msgpack:"labels"`
+	ID     string            `json:"id" bson:"id"`
+	Role   string            `json:"role" bson:"role"`
+	Labels map[string]string `json:"labels" bson:"labels"`
 
-	User auth.User `json:"user" bsomsgpack" bson:"-"`
+	User auth.User `json:"user,omitempty"`
 }
 
 type MembersMap map[string]*Member
@@ -211,33 +211,33 @@ const (
 )
 
 type BaseTransit struct {
-	ID              string            `json:"id" bson:"id" msgpack:"id"`
+	ID              string            `json:"id" bson:"id"`
 	Type            string            `json:"type"`
-	DepartTime      time.Time         `json:"departTime" bson:"departTime" msgpack:"departTime"`
-	DepartLocation  maps.Place        `json:"departLocation" bson:"departLocation" msgpack:"departLocation"`
-	ArrivalTime     time.Time         `json:"arrivalTime" bson:"arrivalTime" msgpack:"arrivalTime"`
-	ArrivalLocation maps.Place        `json:"arrivalLocation" bson:"arrivalLocation" msgpack:"arrivalLocation"`
-	ConfirmationID  string            `json:"confirmationID" bson:"confirmationID" msgpack:"confirmationID"`
-	Notes           string            `json:"notes" bson:"notes" msgpack:"notes"`
-	PriceItem       finance.PriceItem `json:"price" bson:"price" msgpack:"price"`
+	DepartTime      time.Time         `json:"departTime" bson:"departTime"`
+	DepartLocation  maps.Place        `json:"departLocation" bson:"departLocation"`
+	ArrivalTime     time.Time         `json:"arrivalTime" bson:"arrivalTime"`
+	ArrivalLocation maps.Place        `json:"arrivalLocation" bson:"arrivalLocation"`
+	ConfirmationID  string            `json:"confirmationID" bson:"confirmationID"`
+	Notes           string            `json:"notes" bson:"notes"`
+	PriceItem       finance.PriceItem `json:"price" bson:"price"`
 
-	Tags   common.Tags   `json:"tags" bson:"tags" msgpack:"tags"`
-	Labels common.Labels `json:"labels" bson:"labels" msgpack:"labels"`
+	Tags   common.Tags   `json:"tags" bson:"tags"`
+	Labels common.Labels `json:"labels" bson:"labels"`
 }
 
 type TransitsMap map[string]*BaseTransit
 
 type Lodging struct {
-	ID             string            `json:"id" bson:"id" msgpack:"id"`
-	NumGuests      int32             `json:"numGuests" bson:"numGuests" msgpack:"numGuests"`
-	CheckinTime    time.Time         `json:"checkinTime" bson:"checkinTime" msgpack:"checkinTime"`
-	CheckoutTime   time.Time         `json:"checkoutTime" bson:"checkoutTime" msgpack:"checkoutTime"`
-	PriceItem      finance.PriceItem `json:"price" bson:"price" msgpack:"price"`
-	ConfirmationID string            `json:"confirmationID" bson:"confirmationID" msgpack:"confirmationID"`
-	Notes          string            `json:"notes" bson:"notes" msgpack:"notes"`
-	Place          maps.Place        `json:"place" bson:"place" msgpack:"place"`
-	Tags           common.Tags       `json:"tags" bson:"tags" msgpack:"tags"`
-	Labels         common.Labels     `json:"labels" bson:"labels" msgpack:"labels"`
+	ID             string            `json:"id" bson:"id"`
+	NumGuests      int32             `json:"numGuests" bson:"numGuests"`
+	CheckinTime    time.Time         `json:"checkinTime" bson:"checkinTime"`
+	CheckoutTime   time.Time         `json:"checkoutTime" bson:"checkoutTime"`
+	PriceItem      finance.PriceItem `json:"price" bson:"price"`
+	ConfirmationID string            `json:"confirmationID" bson:"confirmationID"`
+	Notes          string            `json:"notes" bson:"notes"`
+	Place          maps.Place        `json:"place" bson:"place"`
+	Tags           common.Tags       `json:"tags" bson:"tags"`
+	Labels         common.Labels     `json:"labels" bson:"labels"`
 }
 
 type LodgingList []*Lodging
@@ -257,12 +257,12 @@ func (m LodgingsMap) GetLodgingsForDate(dt time.Time) LodgingsMap {
 }
 
 type Budget struct {
-	ID     string          `json:"id" bson:"id" msgpack:"id"`
-	Amount finance.Price   `json:"amount" bson:"amount" msgpack:"amount"`
-	Items  BudgetItemsList `json:"items" bson:"items" msgpack:"items"`
+	ID     string          `json:"id" bson:"id"`
+	Amount finance.Price   `json:"amount" bson:"amount"`
+	Items  BudgetItemsList `json:"items" bson:"items"`
 
-	Labels common.Labels `json:"labels" bson:"labels" msgpack:"labels"`
-	Tags   common.Tags   `json:"tags" bson:"tags" msgpack:"tags"`
+	Labels common.Labels `json:"labels" bson:"labels"`
+	Tags   common.Tags   `json:"tags" bson:"tags"`
 }
 
 func NewBudget() Budget {
@@ -275,21 +275,21 @@ func NewBudget() Budget {
 }
 
 type BudgetItem struct {
-	Title     string            `json:"title" bson:"title" msgpack:"title"`
-	Desc      string            `json:"desc" bson:"desc" msgpack:"desc"`
-	PriceItem finance.PriceItem `json:"price" bson:"price" msgpack:"price"`
-	Labels    common.Labels     `json:"labels" bson:"labels" msgpack:"labels"`
-	Tag       common.Tags       `json:"tags" bson:"tags" msgpack:"tags"`
+	Title     string            `json:"title" bson:"title"`
+	Desc      string            `json:"desc" bson:"desc"`
+	PriceItem finance.PriceItem `json:"price" bson:"price"`
+	Labels    common.Labels     `json:"labels" bson:"labels"`
+	Tag       common.Tags       `json:"tags" bson:"tags"`
 }
 
 type BudgetItemsList []*BudgetItem
 
 type Link struct {
-	ID     string        `json:"id" bson:"id" msgpack:"id"`
-	Notes  string        `json:"notes" bson:"notes" msgpack:"notes"`
+	ID     string        `json:"id" bson:"id"`
+	Notes  string        `json:"notes" bson:"notes"`
 	OGP    ogp.Opengraph `json:"ogp"`
-	Labels common.Labels `json:"labels" bson:"labels" msgpack:"labels"`
-	Tags   common.Tags   `json:"tags" bson:"tags" msgpack:"tags"`
+	Labels common.Labels `json:"labels" bson:"labels"`
+	Tags   common.Tags   `json:"tags" bson:"tags"`
 }
 
 type LinksMap map[string]*Link

@@ -9,7 +9,6 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/travelreys/travelreys/pkg/common"
-	"github.com/vmihailenco/msgpack/v5"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 )
@@ -59,7 +58,7 @@ func NewSessionStore(cli *clientv3.Client, logger *zap.Logger) SessionStore {
 }
 
 func (s *sessionStore) AddSessCtx(ctx context.Context, sessCtx SessionContext) error {
-	value, _ := msgpack.Marshal(sessCtx)
+	value, _ := common.MsgpackMarshal(sessCtx)
 	_, err := s.cli.Put(
 		ctx,
 		sessConnKey(sessCtx.TripID, sessCtx.ConnID),
@@ -85,7 +84,7 @@ func (s *sessionStore) ReadTripSessCtx(
 	var l SessionContextList
 	for _, item := range resp.Kvs {
 		var sessCtx SessionContext
-		err := msgpack.Unmarshal(item.Value, &sessCtx)
+		err := common.MsgpackUnmarshal(item.Value, &sessCtx)
 		if err != nil {
 			continue
 		}
@@ -221,7 +220,7 @@ func (s *syncMsgStore) subBroadcast(subj, tripID string) (<-chan SyncMsgBroadcas
 				return
 			case natsMsg := <-natsCh:
 				var msg SyncMsgBroadcast
-				if err := msgpack.Unmarshal(natsMsg.Data, &msg); err != nil {
+				if err := common.MsgpackUnmarshal(natsMsg.Data, &msg); err != nil {
 					s.logger.Error("subBroadcast", zap.Error(err))
 					continue
 				}
@@ -252,7 +251,7 @@ func (s *syncMsgStore) subTOB(subj, tripID string) (<-chan SyncMsgTOB, chan<- bo
 				return
 			case natsMsg := <-natsCh:
 				var msg SyncMsgTOB
-				if err := msgpack.Unmarshal(natsMsg.Data, &msg); err != nil {
+				if err := common.MsgpackUnmarshal(natsMsg.Data, &msg); err != nil {
 					s.logger.Error("subTOB", zap.Error(err))
 					continue
 				}
@@ -283,7 +282,7 @@ func (s *syncMsgStore) subTOBQueue(subj, tripID, groupName string) (<-chan SyncM
 				return
 			case natsMsg := <-natsCh:
 				var msg SyncMsgTOB
-				if err := msgpack.Unmarshal(natsMsg.Data, &msg); err != nil {
+				if err := common.MsgpackUnmarshal(natsMsg.Data, &msg); err != nil {
 					s.logger.Error("subTOBQueue", zap.Error(err))
 				}
 				msgCh <- msg
@@ -294,7 +293,7 @@ func (s *syncMsgStore) subTOBQueue(subj, tripID, groupName string) (<-chan SyncM
 }
 
 func (s *syncMsgStore) PubBroadcastReq(tripID string, msg *SyncMsgBroadcast) error {
-	data, err := msgpack.Marshal(msg)
+	data, err := common.MsgpackMarshal(msg)
 	if err != nil {
 		s.logger.Error("PubBroadcastReq", zap.Error(err))
 	}
@@ -306,7 +305,7 @@ func (s *syncMsgStore) SubBroadcastReq(tripID string) (<-chan SyncMsgBroadcast, 
 }
 
 func (s *syncMsgStore) PubBroadcastResp(tripID string, msg *SyncMsgBroadcast) error {
-	data, err := msgpack.Marshal(msg)
+	data, err := common.MsgpackMarshal(msg)
 	if err != nil {
 		s.logger.Error("PubBroadcastRes", zap.Error(err))
 	}
@@ -318,7 +317,7 @@ func (s *syncMsgStore) SubBroadcastResp(tripID string) (<-chan SyncMsgBroadcast,
 }
 
 func (s *syncMsgStore) PubTOBReq(tripID string, msg *SyncMsgTOB) error {
-	data, err := msgpack.Marshal(msg)
+	data, err := common.MsgpackMarshal(msg)
 	if err != nil {
 		s.logger.Error("PubTOBReq", zap.Error(err))
 	}
@@ -334,7 +333,7 @@ func (s *syncMsgStore) SubTOBReqQueue(tripID, groupName string) (<-chan SyncMsgT
 }
 
 func (s *syncMsgStore) PubTOBResp(tripID string, msg *SyncMsgTOB) error {
-	data, err := msgpack.Marshal(msg)
+	data, err := common.MsgpackMarshal(msg)
 	if err != nil {
 		s.logger.Error("PubTOBRes", zap.Error(err))
 	}

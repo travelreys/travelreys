@@ -7,13 +7,13 @@ import "github.com/travelreys/travelreys/pkg/jsonpatch"
 type SessionContext struct {
 	// ConnID tracks the connection from an instance of
 	// the travelreys client app.
-	ConnID string `json:"connID" msgpack:"connID"`
+	ConnID string `json:"connID"`
 
 	// TripID represents the trip currently being updated
-	TripID string `json:"tripID" msgpack:"tripID"`
+	TripID string `json:"tripID"`
 
 	// Participating member
-	MemberID string `json:"memberID" msgpack:"memberID"`
+	MemberID string `json:"memberID"`
 }
 
 type SessionContextList []SessionContext
@@ -32,10 +32,10 @@ const (
 )
 
 type SyncMsg struct {
-	Type     string `json:"type" msgpack:"type"`
-	ConnID   string `json:"connID" msgpack:"connID"`
-	TripID   string `json:"tripID" msgpack:"tripID"`
-	MemberID string `json:"memberID" msgpack:"memberID"`
+	Type     string `json:"type"`
+	ConnID   string `json:"connID"`
+	TripID   string `json:"tripID"`
+	MemberID string `json:"memberID"`
 }
 
 const (
@@ -45,13 +45,13 @@ const (
 )
 
 type SyncMsgBroadcast struct {
-	SyncMsg `msgpack:",inline"`
+	SyncMsg `json:",inline"`
 
-	Topic string `json:"topic" msgpack:"topic"`
+	Topic string `json:"topic"`
 
-	Ping         *SyncMsgBroadcastPayloadPing         `json:"ping,omitempty" msgpack:"ping,omitempty"`
-	Cursor       *SyncMsgBroadcastPayloadCursor       `json:"cursor,omitempty" msgpack:"cursor,omitempty"`
-	FormPresence *SyncMsgBroadcastPayloadFormPresence `json:"formPresence,omitempty" msgpack:"formPresence,omitempty"`
+	Ping         *SyncMsgBroadcastPayloadPing         `json:"ping,omitempty"`
+	Cursor       *SyncMsgBroadcastPayloadCursor       `json:"cursor,omitempty"`
+	FormPresence *SyncMsgBroadcastPayloadFormPresence `json:"formPresence,omitempty"`
 }
 
 type SyncMsgBroadcastPayloadPing struct {
@@ -60,8 +60,8 @@ type SyncMsgBroadcastPayloadPing struct {
 type SyncMsgBroadcastPayloadCursor struct{}
 
 type SyncMsgBroadcastPayloadFormPresence struct {
-	IsActive bool   `json:"isActive" msgpack:"isActive"` // toggle on/off
-	EditPath string `json:"editPath" msgpack:"editPath"`
+	IsActive bool   `json:"isActive"`
+	EditPath string `json:"editPath"`
 }
 
 func MakeSyncMsgBroadcastTopicPing(
@@ -109,28 +109,28 @@ const (
 type SyncMsgTOB struct {
 	SyncMsg
 
-	Topic   string `json:"topic" msgpack:"topic"`
-	Counter uint64 `json:"counter" msgpack:"counter"`
+	Topic   string `json:"topic"`
+	Counter uint64 `json:"counter"`
 
-	Join   *SyncMsgTOBPayloadJoin   `json:"join,omitempty" msgpack:"join,omitempty"`
-	Leave  *SyncMsgTOBPayloadLeave  `json:"leave,omitempty" msgpack:"leave,omitempty"`
-	Update *SyncMsgTOBPayloadUpdate `json:"update,omitempty" msgpack:"update,omitempty"`
+	Join   *SyncMsgTOBPayloadJoin   `json:"join,omitempty"`
+	Leave  *SyncMsgTOBPayloadLeave  `json:"leave,omitempty"`
+	Update *SyncMsgTOBPayloadUpdate `json:"update,omitempty"`
 }
 
 type SyncMsgTOBPayloadJoin struct {
 	// Latest Snapshot of the trip
-	Trip *Trip `json:"trip" msgpack:"trip"`
+	Trip *Trip `json:"trip"`
 
 	// List of members updated (presence)
-	Members []string `json:"members" msgpack:"members"`
+	Members []string `json:"members"`
 }
 
 type SyncMsgTOBPayloadLeave struct {
 }
 
 type SyncMsgTOBPayloadUpdate struct {
-	Op  string         `json:"op" msgpack:"op"`
-	Ops []jsonpatch.Op `json:"ops" msgpack:"ops"`
+	Op  string         `json:"op"`
+	Ops []jsonpatch.Op `json:"ops"`
 }
 
 func MakeSyncMsgTOBTopicJoin(

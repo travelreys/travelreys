@@ -1,10 +1,10 @@
 package jsonpatch
 
 type Op struct {
-	Op    string      `json:"op"  msgpack:"op"`
-	Path  string      `json:"path"  msgpack:"path"`
-	Value interface{} `json:"value"  msgpack:"value"`
-	From  string      `json:"from"  msgpack:"from"`
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value"`
+	From  string      `json:"from"`
 }
 
 func MakeAddOp(path string, val interface{}) Op {
