@@ -11,7 +11,6 @@ import (
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/common"
-	jp "github.com/travelreys/travelreys/pkg/jsonpatch"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/media"
 	"go.uber.org/zap"
@@ -118,7 +117,6 @@ func (crd *Coordinator) Stop() {
 	crd.sessStore.DeleteCounter(
 		context.Background(),
 		crd.tripID,
-		crd.counterLeaseID,
 	)
 	crd.refreshCtrTicker.Stop()
 	if crd.tobDoneCh != nil {
@@ -168,6 +166,7 @@ func (crd *Coordinator) Run() error {
 		// 4.1 Read message from FIFO Queue
 		for msg := range crd.dataFifoMsgQueue {
 			ctx := context.Background()
+			fmt.Println(msg.Topic)
 
 			switch msg.Topic {
 			case SyncMsgTOBTopicUpdate:
@@ -183,7 +182,7 @@ func (crd *Coordinator) Run() error {
 
 	go func() {
 		for range crd.refreshCtrTicker.C {
-			crd.sessStore.RefreshCounterTTL(context.Background(), crd.tripID, crd.counterLeaseID)
+			crd.sessStore.RefreshCounterTTL(context.Background(), crd.tripID)
 		}
 	}()
 
@@ -223,7 +222,7 @@ func (crd *Coordinator) handleSyncMsgTOBLeave(ctx context.Context, msg *SyncMsgT
 // by applying the json.Op before performing additional processing
 // based on message topic.
 func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgTOB) {
-
+	crd.logger.Info("applying")
 	patchOps, _ := json.Marshal(msg.Update.Ops)
 	patch, _ := jsonpatch.DecodePatch(patchOps)
 	modified, err := patch.Apply(crd.trip)
@@ -237,6 +236,7 @@ func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgTOB) {
 	var toSave Trip
 	if err = json.Unmarshal(crd.trip, &toSave); err != nil {
 		crd.logger.Error("json unmarshall fails", zap.Error(err))
+		return
 	}
 
 	switch msg.Update.Op {
@@ -264,13 +264,12 @@ func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgTOB) {
 	}
 
 	// Persist trip state to database
+	crd.logger.Info("saving ")
 	if err := crd.store.Save(ctx, &toSave); err != nil {
 		crd.logger.Error("save fails", zap.Error(err))
 	}
 
-	leaseID, _ := crd.sessStore.IncrCounter(ctx, crd.tripID, crd.counterLeaseID)
-	crd.counterLeaseID = leaseID
-
+	crd.sessStore.IncrCounter(ctx, crd.tripID)
 }
 
 func (crd *Coordinator) processLodgingChanged(
@@ -320,7 +319,10 @@ func (crd *Coordinator) processDatesChanged(
 
 	}
 	toSave.Itineraries = newItineraries
-	msg.Update.Ops = append(msg.Update.Ops, jp.MakeRepOp(JSONPathItineraryRoot, newItineraries))
+	msg.Update.Ops = append(
+		msg.Update.Ops,
+		MakeRepSyncOp(JSONPathItineraryRoot, newItineraries),
+	)
 
 }
 
@@ -390,7 +392,7 @@ func (crd *Coordinator) processAugmentMediaItemSignedURL(
 		return
 	}
 
-	msg.Update.Ops = append(msg.Update.Ops, jp.MakeAddOp(
+	msg.Update.Ops = append(msg.Update.Ops, MakeAddSyncOp(
 		fmt.Sprintf(
 			"/mediaItems/%s/%d/urls",
 			mediaItemKey,
@@ -432,7 +434,7 @@ func (crd *Coordinator) processOptimizeRoute(
 
 		itin.Activities[actId].Labels[LabelFractionalIndex] = newFIdx
 
-		jop := jp.MakeRepOp(
+		jop := MakeRepSyncOp(
 			fmt.Sprintf("/itineraries/%s/activities/%s/labels/fIndex", dtKey, actId),
 			newFIdx,
 		)
@@ -447,7 +449,7 @@ func (crd *Coordinator) processOptimizeRoute(
 
 // parseItinDtKeyFromOps gets the itinerary dt from the ops array
 // e.g /itineraries/2023-03-26/activities/9935afee-8bfd-4148-8be8-79fdb2f12b8e
-func (crd *Coordinator) parseItinDtKeyFromOps(ops []jp.Op) string {
+func (crd *Coordinator) parseItinDtKeyFromOps(ops []SyncOp) string {
 	for _, op := range ops {
 		if !strings.HasPrefix(op.Path, JSONPathItineraryRoot) {
 			continue
@@ -513,7 +515,7 @@ func (crd *Coordinator) UpdateRoutes(
 ) {
 	for pair, routes := range routesMap {
 		toSave.Itineraries[dtKey].Routes[pair] = routes
-		jop := jp.MakeAddOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
+		jop := MakeAddSyncOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), routes)
 		msg.Update.Ops = append(
 			msg.Update.Ops, jop,
 		)
@@ -528,7 +530,7 @@ func (crd *Coordinator) UpdateRoutes(
 	}
 
 	for _, pair := range routesToRemove {
-		jop := jp.MakeRemoveOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), "")
+		jop := MakeRemoveSyncOp(fmt.Sprintf("/itineraries/%s/routes/%s", dtKey, pair), "")
 		msg.Update.Ops = append(msg.Update.Ops, jop)
 		delete(toSave.Itineraries[dtKey].Routes, pair)
 	}

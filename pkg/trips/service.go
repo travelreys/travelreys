@@ -16,9 +16,7 @@ import (
 )
 
 var (
-	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
-	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
-
+	attachmentBucket          = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
 	ErrDeleteAnotherTripMedia = errors.New("trips.ErrDeleteAnotherTripMedia")
 )
 

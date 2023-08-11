@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/travelreys/travelreys/pkg/jsonpatch"
 )
 
 type JoinTripFromEmailRequest struct {
@@ -61,7 +60,7 @@ func (svc *asyncService) JoinTripFromMsg(
 		tripID,
 		impersonatee,
 		SyncMsgTOBUpdateOpUpdateTripMembers,
-		[]jsonpatch.Op{},
+		[]SyncOp{},
 	)
 	svc.msgStore.PubTOBReq(tripID, &addMemMsg)
 }

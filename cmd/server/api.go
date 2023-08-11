@@ -39,11 +39,6 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		logger.Error("cannot connect to redis", zap.Error(err))
 		return nil, err
 	}
-	etcd, err := common.MakeDefaultEtcdClient()
-	if err != nil {
-		logger.Error("cannot connect to etcd", zap.Error(err))
-		return nil, err
-	}
 
 	ctx := context.Background()
 
@@ -109,7 +104,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	tripSvcWithRBAC := trips.ServiceWithRBACMiddleware(tripSvc, logger)
 	tripSyncSvc := trips.NewSyncService(
 		tripStore,
-		trips.NewSessionStore(etcd, logger),
+		trips.NewSessionStore(rdb, logger),
 		trips.NewSyncMsgStore(nc, logger),
 	)
 	wsSvr := trips.NewWebsocketServer(tripSyncSvc, logger)

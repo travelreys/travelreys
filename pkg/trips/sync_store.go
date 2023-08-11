@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
+	"github.com/go-redis/redis/v9"
 	"github.com/nats-io/nats.go"
 	"github.com/travelreys/travelreys/pkg/common"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 )
 
@@ -43,49 +42,59 @@ type SessionStore interface {
 	ReadTripSessCtx(ctx context.Context, tripID string) (SessionContextList, error)
 
 	GetCounter(ctx context.Context, tripID string) (uint64, error)
-	IncrCounter(ctx context.Context, tripID string, leaseID int64) (int64, error)
-	DeleteCounter(ctx context.Context, tripID string, leaseID int64) error
-	RefreshCounterTTL(ctx context.Context, tripID string, leaseID int64) error
+	IncrCounter(ctx context.Context, tripID string) error
+	DeleteCounter(ctx context.Context, tripID string) error
+	RefreshCounterTTL(ctx context.Context, tripID string) error
 }
 
 type sessionStore struct {
-	cli    *clientv3.Client
+	rdb    redis.UniversalClient
 	logger *zap.Logger
 }
 
-func NewSessionStore(cli *clientv3.Client, logger *zap.Logger) SessionStore {
-	return &sessionStore{cli, logger.Named(sessStoreLogger)}
+func NewSessionStore(rdb redis.UniversalClient, logger *zap.Logger) SessionStore {
+	return &sessionStore{rdb, logger.Named(sessStoreLogger)}
 }
 
 func (s *sessionStore) AddSessCtx(ctx context.Context, sessCtx SessionContext) error {
+	key := sessConnKey(sessCtx.TripID, sessCtx.ConnID)
 	value, _ := common.MsgpackMarshal(sessCtx)
-	_, err := s.cli.Put(
-		ctx,
-		sessConnKey(sessCtx.TripID, sessCtx.ConnID),
-		string(value),
-	)
-	return err
+	cmd := s.rdb.Set(ctx, key, string(value), defaultSyncSessionConnTTL)
+	return cmd.Err()
 }
 
 func (s *sessionStore) RemoveSessCtx(ctx context.Context, sessCtx SessionContext) error {
-	_, err := s.cli.Delete(ctx, sessConnKey(sessCtx.TripID, sessCtx.ConnID))
-	return err
+	cmd := s.rdb.Del(ctx, sessConnKey(sessCtx.TripID, sessCtx.ConnID), sessCtx.ConnID)
+	return cmd.Err()
 }
 
 func (s *sessionStore) ReadTripSessCtx(
 	ctx context.Context,
 	tripID string,
 ) (SessionContextList, error) {
-	resp, err := s.cli.Get(ctx, sessConnKey(tripID, ""), clientv3.WithPrefix())
-	if err != nil {
-		return nil, err
+	var cursor uint64
+	keys := []string{}
+	for {
+		skeys, cursor, err := s.rdb.Scan(ctx, cursor, sessConnKey(tripID, "*"), 10).Result()
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range skeys {
+			keys = append(keys, key)
+		}
+		if cursor == 0 {
+			break
+		}
 	}
 
 	var l SessionContextList
-	for _, item := range resp.Kvs {
-		var sessCtx SessionContext
-		err := common.MsgpackUnmarshal(item.Value, &sessCtx)
+	for _, key := range keys {
+		str, err := s.rdb.Get(ctx, key).Result()
 		if err != nil {
+			return nil, err
+		}
+		var sessCtx SessionContext
+		if err := common.MsgpackUnmarshal([]byte(str), &sessCtx); err != nil {
 			continue
 		}
 		l = append(l, sessCtx)
@@ -94,56 +103,37 @@ func (s *sessionStore) ReadTripSessCtx(
 }
 
 func (s *sessionStore) GetCounter(ctx context.Context, tripID string) (uint64, error) {
-	resp, err := s.cli.Get(ctx, sessCounterKey(tripID))
+	key := sessCounterKey(tripID)
+	cmd := s.rdb.Get(ctx, key)
+	if cmd.Err() != nil {
+		return 0, cmd.Err()
+	}
+	ctr, err := cmd.Int64()
 	if err != nil {
 		return 0, err
 	}
-
-	if len(resp.Kvs) == 0 {
-		return 0, ErrCounterNotFound
-	}
-
-	counter, _ := strconv.Atoi(string(resp.Kvs[0].Value))
-	return uint64(counter), err
+	return uint64(ctr), err
 }
 
-func (s *sessionStore) IncrCounter(ctx context.Context, tripID string, leaseID int64) (int64, error) {
+func (s *sessionStore) IncrCounter(ctx context.Context, tripID string) error {
 	key := sessCounterKey(tripID)
-
-	ctr, err := s.GetCounter(ctx, tripID)
-	if err == ErrCounterNotFound {
-		leaseResp, err := s.cli.Lease.Grant(ctx, int64(defaultSyncSessionConnTTL.Seconds()))
-		if err != nil {
-			return 0, nil
-		}
-
-		if _, err = s.cli.Put(
-			ctx, key, "1", clientv3.WithLease(leaseResp.ID),
-		); err != nil {
-			return 0, nil
-		}
-		return int64(leaseResp.ID), nil
+	incCmd := s.rdb.Incr(ctx, key)
+	if incCmd.Err() != nil {
+		return incCmd.Err()
 	}
-
-	ctr += 1
-	if _, err = s.cli.Put(
-		ctx, key, string(ctr), clientv3.WithLease(clientv3.LeaseID(leaseID)),
-	); err != nil {
-		return 0, nil
-	}
-	return leaseID, s.RefreshCounterTTL(ctx, tripID, leaseID)
+	return s.RefreshCounterTTL(ctx, tripID)
 }
 
-func (s *sessionStore) DeleteCounter(ctx context.Context, tripID string, leaseID int64) error {
-	s.cli.Revoke(ctx, clientv3.LeaseID(leaseID))
-
-	_, err := s.cli.Delete(ctx, sessCounterKey(tripID))
-	return err
+func (s *sessionStore) DeleteCounter(ctx context.Context, tripID string) error {
+	key := sessCounterKey(tripID)
+	cmd := s.rdb.Del(ctx, key)
+	return cmd.Err()
 }
 
-func (s *sessionStore) RefreshCounterTTL(ctx context.Context, tripID string, leaseID int64) error {
-	_, err := s.cli.KeepAliveOnce(ctx, clientv3.LeaseID(leaseID))
-	return err
+func (s *sessionStore) RefreshCounterTTL(ctx context.Context, tripID string) error {
+	key := sessCounterKey(tripID)
+	exprCmd := s.rdb.Expire(ctx, key, defaultSyncSessionConnTTL)
+	return exprCmd.Err()
 }
 
 // SubjBroadcastRequest is the NATS.io subj for client -> coordinator communication

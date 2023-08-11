@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-redis/redis/v9"
 	"github.com/nats-io/nats.go"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
@@ -26,7 +25,6 @@ var (
 	mongoURL    = os.Getenv("TRAVELREYS_MONGO_URL")
 	mongoDBName = os.Getenv("TRAVELREYS_MONGO_DBNAME")
 	natsURL     = os.Getenv("TRAVELREYS_NATS_URL")
-	etcdURL     = os.Getenv("TRAVELREYS_ETCD_URL")
 	redisURL    = os.Getenv("TRAVELREYS_REDIS_URL")
 )
 
@@ -59,19 +57,6 @@ func MakeRedisClient(uri string) (redis.UniversalClient, error) {
 	}
 	rdb := redis.NewUniversalClient(redisOptsToUnivOpts(opts))
 	return rdb, nil
-}
-
-// Etcd
-
-func MakeDefaultEtcdClient() (*clientv3.Client, error) {
-	return MakeEtcdClient(etcdURL)
-}
-
-func MakeEtcdClient(uri string) (*clientv3.Client, error) {
-	return clientv3.New(clientv3.Config{
-		Endpoints:   []string{etcdURL},
-		DialTimeout: 5 * time.Second,
-	})
 }
 
 // Mongo

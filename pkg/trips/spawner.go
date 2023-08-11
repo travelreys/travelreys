@@ -43,6 +43,7 @@ func NewSpawner(
 
 func (spwn *Spawner) shouldSpawnCoordinator(msg SyncMsgTOB) bool {
 	if msg.Topic != SyncMsgTOBTopicJoin {
+		fmt.Println("skipping spawning:", zap.String("reason", "topic not join"))
 		return false
 	}
 
@@ -54,6 +55,10 @@ func (spwn *Spawner) shouldSpawnCoordinator(msg SyncMsgTOB) bool {
 		spwn.crds[msg.TripID] = struct{}{}
 	}
 	spwn.mu.Unlock()
+
+	if !exist {
+		fmt.Println("skipping spawning:", zap.String("reason", "coordinator exists"))
+	}
 	return !exist
 }
 
@@ -70,9 +75,7 @@ func (spwn *Spawner) Run() error {
 	}()
 
 	for msg := range msgCh {
-		fmt.Println(msg)
 		if !spwn.shouldSpawnCoordinator(msg) {
-			fmt.Println("skipping")
 			continue
 		}
 		coord := NewCoordinator(

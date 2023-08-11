@@ -1,7 +1,5 @@
 package trips
 
-import "github.com/travelreys/travelreys/pkg/jsonpatch"
-
 // SessionContext represents a user's participation
 // to the multiplayer collaboration session.
 type SessionContext struct {
@@ -83,27 +81,27 @@ func MakeSyncMsgBroadcastTopicPing(
 const (
 	SyncMsgTOBTopicJoin   = "SyncMsgTOBTopicJoin"
 	SyncMsgTOBTopicLeave  = "SyncMsgTOBTopicLeave"
-	SyncMsgTOBTopicUpdate = "SyncMsgBroadcastTopicUpdate"
+	SyncMsgTOBTopicUpdate = "SyncMsgTOBTopicUpdate"
 
 	// Trip
-	SyncMsgTOBUpdateOpDeleteTrip        = "SyncMsgTOBTopicDeleteTrip"
-	SyncMsgTOBUpdateOpUpdateTripDates   = "SyncMsgTOBTopicUpdateTripDates"
-	SyncMsgTOBUpdateOpUpdateTripMembers = "SyncMsgTOBTopicUpdateTripMembers"
+	SyncMsgTOBUpdateOpDeleteTrip        = "SyncMsgTOBUpdateOpDeleteTrip"
+	SyncMsgTOBUpdateOpUpdateTripDates   = "SyncMsgTOBUpdateOpUpdateTripDates"
+	SyncMsgTOBUpdateOpUpdateTripMembers = "SyncMsgTOBUpdateOpUpdateTripMembers"
 
 	// Lodgings
-	SyncMsgTOBUpdateOpAddLodging    = "SyncMsgTOBTopicAddLodging"
-	SyncMsgTOBUpdateOpDeleteLodging = "SyncMsgTOBTopicDeleteLodging"
-	SyncMsgTOBUpdateOpUpdateLodging = "SyncMsgTOBTopicUpdateLodging"
+	SyncMsgTOBUpdateOpAddLodging    = "SyncMsgTOBUpdateOpAddLodging"
+	SyncMsgTOBUpdateOpDeleteLodging = "SyncMsgTOBUpdateOpDeleteLodging"
+	SyncMsgTOBUpdateOpUpdateLodging = "SyncMsgTOBUpdateOpUpdateLodging"
 
 	// Itinerary
-	SyncMsgTOBUpdateOpDeleteActivity              = "SyncMsgTOBTopicDeleteActivity"
-	SyncMsgTOBUpdateOpOptimizeItinerary           = "SyncMsgTOBTopicOptimizeItinerary"
-	SyncMsgTOBUpdateOpReorderActivityToAnotherDay = "SyncMsgTOBTopicReorderActivityToAnotherDay"
-	SyncMsgTOBUpdateOpReorderItinerary            = "SyncMsgTOBTopicReorderItinerary"
-	SyncMsgTOBUpdateOpUpdateActivityPlace         = "SyncMsgTOBTopicUpdateActivityPlace"
+	SyncMsgTOBUpdateOpDeleteActivity              = "SyncMsgTOBUpdateOpDeleteActivity"
+	SyncMsgTOBUpdateOpOptimizeItinerary           = "SyncMsgTOBUpdateOpOptimizeItinerary"
+	SyncMsgTOBUpdateOpReorderActivityToAnotherDay = "SyncMsgTOBUpdateOpReorderActivityToAnotherDay"
+	SyncMsgTOBUpdateOpReorderItinerary            = "SyncMsgTOBUpdateOpReorderItinerary"
+	SyncMsgTOBUpdateOpUpdateActivityPlace         = "SyncMsgTOBUpdateOpUpdateActivityPlace"
 
 	// Media
-	SyncMsgTOBUpdateOpAddMediaItem = "SyncMsgTOBTopicAddMediaItem"
+	SyncMsgTOBUpdateOpAddMediaItem = "SyncMsgTOBUpdateOpAddMediaItem"
 )
 
 type SyncMsgTOB struct {
@@ -129,8 +127,8 @@ type SyncMsgTOBPayloadLeave struct {
 }
 
 type SyncMsgTOBPayloadUpdate struct {
-	Op  string         `json:"op"`
-	Ops []jsonpatch.Op `json:"ops"`
+	Op  string   `json:"op"`
+	Ops []SyncOp `json:"ops"`
 }
 
 func MakeSyncMsgTOBTopicJoin(
@@ -170,7 +168,7 @@ func MakeSyncMsgTOBTopicUpdate(
 	tripID,
 	mem,
 	op string,
-	ops []jsonpatch.Op,
+	ops []SyncOp,
 ) SyncMsgTOB {
 	return SyncMsgTOB{
 		SyncMsg: SyncMsg{

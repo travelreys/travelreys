@@ -18,9 +18,9 @@ func MakeCoordinatorSpanwer(logger *zap.Logger) (*trips.Spawner, error) {
 		return nil, err
 	}
 
-	etcd, err := common.MakeDefaultEtcdClient()
+	rdb, err := common.MakeDefaultRedisClient()
 	if err != nil {
-		logger.Error("cannot connect to etcd", zap.Error(err))
+		logger.Error("cannot connect to rdb", zap.Error(err))
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func MakeCoordinatorSpanwer(logger *zap.Logger) (*trips.Spawner, error) {
 		mapsSvc,
 		media.NewService(mediaStore, mediaCDNProvider, storageSvc, logger),
 		trips.NewStore(ctx, db, logger),
-		trips.NewSessionStore(etcd, logger),
+		trips.NewSessionStore(rdb, logger),
 		trips.NewSyncMsgStore(nc, logger),
 		logger,
 	), nil

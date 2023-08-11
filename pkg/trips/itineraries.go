@@ -78,7 +78,7 @@ func GetSortedItineraryKeys(trip *Trip) []string {
 	for key := range trip.Itineraries {
 		list = append(list, key)
 	}
-	sort.Sort(sort.StringSlice(list))
+	sort.Strings(list)
 	return list
 }
 
