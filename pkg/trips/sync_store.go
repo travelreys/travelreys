@@ -28,12 +28,12 @@ var (
 
 // sessConnKey is the Redis key for maintaining session connections
 func sessConnKey(tripID, connID string) string {
-	return fmt.Sprintf("sync-session/%s/connections/%s", tripID, connID)
+	return fmt.Sprintf("sync-session.%s.connections.%s", tripID, connID)
 }
 
 // sessCounterKey is the Redis for TOB counter
 func sessCounterKey(tripID string) string {
-	return fmt.Sprintf("sync-session/%s/counter", tripID)
+	return fmt.Sprintf("sync-session.%s.counter", tripID)
 }
 
 type SessionStore interface {
@@ -75,7 +75,9 @@ func (s *sessionStore) ReadTripSessCtx(
 	var cursor uint64
 	keys := []string{}
 	for {
-		skeys, cursor, err := s.rdb.Scan(ctx, cursor, sessConnKey(tripID, "*"), 10).Result()
+		skeys, cursor, err := s.rdb.Scan(
+			ctx, cursor, sessConnKey(tripID, "*"), 10,
+		).Result()
 		if err != nil {
 			return nil, err
 		}
@@ -103,21 +105,19 @@ func (s *sessionStore) ReadTripSessCtx(
 }
 
 func (s *sessionStore) GetCounter(ctx context.Context, tripID string) (uint64, error) {
-	key := sessCounterKey(tripID)
-	cmd := s.rdb.Get(ctx, key)
-	if cmd.Err() != nil {
-		return 0, cmd.Err()
+	cmd := s.rdb.Get(ctx, sessCounterKey(tripID))
+	if cmd.Err() != nil && cmd.Err() == redis.Nil {
+		return 0, ErrCounterNotFound
 	}
 	ctr, err := cmd.Int64()
 	if err != nil {
-		return 0, err
+		return 0, nil
 	}
 	return uint64(ctr), err
 }
 
 func (s *sessionStore) IncrCounter(ctx context.Context, tripID string) error {
-	key := sessCounterKey(tripID)
-	incCmd := s.rdb.Incr(ctx, key)
+	incCmd := s.rdb.Incr(ctx, sessCounterKey(tripID))
 	if incCmd.Err() != nil {
 		return incCmd.Err()
 	}
@@ -125,14 +125,16 @@ func (s *sessionStore) IncrCounter(ctx context.Context, tripID string) error {
 }
 
 func (s *sessionStore) DeleteCounter(ctx context.Context, tripID string) error {
-	key := sessCounterKey(tripID)
-	cmd := s.rdb.Del(ctx, key)
+	cmd := s.rdb.Del(ctx, sessCounterKey(tripID))
 	return cmd.Err()
 }
 
 func (s *sessionStore) RefreshCounterTTL(ctx context.Context, tripID string) error {
-	key := sessCounterKey(tripID)
-	exprCmd := s.rdb.Expire(ctx, key, defaultSyncSessionConnTTL)
+	exprCmd := s.rdb.Expire(
+		ctx,
+		sessCounterKey(tripID),
+		defaultSyncSessionConnTTL,
+	)
 	return exprCmd.Err()
 }
 

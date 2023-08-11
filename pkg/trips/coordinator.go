@@ -264,7 +264,7 @@ func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgTOB) {
 	}
 
 	// Persist trip state to database
-	crd.logger.Info("saving ")
+	crd.logger.Info("saving")
 	if err := crd.store.Save(ctx, &toSave); err != nil {
 		crd.logger.Error("save fails", zap.Error(err))
 	}

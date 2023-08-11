@@ -1,7 +1,6 @@
 package trips
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/travelreys/travelreys/pkg/maps"
@@ -43,7 +42,7 @@ func NewSpawner(
 
 func (spwn *Spawner) shouldSpawnCoordinator(msg SyncMsgTOB) bool {
 	if msg.Topic != SyncMsgTOBTopicJoin {
-		fmt.Println("skipping spawning:", zap.String("reason", "topic not join"))
+		spwn.logger.Info("skipping spawning:", zap.String("reason", "topic not join"))
 		return false
 	}
 
@@ -57,7 +56,7 @@ func (spwn *Spawner) shouldSpawnCoordinator(msg SyncMsgTOB) bool {
 	spwn.mu.Unlock()
 
 	if !exist {
-		fmt.Println("skipping spawning:", zap.String("reason", "coordinator exists"))
+		spwn.logger.Info("skipping spawning:", zap.String("reason", "coordinator exists"))
 	}
 	return !exist
 }
