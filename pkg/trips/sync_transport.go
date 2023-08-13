@@ -2,11 +2,11 @@ package trips
 
 import (
 	context "context"
+	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/travelreys/travelreys/pkg/common"
 	"go.uber.org/zap"
 )
 
@@ -107,8 +107,8 @@ func (h *ConnHandler) Run() {
 		}
 
 		var syncMsg SyncMsg
-		if err := common.MsgpackUnmarshal(p, &syncMsg); err != nil {
-			h.logger.Error("common.MsgpackUnmarshal", zap.Error(err))
+		if err := json.Unmarshal(p, &syncMsg); err != nil {
+			h.logger.Error("json.Unmarshal", zap.Error(err))
 			continue
 		}
 
@@ -130,15 +130,14 @@ func (h *ConnHandler) Run() {
 			continue
 		case SyncMsgTypeTOB:
 			var msg SyncMsgTOB
-			if err := common.MsgpackUnmarshal(p, &msg); err != nil {
-				h.logger.Error("common.MsgpackUnmarshal", zap.Error(err))
+			if err := json.Unmarshal(p, &msg); err != nil {
+				h.logger.Error("json unmarshal", zap.Error(err))
 				continue
 			}
 
 			if err := h.ProcessDataMessage(&msg); err != nil {
 				if err == ErrRBAC {
-					b, _ := common.MsgpackMarshal(ErrMessage{Err: err.Error()})
-					h.ws.WriteMessage(websocket.BinaryMessage, b)
+					h.ws.WriteJSON(ErrMessage{Err: err.Error()})
 					return
 				}
 				h.logger.Error("h.ProcessDataMessage", zap.Error(err))
@@ -150,8 +149,8 @@ func (h *ConnHandler) Run() {
 
 func (h *ConnHandler) ParseControlMsg(p []byte) (*SyncMsgBroadcast, error) {
 	var msg SyncMsgBroadcast
-	if err := common.MsgpackUnmarshal(p, &msg); err != nil {
-		h.logger.Error("common.MsgpackUnmarshal", zap.Error(err))
+	if err := json.Unmarshal(p, &msg); err != nil {
+		h.logger.Error("json.Unmarshal", zap.Error(err))
 		return nil, err
 	}
 	return &msg, nil
@@ -227,22 +226,17 @@ func (h *ConnHandler) WriteMessage() {
 			}
 			msg.ConnID = h.connID
 			h.logger.Debug("recv control", zap.String("op", msg.Topic))
-			b, _ := common.MsgpackMarshal(msg)
-			h.ws.WriteMessage(websocket.BinaryMessage, b)
+			h.ws.WriteJSON(msg)
 		case msg, ok := <-h.dataMsgCh:
 			if !ok {
 				return
 			}
 			msg.ConnID = h.connID
 			h.logger.Debug("recv tob", zap.String("op", msg.Topic))
-			b, _ := common.MsgpackMarshal(msg)
-			h.ws.WriteMessage(websocket.BinaryMessage, b)
+			h.ws.WriteJSON(msg)
 		case <-pingTicker.C:
 			h.logger.Debug("ping")
-			b, _ := common.MsgpackMarshal(
-				MakeSyncMsgBroadcastTopicPing(h.connID, h.tripID, h.memberID),
-			)
-			h.ws.WriteMessage(websocket.BinaryMessage, b)
+			h.ws.WriteJSON(MakeSyncMsgBroadcastTopicPing(h.connID, h.tripID, h.memberID))
 		}
 	}
 }

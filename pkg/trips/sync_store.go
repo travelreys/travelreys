@@ -2,6 +2,7 @@ package trips
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -58,7 +59,7 @@ func NewSessionStore(rdb redis.UniversalClient, logger *zap.Logger) SessionStore
 
 func (s *sessionStore) AddSessCtx(ctx context.Context, sessCtx SessionContext) error {
 	key := sessConnKey(sessCtx.TripID, sessCtx.ConnID)
-	value, _ := common.MsgpackMarshal(sessCtx)
+	value, _ := json.Marshal(sessCtx)
 	cmd := s.rdb.Set(ctx, key, string(value), defaultSyncSessionConnTTL)
 	return cmd.Err()
 }
@@ -96,7 +97,7 @@ func (s *sessionStore) ReadTripSessCtx(
 			return nil, err
 		}
 		var sessCtx SessionContext
-		if err := common.MsgpackUnmarshal([]byte(str), &sessCtx); err != nil {
+		if err := json.Unmarshal([]byte(str), &sessCtx); err != nil {
 			continue
 		}
 		l = append(l, sessCtx)
@@ -212,7 +213,7 @@ func (s *syncMsgStore) subBroadcast(subj, tripID string) (<-chan SyncMsgBroadcas
 				return
 			case natsMsg := <-natsCh:
 				var msg SyncMsgBroadcast
-				if err := common.MsgpackUnmarshal(natsMsg.Data, &msg); err != nil {
+				if err := json.Unmarshal(natsMsg.Data, &msg); err != nil {
 					s.logger.Error("subBroadcast", zap.Error(err))
 					continue
 				}
@@ -243,7 +244,7 @@ func (s *syncMsgStore) subTOB(subj, tripID string) (<-chan SyncMsgTOB, chan<- bo
 				return
 			case natsMsg := <-natsCh:
 				var msg SyncMsgTOB
-				if err := common.MsgpackUnmarshal(natsMsg.Data, &msg); err != nil {
+				if err := json.Unmarshal(natsMsg.Data, &msg); err != nil {
 					s.logger.Error("subTOB", zap.Error(err))
 					continue
 				}
@@ -274,7 +275,7 @@ func (s *syncMsgStore) subTOBQueue(subj, tripID, groupName string) (<-chan SyncM
 				return
 			case natsMsg := <-natsCh:
 				var msg SyncMsgTOB
-				if err := common.MsgpackUnmarshal(natsMsg.Data, &msg); err != nil {
+				if err := json.Unmarshal(natsMsg.Data, &msg); err != nil {
 					s.logger.Error("subTOBQueue", zap.Error(err))
 				}
 				msgCh <- msg
@@ -285,7 +286,7 @@ func (s *syncMsgStore) subTOBQueue(subj, tripID, groupName string) (<-chan SyncM
 }
 
 func (s *syncMsgStore) PubBroadcastReq(tripID string, msg *SyncMsgBroadcast) error {
-	data, err := common.MsgpackMarshal(msg)
+	data, err := json.Marshal(msg)
 	if err != nil {
 		s.logger.Error("PubBroadcastReq", zap.Error(err))
 	}
@@ -297,7 +298,7 @@ func (s *syncMsgStore) SubBroadcastReq(tripID string) (<-chan SyncMsgBroadcast, 
 }
 
 func (s *syncMsgStore) PubBroadcastResp(tripID string, msg *SyncMsgBroadcast) error {
-	data, err := common.MsgpackMarshal(msg)
+	data, err := json.Marshal(msg)
 	if err != nil {
 		s.logger.Error("PubBroadcastRes", zap.Error(err))
 	}
@@ -309,7 +310,7 @@ func (s *syncMsgStore) SubBroadcastResp(tripID string) (<-chan SyncMsgBroadcast,
 }
 
 func (s *syncMsgStore) PubTOBReq(tripID string, msg *SyncMsgTOB) error {
-	data, err := common.MsgpackMarshal(msg)
+	data, err := json.Marshal(msg)
 	if err != nil {
 		s.logger.Error("PubTOBReq", zap.Error(err))
 	}
@@ -325,7 +326,7 @@ func (s *syncMsgStore) SubTOBReqQueue(tripID, groupName string) (<-chan SyncMsgT
 }
 
 func (s *syncMsgStore) PubTOBResp(tripID string, msg *SyncMsgTOB) error {
-	data, err := common.MsgpackMarshal(msg)
+	data, err := json.Marshal(msg)
 	if err != nil {
 		s.logger.Error("PubTOBRes", zap.Error(err))
 	}
