@@ -120,11 +120,6 @@ func (h *ConnHandler) Run() {
 				continue
 			}
 			if err := h.ProcessControlMsg(ctrlmsg); err != nil {
-				if err == ErrRBAC {
-					b, _ := common.MsgpackMarshal(ErrMessage{Err: err.Error()})
-					h.ws.WriteMessage(websocket.BinaryMessage, b)
-					return
-				}
 				h.logger.Error("ProcessControlMsg", zap.Error(err))
 				continue
 			}
@@ -141,6 +136,11 @@ func (h *ConnHandler) Run() {
 			}
 
 			if err := h.ProcessDataMessage(&msg); err != nil {
+				if err == ErrRBAC {
+					b, _ := common.MsgpackMarshal(ErrMessage{Err: err.Error()})
+					h.ws.WriteMessage(websocket.BinaryMessage, b)
+					return
+				}
 				h.logger.Error("h.ProcessDataMessage", zap.Error(err))
 				continue
 			}

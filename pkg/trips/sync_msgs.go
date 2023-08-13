@@ -138,7 +138,7 @@ func MakeSyncMsgTOBTopicJoin(
 ) SyncMsgTOB {
 	return SyncMsgTOB{
 		SyncMsg: SyncMsg{
-			Type:     SyncMsgTypeBroadcast,
+			Type:     SyncMsgTypeTOB,
 			ConnID:   connID,
 			TripID:   tripID,
 			MemberID: mem,
@@ -154,7 +154,7 @@ func MakeSyncMsgTOBTopicLeave(
 ) SyncMsgTOB {
 	return SyncMsgTOB{
 		SyncMsg: SyncMsg{
-			Type:     SyncMsgTypeBroadcast,
+			Type:     SyncMsgTypeTOB,
 			ConnID:   connID,
 			TripID:   tripID,
 			MemberID: mem,
