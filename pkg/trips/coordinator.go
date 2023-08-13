@@ -215,6 +215,10 @@ func (crd *Coordinator) handleSyncMsgTOBLeave(ctx context.Context, msg *SyncMsgT
 	if err != nil {
 		return false, err
 	}
+
+	msg.Leave = &SyncMsgTOBPayloadLeave{
+		Members: ctxs.ToMembers(),
+	}
 	return len(ctxs) == 0, nil
 }
 

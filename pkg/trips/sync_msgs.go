@@ -124,6 +124,8 @@ type SyncMsgTOBPayloadJoin struct {
 }
 
 type SyncMsgTOBPayloadLeave struct {
+	// List of members updated (presence)
+	Members []string `json:"members"`
 }
 
 type SyncMsgTOBPayloadUpdate struct {
