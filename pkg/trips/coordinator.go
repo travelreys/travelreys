@@ -225,7 +225,7 @@ func (crd *Coordinator) handleSyncMsgTOBLeave(ctx context.Context, msg *SyncMsgT
 // by applying the json.Op before performing additional processing
 // based on message topic.
 func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgTOB) {
-	crd.logger.Info("applying")
+	crd.logger.Info("applying", zap.Uint64("counter", msg.Counter))
 	patchOps, _ := json.Marshal(msg.Update.Ops)
 	patch, _ := jsonpatch.DecodePatch(patchOps)
 	modified, err := patch.Apply(crd.trip)
