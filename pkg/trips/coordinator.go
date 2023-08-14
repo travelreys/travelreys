@@ -166,7 +166,6 @@ func (crd *Coordinator) Run() error {
 		// 4.1 Read message from FIFO Queue
 		for msg := range crd.dataFifoMsgQueue {
 			ctx := context.Background()
-			fmt.Println(msg.Topic)
 
 			switch msg.Topic {
 			case SyncMsgTOBTopicUpdate:
@@ -268,7 +267,7 @@ func (crd *Coordinator) applyDataFifoMsg(ctx context.Context, msg *SyncMsgTOB) {
 	}
 
 	// Persist trip state to database
-	crd.logger.Info("saving")
+	crd.logger.Info("saving", zap.Uint64("counter", msg.Counter))
 	if err := crd.store.Save(ctx, &toSave); err != nil {
 		crd.logger.Error("save fails", zap.Error(err))
 	}

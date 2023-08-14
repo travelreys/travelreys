@@ -246,11 +246,13 @@ type LodgingsMap map[string]*Lodging
 func (m LodgingsMap) GetLodgingsForDate(dt time.Time) LodgingsMap {
 	results := LodgingsMap{}
 	for _, l := range m {
-		// TODO: fix this checkout and checking should be the same then show
-		// else only show checkin or staying
-		if (dt.Equal(l.CheckinTime) || dt.After(l.CheckinTime)) &&
-			(dt.Before(l.CheckoutTime) || dt.Equal(l.CheckoutTime)) {
+		if dt.Equal(l.CheckinTime) || dt.Equal(l.CheckoutTime) {
 			results[l.ID] = l
+			continue
+		}
+		if dt.After(l.CheckinTime) && dt.Before(l.CheckoutTime) {
+			results[l.ID] = l
+			continue
 		}
 	}
 	return results
