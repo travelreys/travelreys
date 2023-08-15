@@ -16,20 +16,6 @@ func Int64Ptr(i int64) *int64    { return &i }
 func StringPtr(i string) *string { return &i }
 func BoolPtr(i bool) *bool       { return &i }
 
-type Positioning struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
-
-	Continent string `json:"continent"`
-	Country   string `json:"country"`
-	State     string `json:"state"`
-	City      string `json:"city"`
-	Longitude string `json:"longitude"`
-	Latitude  string `json:"latitude"`
-
-	Labels Labels `json:"labels"`
-}
-
 type Errorer interface {
 	Error() error
 }

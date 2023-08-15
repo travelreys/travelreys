@@ -22,10 +22,9 @@ import (
 
 const (
 	authCookieDuration = 365 * 24 * time.Hour
-	otpDuration        = 60 * time.Second
+	otpDuration        = 120 * time.Second
 
 	defaultLoginSender             = "login@travelreys.com"
-	svcLoggerName                  = "auth.service"
 	defaultWelcomEmailTmplFilePath = "assets/welcomeEmail.tmpl.html"
 	defaultWelcomEmailTmplFileName = "welcomeEmail.tmpl.html"
 )
@@ -83,7 +82,7 @@ func NewService(
 		secureCookie: secureCookie,
 		mailSvc:      mailSvc,
 		storageSvc:   storageSvc,
-		logger:       logger.Named(svcLoggerName),
+		logger:       logger.Named("auth.service"),
 	}
 }
 

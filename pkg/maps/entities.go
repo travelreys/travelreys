@@ -34,23 +34,19 @@ var (
 )
 
 type LatLng struct {
-	Lat float64 `json:"lat"`
-	Lng float64 `json:"lng"`
+	Lat float64 `json:"lat" bson:"lat"`
+	Lng float64 `json:"lng" bson:"lng"`
 }
 
 type Place struct {
-	ID          string        `json:"id"`
-	Name        string        `json:"name"`
-	Address     string        `json:"address"`
-	LatLng      LatLng        `json:"latlng"`
-	PhoneNumber string        `json:"phoneNumber"`
-	Types       []string      `json:"types"`
-	Website     string        `json:"website"`
-	Labels      common.Labels `json:"labels"`
-}
-
-func (p Place) isEmpty() bool {
-	return p.ID == ""
+	ID          string        `json:"id" bson:"id"`
+	Name        string        `json:"name" bson:"name"`
+	Address     string        `json:"address" bson:"address"`
+	LatLng      LatLng        `json:"latlng" bson:"latlng"`
+	PhoneNumber string        `json:"phoneNumber" bson:"phoneNumber"`
+	Types       []string      `json:"types" bson:"types"`
+	Website     string        `json:"website" bson:"website"`
+	Labels      common.Labels `json:"labels" bson:"labels"`
 }
 
 func PlaceFromPlaceDetailsResult(result maps.PlaceDetailsResult) Place {
@@ -103,17 +99,17 @@ type AutocompletePredictionList []AutocompletePrediction
 // Polyline represents a list of lat,lng points encoded as a byte array.
 // See: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
 type Polyline struct {
-	Points string `json:"points"`
+	Points string `json:"points" bson:"points"`
 }
 
 type Route struct {
-	Polyline      Polyline      `json:"polyline"`
-	Distance      int           `json:"distance"`
-	Duration      time.Duration `json:"duration"`
-	StartLocation LatLng        `json:"start"`
-	EndLocation   LatLng        `json:"end"`
+	Polyline      Polyline      `json:"polyline" bson:"polyline"`
+	Distance      int           `json:"distance" bson:"distance"`
+	Duration      time.Duration `json:"duration" bson:"duration"`
+	StartLocation LatLng        `json:"start" bson:"start"`
+	EndLocation   LatLng        `json:"end" bson:"end"`
 	TravelMode    string        `json:"travelMode" bson:"travelMode"`
-	Labels        common.Labels `json:"labels"`
+	Labels        common.Labels `json:"labels" bson:"labels"`
 }
 
 func RouteFromRouteResult(result maps.Route, mode string) Route {
@@ -137,6 +133,7 @@ func RouteFromRouteResult(result maps.Route, mode string) Route {
 }
 
 type RouteList []Route
+type RouteListMap map[string]RouteList
 
 // GetMostCommonSenseRoute returns the "most common sense" route
 // amongs multiple route options, that is, when walking is avaliable and

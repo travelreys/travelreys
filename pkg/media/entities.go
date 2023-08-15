@@ -91,7 +91,7 @@ func NewMediaItem(tripID, userID, objectPath string, param NewMediaItemParams) M
 }
 
 type MediaPresignedUrl struct {
-	ContentURL string `json:"contentURL" bson:"-"`
+	ContentURL string `json:"contentURL"`
 
 	Image ImagePresignedUrls `json:"image"`
 	Video VideoPresignedUrls `json:"video"`
@@ -100,15 +100,15 @@ type MediaPresignedUrl struct {
 type MediaPresignedUrlList []MediaPresignedUrl
 
 type ImagePresignedUrls struct {
-	OptimizedURL string `json:"optimizedURL" bson:"-"`
+	OptimizedURL string `json:"optimizedURL"`
 }
 
 type VideoPresignedUrls struct {
-	PreviewURL string        `json:"previewURL" bson:"-"`
-	Sources    []VideoSource `json:"sources" bson:"-"`
+	PreviewURL string        `json:"previewURL"`
+	Sources    []VideoSource `json:"sources"`
 }
 
 type VideoSource struct {
-	Source string `json:"source" bson:"-"`
-	Codecs string `json:"codecs" bson:"-"`
+	Source string `json:"source"`
+	Codecs string `json:"codecs"`
 }

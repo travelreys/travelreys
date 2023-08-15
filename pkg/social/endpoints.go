@@ -212,7 +212,7 @@ type ReadRequest struct {
 	ReferrerID string `json:"referrerID"`
 }
 type ReadResponse struct {
-	Trip        trips.Trip  `json:"trip"`
+	Trip        *trips.Trip `json:"trip"`
 	UserProfile UserProfile `json:"profile"`
 	Err         error       `json:"error,omitempty"`
 }

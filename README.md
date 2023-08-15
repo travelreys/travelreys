@@ -20,6 +20,20 @@ docker run -d -p 4222:4222 -p 8222:8222 -p 6222:6222 --name nats nats:2.9.10
 # Redis
 docker run -d --name redis -p6379:6379 redis:7.0
 
+# etcd
+docker run -d --name etcd \
+  -p 2380:2380 -p 2379:2379 \
+  quay.io/coreos/etcd:v3.3.26 etcd \
+    --name etcd0 \
+    --advertise-client-urls "http://${HostIP}:2379" \
+    --listen-client-urls "http://0.0.0.0:2379" \
+    --initial-advertise-peer-urls "http://${HostIP}:2380" \
+    --listen-peer-urls "http://0.0.0.0:2380" \
+    --initial-cluster "etcd0=http://${HostIP}:2380" \
+    --initial-cluster-token cluster-1 \
+    --initial-cluster-state new
+
+
 # MongoDB
 docker run -d --name mongo1 -p 27017:27017 mongo:6.0.2 mongod --replSet=rs0
 docker run -d --name mongo2 -p 27018:27017 mongo:6.0.2 mongod --replSet=rs0

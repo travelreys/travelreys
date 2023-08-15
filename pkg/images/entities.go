@@ -1,41 +1,41 @@
 package images
 
 type ImageOwnerLinks struct {
-	Self   string `json:"self"`
-	Html   string `json:"html"`
-	Photos string `json:"photos"`
-	Likes  string `json:"likes"`
+	Self   string `json:"self" bson:"self"`
+	Html   string `json:"html" bson:"html"`
+	Photos string `json:"photos" bson:"photos"`
+	Likes  string `json:"likes" bson:"likes"`
 }
 
 type ImageOwner struct {
-	ID       string          `json:"id"`
-	Username string          `json:"username"`
-	Name     string          `json:"name"`
-	Links    ImageOwnerLinks `json:"links"`
+	ID       string          `json:"id" bson:"id"`
+	Username string          `json:"username" bson:"username"`
+	Name     string          `json:"name" bson:"name"`
+	Links    ImageOwnerLinks `json:"links" bson:"links"`
 }
 
 type ImageURLS struct {
-	Raw     string `json:"raw"`
-	Full    string `json:"full"`
-	Regular string `json:"regular"`
-	Small   string `json:"small"`
-	Thumb   string `json:"thumb"`
+	Raw     string `json:"raw" bson:"raw"`
+	Full    string `json:"full" bson:"full"`
+	Regular string `json:"regular" bson:"regular"`
+	Small   string `json:"small" bson:"small"`
+	Thumb   string `json:"thumb" bson:"thumb"`
 }
 
 type ImageMetadataLinks struct {
-	Self     string `json:"self"`
-	Html     string `json:"html"`
-	Download string `json:"download"`
+	Self     string `json:"self" bson:"self"`
+	Html     string `json:"html" bson:"html"`
+	Download string `json:"download" bson:"download"`
 }
 
 type ImageMetadata struct {
-	ID       string             `json:"id"`
-	Width    float64            `json:"width"`
-	Height   float64            `json:"height"`
-	BlurHash string             `json:"blur_hash"`
-	User     ImageOwner         `json:"user"`
-	Urls     ImageURLS          `json:"urls"`
-	Links    ImageMetadataLinks `json:"links"`
+	ID       string             `json:"id" bson:"id"`
+	Width    float64            `json:"width" bson:"width"`
+	Height   float64            `json:"height" bson:"height"`
+	BlurHash string             `json:"blur_hash" bson:"blur_hash"`
+	User     ImageOwner         `json:"user" bson:"user"`
+	Urls     ImageURLS          `json:"urls" bson:"urls"`
+	Links    ImageMetadataLinks `json:"links" bson:"links"`
 }
 
 type MetadataList []ImageMetadata

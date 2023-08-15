@@ -1,12 +1,10 @@
-package tripssync
+package trips
 
 import (
-	context "context"
 	"sync"
 
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/media"
-	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 
@@ -14,23 +12,21 @@ type Spawner struct {
 	crds map[string]struct{} // map of coordinators by tripIDs
 	mu   sync.Mutex
 
-	mapsSvc   maps.Service
-	mediaSvc  media.Service
-	store     Store
-	msgStore  MessageStore
-	tobStore  TOBMessageStore
-	tripStore trips.Store
+	mapsSvc  maps.Service
+	mediaSvc media.Service
 
-	logger *zap.Logger
+	store     Store
+	sessStore SessionStore
+	msgStore  SyncMsgStore
+	logger    *zap.Logger
 }
 
 func NewSpawner(
 	mapsSvc maps.Service,
 	mediaSvc media.Service,
 	store Store,
-	msgStore MessageStore,
-	tobStore TOBMessageStore,
-	tripStore trips.Store,
+	sessStore SessionStore,
+	msgStore SyncMsgStore,
 	logger *zap.Logger,
 ) *Spawner {
 	return &Spawner{
@@ -38,17 +34,37 @@ func NewSpawner(
 		mapsSvc:   mapsSvc,
 		mediaSvc:  mediaSvc,
 		store:     store,
+		sessStore: sessStore,
 		msgStore:  msgStore,
-		tobStore:  tobStore,
-		tripStore: tripStore,
-		logger:    logger,
+		logger:    logger.Named("trips.spawner"),
 	}
 }
 
-// Run listens to OpJoinSession requests and spawn a
-// coordinator if there is only 1 member in the session (i.e new session)
+func (spwn *Spawner) shouldSpawnCoordinator(msg SyncMsgTOB) bool {
+	if msg.Topic != SyncMsgTOBTopicJoin {
+		spwn.logger.Info("skipping spawning:", zap.String("reason", "topic not join"))
+		return false
+	}
+
+	exist := false
+	spwn.mu.Lock()
+	_, ok := spwn.crds[msg.TripID]
+	exist = ok
+	if !ok {
+		spwn.crds[msg.TripID] = struct{}{}
+	}
+	spwn.mu.Unlock()
+
+	if !exist {
+		spwn.logger.Info("skipping spawning:", zap.String("reason", "coordinator exists"))
+	}
+	return !exist
+}
+
+// Run listens to Join requests and spawn a coordinator if there is
+// only 1 member in the session (i.e new session)
 func (spwn *Spawner) Run() error {
-	msgCh, done, err := spwn.msgStore.Subscribe("*")
+	msgCh, done, err := spwn.msgStore.SubTOBReq("*")
 	if err != nil {
 		return err
 	}
@@ -58,40 +74,16 @@ func (spwn *Spawner) Run() error {
 	}()
 
 	for msg := range msgCh {
-		if msg.Op != OpJoinSession {
+		if !spwn.shouldSpawnCoordinator(msg) {
 			continue
 		}
-		ctx := context.Background()
-		sess, err := spwn.store.Read(ctx, msg.TripID)
-		if err != nil {
-			// TODO: handle error here
-			spwn.logger.Error("unable to read session", zap.Error(err))
-			continue
-		}
-		// if len(sess.Members) > 1 {
-		// 	continue
-		// }
-
-		exist := false
-		spwn.mu.Lock()
-		_, ok := spwn.crds[msg.TripID]
-		exist = ok
-		if !ok {
-			spwn.crds[msg.TripID] = struct{}{}
-		}
-		spwn.mu.Unlock()
-		if exist {
-			continue
-		}
-
 		coord := NewCoordinator(
 			msg.TripID,
 			spwn.mapsSvc,
 			spwn.mediaSvc,
 			spwn.store,
+			spwn.sessStore,
 			spwn.msgStore,
-			spwn.tobStore,
-			spwn.tripStore,
 			spwn.logger,
 		)
 		doneCh, err := coord.Init()
@@ -103,7 +95,11 @@ func (spwn *Spawner) Run() error {
 			spwn.logger.Error("unable to run coordinator", zap.Error(err))
 			continue
 		}
-		coord.SendFirstMemberJoinMsg(ctx, msg, sess)
+
+		if err = coord.SendFirstMemberJoinMsg(&msg); err != nil {
+			// TODO: spwn.ctrlMsgStore.PubRes(msg.TripID, msg)
+			continue
+		}
 
 		go func() {
 			<-doneCh

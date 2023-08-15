@@ -141,10 +141,10 @@ func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, initiatorID, target
 	return mw.next.AreTheyFriends(ctx, initiatorID, targetID)
 }
 
-func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (trips.Trip, UserProfile, error) {
+func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (*trips.Trip, UserProfile, error) {
 	trip, err := mw.tripSvc.Read(ctx, tripID)
 	if err != nil {
-		return trips.Trip{}, UserProfile{}, err
+		return nil, UserProfile{}, err
 	}
 	ctxWithTripInfo := trips.ContextWithTripInfo(ctx, trip)
 
@@ -156,7 +156,7 @@ func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referre
 	// Allow access if you are a member of the trip
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return trips.Trip{}, UserProfile{}, ErrRBAC
+		return nil, UserProfile{}, ErrRBAC
 	}
 	membersID := []string{trip.Creator.ID}
 	for _, mem := range trip.Members {
@@ -175,7 +175,7 @@ func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referre
 		}
 	}
 
-	return trips.Trip{}, UserProfile{}, ErrTripSharingNotEnabled
+	return nil, UserProfile{}, ErrTripSharingNotEnabled
 }
 
 func (mw rbacMiddleware) ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error) {

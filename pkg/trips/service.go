@@ -16,19 +16,17 @@ import (
 )
 
 var (
-	attachmentBucket = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
-	mediaBucket      = os.Getenv("TRAVELREYS_MEDIA_BUCKET")
-
+	attachmentBucket          = os.Getenv("TRAVELREYS_TRIPS_BUCKET")
 	ErrDeleteAnotherTripMedia = errors.New("trips.ErrDeleteAnotherTripMedia")
 )
 
 type Service interface {
-	Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error)
-	Save(ctx context.Context, trip Trip) error
+	Create(ctx context.Context, creatorID, name string, start, end time.Time) (*Trip, error)
+	Save(ctx context.Context, trip *Trip) error
 
-	Read(ctx context.Context, ID string) (Trip, error)
+	Read(ctx context.Context, ID string) (*Trip, error)
 	ReadOGP(ctx context.Context, ID string) (TripOGP, error)
-	ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error)
+	ReadWithMembers(ctx context.Context, ID string) (*Trip, auth.UsersMap, error)
 	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
 
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
@@ -69,83 +67,9 @@ func NewService(
 	return &service{store, authSvc, imageSvc, mediaSvc, storageSvc, logger}
 }
 
-func (svc *service) Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error) {
-	trip := NewTripWithDates(creator, name, start, end)
-	trip.CoverImage = CoverImage{
-		Source:   CoverImageSourceWeb,
-		WebImage: images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))],
-	}
-
-	// bootstrap itinerary dates
-	numDays := trip.EndDate.Sub(trip.StartDate).Hours() / 24
-	for i := 0; i <= int(numDays); i++ {
-		dt := trip.StartDate.Add(time.Duration(i*24) * time.Hour)
-		itin := NewItinerary(dt)
-		trip.Itineraries[dt.Format("2006-01-02")] = itin
-	}
-	err := svc.store.Save(ctx, trip)
-	return trip, err
-}
-
-func (svc *service) Save(ctx context.Context, trip Trip) error {
-	return svc.store.Save(ctx, trip)
-}
-
-func (svc *service) Read(ctx context.Context, ID string) (Trip, error) {
-	trip, err := svc.store.Read(ctx, ID)
-	if err != nil {
-		return Trip{}, err
-	}
-	svc.augmentMediaItemURLs(ctx, &trip)
-	return trip, nil
-}
-
-func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
-	trip, err := svc.store.Read(ctx, ID)
-	if err != nil {
-		return TripOGP{}, err
-	}
-	ff := auth.ListFilter{IDs: []string{trip.Creator.ID}}
-	users, err := svc.authSvc.List(ctx, ff)
-	if err != nil {
-		return TripOGP{}, err
-	}
-	var creator auth.User
-	for _, usr := range users {
-		if usr.ID == trip.Creator.ID {
-			creator = usr
-			break
-		}
-	}
-
-	// Select CoverImage URL
-	contentURL, _ := svc.augmentCoverImageURL(ctx, &trip)
-	return trip.OGP(creator, contentURL), nil
-}
-
-func (svc *service) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
-	trip, err := svc.readTripWithContext(ctx, ID)
-	if err != nil {
-		return trip, nil, err
-	}
-	ff := auth.ListFilter{IDs: trip.GetAllMembersID()}
-	users, err := svc.authSvc.List(ctx, ff)
-	if err != nil {
-		return trip, nil, err
-	}
-	usersMap := auth.UsersMap{}
-	for _, usr := range users {
-		usersMap[usr.ID] = usr
-	}
-	usersMap.Scrub()
-
-	svc.augmentMediaItemURLs(ctx, &trip)
-	return trip, usersMap, nil
-}
-
-func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
+func (svc *service) tripFromContext(ctx context.Context, ID string) (*Trip, error) {
 	var (
-		trip Trip
+		trip *Trip
 		err  error
 	)
 	ti, err := TripInfoFromCtx(ctx)
@@ -157,7 +81,88 @@ func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, 
 			return nil, err
 		}
 	}
-	ff := auth.ListFilter{IDs: trip.GetAllMembersID()}
+	return trip, err
+}
+
+func (svc *service) Create(
+	ctx context.Context,
+	creatorID, name string,
+	start, end time.Time,
+) (*Trip, error) {
+	trip := NewTripWithDates(NewCreator(creatorID), name, start, end)
+
+	// pick random cover image
+	trip.CoverImage = &CoverImage{
+		Source:   CoverImageSourceWeb,
+		WebImage: images.CoverStockImageList[rand.Intn(len(images.CoverStockImageList))],
+	}
+
+	// bootstrap itinerary dates
+	numDays := trip.EndDate.Sub(trip.StartDate).Hours() / 24
+	for i := 0; i <= int(numDays); i++ {
+		dt := trip.StartDate.Add(time.Duration(i*24) * time.Hour)
+		itin := NewItinerary(dt)
+		trip.Itineraries[dt.Format(ItineraryDtKeyFormat)] = itin
+	}
+	err := svc.Save(ctx, trip)
+	return trip, err
+}
+
+func (svc *service) Save(ctx context.Context, trip *Trip) error {
+	return svc.store.Save(ctx, trip)
+}
+
+func (svc *service) Read(ctx context.Context, ID string) (*Trip, error) {
+	trip, err := svc.store.Read(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	svc.augmentMediaItemURLs(ctx, trip)
+	return trip, nil
+}
+
+func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
+	trip, err := svc.store.Read(ctx, ID)
+	if err != nil {
+		return TripOGP{}, err
+	}
+
+	creator, err := svc.authSvc.Read(ctx, trip.Creator.ID)
+	if err != nil {
+		return TripOGP{}, err
+	}
+
+	contentURL, _ := svc.augmentCoverImageURL(ctx, trip)
+	return trip.ToOGP(creator.Username, contentURL), nil
+}
+
+func (svc *service) ReadWithMembers(ctx context.Context, ID string) (*Trip, auth.UsersMap, error) {
+	trip, err := svc.tripFromContext(ctx, ID)
+	if err != nil {
+		return trip, nil, err
+	}
+	ff := auth.ListFilter{IDs: trip.GetMemberIDs()}
+	users, err := svc.authSvc.List(ctx, ff)
+	if err != nil {
+		return trip, nil, err
+	}
+	usersMap := auth.UsersMap{}
+	for _, usr := range users {
+		usersMap[usr.ID] = usr
+	}
+	usersMap.Scrub()
+
+	svc.augmentMediaItemURLs(ctx, trip)
+	return trip, usersMap, nil
+}
+
+func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
+	trip, err := svc.tripFromContext(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+
+	ff := auth.ListFilter{IDs: trip.GetMemberIDs()}
 	users, err := svc.authSvc.List(ctx, ff)
 	if err != nil {
 		return nil, err
@@ -175,7 +180,7 @@ func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) 
 		return nil, err
 	}
 	for i := 0; i < len(trips); i++ {
-		svc.augmentCoverImageURL(ctx, &trips[i])
+		svc.augmentCoverImageURL(ctx, trips[i])
 	}
 	return trips, nil
 }
@@ -188,7 +193,7 @@ func (svc *service) ListWithMembers(ctx context.Context, ff ListFilter) (TripsLi
 
 	usersID := []string{}
 	for _, t := range trips {
-		usersID = append(usersID, t.GetAllMembersID()...)
+		usersID = append(usersID, t.GetMemberIDs()...)
 	}
 
 	authff := auth.ListFilter{IDs: usersID}
@@ -323,21 +328,4 @@ func (svc *service) augmentCoverImageURL(ctx context.Context, trip *Trip) (strin
 	}
 	trip.MediaItems[key][mediaItemIdx].URLs = urls[0]
 	return urls[0].Image.OptimizedURL, nil
-}
-
-func (svc *service) readTripWithContext(ctx context.Context, tripID string) (Trip, error) {
-	var (
-		trip Trip
-		err  error
-	)
-	ti, err := TripInfoFromCtx(ctx)
-	if err == nil {
-		trip = ti.Trip
-	} else {
-		trip, err = svc.store.Read(ctx, tripID)
-		if err != nil {
-			return Trip{}, err
-		}
-	}
-	return trip, nil
 }

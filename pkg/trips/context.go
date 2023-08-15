@@ -12,10 +12,10 @@ var (
 )
 
 type TripInfo struct {
-	Trip Trip
+	Trip *Trip
 }
 
-func ContextWithTripInfo(ctx context.Context, trip Trip) context.Context {
+func ContextWithTripInfo(ctx context.Context, trip *Trip) context.Context {
 	return context.WithValue(ctx, common.ContextKeyTripInfo, TripInfo{Trip: trip})
 }
 
@@ -24,6 +24,7 @@ func TripInfoFromCtx(ctx context.Context) (TripInfo, error) {
 	if val == nil {
 		return TripInfo{}, ErrNoTripInfoSet
 	}
+
 	ti, _ := val.(TripInfo)
 	return ti, nil
 }

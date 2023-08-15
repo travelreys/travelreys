@@ -20,7 +20,7 @@ type CreateRequest struct {
 	EndDate   time.Time `json:"endDate"`
 }
 type CreateResponse struct {
-	Trip Trip  `json:"trip"`
+	Trip *Trip `json:"trip"`
 	Err  error `json:"error,omitempty"`
 }
 
@@ -35,14 +35,11 @@ func NewCreateEndpoint(svc Service) endpoint.Endpoint {
 			return CreateResponse{
 				Err: common.ErrorEndpointReqMismatch}, nil
 		}
-
 		ci, err := reqctx.ClientInfoFromCtx(ctx)
 		if err != nil {
-			return CreateResponse{Trip: Trip{}, Err: ErrRBAC}, nil
+			return CreateResponse{Trip: nil, Err: ErrRBAC}, nil
 		}
-
-		creator := NewMember(ci.UserID, MemberRoleCreator)
-		trip, err := svc.Create(ctx, creator, req.Name, req.StartDate, req.EndDate)
+		trip, err := svc.Create(ctx, ci.UserID, req.Name, req.StartDate, req.EndDate)
 		return CreateResponse{Trip: trip, Err: err}, nil
 	}
 }
@@ -53,7 +50,7 @@ type ReadRequest struct {
 }
 
 type ReadResponse struct {
-	Trip Trip  `json:"trip"`
+	Trip *Trip `json:"trip"`
 	Err  error `json:"error,omitempty"`
 }
 
@@ -62,7 +59,7 @@ func (r ReadResponse) Error() error {
 }
 
 type ReadWithMembersResponse struct {
-	Trip    Trip          `json:"trip"`
+	Trip    *Trip         `json:"trip"`
 	Members auth.UsersMap `json:"members"`
 	Err     error         `json:"error,omitempty"`
 }
@@ -136,6 +133,7 @@ type ListRequest struct {
 	ListFilter
 	WithMembers bool `json:"withMembers"`
 }
+
 type ListResponse struct {
 	Trips TripsList `json:"trips"`
 	Err   error     `json:"error,omitempty"`

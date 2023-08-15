@@ -18,10 +18,6 @@ const (
 	cfgFlagPort         = "port"
 	cfgFlagLogLevel     = "log-level"
 	cfgFlagCORSOrigin   = "cors-origin"
-	cfgFlagMongoURL     = "mongo-url"
-	cfgFlagMongoDBName  = "mongo-dbname"
-	cfgFlagNatsURL      = "nats-url"
-	cfgFlagRedisURL     = "redis-url"
 	cfgFlagSecureCookie = "secure-cookie"
 
 	envVarPrefix = "TRAVELREYS"
@@ -32,10 +28,6 @@ type ServerConfig struct {
 	Port         string `mapstructure:"port"`
 	CORSOrigin   string `mapstructure:"cors-origin"`
 	SecureCookie bool   `mapstructure:"secure-cookie"`
-	NatsURL      string `mapstructure:"nats-url"`
-	RedisURL     string `mapstructure:"redis-url"`
-	MongoURL     string `mapstructure:"mongo-url"`
-	MongoDBName  string `mapstructure:"mongo-dbname"`
 }
 
 func (cfg ServerConfig) HTTPBindAddress() string {
@@ -50,10 +42,6 @@ func main() {
 	viper.SetDefault(cfgFlagPort, "2022")
 	viper.SetDefault(cfgFlagLogLevel, "info")
 	viper.SetDefault(cfgFlagCORSOrigin, "*")
-	viper.SetDefault(cfgFlagNatsURL, "")
-	viper.SetDefault(cfgFlagRedisURL, "")
-	viper.SetDefault(cfgFlagMongoURL, "")
-	viper.SetDefault(cfgFlagMongoDBName, "")
 	viper.SetDefault(cfgFlagSecureCookie, true)
 
 	viper.SetEnvPrefix(envVarPrefix)

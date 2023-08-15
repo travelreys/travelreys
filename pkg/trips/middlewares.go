@@ -29,30 +29,34 @@ func ServiceWithRBACMiddleware(
 	return &rbacMiddleware{svc, logger}
 }
 
-func (mw rbacMiddleware) Create(ctx context.Context, creator Member, name string, start, end time.Time) (Trip, error) {
+func (mw rbacMiddleware) Create(
+	ctx context.Context,
+	creatorName, name string,
+	start, end time.Time,
+) (*Trip, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return Trip{}, ErrRBAC
+		return nil, ErrRBAC
 	}
-	return mw.next.Create(ctx, creator, name, start, end)
+	return mw.next.Create(ctx, creatorName, name, start, end)
 }
 
-func (mw rbacMiddleware) Save(ctx context.Context, trip Trip) error {
+func (mw rbacMiddleware) Save(ctx context.Context, trip *Trip) error {
 	return ErrRBAC
 }
 
-func (mw rbacMiddleware) Read(ctx context.Context, ID string) (Trip, error) {
+func (mw rbacMiddleware) Read(ctx context.Context, ID string) (*Trip, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return Trip{}, ErrRBAC
+		return nil, ErrRBAC
 	}
 
 	trip, err := mw.next.Read(ctx, ID)
 	if err != nil {
-		return Trip{}, err
+		return nil, err
 	}
-	if !common.StringContains(trip.GetAllMembersID(), ci.UserID) {
-		return Trip{}, ErrRBAC
+	if !common.StringContains(trip.GetMemberIDs(), ci.UserID) {
+		return nil, ErrRBAC
 	}
 	return trip, nil
 }
@@ -61,17 +65,17 @@ func (mw rbacMiddleware) ReadOGP(ctx context.Context, ID string) (TripOGP, error
 	return mw.next.ReadOGP(ctx, ID)
 }
 
-func (mw rbacMiddleware) ReadWithMembers(ctx context.Context, ID string) (Trip, auth.UsersMap, error) {
+func (mw rbacMiddleware) ReadWithMembers(ctx context.Context, ID string) (*Trip, auth.UsersMap, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return Trip{}, nil, ErrRBAC
+		return nil, nil, ErrRBAC
 	}
 	trip, err := mw.next.Read(ctx, ID)
 	if err != nil {
-		return Trip{}, nil, err
+		return nil, nil, err
 	}
-	if !common.StringContains(trip.GetAllMembersID(), ci.UserID) {
-		return Trip{}, nil, ErrRBAC
+	if !common.StringContains(trip.GetMemberIDs(), ci.UserID) {
+		return nil, nil, ErrRBAC
 	}
 	ctxWithTripInfo := ContextWithTripInfo(ctx, trip)
 	return mw.next.ReadWithMembers(ctxWithTripInfo, ID)
@@ -86,7 +90,7 @@ func (mw rbacMiddleware) ReadMembers(ctx context.Context, ID string) (auth.Users
 	if err != nil {
 		return nil, err
 	}
-	if !common.StringContains(trip.GetAllMembersID(), ci.UserID) {
+	if !common.StringContains(trip.GetMemberIDs(), ci.UserID) {
 		return nil, ErrRBAC
 	}
 	ctxWithTripInfo := ContextWithTripInfo(ctx, trip)

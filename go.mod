@@ -15,7 +15,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.49
 	github.com/nats-io/nats.go v1.22.1
 	github.com/otiai10/opengraph/v2 v2.1.0
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.14.0
 	go.mongodb.org/mongo-driver v1.11.1

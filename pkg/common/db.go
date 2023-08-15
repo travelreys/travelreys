@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"errors"
+	"os"
 	"time"
 
 	"github.com/go-redis/redis/v9"
@@ -14,11 +15,24 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 )
 
-// NATS
-
 const (
 	NATSClientName = "travelreys"
 )
+
+var (
+	DbReqTimeout = 3 * time.Second
+
+	mongoURL    = os.Getenv("TRAVELREYS_MONGO_URL")
+	mongoDBName = os.Getenv("TRAVELREYS_MONGO_DBNAME")
+	natsURL     = os.Getenv("TRAVELREYS_NATS_URL")
+	redisURL    = os.Getenv("TRAVELREYS_REDIS_URL")
+)
+
+// NATS
+
+func MakeDefaultNATSConn() (*nats.Conn, error) {
+	return MakeNATSConn(natsURL)
+}
 
 func MakeNATSConn(url string) (*nats.Conn, error) {
 	return nats.Connect(url, nats.Name(NATSClientName))
@@ -32,6 +46,10 @@ func redisOptsToUnivOpts(opts *redis.Options) *redis.UniversalOptions {
 	}
 }
 
+func MakeDefaultRedisClient() (redis.UniversalClient, error) {
+	return MakeRedisClient(redisURL)
+}
+
 func MakeRedisClient(uri string) (redis.UniversalClient, error) {
 	opts, err := redis.ParseURL(uri)
 	if err != nil {
@@ -43,9 +61,9 @@ func MakeRedisClient(uri string) (redis.UniversalClient, error) {
 
 // Mongo
 
-var (
-	DbReqTimeout = 3 * time.Second
-)
+func MakeDefaultMongoDatabase() (*mongo.Database, error) {
+	return MakeMongoDatabase(mongoURL, mongoDBName)
+}
 
 func MakeMongoDatabase(uri, dbName string) (*mongo.Database, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), DbReqTimeout)
