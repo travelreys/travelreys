@@ -28,6 +28,7 @@ const (
 var (
 	ErrInvalidFriendRequest = errors.New("social.ErrInvalidFriendRequest")
 	ErrAlreadyFriends       = errors.New("social.ErrAlreadyFriends")
+	ErrFriendRequestExists  = errors.New("social.ErrFriendRequestExists")
 )
 
 type Service interface {
@@ -127,6 +128,17 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 		return ErrAlreadyFriends
 	}
 
+	reqs, err := svc.ListFriendRequests(ctx, ListFriendRequestsFilter{
+		InitiatorID: common.StringPtr(initiatorID),
+		TargetID:    common.StringPtr(targetID),
+	})
+	if err != nil {
+		return nil
+	}
+	if len(reqs) > 0 {
+		return ErrFriendRequestExists
+	}
+
 	req := NewFriendRequest(initiatorID, targetID)
 
 	// 3. If target has verified, can automatically follow,
@@ -137,7 +149,6 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 	}
 
 	// 4. Else, send request
-
 	if err := svc.store.UpsertFriendRequest(ctx, req); err != nil {
 		return err
 	}
