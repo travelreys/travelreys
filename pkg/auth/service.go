@@ -232,12 +232,7 @@ func (svc service) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 }
 
 func (svc service) Delete(ctx context.Context, ID string) error {
-	ff := UpdateFilter{
-		Email:  common.StringPtr(""),
-		Name:   common.StringPtr(""),
-		Labels: &common.Labels{},
-	}
-	return svc.store.Update(ctx, ID, ff)
+	return svc.store.Delete(ctx, ID)
 }
 
 func (svc service) UploadAvatarPresignedURL(ctx context.Context, ID, mimeType string) (string, string, error) {

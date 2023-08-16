@@ -37,6 +37,7 @@ type Store interface {
 	List(context.Context, ListFilter) (UsersList, error)
 	Update(context.Context, string, UpdateFilter) error
 	Save(context.Context, User) error
+	Delete(ctx context.Context, ID string) error
 
 	GetOTP(context.Context, string) (string, error)
 	SaveOTP(context.Context, string, string, time.Duration) error
@@ -109,14 +110,14 @@ func (s store) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 }
 
 func (s store) Update(ctx context.Context, ID string, ff UpdateFilter) error {
-	uBsonM, ok := ff.toBSON()
+	bsonM, ok := ff.toBSON()
 	if !ok {
 		return nil
 	}
 	_, err := s.usrsColl.UpdateOne(
 		ctx,
 		bson.M{bsonKeyID: ID},
-		bson.M{"$set": uBsonM},
+		bson.M{"$set": bsonM},
 	)
 	if err == mongo.ErrNoDocuments {
 		return ErrUserNotFound
@@ -131,9 +132,21 @@ func (s store) Update(ctx context.Context, ID string, ff UpdateFilter) error {
 		if common.MongoIsDupError(err) {
 			return ErrDuplicateUsername
 		}
-		return ErrUnexpectedStoreError
 	}
-	return nil
+	return err
+}
+
+func (s store) Delete(ctx context.Context, ID string) error {
+	_, err := s.usrsColl.UpdateOne(
+		ctx,
+		bson.M{bsonKeyID: ID},
+		bson.M{"$set": bson.M{
+			"email":  "",
+			"name":   "",
+			"labels": &common.Labels{},
+		}},
+	)
+	return err
 }
 
 func (s store) Save(ctx context.Context, usr User) error {
