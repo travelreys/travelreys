@@ -24,15 +24,14 @@ const (
 	authCookieDuration = 365 * 24 * time.Hour
 	otpDuration        = 120 * time.Second
 
-	defaultLoginSender             = "login@travelreys.com"
-	defaultWelcomEmailTmplFilePath = "assets/welcomeEmail.tmpl.html"
-	defaultWelcomEmailTmplFileName = "welcomeEmail.tmpl.html"
+	loginMailSender         = "login@travelreys.com"
+	welcomEmailTmplFilePath = "assets/welcomeEmail.tmpl.html"
+	welcomEmailTmplFileName = "welcomeEmail.tmpl.html"
 )
 
 var (
-	avatarFilePrefix        = "avatar"
-	avatarBucket            = os.Getenv("TRAVELREYS_PUBLIC_BUCKET")
-	welcomEmailTmplFilePath = os.Getenv("TRAVELREYS_WELCOME_EMAIL_PATH")
+	avatarFilePrefix = "avatar"
+	avatarBucket     = os.Getenv("TRAVELREYS_PUBLIC_BUCKET")
 
 	ErrProviderGoogleError   = errors.New("auth.ErrProviderGoogleError")
 	ErrProviderFacebookError = errors.New("auth.ErrProviderFacebookError")
@@ -197,7 +196,7 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 	go func() {
 		mailBody, _ := svc.otp.GenerateMagicLinkEmail(usr, otp)
 		loginSubj := "Login to Travelreys!"
-		if err := svc.mailSvc.SendMail(ctx, email, defaultLoginSender, loginSubj, mailBody); err != nil {
+		if err := svc.mailSvc.SendMail(ctx, email, loginMailSender, loginSubj, mailBody); err != nil {
 			svc.logger.Error("MagicLink", zap.Error(err))
 		}
 		if sendWelcomEmail {
@@ -289,12 +288,9 @@ func (svc service) createUser(ctx context.Context, email string) (User, error) {
 func (svc service) sendWelcomeEmail(ctx context.Context, name, to string) {
 	svc.logger.Info("sending welcome email", zap.String("to", to))
 
-	if welcomEmailTmplFilePath == "" {
-		welcomEmailTmplFilePath = defaultWelcomEmailTmplFilePath
-	}
 	t, err := template.
-		New(defaultWelcomEmailTmplFileName).
-		ParseFiles(defaultWelcomEmailTmplFilePath)
+		New(welcomEmailTmplFileName).
+		ParseFiles(welcomEmailTmplFilePath)
 	if err != nil {
 		svc.logger.Error("sendWelcomeEmail", zap.Error(err))
 		return
@@ -309,9 +305,14 @@ func (svc service) sendWelcomeEmail(ctx context.Context, name, to string) {
 		return
 	}
 
-	mailBody := doc.String()
+	mailBody, err := svc.mailSvc.InsertContentOnTemplate(doc.String())
+	if err != nil {
+		svc.logger.Error("sendWelcomeEmail", zap.Error(err))
+		return
+	}
+
 	subj := "Welcome to Travelreys!"
-	if err := svc.mailSvc.SendMail(ctx, to, defaultLoginSender, subj, mailBody); err != nil {
+	if err := svc.mailSvc.SendMail(ctx, to, loginMailSender, subj, mailBody); err != nil {
 		svc.logger.Error("sendWelcomeEmail", zap.Error(err))
 	}
 }
