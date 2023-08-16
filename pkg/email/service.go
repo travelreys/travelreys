@@ -1,8 +1,10 @@
 package email
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"html/template"
 	"net/mail"
 	"net/smtp"
 	"os"
@@ -15,7 +17,13 @@ var (
 	smtpPassword = os.Getenv("TRAVELREYS_SMTP_PASSWORD")
 )
 
+const (
+	emailTmplFilePath = "assets/email.tmpl.html"
+	emailTmplFileName = "email.tmpl.html"
+)
+
 type Service interface {
+	InsertContentOnTemplate(content string) (string, error)
 	SendMail(ctx context.Context, to, from, subj, body string) error
 }
 
@@ -27,6 +35,24 @@ type service struct {
 
 func NewDefaultService() Service {
 	return &service{smtpAddr, smtpUsername, smtpPassword}
+}
+
+func (svc service) InsertContentOnTemplate(content string) (string, error) {
+	t, err := template.
+		New(emailTmplFileName).
+		ParseFiles(emailTmplFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	var doc bytes.Buffer
+	data := struct {
+		Content template.HTML
+	}{template.HTML(content)}
+	if err := t.Execute(&doc, data); err != nil {
+		return "", err
+	}
+	return doc.String(), nil
 }
 
 func (svc service) SendMail(ctx context.Context, to, from, subj, body string) error {

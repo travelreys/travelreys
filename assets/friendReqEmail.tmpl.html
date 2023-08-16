@@ -1,12 +1,24 @@
-<p>
-    Dear {{ .TargetName }},
-<p>
-
-<p>
-    You have received a new friend request from {{ .InitiatorName }} on Travelreys.
-</p>
-
-<div>
-    <span style="display:block;">Best regards,</span>
-    <span style="display:block;">Travelreys Team</span>
+<div style="margin-top: 1rem; margin-bottom: 5rem;">
+  <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 1rem;">
+    <img style="border-radius: 9999px;" height="60" width="60" src="{{ .InitiatorProfileImgURL }}" />
+  </div>
+  <p style="text-align: center; margin-bottom: 1rem; font-size: 1rem; font-weight: 600;">
+    {{ .InitiatorName }}
+  </p>
+  <p style="text-align: center; margin-bottom: 1rem;">
+    is requesting to follow you on Travelreys.
+  </p>
+  <div style="text-align: center; margin-top: 1.5rem;">
+    <a style="display:inline-block; background-color: rgb(124, 58, 237); padding: 0.5rem 1.5rem; border-radius: 9999px; text-decoration: none; color:white; font-size: 1rem; font-weight: 500;"
+      target="_blank" rel='noreferrer' href="https://www.travelreys.com/social/acceptInvitation/{{ .ReqID }}"
+      referrerpolicy="no-referrer">
+      Accept
+    </a>
+    &nbsp;&nbsp;
+    <a style="display:inline-block; color: rgb(124, 58, 237); border: 1px solid rgb(124, 58, 237); padding: 0.5rem 1.5rem; border-radius: 9999px; text-decoration: none; font-size: 1rem; font-weight: 500;"
+      target="_blank" rel='noreferrer' href="https://www.travelreys.com/profile/{{ .InitiatorID }}"
+      referrerpolicy="no-referrer">
+      View Profile
+    </a>
+  </div>
 </div>
