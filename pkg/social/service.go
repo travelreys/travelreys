@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 
@@ -21,15 +20,14 @@ import (
 )
 
 const (
-	defaultLoginSender                = "login@travelreys.com"
-	defaultFriendReqEmailTmplFilePath = "assets/friendReqEmail.tmpl.html"
-	defaultFriendReqEmailTmplFileName = "friendReqEmail.tmpl.html"
+	defaultLoginSender         = "login@travelreys.com"
+	friendReqEmailTmplFilePath = "assets/friendReqEmail.tmpl.html"
+	friendReqEmailTmplFileName = "friendReqEmail.tmpl.html"
 )
 
 var (
-	ErrInvalidFriendRequest    = errors.New("social.ErrInvalidFriendRequest")
-	ErrAlreadyFriends          = errors.New("social.ErrAlreadyFriends")
-	friendReqEmailTmplFilePath = os.Getenv("TRAVELREYS_FRIEND_REQ_EMAIL_PATH")
+	ErrInvalidFriendRequest = errors.New("social.ErrInvalidFriendRequest")
+	ErrAlreadyFriends       = errors.New("social.ErrAlreadyFriends")
 )
 
 type Service interface {
@@ -143,7 +141,7 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 	if err := svc.store.UpsertFriendRequest(ctx, req); err != nil {
 		return err
 	}
-	go svc.sendFriendRequestEmail(ctx, initiator, target)
+	go svc.sendFollowRequestEmail(ctx, initiator, target, req)
 	return nil
 }
 
@@ -251,36 +249,51 @@ func (svc service) AreTheyFriends(ctx context.Context, initiatorID, targetID str
 	return true, nil
 }
 
-func (svc service) sendFriendRequestEmail(ctx context.Context, initiator, target auth.User) {
+func (svc service) sendFollowRequestEmail(
+	ctx context.Context,
+	initiator,
+	target auth.User,
+	req FriendRequest,
+) {
 	svc.logger.Info("sending friend req email", zap.String("to", target.Email))
 
-	if friendReqEmailTmplFilePath == "" {
-		friendReqEmailTmplFilePath = defaultFriendReqEmailTmplFilePath
-	}
 	t, err := template.
-		New(defaultFriendReqEmailTmplFileName).
+		New(friendReqEmailTmplFileName).
 		ParseFiles(friendReqEmailTmplFilePath)
 	if err != nil {
-		svc.logger.Error("sendFriendRequestEmail", zap.Error(err))
+		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
 		return
 	}
 
 	var doc bytes.Buffer
 	data := struct {
-		InitiatorName string
-		TargetName    string
-	}{initiator.Name, target.Name}
+		InitiatorID            string
+		InitiatorProfileImgURL string
+		InitiatorName          string
+		ReqID                  string
+	}{
+		initiator.ID,
+		initiator.GetProfileImgURL(),
+		initiator.Username,
+		req.ID,
+	}
 	if err := t.Execute(&doc, data); err != nil {
-		svc.logger.Error("sendFriendRequestEmail", zap.Error(err))
+		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
 		return
 	}
 
-	mailBody := doc.String()
-	subj := "New Friend Request!"
+	mailContentBody := doc.String()
+	mailBody, err := svc.mailSvc.InsertContentOnTemplate(mailContentBody)
+	if err != nil {
+		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
+		return
+	}
+
+	subj := "New Follow Request!"
 	if err := svc.mailSvc.SendMail(
 		ctx, target.Email, defaultLoginSender, subj, mailBody,
 	); err != nil {
-		svc.logger.Error("sendFriendRequestEmail", zap.Error(err))
+		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
 	}
 }
 
