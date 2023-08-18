@@ -70,7 +70,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	// Images
 	imageSvc := images.NewService(images.NewDefaultWebAPI(logger))
-	imageSvc = images.ServiceWithRBACMiddleware(imageSvc, logger)
+	imageSvc = images.SvcWithRBACMw(imageSvc, logger)
 
 	// Maps
 	mapsSvc, err := maps.NewDefaulService(logger)
@@ -82,7 +82,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Finance
 	finStore := finance.NewStore(rdb, logger)
 	finSvc := finance.NewService(finStore, logger)
-	finSvc = finance.ServiceWithRBACMiddleware(finSvc, logger)
+	finSvc = finance.SvcWithRBACMw(finSvc, logger)
 
 	// Ogp
 	ogpSvc := ogp.NewService()
@@ -101,7 +101,8 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
 	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, mediaSvc, storageSvc, logger)
-	tripSvcWithRBAC := trips.ServiceWithRBACMiddleware(tripSvc, logger)
+	tripSvc = trips.SvcWithValidationMw(tripSvc, logger)
+	tripSvcWithRBAC := trips.SvcWithRBACMw(tripSvc, logger)
 	tripSyncSvc := trips.NewSyncService(
 		tripStore,
 		trips.NewSessionStore(rdb, logger),
@@ -112,7 +113,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Social
 	socialStore := social.NewStore(ctx, db, logger)
 	socialSvc := social.NewService(socialStore, authSvc, tripSvc, mailSvc, logger)
-	socialSvc = social.ServiceWithRBACMiddleware(socialSvc, tripSvc, logger)
+	socialSvc = social.SvcWithRBACMw(socialSvc, tripSvc, logger)
 
 	r := mux.NewRouter()
 	securityMW := api.NewSecureHeadersMiddleware(cfg.CORSOrigin)

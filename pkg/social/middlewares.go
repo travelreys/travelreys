@@ -22,7 +22,7 @@ type rbacMiddleware struct {
 	logger  *zap.Logger
 }
 
-func ServiceWithRBACMiddleware(svc Service, tripSvc trips.Service, logger *zap.Logger) Service {
+func SvcWithRBACMw(svc Service, tripSvc trips.Service, logger *zap.Logger) Service {
 	return &rbacMiddleware{svc, tripSvc, logger}
 }
 

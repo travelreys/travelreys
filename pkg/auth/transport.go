@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -31,7 +32,6 @@ func errToHttpCode(err error) int {
 		ErrProviderOTPInvalidPw,
 		ErrProviderOTPInvalidSig,
 	}
-	authErrors := []error{ErrRBAC}
 
 	if common.ErrorContains(notFoundErrors, err) {
 		return http.StatusNotFound
@@ -39,9 +39,13 @@ func errToHttpCode(err error) int {
 	if common.ErrorContains(appErrors, err) {
 		return http.StatusUnprocessableEntity
 	}
-	if common.ErrorContains(authErrors, err) {
+	if errors.Is(err, ErrRBAC) {
 		return http.StatusUnauthorized
 	}
+	if errors.Is(err, ErrValidation) {
+		return http.StatusBadRequest
+	}
+
 	return http.StatusInternalServerError
 }
 

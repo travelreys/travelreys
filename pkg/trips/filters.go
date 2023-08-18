@@ -1,15 +1,31 @@
 package trips
 
 import (
+	"errors"
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+var (
+	ErrInvalidFilter = errors.New("trips.ErrInvalidFilter")
+)
+
 type ListFilter struct {
-	UserID     *string
-	UserIDs    []string
+	UserID  *string
+	UserIDs []string
+
 	OnlyPublic bool
+}
+
+func (ff ListFilter) Validate() error {
+	if ff.UserIDs != nil && len(ff.UserIDs) == 0 {
+		return ErrInvalidFilter
+	}
+	if ff.UserID != nil && *ff.UserID == "" {
+		return ErrInvalidFilter
+	}
+	return nil
 }
 
 func (f ListFilter) toBSON() (bson.M, bool) {

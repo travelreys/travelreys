@@ -14,15 +14,181 @@ import (
 )
 
 var (
-	ErrRBAC = errors.New("trips.ErrRBAC")
+	ErrValidation = errors.New("trips.ErrValidation")
+	ErrRBAC       = errors.New("trips.ErrRBAC")
 )
+
+// validationMiddleware validates that the input for the service calls are acceptable
+type validationMiddleware struct {
+	next   Service
+	logger *zap.Logger
+}
+
+func SvcWithValidationMw(svc Service, logger *zap.Logger) Service {
+	return &validationMiddleware{svc, logger.Named("trips..validationMiddleware")}
+}
+
+func (mw validationMiddleware) Create(
+	ctx context.Context,
+	creatorID,
+	name string,
+	start,
+	end time.Time,
+) (*Trip, error) {
+	if creatorID == "" {
+		return nil, ErrValidation
+	}
+	return mw.next.Create(ctx, creatorID, name, start, end)
+}
+
+func (mw validationMiddleware) Save(ctx context.Context, trip *Trip) error {
+	return ErrValidation
+}
+
+func (mw validationMiddleware) Read(ctx context.Context, ID string) (*Trip, error) {
+	if ID == "" {
+		return nil, ErrValidation
+	}
+	return mw.next.Read(ctx, ID)
+}
+
+func (mw validationMiddleware) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
+	if ID == "" {
+		return TripOGP{}, ErrValidation
+	}
+	return mw.next.ReadOGP(ctx, ID)
+}
+
+func (mw validationMiddleware) ReadMembers(ctx context.Context, ID string) (MembersMap, error) {
+	if ID == "" {
+		return nil, ErrValidation
+	}
+	return mw.next.ReadMembers(ctx, ID)
+}
+
+func (mw validationMiddleware) List(ctx context.Context, ff ListFilter) (TripsList, error) {
+	if err := ff.Validate(); err != nil {
+		return nil, ErrValidation
+	}
+	return mw.next.List(ctx, ff)
+}
+
+func (mw validationMiddleware) ListWithMembers(
+	ctx context.Context,
+	ff ListFilter,
+) (TripsList, auth.UsersMap, error) {
+	if err := ff.Validate(); err != nil {
+		return nil, nil, ErrValidation
+	}
+	return mw.next.ListWithMembers(ctx, ff)
+}
+
+func (mw validationMiddleware) Delete(ctx context.Context, ID string) error {
+	if ID == "" {
+		return ErrValidation
+	}
+	return mw.next.Delete(ctx, ID)
+}
+
+func (mw validationMiddleware) DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error {
+	if ID == "" || obj.Path == "" || obj.Name == "" {
+		return ErrValidation
+	}
+	return mw.next.DeleteAttachment(ctx, ID, obj)
+}
+
+func (mw validationMiddleware) DownloadAttachmentPresignedURL(
+	ctx context.Context,
+	ID,
+	path,
+	filename string,
+) (string, error) {
+	if ID == "" || path == "" || filename == "" {
+		return "", ErrValidation
+	}
+	return mw.next.DownloadAttachmentPresignedURL(ctx, ID, path, filename)
+}
+
+func (mw validationMiddleware) UploadAttachmentPresignedURL(
+	ctx context.Context,
+	ID,
+	filename,
+	fileType string,
+) (string, error) {
+	if ID == "" || filename == "" {
+		return "", ErrValidation
+	}
+	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename, fileType)
+}
+
+func (mw validationMiddleware) GenerateMediaItems(
+	ctx context.Context,
+	ID,
+	userID string,
+	params []media.NewMediaItemParams,
+) (media.MediaItemList, media.MediaPresignedUrlList, error) {
+	if ID == "" || userID == "" {
+		return nil, nil, ErrValidation
+	}
+	for _, p := range params {
+		if p.Name == "" {
+			return nil, nil, ErrValidation
+		}
+	}
+	return mw.next.GenerateMediaItems(ctx, ID, userID, params)
+}
+
+func (mw validationMiddleware) SaveMediaItems(ctx context.Context, ID string, items media.MediaItemList) error {
+	if ID == "" {
+		return ErrValidation
+	}
+	for _, item := range items {
+		if item.Name == "" || item.Path == "" {
+			return ErrValidation
+		}
+	}
+	return mw.next.SaveMediaItems(ctx, ID, items)
+}
+
+func (mw validationMiddleware) DeleteMediaItems(
+	ctx context.Context,
+	ID string,
+	items media.MediaItemList,
+) error {
+	if ID == "" {
+		return ErrValidation
+	}
+	for _, item := range items {
+		if item.Name == "" || item.Path == "" {
+			return ErrValidation
+		}
+	}
+	return mw.next.DeleteMediaItems(ctx, ID, items)
+}
+
+func (mw validationMiddleware) GenerateGetSignedURLs(
+	ctx context.Context,
+	ID string,
+	items media.MediaItemList,
+) (media.MediaPresignedUrlList, error) {
+	if ID == "" {
+		return nil, ErrValidation
+	}
+	for _, item := range items {
+		if item.Name == "" || item.Path == "" {
+			return nil, ErrValidation
+		}
+	}
+	return mw.next.GenerateGetSignedURLs(ctx, ID, items)
+
+}
 
 type rbacMiddleware struct {
 	next   Service
 	logger *zap.Logger
 }
 
-func ServiceWithRBACMiddleware(
+func SvcWithRBACMw(
 	svc Service,
 	logger *zap.Logger,
 ) Service {
@@ -31,14 +197,16 @@ func ServiceWithRBACMiddleware(
 
 func (mw rbacMiddleware) Create(
 	ctx context.Context,
-	creatorName, name string,
-	start, end time.Time,
+	creatorID,
+	name string,
+	start,
+	end time.Time,
 ) (*Trip, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
 	}
-	return mw.next.Create(ctx, creatorName, name, start, end)
+	return mw.next.Create(ctx, creatorID, name, start, end)
 }
 
 func (mw rbacMiddleware) Save(ctx context.Context, trip *Trip) error {
@@ -65,23 +233,7 @@ func (mw rbacMiddleware) ReadOGP(ctx context.Context, ID string) (TripOGP, error
 	return mw.next.ReadOGP(ctx, ID)
 }
 
-func (mw rbacMiddleware) ReadWithMembers(ctx context.Context, ID string) (*Trip, auth.UsersMap, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil || ci.HasEmptyID() {
-		return nil, nil, ErrRBAC
-	}
-	trip, err := mw.next.Read(ctx, ID)
-	if err != nil {
-		return nil, nil, err
-	}
-	if !common.StringContains(trip.GetMemberIDs(), ci.UserID) {
-		return nil, nil, ErrRBAC
-	}
-	ctxWithTripInfo := ContextWithTripInfo(ctx, trip)
-	return mw.next.ReadWithMembers(ctxWithTripInfo, ID)
-}
-
-func (mw rbacMiddleware) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
+func (mw rbacMiddleware) ReadMembers(ctx context.Context, ID string) (MembersMap, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
@@ -93,8 +245,7 @@ func (mw rbacMiddleware) ReadMembers(ctx context.Context, ID string) (auth.Users
 	if !common.StringContains(trip.GetMemberIDs(), ci.UserID) {
 		return nil, ErrRBAC
 	}
-	ctxWithTripInfo := ContextWithTripInfo(ctx, trip)
-	return mw.next.ReadMembers(ctxWithTripInfo, ID)
+	return mw.next.ReadMembers(ContextWithTripInfo(ctx, trip), ID)
 }
 
 func (mw rbacMiddleware) List(ctx context.Context, ff ListFilter) (TripsList, error) {
@@ -105,7 +256,10 @@ func (mw rbacMiddleware) List(ctx context.Context, ff ListFilter) (TripsList, er
 	return mw.next.List(ctx, ff)
 }
 
-func (mw rbacMiddleware) ListWithMembers(ctx context.Context, ff ListFilter) (TripsList, auth.UsersMap, error) {
+func (mw rbacMiddleware) ListWithMembers(
+	ctx context.Context,
+	ff ListFilter,
+) (TripsList, auth.UsersMap, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, nil, ErrRBAC
@@ -118,7 +272,15 @@ func (mw rbacMiddleware) Delete(ctx context.Context, ID string) error {
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	return mw.next.Delete(ctx, ID)
+
+	trip, err := mw.next.Read(ctx, ID)
+	if err != nil && err != ErrTripNotFound {
+		return err
+	}
+	if trip.Creator.ID != ci.UserID {
+		return ErrRBAC
+	}
+	return mw.next.Delete(ContextWithTripInfo(ctx, trip), ID)
 }
 
 func (mw rbacMiddleware) DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error {
@@ -145,7 +307,7 @@ func (mw rbacMiddleware) UploadAttachmentPresignedURL(ctx context.Context, ID, f
 	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename, fileType)
 }
 
-func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, id, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error) {
+func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, ID, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, nil, ErrRBAC
@@ -153,23 +315,23 @@ func (mw rbacMiddleware) GenerateMediaItems(ctx context.Context, id, userID stri
 	if ci.UserID != userID {
 		return nil, nil, ErrRBAC
 	}
-	return mw.next.GenerateMediaItems(ctx, id, userID, params)
+	return mw.next.GenerateMediaItems(ctx, ID, userID, params)
 }
 
-func (mw rbacMiddleware) SaveMediaItems(ctx context.Context, id string, items media.MediaItemList) error {
+func (mw rbacMiddleware) SaveMediaItems(ctx context.Context, ID string, items media.MediaItemList) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	return mw.next.SaveMediaItems(ctx, id, items)
+	return mw.next.SaveMediaItems(ctx, ID, items)
 }
 
-func (mw rbacMiddleware) DeleteMediaItems(ctx context.Context, id string, items media.MediaItemList) error {
+func (mw rbacMiddleware) DeleteMediaItems(ctx context.Context, ID string, items media.MediaItemList) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	return mw.next.DeleteMediaItems(ctx, id, items)
+	return mw.next.DeleteMediaItems(ctx, ID, items)
 }
 
 func (mw rbacMiddleware) GenerateGetSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error) {

@@ -3,6 +3,7 @@ package ogp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -14,7 +15,6 @@ import (
 func errToHttpCode() func(err error) int {
 	notFoundErrors := []error{}
 	appErrors := []error{}
-	authErrors := []error{ErrRBAC}
 
 	return func(err error) int {
 		if common.ErrorContains(notFoundErrors, err) {
@@ -23,7 +23,7 @@ func errToHttpCode() func(err error) int {
 		if common.ErrorContains(appErrors, err) {
 			return http.StatusUnprocessableEntity
 		}
-		if common.ErrorContains(authErrors, err) {
+		if errors.Is(err, ErrRBAC) {
 			return http.StatusUnauthorized
 		}
 		return http.StatusInternalServerError
