@@ -3,7 +3,9 @@ package trips
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
+	"github.com/travelreys/travelreys/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -71,6 +73,18 @@ func (f ListFilter) toBSON() (bson.M, bool) {
 type ListInvitesFilter struct {
 	UserID *string
 	TripID *string
+}
+
+func MakeListInvitesFilterFromURLParams(params url.Values) ListInvitesFilter {
+	ff := ListInvitesFilter{}
+
+	if params.Get("userID") != "" {
+		ff.UserID = common.StringPtr(params.Get("userID"))
+	}
+	if params.Get("tripID") != "" {
+		ff.TripID = common.StringPtr(params.Get("tripID"))
+	}
+	return ff
 }
 
 func (f ListInvitesFilter) Validate() error {

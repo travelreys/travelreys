@@ -58,9 +58,8 @@ func decodeSendRequest(_ context.Context, r *http.Request) (interface{}, error) 
 
 func decodeListInvitesRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	req := ListInvitesRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, common.ErrInvalidJSONBody
-	}
+	ff := MakeListInvitesFilterFromURLParams(r.URL.Query())
+	req.ListInvitesFilter = ff
 	return req, nil
 }
 

@@ -15,7 +15,7 @@ import (
 )
 
 type Invite struct {
-	ID       string `json:"ID"`
+	ID       string `json:"id"`
 	AuthorID string `json:"authorID"`
 	TripID   string `json:"tripID"`
 	UserID   string `json:"userID"`
