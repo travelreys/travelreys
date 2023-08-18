@@ -15,7 +15,7 @@ var (
 	ErrInvalidAuthToken        = errors.New("common.ErrInvalidAuthToken")
 	ErrInvalidSigningMethod    = errors.New("common.ErrInvalidSigningMethod")
 	ErrMissingJWTClaims        = errors.New("common.ErrMissingJWTClaims")
-	ErrorEndpointReqMismatch   = errors.New("common.ErrorEndpointReqMismatch")
+	ErrEndpointReqMismatch     = errors.New("common.ErrEndpointReqMismatch")
 	ErrorEncodeInvalidResponse = errors.New("common.ErrorEncodeInvalidResponse")
 )
 

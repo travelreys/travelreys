@@ -33,7 +33,8 @@ func NewCreateEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(CreateRequest)
 		if !ok {
 			return CreateResponse{
-				Err: common.ErrorEndpointReqMismatch}, nil
+				Err: common.ErrEndpointReqMismatch,
+			}, nil
 		}
 		ci, err := reqctx.ClientInfoFromCtx(ctx)
 		if err != nil {
@@ -62,7 +63,7 @@ func NewReadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ReadRequest)
 		if !ok {
-			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ReadResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		trip, err := svc.Read(ctx, req.ID)
 		return ReadResponse{Trip: trip, Err: err}, nil
@@ -86,7 +87,7 @@ func NewReadMembersEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ReadMembersRequest)
 		if !ok {
-			return ReadMembersResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ReadMembersResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		members, err := svc.ReadMembers(ctx, req.ID)
 		return ReadMembersResponse{Members: members, Err: err}, nil
@@ -106,7 +107,7 @@ func NewReadOGPEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ReadRequest)
 		if !ok {
-			return ReadOGPResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ReadOGPResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		ogp, err := svc.ReadOGP(ctx, req.ID)
 		return ReadOGPResponse{TripOGP: ogp, Err: err}, nil
@@ -141,7 +142,7 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListRequest)
 		if !ok {
-			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ListResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		if req.WithMembers {
 			trips, members, err := svc.ListWithMembers(ctx, req.ListFilter)
@@ -170,7 +171,7 @@ func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(DeleteRequest)
 		if !ok {
-			return DeleteResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return DeleteResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.Delete(ctx, req.ID)
 		return DeleteResponse{Err: err}, nil
@@ -194,7 +195,7 @@ func NewDeleteAttachmentEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(DeleteAttachmentRequest)
 		if !ok {
-			return DeleteAttachmentResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return DeleteAttachmentResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.DeleteAttachment(ctx, req.ID, req.Obj)
 		return DeleteAttachmentResponse{Err: err}, nil
@@ -220,7 +221,7 @@ func NewDownloadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(DownloadAttachmentPresignedURLRequest)
 		if !ok {
-			return DownloadAttachmentPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return DownloadAttachmentPresignedURLResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		presignedURL, err := svc.DownloadAttachmentPresignedURL(ctx, req.ID, req.Path, req.Filename)
 		return DownloadAttachmentPresignedURLResponse{
@@ -249,7 +250,7 @@ func NewUploadAttachmentPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(UploadAttachmentPresignedURLRequest)
 		if !ok {
-			return UploadAttachmentPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return UploadAttachmentPresignedURLResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		presignedURL, err := svc.UploadAttachmentPresignedURL(ctx, req.ID, req.Filename, req.Filetype)
 		return UploadAttachmentPresignedURLResponse{
@@ -279,7 +280,7 @@ func NewGenerateMediaItemsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(GenerateMediaItemsRequest)
 		if !ok {
-			return GenerateMediaItemsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return GenerateMediaItemsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		items, urls, err := svc.GenerateMediaItems(ctx, req.ID, req.UserID, req.Params)
 		return GenerateMediaItemsResponse{Items: items, URLs: urls, Err: err}, nil
@@ -303,7 +304,7 @@ func NewSaveMediaItemsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(SaveMediaItemsRequest)
 		if !ok {
-			return SaveMediaItemsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return SaveMediaItemsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.SaveMediaItems(ctx, req.ID, req.Items)
 		return SaveMediaItemsResponse{Err: err}, nil
@@ -328,7 +329,7 @@ func NewGenerateSignedURLsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(GenerateSignedURLsRequest)
 		if !ok {
-			return GenerateSignedURLsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return GenerateSignedURLsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		urls, err := svc.GenerateGetSignedURLs(ctx, req.ID, req.Items)
 		return GenerateSignedURLsResponse{URLs: urls, Err: err}, nil
@@ -352,7 +353,7 @@ func NewDeleteMediaItemsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(DeleteMediaItemsRequest)
 		if !ok {
-			return DeleteMediaItemsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return DeleteMediaItemsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.DeleteMediaItems(ctx, req.ID, req.Items)
 		return DeleteMediaItemsResponse{Err: err}, nil

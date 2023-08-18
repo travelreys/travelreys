@@ -5,3 +5,4 @@ type ContextKey int
 var ContextKeyClientInfo ContextKey = 1
 var ContextKeyTripInfo ContextKey = 2
 var ContextKeyFriendRequestInfo ContextKey = 3
+var ContextKeyInviteInfo ContextKey = 4

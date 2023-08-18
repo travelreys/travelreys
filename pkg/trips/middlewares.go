@@ -25,7 +25,7 @@ type validationMiddleware struct {
 }
 
 func SvcWithValidationMw(svc Service, logger *zap.Logger) Service {
-	return &validationMiddleware{svc, logger.Named("trips..validationMiddleware")}
+	return &validationMiddleware{svc, logger.Named("trips.validationMiddleware")}
 }
 
 func (mw validationMiddleware) Create(

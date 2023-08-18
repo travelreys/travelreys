@@ -25,6 +25,10 @@ func (ff ListFilter) Validate() error {
 	if ff.UserID != nil && *ff.UserID == "" {
 		return ErrInvalidFilter
 	}
+	_, ok := ff.toBSON()
+	if !ok {
+		return ErrInvalidFilter
+	}
 	return nil
 }
 
@@ -62,4 +66,31 @@ func (f ListFilter) toBSON() (bson.M, bool) {
 
 	bsonAnd = append(bsonAnd, bson.M{bsonKeyDeleted: false})
 	return bson.M{"$and": bsonAnd}, isSet
+}
+
+type ListInvitesFilter struct {
+	UserID *string
+	TripID *string
+}
+
+func (f ListInvitesFilter) Validate() error {
+	_, ok := f.toBSON()
+	if !ok {
+		return ErrInvalidFilter
+	}
+	return nil
+}
+
+func (f ListInvitesFilter) toBSON() (bson.M, bool) {
+	bsonM := bson.M{}
+	isSet := false
+	if f.TripID != nil && *f.TripID != "" {
+		bsonM["tripID"] = f.TripID
+		isSet = true
+	}
+	if f.UserID != nil && *f.UserID != "" {
+		bsonM["userID"] = f.UserID
+		isSet = true
+	}
+	return bsonM, isSet
 }

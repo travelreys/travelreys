@@ -24,7 +24,7 @@ func NewMagicLinkEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(MagicLinkRequest)
 		if !ok {
-			return MagicLinkResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return MagicLinkResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.MagicLink(ctx, req.Email)
 		return MagicLinkResponse{Err: err}, nil
@@ -51,7 +51,7 @@ func NewLoginEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(LoginRequest)
 		if !ok {
-			return LoginResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return LoginResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		usr, cookie, err := svc.Login(ctx, req.Code, req.Signature, req.Provider)
 		return LoginResponse{User: usr, Cookie: cookie, Err: err}, nil
@@ -76,7 +76,7 @@ func NewReadEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(ReadRequest)
 		if !ok {
 			return ReadResponse{
-				Err: common.ErrorEndpointReqMismatch,
+				Err: common.ErrEndpointReqMismatch,
 			}, nil
 		}
 		usr, err := svc.Read(ctx, req.ID)
@@ -102,7 +102,7 @@ func NewUpdateEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(UpdateRequest)
 		if !ok {
 			return UpdateResponse{
-				Err: common.ErrorEndpointReqMismatch,
+				Err: common.ErrEndpointReqMismatch,
 			}, nil
 		}
 		err := svc.Update(ctx, req.ID, req.FF)
@@ -126,7 +126,7 @@ func NewListEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListRequest)
 		if !ok {
-			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ListResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		users, err := svc.List(ctx, req.FF)
 		return ListResponse{Users: users, Err: err}, nil
@@ -166,7 +166,7 @@ func NewDeleteEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(DeleteRequest)
 		if !ok {
 			return DeleteResponse{
-				Err: common.ErrorEndpointReqMismatch,
+				Err: common.ErrEndpointReqMismatch,
 			}, nil
 		}
 		err := svc.Delete(ctx, req.ID)
@@ -193,7 +193,7 @@ func NewUploadAvatarPresignedURLEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(UploadAvatarPresignedURLRequest)
 		if !ok {
-			return UploadAvatarPresignedURLResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return UploadAvatarPresignedURLResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		suffixToken, presignedURL, err := svc.UploadAvatarPresignedURL(ctx, req.ID, req.MIMEType)
 		return UploadAvatarPresignedURLResponse{
