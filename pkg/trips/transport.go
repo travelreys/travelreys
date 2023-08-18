@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"path/filepath"
 
@@ -21,7 +22,6 @@ const (
 func errToHttpCode(err error) int {
 	notFoundErrors := []error{ErrTripNotFound}
 	appErrors := []error{ErrUnexpectedStoreError}
-	authErrors := []error{ErrRBAC}
 
 	if common.ErrorContains(notFoundErrors, err) {
 		return http.StatusNotFound
@@ -29,8 +29,11 @@ func errToHttpCode(err error) int {
 	if common.ErrorContains(appErrors, err) {
 		return http.StatusUnprocessableEntity
 	}
-	if common.ErrorContains(authErrors, err) {
+	if errors.Is(err, ErrRBAC) {
 		return http.StatusUnauthorized
+	}
+	if errors.Is(err, ErrValidation) {
+		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError
 }

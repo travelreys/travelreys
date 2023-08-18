@@ -58,27 +58,11 @@ func (r ReadResponse) Error() error {
 	return r.Err
 }
 
-type ReadWithMembersResponse struct {
-	Trip    *Trip         `json:"trip"`
-	Members auth.UsersMap `json:"members"`
-	Err     error         `json:"error,omitempty"`
-}
-
-func (r ReadWithMembersResponse) Error() error {
-	return r.Err
-}
-
 func NewReadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ReadRequest)
 		if !ok {
 			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
-		}
-		if req.WithMembers {
-			trip, members, err := svc.ReadWithMembers(ctx, req.ID)
-			return ReadWithMembersResponse{
-				Trip: trip, Members: members, Err: err,
-			}, nil
 		}
 		trip, err := svc.Read(ctx, req.ID)
 		return ReadResponse{Trip: trip, Err: err}, nil
@@ -90,8 +74,8 @@ type ReadMembersRequest struct {
 }
 
 type ReadMembersResponse struct {
-	Members auth.UsersMap `json:"members"`
-	Err     error         `json:"error,omitempty"`
+	Members MembersMap `json:"members"`
+	Err     error      `json:"error,omitempty"`
 }
 
 func (r ReadMembersResponse) Error() error {

@@ -26,9 +26,7 @@ type Service interface {
 
 	Read(ctx context.Context, ID string) (*Trip, error)
 	ReadOGP(ctx context.Context, ID string) (TripOGP, error)
-	ReadWithMembers(ctx context.Context, ID string) (*Trip, auth.UsersMap, error)
-	ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error)
-
+	ReadMembers(ctx context.Context, ID string) (MembersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	ListWithMembers(ctx context.Context, ff ListFilter) (TripsList, auth.UsersMap, error)
 
@@ -40,9 +38,9 @@ type Service interface {
 	DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error
 
 	// Media Items
-	GenerateMediaItems(ctx context.Context, id, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error)
-	SaveMediaItems(ctx context.Context, id string, items media.MediaItemList) error
-	DeleteMediaItems(ctx context.Context, id string, items media.MediaItemList) error
+	GenerateMediaItems(ctx context.Context, ID, userID string, params []media.NewMediaItemParams) (media.MediaItemList, media.MediaPresignedUrlList, error)
+	SaveMediaItems(ctx context.Context, ID string, items media.MediaItemList) error
+	DeleteMediaItems(ctx context.Context, ID string, items media.MediaItemList) error
 	GenerateGetSignedURLs(ctx context.Context, ID string, items media.MediaItemList) (media.MediaPresignedUrlList, error)
 }
 
@@ -136,27 +134,10 @@ func (svc *service) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 	return trip.ToOGP(creator.Username, contentURL), nil
 }
 
-func (svc *service) ReadWithMembers(ctx context.Context, ID string) (*Trip, auth.UsersMap, error) {
-	trip, err := svc.tripFromContext(ctx, ID)
-	if err != nil {
-		return trip, nil, err
-	}
-	ff := auth.ListFilter{IDs: trip.GetMemberIDs()}
-	users, err := svc.authSvc.List(ctx, ff)
-	if err != nil {
-		return trip, nil, err
-	}
-	usersMap := auth.UsersMap{}
-	for _, usr := range users {
-		usersMap[usr.ID] = usr
-	}
-	usersMap.Scrub()
-
-	svc.augmentMediaItemURLs(ctx, trip)
-	return trip, usersMap, nil
-}
-
-func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, error) {
+func (svc *service) ReadMembers(
+	ctx context.Context,
+	ID string,
+) (MembersMap, error) {
 	trip, err := svc.tripFromContext(ctx, ID)
 	if err != nil {
 		return nil, err
@@ -167,11 +148,17 @@ func (svc *service) ReadMembers(ctx context.Context, ID string) (auth.UsersMap, 
 	if err != nil {
 		return nil, err
 	}
-	usersMap := auth.UsersMap{}
+
 	for _, usr := range users {
-		usersMap[usr.ID] = usr
+		if usr.ID == trip.Creator.ID {
+			trip.Creator.augmentMemberWithUser(usr)
+			continue
+		}
+		trip.Members[usr.ID].augmentMemberWithUser(usr)
 	}
-	return usersMap, nil
+
+	trip.Members[trip.Creator.ID] = &trip.Creator
+	return trip.Members, nil
 }
 
 func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) {
@@ -185,7 +172,10 @@ func (svc *service) List(ctx context.Context, ff ListFilter) (TripsList, error) 
 	return trips, nil
 }
 
-func (svc *service) ListWithMembers(ctx context.Context, ff ListFilter) (TripsList, auth.UsersMap, error) {
+func (svc *service) ListWithMembers(
+	ctx context.Context,
+	ff ListFilter,
+) (TripsList, auth.UsersMap, error) {
 	trips, err := svc.List(ctx, ff)
 	if err != nil {
 		return nil, nil, err
@@ -206,22 +196,17 @@ func (svc *service) ListWithMembers(ctx context.Context, ff ListFilter) (TripsLi
 		usersMap[usr.ID] = usr
 	}
 	usersMap.Scrub()
-
 	return trips, usersMap, nil
 }
 
-// Delete performs a logical delete on the trip by updating
-// the delete flag
+// Delete performs a logical delete on the trip
+// by updating the delete flag
 func (svc *service) Delete(ctx context.Context, ID string) error {
-	trip, err := svc.store.Read(ctx, ID)
-	if err == ErrTripNotFound {
-		return nil
-	}
+	trip, err := svc.tripFromContext(ctx, ID)
 	if err != nil {
 		return err
 	}
-
-	trip.Deleted = true
+	trip.Delete()
 	return svc.store.Save(ctx, trip)
 }
 
@@ -255,23 +240,23 @@ func (svc *service) GenerateMediaItems(ctx context.Context, tripID, userID strin
 	return items, urls, err
 }
 
-func (svc *service) SaveMediaItems(ctx context.Context, id string, items media.MediaItemList) error {
-	if _, err := svc.Read(ctx, id); err != nil {
+func (svc *service) SaveMediaItems(ctx context.Context, ID string, items media.MediaItemList) error {
+	if _, err := svc.Read(ctx, ID); err != nil {
 		return err
 	}
 	for i := 0; i < len(items); i++ {
-		items[i].TripID = id
+		items[i].TripID = ID
 	}
 	return svc.mediaSvc.Save(ctx, items)
 }
 
-func (svc *service) DeleteMediaItems(ctx context.Context, id string, items media.MediaItemList) error {
-	if _, err := svc.Read(ctx, id); err != nil {
+func (svc *service) DeleteMediaItems(ctx context.Context, ID string, items media.MediaItemList) error {
+	if _, err := svc.Read(ctx, ID); err != nil {
 		return err
 	}
 
 	for _, item := range items {
-		if item.TripID != id {
+		if item.TripID != ID {
 			return ErrDeleteAnotherTripMedia
 		}
 	}

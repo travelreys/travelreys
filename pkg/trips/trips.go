@@ -27,6 +27,8 @@ const (
 	LabelActivityDisplayMediaItem = "displayMediaItem"
 	LabelCreatedBy                = "createdBy"
 	LabelFractionalIndex          = "fIndex"
+	LabelMemberProfileImg         = "memberProfileImg"
+	LabelMemberUsername           = "memberUsername"
 	LabelSharingAccess            = "sharing|access"
 	LabelUiColor                  = "ui|color"
 
@@ -40,8 +42,6 @@ const (
 	// JSON Patch Paths
 	JSONPathItineraryRoot = "/itineraries"
 )
-
-const ()
 
 type Trip struct {
 	ID   string `json:"id" bson:"id"`
@@ -140,6 +140,10 @@ func (trip Trip) IsSharingEnabled() bool {
 	return value == SharingAccessViewer
 }
 
+func (trip *Trip) Delete() {
+	trip.Deleted = true
+}
+
 const (
 	CoverImageSourceWeb  = "web"
 	CoverImageSourceTrip = "trip"
@@ -176,8 +180,6 @@ type Member struct {
 	ID     string            `json:"id" bson:"id"`
 	Role   string            `json:"role" bson:"role"`
 	Labels map[string]string `json:"labels" bson:"labels"`
-
-	User auth.User `json:"user,omitempty"`
 }
 
 type MembersMap map[string]*Member
@@ -193,6 +195,10 @@ func NewMember(id, role string) Member {
 		Role:   role,
 		Labels: common.Labels{},
 	}
+}
+
+func (mem *Member) augmentMemberWithUser(user auth.User) {
+	mem.Labels[LabelMemberProfileImg] = user.GetProfileImgURL()
 }
 
 func (t Trip) GetMemberIDs() []string {

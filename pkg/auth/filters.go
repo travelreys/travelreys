@@ -62,7 +62,7 @@ type ListFilter struct {
 	PageCount *int     `json:"pageCount" bson:"pageCount"`
 }
 
-func (ff *ListFilter) Validate() error {
+func (ff ListFilter) Validate() error {
 	if ff.Username != nil && !UsernameRegexp.MatchString(*ff.Username) {
 		return ErrInvalidFilter
 	}
@@ -72,7 +72,7 @@ func (ff *ListFilter) Validate() error {
 	return nil
 }
 
-func (ff *ListFilter) toBSON() (bson.M, bool) {
+func (ff ListFilter) toBSON() (bson.M, bool) {
 	bsonM := bson.M{}
 	isSet := false
 
