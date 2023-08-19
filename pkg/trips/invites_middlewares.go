@@ -142,7 +142,7 @@ func (mw *inviteRBACMiddleware) Accept(ctx context.Context, ID string) error {
 		return err
 	}
 
-	if invite.UserID != ID {
+	if invite.UserID != ci.UserID {
 		return ErrRBAC
 	}
 
