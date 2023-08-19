@@ -33,14 +33,14 @@ var (
 )
 
 type Store interface {
-	Read(context.Context, ReadFilter) (User, error)
-	List(context.Context, ListFilter) (UsersList, error)
-	Update(context.Context, string, UpdateFilter) error
-	Save(context.Context, User) error
+	Read(ctx context.Context, ff ReadFilter) (User, error)
+	List(ctx context.Context, ff ListFilter) (UsersList, error)
+	Update(ctx context.Context, ID string, ff UpdateFilter) error
+	Save(ctx context.Context, usr User) error
 	Delete(ctx context.Context, ID string) error
 
-	GetOTP(context.Context, string) (string, error)
-	SaveOTP(context.Context, string, string, time.Duration) error
+	GetOTP(ctx context.Context, email string) (string, error)
+	SaveOTP(ctx context.Context, email string, otp string, dur time.Duration) error
 }
 
 type store struct {
@@ -163,15 +163,15 @@ func (s store) Save(ctx context.Context, usr User) error {
 	return err
 }
 
-func (s store) GetOTP(ctx context.Context, ID string) (string, error) {
-	cmd := s.rdb.Get(ctx, fmt.Sprintf("otp:%s", ID))
+func (s store) GetOTP(ctx context.Context, email string) (string, error) {
+	cmd := s.rdb.Get(ctx, fmt.Sprintf("otp:%s", email))
 	if cmd.Err() != nil {
 		return "", cmd.Err()
 	}
 	return cmd.Val(), nil
 }
 
-func (s store) SaveOTP(ctx context.Context, ID, otp string, ttl time.Duration) error {
-	cmd := s.rdb.Set(ctx, fmt.Sprintf("otp:%s", ID), otp, ttl)
+func (s store) SaveOTP(ctx context.Context, email, otp string, ttl time.Duration) error {
+	cmd := s.rdb.Set(ctx, fmt.Sprintf("otp:%s", email), otp, ttl)
 	return cmd.Err()
 }
