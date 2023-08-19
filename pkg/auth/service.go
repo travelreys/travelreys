@@ -21,7 +21,7 @@ import (
 
 const (
 	authCookieDuration = 365 * 24 * time.Hour
-	otpDuration        = 120 * time.Second
+	magicLinkDuration  = 120 * time.Second
 
 	loginMailSender         = "login@travelreys.com"
 	welcomEmailTmplFilePath = "assets/welcomeEmail.tmpl.html"
@@ -40,6 +40,14 @@ var (
 type Service interface {
 	Login(ctx context.Context, authCode, signature, provider string) (User, *http.Cookie, error)
 	MagicLink(ctx context.Context, email string) error
+	GenerateOTPAuthCodeAndSig(ctx context.Context, email string, duration time.Duration) (string, string, error)
+
+	EmailLogin(
+		ctx context.Context,
+		authCode,
+		signature string,
+		isLoggedIn bool,
+	) (User, *http.Cookie, error)
 
 	Read(ctx context.Context, ID string) (User, error)
 	List(ctx context.Context, ff ListFilter) (UsersList, error)
@@ -136,11 +144,11 @@ func (svc service) Login(
 	if isNewUser {
 		usr.CreatedAt = time.Now()
 	}
-
 	if err := svc.store.Save(ctx, usr); err != nil {
 		svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
 		return User{}, nil, err
 	}
+
 	jwt, err := svc.issueJwtToken(usr)
 	if err != nil {
 		svc.logger.Error("Login", zap.String("provider", provider), zap.Error(err))
@@ -170,13 +178,32 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 	if err != nil {
 		return err
 	}
-	if err = svc.store.SaveOTP(ctx, email, hashedOTP, otpDuration); err != nil {
+	if err = svc.store.SaveOTP(
+		ctx, email, hashedOTP, magicLinkDuration,
+	); err != nil {
 		return err
 	}
 	go func() {
 		svc.sendMagicLinkEmail(ctx, otp, email)
 	}()
 	return nil
+}
+
+func (svc service) GenerateOTPAuthCodeAndSig(
+	ctx context.Context,
+	email string,
+	duration time.Duration,
+) (string, string, error) {
+	otp, hashedOTP, err := svc.otp.GenerateOTP(6)
+	if err != nil {
+		return "", "", err
+	}
+	if err = svc.store.SaveOTP(ctx, email, hashedOTP, duration); err != nil {
+		return "", "", err
+	}
+
+	sEnc, sha := svc.otp.GenerateAuthCodeAndSig(email, otp)
+	return sEnc, sha, nil
 }
 
 func (svc service) Read(ctx context.Context, ID string) (User, error) {
@@ -290,4 +317,64 @@ func (svc service) sendMagicLinkEmail(
 		svc.logger.Error("sendMagicLinkEmail", zap.Error(err))
 	}
 
+}
+
+// Invite Service
+
+func (svc service) EmailLogin(
+	ctx context.Context,
+	authCode,
+	signature string,
+	isLoggedIn bool,
+) (User, *http.Cookie, error) {
+	usr, err := svc.otp.TokenToUserInfo(ctx, authCode, signature)
+	if err != nil {
+		return User{}, nil, err
+	}
+
+	isNewUser := false
+	existUsr, err := svc.store.Read(
+		ctx,
+		ReadFilter{Email: usr.Email},
+	)
+	if err == ErrUserNotFound {
+		isNewUser = true
+	} else if err != nil {
+		return User{}, nil, err
+	} else {
+		usr = existUsr
+	}
+
+	if isNewUser {
+		usr.CreatedAt = time.Now()
+		if err := svc.store.Save(ctx, usr); err != nil {
+			svc.logger.Error("EmailLogin", zap.Error(err))
+			return User{}, nil, err
+		}
+		go svc.sendWelcomeEmail(ctx, usr.Name, usr.Email)
+	}
+
+	// The request could come from a new that is already
+	// logged in, or a user that is not logged in.
+	var cookie *http.Cookie
+	if !isLoggedIn {
+		jwt, err := svc.issueJwtToken(usr)
+		if err != nil {
+			svc.logger.Error("EmailLogin", zap.Error(err))
+			return User{}, nil, err
+		}
+		cookie := &http.Cookie{
+			Name:     AccessCookieName,
+			Value:    jwt,
+			HttpOnly: true,
+			Path:     "/",
+			MaxAge:   int(authCookieDuration.Seconds()),
+		}
+		if svc.secureCookie {
+			cookie.SameSite = http.SameSiteNoneMode
+			cookie.Secure = true
+		}
+	}
+
+	return usr, cookie, nil
 }

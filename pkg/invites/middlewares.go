@@ -3,6 +3,7 @@ package invites
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
@@ -74,6 +75,51 @@ func (mw *validationMiddleware) ListTripInvites(
 		return nil, common.ErrValidation
 	}
 	return mw.next.ListTripInvites(ctx, ff)
+}
+
+func (mw *validationMiddleware) SendEmailTripInvite(
+	ctx context.Context,
+	tripID,
+	authorID,
+	userEmail string,
+) error {
+	if tripID == "" || authorID == "" || userEmail == "" {
+		return common.ErrValidation
+	}
+	return mw.next.SendEmailTripInvite(ctx, tripID, authorID, userEmail)
+}
+
+func (mw *validationMiddleware) AcceptEmailTripInvite(
+	ctx context.Context,
+	ID,
+	sig,
+	code string,
+	isLoggedIn bool,
+) (*http.Cookie, error) {
+	if ID == "" || sig == "" || code == "" {
+		return nil, common.ErrValidation
+	}
+	return mw.next.AcceptEmailTripInvite(ctx, ID, sig, code, isLoggedIn)
+}
+
+func (mw *validationMiddleware) ReadEmailTripInvite(
+	ctx context.Context,
+	ID string,
+) (EmailTripInvite, error) {
+	if ID == "" {
+		return EmailTripInvite{}, common.ErrValidation
+	}
+	return mw.next.ReadEmailTripInvite(ctx, ID)
+}
+
+func (mw *validationMiddleware) ListEmailTripInvites(
+	ctx context.Context,
+	ff ListEmailTripInvitesFilter,
+) (EmailTripInviteList, error) {
+	if err := ff.Validate(); err != nil {
+		return EmailTripInviteList{}, common.ErrValidation
+	}
+	return mw.next.ListEmailTripInvites(ctx, ff)
 }
 
 type rbacMiddleware struct {
@@ -195,4 +241,47 @@ func (mw *rbacMiddleware) ListTripInvites(
 		return nil, ErrRBAC
 	}
 	return mw.next.ListTripInvites(ctx, ff)
+}
+
+func (mw *rbacMiddleware) SendEmailTripInvite(
+	ctx context.Context,
+	tripID,
+	authorID,
+	userEmail string,
+) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	return mw.next.SendEmailTripInvite(ctx, tripID, authorID, userEmail)
+}
+
+func (mw *rbacMiddleware) AcceptEmailTripInvite(
+	ctx context.Context,
+	ID,
+	sig,
+	code string,
+	isLoggedIn bool,
+) (*http.Cookie, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+	return mw.next.AcceptEmailTripInvite(ctx, ID, sig, code, isLoggedIn)
+}
+
+func (mw *rbacMiddleware) ReadEmailTripInvite(ctx context.Context, ID string) (EmailTripInvite, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return EmailTripInvite{}, ErrRBAC
+	}
+	return mw.next.ReadEmailTripInvite(ctx, ID)
+}
+
+func (mw *rbacMiddleware) ListEmailTripInvites(ctx context.Context, ff ListEmailTripInvitesFilter) (EmailTripInviteList, error) {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return nil, ErrRBAC
+	}
+	return mw.next.ListEmailTripInvites(ctx, ff)
 }

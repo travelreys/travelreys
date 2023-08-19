@@ -52,3 +52,30 @@ func (f ListTripInvitesFilter) toBSON() (bson.M, bool) {
 	}
 	return bsonM, isSet
 }
+
+type ListEmailTripInvitesFilter struct {
+	Email  *string
+	TripID *string
+}
+
+func (f ListEmailTripInvitesFilter) Validate() error {
+	_, ok := f.toBSON()
+	if !ok {
+		return ErrInvalidFilter
+	}
+	return nil
+}
+
+func (f ListEmailTripInvitesFilter) toBSON() (bson.M, bool) {
+	bsonM := bson.M{}
+	isSet := false
+	if f.TripID != nil && *f.TripID != "" {
+		bsonM["tripID"] = f.TripID
+		isSet = true
+	}
+	if f.Email != nil && *f.Email != "" {
+		bsonM["userID"] = f.Email
+		isSet = true
+	}
+	return bsonM, isSet
+}

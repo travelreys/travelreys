@@ -113,7 +113,13 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	// Trips Invite
 	inviteStore := invites.NewStore(ctx, db, logger)
-	inviteSvc := invites.NewService(tripSyncSvc, mailSvc, inviteStore, logger)
+	inviteSvc := invites.NewService(
+		authSvc,
+		tripSyncSvc,
+		mailSvc,
+		inviteStore,
+		logger,
+	)
 	inviteSvc = invites.SvcWithValidationMw(inviteSvc, logger)
 	inviteSvc = invites.SvcWithRBACMw(inviteSvc, tripSvc, authSvc, logger)
 

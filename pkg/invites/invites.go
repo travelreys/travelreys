@@ -3,6 +3,7 @@ package invites
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/travelreys/travelreys/pkg/common"
 )
@@ -50,6 +51,7 @@ type EmailTripInvite struct {
 	TripID     string        `json:"tripID" bson:"tripID"`
 	TripName   string        `json:"tripName" bson:"-"`
 	UserEmail  string        `json:"userEmail" bson:"-"`
+	CreatedAt  time.Time     `json:"createdAt" bson:"createdAt"`
 	Labels     common.Labels `json:"labels" bson:"labels"`
 }
 
@@ -67,5 +69,8 @@ func NewEmailTripInvite(
 		TripID:     tripID,
 		TripName:   tripName,
 		UserEmail:  userEmail,
+		CreatedAt:  time.Now(),
 	}
 }
+
+type EmailTripInviteList []EmailTripInvite

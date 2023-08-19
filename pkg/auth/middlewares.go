@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
@@ -44,6 +45,29 @@ func (mw validationMiddleware) MagicLink(ctx context.Context, email string) erro
 		return ErrProviderOTPInvalidEmail
 	}
 	return mw.next.MagicLink(ctx, email)
+}
+
+func (mw validationMiddleware) GenerateOTPAuthCodeAndSig(
+	ctx context.Context,
+	email string,
+	duration time.Duration,
+) (string, string, error) {
+	if email == "" {
+		return "", "", common.ErrValidation
+	}
+	return mw.next.GenerateOTPAuthCodeAndSig(ctx, email, duration)
+}
+
+func (mw validationMiddleware) EmailLogin(
+	ctx context.Context,
+	authCode,
+	signature string,
+	isLoggedIn bool,
+) (User, *http.Cookie, error) {
+	if authCode == "" || signature == "" {
+		return User{}, nil, nil
+	}
+	return mw.next.EmailLogin(ctx, authCode, signature, isLoggedIn)
 }
 
 func (mw validationMiddleware) Read(ctx context.Context, ID string) (User, error) {
@@ -99,6 +123,23 @@ func (mw rbacMiddleware) Login(ctx context.Context, authCode, signature, provide
 
 func (mw rbacMiddleware) MagicLink(ctx context.Context, email string) error {
 	return mw.next.MagicLink(ctx, email)
+}
+
+func (mw rbacMiddleware) GenerateOTPAuthCodeAndSig(
+	ctx context.Context,
+	email string,
+	duration time.Duration,
+) (string, string, error) {
+	return "", "", nil
+}
+
+func (mw rbacMiddleware) EmailLogin(
+	ctx context.Context,
+	authCode,
+	signature string,
+	isLoggedIn bool,
+) (User, *http.Cookie, error) {
+	return User{}, nil, ErrRBAC
 }
 
 func (mw rbacMiddleware) Read(ctx context.Context, ID string) (User, error) {

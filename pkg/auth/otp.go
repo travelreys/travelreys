@@ -116,10 +116,15 @@ func (prv OTPProvider) ValidateOTP(otp, hashedOTP []byte) error {
 	return nil
 }
 
-func (prv OTPProvider) GenerateMagicLinkEmail(email, otp string) (string, error) {
+func (prv OTPProvider) GenerateAuthCodeAndSig(email, otp string) (string, string) {
 	authCode := fmt.Sprintf("%s|%s", email, otp)
 	sEnc := base64.StdEncoding.EncodeToString([]byte(authCode))
 	sha := prv.GenerateHMAC(sEnc)
+	return sEnc, sha
+}
+
+func (prv OTPProvider) GenerateMagicLinkEmail(email, otp string) (string, error) {
+	sEnc, sha := prv.GenerateAuthCodeAndSig(email, otp)
 	magicLink := fmt.Sprintf("https://www.travelreys.com/magic-link?c=%s&sig=%s", sEnc, sha)
 
 	t, err := template.
