@@ -96,19 +96,36 @@ func (mw *inviteRBACMiddleware) Send(
 		return ErrRBAC
 	}
 
-	if _, err := mw.authSvc.Read(ctx, userID); err != nil {
+	users, err := mw.authSvc.List(ctx, auth.ListFilter{
+		IDs: []string{userID, authorID},
+	})
+	if err != nil {
 		return err
+	}
+	if len(users) != 2 {
+		return ErrInvalidInvite
 	}
 	t, err := mw.tripSvc.Read(ctx, tripID)
 	if err != nil {
 		return err
 	}
-
 	if !common.StringContains(t.GetMemberIDs(), authorID) {
 		return ErrRBAC
 	}
 
-	return mw.next.Send(ctx, tripID, authorID, userID)
+	author := users[0]
+	user := users[1]
+	if users[1].ID == authorID {
+		author = users[1]
+		user = users[0]
+	}
+
+	return mw.next.Send(
+		ContextWithInviteMetaInfo(ctx, &user, &author, t),
+		tripID,
+		authorID,
+		userID,
+	)
 }
 
 func (mw *inviteRBACMiddleware) Read(ctx context.Context, ID string) (Invite, error) {
