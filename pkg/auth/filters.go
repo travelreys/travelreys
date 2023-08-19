@@ -73,8 +73,7 @@ func (ff ListFilter) Validate() error {
 	if ff.Email != nil && !common.EmailRegexp.MatchString(*ff.Email) {
 		return ErrInvalidFilter
 	}
-	f, ok := ff.toBSON()
-	fmt.Println(ok, f)
+	_, ok := ff.toBSON()
 	if !ok {
 		return ErrInvalidFilter
 	}

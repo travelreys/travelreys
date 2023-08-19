@@ -32,6 +32,7 @@ func (mw validationMiddleware) Login(
 	provider string,
 ) (User, *http.Cookie, error) {
 	if provider == "" || authCode == "" {
+		mw.logger.Warn("Login")
 		return User{}, nil, common.ErrValidation
 	}
 	if provider == OIDCProviderOTP && signature == "" {
@@ -42,6 +43,7 @@ func (mw validationMiddleware) Login(
 
 func (mw validationMiddleware) MagicLink(ctx context.Context, email string) error {
 	if !common.IsEmailValid(email) {
+		mw.logger.Warn("MagicLink")
 		return ErrProviderOTPInvalidEmail
 	}
 	return mw.next.MagicLink(ctx, email)
@@ -53,6 +55,7 @@ func (mw validationMiddleware) GenerateOTPAuthCodeAndSig(
 	duration time.Duration,
 ) (string, string, error) {
 	if email == "" {
+		mw.logger.Warn("GenerateOTPAuthCodeAndSig")
 		return "", "", common.ErrValidation
 	}
 	return mw.next.GenerateOTPAuthCodeAndSig(ctx, email, duration)
@@ -65,13 +68,15 @@ func (mw validationMiddleware) EmailLogin(
 	isLoggedIn bool,
 ) (User, *http.Cookie, error) {
 	if authCode == "" || signature == "" {
-		return User{}, nil, nil
+		mw.logger.Warn("EmailLogin")
+		return User{}, nil, common.ErrValidation
 	}
 	return mw.next.EmailLogin(ctx, authCode, signature, isLoggedIn)
 }
 
 func (mw validationMiddleware) Read(ctx context.Context, ID string) (User, error) {
 	if ID == "" {
+		mw.logger.Warn("Read")
 		return User{}, common.ErrValidation
 	}
 	return mw.next.Read(ctx, ID)
@@ -79,6 +84,7 @@ func (mw validationMiddleware) Read(ctx context.Context, ID string) (User, error
 
 func (mw validationMiddleware) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	if err := ff.Validate(); err != nil {
+		mw.logger.Warn("List")
 		return nil, common.ErrValidation
 	}
 	return mw.next.List(ctx, ff)
@@ -86,6 +92,7 @@ func (mw validationMiddleware) List(ctx context.Context, ff ListFilter) (UsersLi
 
 func (mw validationMiddleware) Update(ctx context.Context, ID string, ff UpdateFilter) error {
 	if ID == "" {
+		mw.logger.Warn("Update")
 		return common.ErrValidation
 	}
 	if err := ff.Validate(); err != nil {
@@ -96,6 +103,7 @@ func (mw validationMiddleware) Update(ctx context.Context, ID string, ff UpdateF
 
 func (mw validationMiddleware) Delete(ctx context.Context, ID string) error {
 	if ID == "" {
+		mw.logger.Warn("Delete")
 		return common.ErrValidation
 	}
 	return mw.next.Delete(ctx, ID)
@@ -103,6 +111,7 @@ func (mw validationMiddleware) Delete(ctx context.Context, ID string) error {
 
 func (mw validationMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID, mimeType string) (string, string, error) {
 	if ID == "" || mimeType == "" {
+		mw.logger.Warn("UploadAvatarPresignedURL")
 		return "", "", common.ErrValidation
 	}
 	return mw.next.UploadAvatarPresignedURL(ctx, ID, mimeType)

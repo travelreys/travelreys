@@ -39,6 +39,7 @@ func (mw *validationMiddleware) SendAppInvite(
 	userEmail string,
 ) error {
 	if authorID == "" || userEmail == "" {
+		mw.logger.Warn("SendAppInvite")
 		return common.ErrValidation
 	}
 	return mw.next.SendAppInvite(ctx, authorID, userEmail)
@@ -51,6 +52,7 @@ func (mw *validationMiddleware) AcceptAppInvite(
 	sig string,
 ) (auth.User, *http.Cookie, error) {
 	if ID == "" || code == "" || sig == "" {
+		mw.logger.Warn("AcceptAppInvite")
 		return auth.User{}, nil, common.ErrValidation
 	}
 	return mw.next.AcceptAppInvite(ctx, ID, code, sig)
@@ -65,6 +67,7 @@ func (mw *validationMiddleware) SendTripInvite(
 	userID string,
 ) error {
 	if tripID == "" || authorID == "" || userID == "" {
+		mw.logger.Warn("SendTripInvite")
 		return common.ErrValidation
 	}
 	return mw.next.SendTripInvite(ctx, tripID, authorID, userID)
@@ -72,6 +75,7 @@ func (mw *validationMiddleware) SendTripInvite(
 
 func (mw *validationMiddleware) AcceptTripInvite(ctx context.Context, ID string) error {
 	if ID == "" {
+		mw.logger.Warn("AcceptTripInvite")
 		return common.ErrValidation
 	}
 	return mw.next.AcceptTripInvite(ctx, ID)
@@ -82,6 +86,7 @@ func (mw *validationMiddleware) ReadTripInvite(
 	ID string,
 ) (TripInvite, error) {
 	if ID == "" {
+		mw.logger.Warn("ReadTripInvite")
 		return TripInvite{}, common.ErrValidation
 	}
 	return mw.next.ReadTripInvite(ctx, ID)
@@ -89,6 +94,7 @@ func (mw *validationMiddleware) ReadTripInvite(
 
 func (mw *validationMiddleware) DeclineTripInvite(ctx context.Context, ID string) error {
 	if ID == "" {
+		mw.logger.Warn("DeclineTripInvite")
 		return common.ErrValidation
 	}
 	return mw.next.DeclineTripInvite(ctx, ID)
@@ -99,6 +105,7 @@ func (mw *validationMiddleware) ListTripInvites(
 	ff ListTripInvitesFilter,
 ) (TripInviteList, error) {
 	if err := ff.Validate(); err != nil {
+		mw.logger.Warn("ListTripInvites")
 		return nil, common.ErrValidation
 	}
 	return mw.next.ListTripInvites(ctx, ff)
@@ -113,6 +120,7 @@ func (mw *validationMiddleware) SendEmailTripInvite(
 	userEmail string,
 ) error {
 	if tripID == "" || authorID == "" || userEmail == "" {
+		mw.logger.Warn("SendEmailTripInvite")
 		return common.ErrValidation
 	}
 	return mw.next.SendEmailTripInvite(ctx, tripID, authorID, userEmail)
@@ -126,6 +134,7 @@ func (mw *validationMiddleware) AcceptEmailTripInvite(
 	isLoggedIn bool,
 ) (auth.User, *http.Cookie, error) {
 	if ID == "" || sig == "" || code == "" {
+		mw.logger.Warn("AcceptEmailTripInvite")
 		return auth.User{}, nil, common.ErrValidation
 	}
 	return mw.next.AcceptEmailTripInvite(ctx, ID, sig, code, isLoggedIn)
@@ -136,6 +145,7 @@ func (mw *validationMiddleware) ReadEmailTripInvite(
 	ID string,
 ) (EmailTripInvite, error) {
 	if ID == "" {
+		mw.logger.Warn("ReadEmailTripInvite")
 		return EmailTripInvite{}, common.ErrValidation
 	}
 	return mw.next.ReadEmailTripInvite(ctx, ID)
@@ -146,6 +156,7 @@ func (mw *validationMiddleware) ListEmailTripInvites(
 	ff ListEmailTripInvitesFilter,
 ) (EmailTripInviteList, error) {
 	if err := ff.Validate(); err != nil {
+		mw.logger.Warn("ListEmailTripInvites")
 		return EmailTripInviteList{}, common.ErrValidation
 	}
 	return mw.next.ListEmailTripInvites(ctx, ff)

@@ -232,8 +232,14 @@ func (svc service) ListFollowing(ctx context.Context, userID string) (FriendsLis
 		return nil, err
 	}
 
-	targetIDs := friends.GetTargetIDs()
-	targets, err := svc.authSvc.List(ctx, auth.ListFilter{IDs: targetIDs})
+	if len(friends) == 0 {
+		return FriendsList{}, nil
+	}
+
+	targets, err := svc.authSvc.List(
+		ctx,
+		auth.ListFilter{IDs: friends.GetTargetIDs()},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -261,54 +267,6 @@ func (svc service) AreTheyFriends(ctx context.Context, initiatorID, targetID str
 		return false, err
 	}
 	return true, nil
-}
-
-func (svc service) sendFollowRequestEmail(
-	ctx context.Context,
-	initiator,
-	target auth.User,
-	req FriendRequest,
-) {
-	svc.logger.Info("sending friend req email", zap.String("to", target.Email))
-
-	t, err := template.
-		New(friendReqEmailTmplFileName).
-		ParseFiles(friendReqEmailTmplFilePath)
-	if err != nil {
-		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
-		return
-	}
-
-	var doc bytes.Buffer
-	data := struct {
-		InitiatorID            string
-		InitiatorProfileImgURL string
-		InitiatorName          string
-		ReqID                  string
-	}{
-		initiator.ID,
-		initiator.GetProfileImgURL(),
-		initiator.Username,
-		req.ID,
-	}
-	if err := t.Execute(&doc, data); err != nil {
-		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
-		return
-	}
-
-	mailContentBody := doc.String()
-	mailBody, err := svc.mailSvc.InsertContentOnTemplate(mailContentBody)
-	if err != nil {
-		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
-		return
-	}
-
-	subj := "New Follow Request!"
-	if err := svc.mailSvc.SendMail(
-		ctx, target.Email, defaultLoginSender, subj, mailBody,
-	); err != nil {
-		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
-	}
 }
 
 func (svc *service) ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (*trips.Trip, UserProfile, error) {
@@ -347,21 +305,19 @@ func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) 
 	if err != nil {
 		return trips.TripsList{}, UserProfileMap{}, err
 	}
-	targetIDs := followings.GetTargetIDs()
-	if len(targetIDs) == 0 {
-		return trips.TripsList{}, UserProfileMap{}, err
-	}
-	ff := auth.ListFilter{IDs: targetIDs}
-	targets, err := svc.authSvc.List(ctx, ff)
-	if err != nil {
-		return trips.TripsList{}, UserProfileMap{}, err
-	}
-	profileMap := UserProfileMap{}
-	for _, target := range targets {
-		profileMap[target.ID] = UserProfileFromUser(target)
+	if len(followings) == 0 {
+		return trips.TripsList{}, UserProfileMap{}, nil
 	}
 
-	tripslist, err := svc.tripSvc.List(ctx, trips.ListFilter{UserIDs: targetIDs})
+	profileMap := UserProfileMap{}
+	for _, friend := range followings {
+		profileMap[friend.TargetID] = friend.TargetProfile
+	}
+
+	tripslist, err := svc.tripSvc.List(
+		ctx,
+		trips.ListFilter{UserIDs: followings.GetTargetIDs()},
+	)
 	if err != nil {
 		return trips.TripsList{}, UserProfileMap{}, err
 	}
@@ -369,7 +325,6 @@ func (svc *service) ListFollowingTrips(ctx context.Context, initiatorID string) 
 	for _, t := range tripslist {
 		publicInfo = append(publicInfo, MakeTripPublicInfoWithUserProfiles(t, profileMap))
 	}
-
 	return publicInfo, profileMap, nil
 }
 
@@ -455,4 +410,52 @@ func (svc *service) DuplicateTrip(
 	}
 
 	return newTrip.ID, svc.tripSvc.Save(ctx, newTrip)
+}
+
+func (svc service) sendFollowRequestEmail(
+	ctx context.Context,
+	initiator,
+	target auth.User,
+	req FriendRequest,
+) {
+	svc.logger.Info("sending friend req email", zap.String("to", target.Email))
+
+	t, err := template.
+		New(friendReqEmailTmplFileName).
+		ParseFiles(friendReqEmailTmplFilePath)
+	if err != nil {
+		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
+		return
+	}
+
+	var doc bytes.Buffer
+	data := struct {
+		InitiatorID            string
+		InitiatorProfileImgURL string
+		InitiatorName          string
+		ReqID                  string
+	}{
+		initiator.ID,
+		initiator.GetProfileImgURL(),
+		initiator.Username,
+		req.ID,
+	}
+	if err := t.Execute(&doc, data); err != nil {
+		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
+		return
+	}
+
+	mailContentBody := doc.String()
+	mailBody, err := svc.mailSvc.InsertContentOnTemplate(mailContentBody)
+	if err != nil {
+		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
+		return
+	}
+
+	subj := "New Follow Request!"
+	if err := svc.mailSvc.SendMail(
+		ctx, target.Email, defaultLoginSender, subj, mailBody,
+	); err != nil {
+		svc.logger.Error("sendFollowRequestEmail", zap.Error(err))
+	}
 }
