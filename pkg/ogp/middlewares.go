@@ -6,13 +6,13 @@ import (
 	"net"
 	"net/url"
 
+	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
 	"go.uber.org/zap"
 )
 
 var (
-	ErrValidation = errors.New("ogp.ErrValidation")
-	ErrRBAC       = errors.New("ogp.ErrRBAC")
+	ErrRBAC = errors.New("ogp.ErrRBAC")
 )
 
 type validationMiddleware struct {
@@ -26,20 +26,20 @@ func SvcWithValidation(svc Service, logger *zap.Logger) Service {
 
 func (mw validationMiddleware) Fetch(ctx context.Context, queryURL string) (Opengraph, error) {
 	if queryURL == "" {
-		return Opengraph{}, ErrValidation
+		return Opengraph{}, common.ErrValidation
 	}
 	u, err := url.Parse(queryURL)
 	if err != nil {
-		return Opengraph{}, ErrValidation
+		return Opengraph{}, common.ErrValidation
 	}
 
 	ips, err := net.LookupIP(u.Host)
 	if err != nil {
-		return Opengraph{}, ErrValidation
+		return Opengraph{}, common.ErrValidation
 	}
 	for _, ip := range ips {
 		if ip.IsPrivate() {
-			return Opengraph{}, ErrValidation
+			return Opengraph{}, common.ErrValidation
 		}
 	}
 	return mw.next.Fetch(ctx, queryURL)

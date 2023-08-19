@@ -31,35 +31,35 @@ func (mw *inviteValidationMiddleware) Send(
 	userID string,
 ) error {
 	if tripID == "" || authorID == "" || userID == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	return mw.next.Send(ctx, tripID, authorID, userID)
 }
 
 func (mw *inviteValidationMiddleware) Accept(ctx context.Context, ID string) error {
 	if ID == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	return mw.next.Accept(ctx, ID)
 }
 
 func (mw *inviteValidationMiddleware) Read(ctx context.Context, ID string) (Invite, error) {
 	if ID == "" {
-		return Invite{}, ErrValidation
+		return Invite{}, common.ErrValidation
 	}
 	return mw.next.Read(ctx, ID)
 }
 
 func (mw *inviteValidationMiddleware) Decline(ctx context.Context, ID string) error {
 	if ID == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	return mw.next.Decline(ctx, ID)
 }
 
 func (mw *inviteValidationMiddleware) List(ctx context.Context, ff ListInvitesFilter) (InviteList, error) {
 	if err := ff.Validate(); err != nil {
-		return nil, ErrValidation
+		return nil, common.ErrValidation
 	}
 	return mw.next.List(ctx, ff)
 }

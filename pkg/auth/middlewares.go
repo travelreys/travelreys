@@ -11,8 +11,7 @@ import (
 )
 
 var (
-	ErrValidation = errors.New("auth.ErrValidation")
-	ErrRBAC       = errors.New("auth.ErrRBAC")
+	ErrRBAC = errors.New("auth.ErrRBAC")
 )
 
 // validationMiddleware validates that the input for the service calls are acceptable
@@ -32,10 +31,10 @@ func (mw validationMiddleware) Login(
 	provider string,
 ) (User, *http.Cookie, error) {
 	if provider == "" || authCode == "" {
-		return User{}, nil, ErrValidation
+		return User{}, nil, common.ErrValidation
 	}
 	if provider == OIDCProviderOTP && signature == "" {
-		return User{}, nil, ErrValidation
+		return User{}, nil, common.ErrValidation
 	}
 	return mw.next.Login(ctx, authCode, signature, provider)
 }
@@ -49,38 +48,38 @@ func (mw validationMiddleware) MagicLink(ctx context.Context, email string) erro
 
 func (mw validationMiddleware) Read(ctx context.Context, ID string) (User, error) {
 	if ID == "" {
-		return User{}, ErrValidation
+		return User{}, common.ErrValidation
 	}
 	return mw.next.Read(ctx, ID)
 }
 
 func (mw validationMiddleware) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	if err := ff.Validate(); err != nil {
-		return nil, ErrValidation
+		return nil, common.ErrValidation
 	}
 	return mw.next.List(ctx, ff)
 }
 
 func (mw validationMiddleware) Update(ctx context.Context, ID string, ff UpdateFilter) error {
 	if ID == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	if err := ff.Validate(); err != nil {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	return mw.next.Update(ctx, ID, ff)
 }
 
 func (mw validationMiddleware) Delete(ctx context.Context, ID string) error {
 	if ID == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	return mw.next.Delete(ctx, ID)
 }
 
 func (mw validationMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID, mimeType string) (string, string, error) {
 	if ID == "" || mimeType == "" {
-		return "", "", ErrValidation
+		return "", "", common.ErrValidation
 	}
 	return mw.next.UploadAvatarPresignedURL(ctx, ID, mimeType)
 }

@@ -14,8 +14,7 @@ import (
 )
 
 var (
-	ErrValidation = errors.New("trips.ErrValidation")
-	ErrRBAC       = errors.New("trips.ErrRBAC")
+	ErrRBAC = errors.New("trips.ErrRBAC")
 )
 
 // validationMiddleware validates that the input for the service calls are acceptable
@@ -36,39 +35,39 @@ func (mw validationMiddleware) Create(
 	end time.Time,
 ) (*Trip, error) {
 	if creatorID == "" {
-		return nil, ErrValidation
+		return nil, common.ErrValidation
 	}
 	return mw.next.Create(ctx, creatorID, name, start, end)
 }
 
 func (mw validationMiddleware) Save(ctx context.Context, trip *Trip) error {
-	return ErrValidation
+	return common.ErrValidation
 }
 
 func (mw validationMiddleware) Read(ctx context.Context, ID string) (*Trip, error) {
 	if ID == "" {
-		return nil, ErrValidation
+		return nil, common.ErrValidation
 	}
 	return mw.next.Read(ctx, ID)
 }
 
 func (mw validationMiddleware) ReadOGP(ctx context.Context, ID string) (TripOGP, error) {
 	if ID == "" {
-		return TripOGP{}, ErrValidation
+		return TripOGP{}, common.ErrValidation
 	}
 	return mw.next.ReadOGP(ctx, ID)
 }
 
 func (mw validationMiddleware) ReadMembers(ctx context.Context, ID string) (MembersMap, error) {
 	if ID == "" {
-		return nil, ErrValidation
+		return nil, common.ErrValidation
 	}
 	return mw.next.ReadMembers(ctx, ID)
 }
 
 func (mw validationMiddleware) List(ctx context.Context, ff ListFilter) (TripsList, error) {
 	if err := ff.Validate(); err != nil {
-		return nil, ErrValidation
+		return nil, common.ErrValidation
 	}
 	return mw.next.List(ctx, ff)
 }
@@ -78,21 +77,21 @@ func (mw validationMiddleware) ListWithMembers(
 	ff ListFilter,
 ) (TripsList, auth.UsersMap, error) {
 	if err := ff.Validate(); err != nil {
-		return nil, nil, ErrValidation
+		return nil, nil, common.ErrValidation
 	}
 	return mw.next.ListWithMembers(ctx, ff)
 }
 
 func (mw validationMiddleware) Delete(ctx context.Context, ID string) error {
 	if ID == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	return mw.next.Delete(ctx, ID)
 }
 
 func (mw validationMiddleware) DeleteAttachment(ctx context.Context, ID string, obj storage.Object) error {
 	if ID == "" || obj.Path == "" || obj.Name == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	return mw.next.DeleteAttachment(ctx, ID, obj)
 }
@@ -104,7 +103,7 @@ func (mw validationMiddleware) DownloadAttachmentPresignedURL(
 	filename string,
 ) (string, error) {
 	if ID == "" || path == "" || filename == "" {
-		return "", ErrValidation
+		return "", common.ErrValidation
 	}
 	return mw.next.DownloadAttachmentPresignedURL(ctx, ID, path, filename)
 }
@@ -116,7 +115,7 @@ func (mw validationMiddleware) UploadAttachmentPresignedURL(
 	fileType string,
 ) (string, error) {
 	if ID == "" || filename == "" {
-		return "", ErrValidation
+		return "", common.ErrValidation
 	}
 	return mw.next.UploadAttachmentPresignedURL(ctx, ID, filename, fileType)
 }
@@ -128,11 +127,11 @@ func (mw validationMiddleware) GenerateMediaItems(
 	params []media.NewMediaItemParams,
 ) (media.MediaItemList, media.MediaPresignedUrlList, error) {
 	if ID == "" || userID == "" {
-		return nil, nil, ErrValidation
+		return nil, nil, common.ErrValidation
 	}
 	for _, p := range params {
 		if p.Name == "" {
-			return nil, nil, ErrValidation
+			return nil, nil, common.ErrValidation
 		}
 	}
 	return mw.next.GenerateMediaItems(ctx, ID, userID, params)
@@ -140,11 +139,11 @@ func (mw validationMiddleware) GenerateMediaItems(
 
 func (mw validationMiddleware) SaveMediaItems(ctx context.Context, ID string, items media.MediaItemList) error {
 	if ID == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	for _, item := range items {
 		if item.Name == "" || item.Path == "" {
-			return ErrValidation
+			return common.ErrValidation
 		}
 	}
 	return mw.next.SaveMediaItems(ctx, ID, items)
@@ -156,11 +155,11 @@ func (mw validationMiddleware) DeleteMediaItems(
 	items media.MediaItemList,
 ) error {
 	if ID == "" {
-		return ErrValidation
+		return common.ErrValidation
 	}
 	for _, item := range items {
 		if item.Name == "" || item.Path == "" {
-			return ErrValidation
+			return common.ErrValidation
 		}
 	}
 	return mw.next.DeleteMediaItems(ctx, ID, items)
@@ -172,11 +171,11 @@ func (mw validationMiddleware) GenerateGetSignedURLs(
 	items media.MediaItemList,
 ) (media.MediaPresignedUrlList, error) {
 	if ID == "" {
-		return nil, ErrValidation
+		return nil, common.ErrValidation
 	}
 	for _, item := range items {
 		if item.Name == "" || item.Path == "" {
-			return nil, ErrValidation
+			return nil, common.ErrValidation
 		}
 	}
 	return mw.next.GenerateGetSignedURLs(ctx, ID, items)

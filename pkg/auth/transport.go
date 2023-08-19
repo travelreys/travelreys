@@ -42,7 +42,7 @@ func errToHttpCode(err error) int {
 	if errors.Is(err, ErrRBAC) {
 		return http.StatusUnauthorized
 	}
-	if errors.Is(err, ErrValidation) {
+	if errors.Is(err, common.ErrValidation) {
 		return http.StatusBadRequest
 	}
 
