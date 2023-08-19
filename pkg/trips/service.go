@@ -23,13 +23,11 @@ var (
 type Service interface {
 	Create(ctx context.Context, creatorID, name string, start, end time.Time) (*Trip, error)
 	Save(ctx context.Context, trip *Trip) error
-
 	Read(ctx context.Context, ID string) (*Trip, error)
 	ReadOGP(ctx context.Context, ID string) (TripOGP, error)
 	ReadMembers(ctx context.Context, ID string) (MembersMap, error)
 	List(ctx context.Context, ff ListFilter) (TripsList, error)
 	ListWithMembers(ctx context.Context, ff ListFilter) (TripsList, auth.UsersMap, error)
-
 	Delete(ctx context.Context, ID string) error
 
 	// Attachments
@@ -179,6 +177,10 @@ func (svc *service) ListWithMembers(
 	trips, err := svc.List(ctx, ff)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if len(trips) == 0 {
+		return TripsList{}, auth.UsersMap{}, nil
 	}
 
 	usersID := []string{}

@@ -34,26 +34,26 @@ type Store interface {
 }
 
 type store struct {
-	db        *mongo.Database
-	tripsColl *mongo.Collection
+	db   *mongo.Database
+	coll *mongo.Collection
 
 	logger *zap.Logger
 }
 
 func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store {
-	tripsColl := db.Collection(mongoCollTrips)
-	tripsColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	coll := db.Collection(mongoCollTrips)
+	coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{bsonKeyID: 1}},
 		{Keys: bson.M{bsonKeyCreatorId: 1}},
 		{Keys: bson.M{"membersId.$**": 1}},
 	})
-	return &store{db, tripsColl, logger.Named(storeLoggerName)}
+	return &store{db, coll, logger.Named(storeLoggerName)}
 }
 
 func (s *store) Save(ctx context.Context, trip *Trip) error {
 	saveFF := bson.M{bsonKeyID: trip.ID}
 	opts := options.Replace().SetUpsert(true)
-	_, err := s.tripsColl.ReplaceOne(ctx, saveFF, trip, opts)
+	_, err := s.coll.ReplaceOne(ctx, saveFF, trip, opts)
 	if err != nil {
 		s.logger.Error("Save", zap.Error(err))
 		return ErrUnexpectedStoreError
@@ -63,7 +63,7 @@ func (s *store) Save(ctx context.Context, trip *Trip) error {
 
 func (s *store) Read(ctx context.Context, ID string) (*Trip, error) {
 	var trip Trip
-	err := s.tripsColl.FindOne(ctx, bson.M{bsonKeyID: ID}).Decode(&trip)
+	err := s.coll.FindOne(ctx, bson.M{bsonKeyID: ID}).Decode(&trip)
 	if err == mongo.ErrNoDocuments {
 		return nil, ErrTripNotFound
 	}
@@ -82,7 +82,7 @@ func (s *store) List(ctx context.Context, ff ListFilter) (TripsList, error) {
 	}
 
 	opts := options.Find().SetSort(bson.M{"startDate": -1})
-	cursor, err := s.tripsColl.Find(ctx, bsonM, opts)
+	cursor, err := s.coll.Find(ctx, bsonM, opts)
 	if err != nil {
 		s.logger.Error(
 			"List",
@@ -96,7 +96,7 @@ func (s *store) List(ctx context.Context, ff ListFilter) (TripsList, error) {
 }
 
 func (s *store) Delete(ctx context.Context, ID string) error {
-	_, err := s.tripsColl.DeleteOne(ctx, bson.M{ID: ID})
+	_, err := s.coll.DeleteOne(ctx, bson.M{ID: ID})
 	if err != nil {
 		s.logger.Error("Delete", zap.String("id", ID), zap.Error(err))
 		return ErrUnexpectedStoreError

@@ -1,0 +1,19 @@
+<div style="margin-top: 1rem; margin-bottom: 4rem;">
+  <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 1rem;">
+    <img style="width:100%;" height="400"
+      src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzOTc1ODV8MHwxfHNlYXJjaHwzfHx0cmF2ZWx8ZW58MHwwfHx8MTY4ODc0MDUxNnww&ixlib=rb-4.0.3&q=80&w=1080" />
+  </div>
+  <p style="text-align: center; margin-bottom: 1rem; font-size: 1rem; font-weight: 600;">
+    {{ .AuthorName }}
+  </p>
+  <p style="text-align: center; margin-bottom: 1rem;">
+    is inviting you to join {{ .TripName }} on Travelreys.
+  </p>
+  <div style="text-align: center; margin-top: 1.5rem;">
+    <a style="display:inline-block; background-color: rgb(124, 58, 237); padding: 0.5rem 1.5rem; border-radius: 9999px; text-decoration: none; color:white; font-size: 1rem; font-weight: 500;"
+      target="_blank" rel='noreferrer' href="https://www.travelreys.com/trip-invites/{{ .ID }}/accept"
+      referrerpolicy="no-referrer">
+      Accept
+    </a>
+  </div>
+</div>

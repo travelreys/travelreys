@@ -27,7 +27,7 @@ func NewPlacesAutocompleteEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(PlacesAutocompleteRequest)
 		if !ok {
 			return PlacesAutocompleteResponse{
-				Err: common.ErrorEndpointReqMismatch,
+				Err: common.ErrEndpointReqMismatch,
 			}, nil
 		}
 		preds, err := svc.PlacesAutocomplete(ctx, req.Query, req.Types, req.Sessiontoken, req.Lang)
@@ -56,7 +56,7 @@ func NewPlaceDetailsEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(PlaceDetailsRequest)
 		if !ok {
 			return PlaceDetailsResponse{
-				Err: common.ErrorEndpointReqMismatch,
+				Err: common.ErrEndpointReqMismatch,
 			}, nil
 		}
 		place, err := svc.PlaceDetails(ctx, req.PlaceID, req.Fields, req.Sessiontoken, req.Lang)
@@ -85,7 +85,7 @@ func NewPlaceAtmosphereEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(PlaceAtmosphereRequest)
 		if !ok {
 			return PlaceAtmosphereResponse{
-				Err: common.ErrorEndpointReqMismatch,
+				Err: common.ErrEndpointReqMismatch,
 			}, nil
 		}
 		place, err := svc.PlaceAtmosphere(ctx, req.PlaceID, req.Fields, req.Sessiontoken, req.Lang)
@@ -113,7 +113,7 @@ func NewDirectionsEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(DirectionsRequest)
 		if !ok {
 			return DirectionsResponse{
-				Err: common.ErrorEndpointReqMismatch,
+				Err: common.ErrEndpointReqMismatch,
 			}, nil
 		}
 		routeList, err := svc.Directions(ctx, req.OriginPlaceID, req.DestPlaceID, req.Modes)

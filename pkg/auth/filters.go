@@ -52,6 +52,10 @@ func (ff *UpdateFilter) Validate() error {
 	if ff.Username != nil && !IsValidUsername(*ff.Username) {
 		return ErrInvalidFilter
 	}
+	_, ok := ff.toBSON()
+	if !ok {
+		return ErrInvalidFilter
+	}
 	return nil
 }
 
@@ -67,6 +71,11 @@ func (ff ListFilter) Validate() error {
 		return ErrInvalidFilter
 	}
 	if ff.Email != nil && !common.EmailRegexp.MatchString(*ff.Email) {
+		return ErrInvalidFilter
+	}
+	f, ok := ff.toBSON()
+	fmt.Println(ok, f)
+	if !ok {
 		return ErrInvalidFilter
 	}
 	return nil

@@ -24,7 +24,7 @@ func NewFetchEndpoint(svc Service) endpoint.Endpoint {
 		req, ok := epReq.(FetchRequest)
 		if !ok {
 			return FetchResponse{
-				Err: common.ErrorEndpointReqMismatch}, nil
+				Err: common.ErrEndpointReqMismatch}, nil
 		}
 		g, err := svc.Fetch(ctx, req.Url)
 		return FetchResponse{Graph: g, Err: err}, nil

@@ -186,6 +186,9 @@ func (svc service) ListFriendRequests(ctx context.Context, ff ListFriendRequests
 	if err != nil {
 		return nil, err
 	}
+	if len(reqs) == 0 {
+		return FriendRequestList{}, nil
+	}
 
 	initiatorIDs := reqs.GetInitiatorIDs()
 	users, err := svc.authSvc.List(ctx, auth.ListFilter{IDs: initiatorIDs})

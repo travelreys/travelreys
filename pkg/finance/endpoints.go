@@ -24,7 +24,7 @@ func NewGetFxRatesEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(GetFxRatesRequest)
 		if !ok {
-			return GetFxRatesResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return GetFxRatesResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		rates, err := svc.GetFxRates(ctx, req.Base)
 		return GetFxRatesResponse{Rates: rates, Err: err}, nil

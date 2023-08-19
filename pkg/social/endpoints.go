@@ -26,7 +26,7 @@ func NewGetProfileRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(GetProfileRequest)
 		if !ok {
-			return GetProfileResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return GetProfileResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		profile, err := svc.GetProfile(ctx, req.ID)
 		return GetProfileResponse{Profile: profile, Err: err}, nil
@@ -49,7 +49,7 @@ func NewSendFriendRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(SendFriendRequestRequest)
 		if !ok {
-			return SendFriendRequestResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return SendFriendRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.SendFriendRequest(ctx, req.InitiatorID, req.TargetID)
 		return SendFriendRequestResponse{Err: err}, nil
@@ -72,7 +72,7 @@ func NewAcceptFriendRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(AcceptFriendRequestRequest)
 		if !ok {
-			return AcceptFriendRequestResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return AcceptFriendRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.AcceptFriendRequest(ctx, req.UserID, req.RequestID)
 		return AcceptFriendRequestResponse{Err: err}, nil
@@ -95,7 +95,7 @@ func NewDeleteFriendRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(DeleteFriendRequestRequest)
 		if !ok {
-			return DeleteFriendRequestResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return DeleteFriendRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.DeleteFriendRequest(ctx, req.UserID, req.RequestID)
 		return DeleteFriendRequestResponse{Err: err}, nil
@@ -118,7 +118,7 @@ func NewListFriendRequestsRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListFriendRequestsRequest)
 		if !ok {
-			return ListFriendRequestsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ListFriendRequestsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		reqs, err := svc.ListFriendRequests(ctx, req.ListFriendRequestsFilter)
 		return ListFriendRequestsResponse{Requests: reqs, Err: err}, nil
@@ -143,7 +143,7 @@ func NewAreTheyFriendsResponseEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(AreTheyFriendsRequest)
 		if !ok {
-			return ListFriendRequestsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ListFriendRequestsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		ok, err := svc.AreTheyFriends(ctx, req.InitiatorID, req.TargetID)
 		return AreTheyFriendsResponse{OK: ok, Err: err}, nil
@@ -166,7 +166,7 @@ func NewListFollowersRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListFriendsRequest)
 		if !ok {
-			return ListFriendsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ListFriendsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		friends, err := svc.ListFollowers(ctx, req.UserID)
 		return ListFriendsResponse{Friends: friends, Err: err}, nil
@@ -177,7 +177,7 @@ func NewListFollowingRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListFriendsRequest)
 		if !ok {
-			return ListFriendsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ListFriendsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		friends, err := svc.ListFollowing(ctx, req.UserID)
 		return ListFriendsResponse{Friends: friends, Err: err}, nil
@@ -200,7 +200,7 @@ func NewDeleteFriendEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(DeleteFriendRequest)
 		if !ok {
-			return DeleteFriendResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return DeleteFriendResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		err := svc.DeleteFriend(ctx, req.UserID, req.BindingKey)
 		return DeleteFriendResponse{Err: err}, nil
@@ -225,7 +225,7 @@ func NewReadTripPublicInfoEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ReadRequest)
 		if !ok {
-			return ReadResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ReadResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		trip, profile, err := svc.ReadTripPublicInfo(ctx, req.TripID, req.ReferrerID)
 		return ReadResponse{Trip: trip, UserProfile: profile, Err: err}, nil
@@ -248,7 +248,7 @@ func NewListTripPublicInfoEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListRequest)
 		if !ok {
-			return ListResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ListResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		tripslist, err := svc.ListTripPublicInfo(ctx, req.ListFilter)
 		return ListResponse{Trips: tripslist, Err: err}, nil
@@ -273,7 +273,7 @@ func NewListFollowingTripsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(ListFollowingTripsRequest)
 		if !ok {
-			return ListFollowingTripsResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return ListFollowingTripsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		tripslist, profiles, err := svc.ListFollowingTrips(ctx, req.InitiatorID)
 		return ListFollowingTripsResponse{Trips: tripslist, UserProfileMap: profiles, Err: err}, nil
@@ -299,7 +299,7 @@ func NewDuplicateTripEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
 		req, ok := epReq.(DuplicateRequest)
 		if !ok {
-			return DuplicateResponse{Err: common.ErrorEndpointReqMismatch}, nil
+			return DuplicateResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
 		id, err := svc.DuplicateTrip(
 			ctx, "", req.ReferrerID, req.TripID, req.Name, req.StartDate,
