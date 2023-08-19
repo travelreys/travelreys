@@ -179,6 +179,10 @@ func (svc *service) ListWithMembers(
 		return nil, nil, err
 	}
 
+	if len(trips) == 0 {
+		return TripsList{}, auth.UsersMap{}, nil
+	}
+
 	usersID := []string{}
 	for _, t := range trips {
 		usersID = append(usersID, t.GetMemberIDs()...)
