@@ -26,19 +26,23 @@ func SvcWithValidation(svc Service, logger *zap.Logger) Service {
 
 func (mw validationMiddleware) Fetch(ctx context.Context, queryURL string) (Opengraph, error) {
 	if queryURL == "" {
+		mw.logger.Warn("Fetch")
 		return Opengraph{}, common.ErrValidation
 	}
 	u, err := url.Parse(queryURL)
 	if err != nil {
+		mw.logger.Warn("Fetch")
 		return Opengraph{}, common.ErrValidation
 	}
 
 	ips, err := net.LookupIP(u.Host)
 	if err != nil {
+		mw.logger.Warn("Fetch")
 		return Opengraph{}, common.ErrValidation
 	}
 	for _, ip := range ips {
 		if ip.IsPrivate() {
+			mw.logger.Warn("Fetch")
 			return Opengraph{}, common.ErrValidation
 		}
 	}

@@ -1,27 +1,33 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"math"
 	"math/big"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/common"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
 	EnvOTPSecret = "TRAVELREYS_OTP_SECRET"
+
+	magicLinkTmplFilePath = "assets/magicLinkEmail.tmpl.html"
+	magicLinkTmplFileName = "magicLinkEmail.tmpl.html"
 )
 
 var (
@@ -32,9 +38,6 @@ var (
 	ErrProviderOTPInvalidEmail  = errors.New("auth.ErrProviderOTPInvalidEmail")
 	ErrProviderOTPInvalidPw     = errors.New("auth.ErrProviderOTPInvalidPw")
 	ErrProviderOTPInvalidSig    = errors.New("auth.ErrProviderOTPInvalidSig")
-
-	defaultOTPPeriod = 60
-	b32NoPadding     = base32.StdEncoding.WithPadding(base32.NoPadding)
 )
 
 type OTPProvider struct {
@@ -77,16 +80,16 @@ func (prv OTPProvider) TokenToUserInfo(ctx context.Context, code, sig string) (U
 	if err != nil {
 		return User{}, err
 	}
-	usr, err := prv.store.Read(ctx, ReadFilter{Email: email})
-	if err != nil {
-		return User{}, ErrProviderOTPEmailNotFound
-	}
 
-	hashedPw, err := prv.store.GetOTP(ctx, usr.ID)
+	hashedPw, err := prv.store.GetOTP(ctx, email)
+	if err != nil {
+		return User{}, ErrProviderOTPNotSet
+	}
 	if err := prv.ValidateOTP([]byte(pw), []byte(hashedPw)); err != nil {
 		return User{}, err
 	}
-	return usr, nil
+
+	return prv.createUser(ctx, email)
 }
 
 func (prv OTPProvider) GenerateOTP(maxDigits uint32) (string, string, error) {
@@ -113,25 +116,53 @@ func (prv OTPProvider) ValidateOTP(otp, hashedOTP []byte) error {
 	return nil
 }
 
-func (prv OTPProvider) GenerateMagicLinkEmail(usr User, otp string) (string, error) {
-	authCode := fmt.Sprintf("%s|%s", usr.Email, otp)
+func (prv OTPProvider) GenerateAuthCodeAndSig(email, otp string) (string, string) {
+	authCode := fmt.Sprintf("%s|%s", email, otp)
 	sEnc := base64.StdEncoding.EncodeToString([]byte(authCode))
 	sha := prv.GenerateHMAC(sEnc)
+	return sEnc, sha
+}
 
+func (prv OTPProvider) GenerateMagicLinkEmail(email, otp string) (string, error) {
+	sEnc, sha := prv.GenerateAuthCodeAndSig(email, otp)
 	magicLink := fmt.Sprintf("https://www.travelreys.com/magic-link?c=%s&sig=%s", sEnc, sha)
-	bodyTmpl := `
-	<div>
-	<p>Welcome to travelreys. Click on the following magic link to login.</p>
-	<br />
-	<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>
-	</div>
-	`
-	body := fmt.Sprintf(bodyTmpl, magicLink, magicLink)
-	return body, nil
+
+	t, err := template.
+		New(magicLinkTmplFileName).
+		ParseFiles(magicLinkTmplFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	var doc bytes.Buffer
+	data := struct {
+		MagicLink string
+	}{magicLink}
+	if err := t.Execute(&doc, data); err != nil {
+		return "", err
+	}
+
+	return doc.String(), nil
 }
 
 func (prv OTPProvider) GenerateHMAC(code string) string {
 	h := hmac.New(sha256.New, []byte(prv.secret))
 	h.Write([]byte(code))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func (prv OTPProvider) createUser(ctx context.Context, email string) (User, error) {
+	newusr := User{
+		ID:          uuid.NewString(),
+		Email:       email,
+		Name:        email,
+		Username:    RandomUsernameGenerator(),
+		CreatedAt:   time.Now(),
+		PhoneNumber: PhoneNumber{},
+		Labels: common.Labels{
+			LabelAvatarImage:   "https://cdn.travelreys.com/travelreys-public-demo/avatar/account.png",
+			LabelDefaultLocale: "en",
+		},
+	}
+	return newusr, nil
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/travelreys/travelreys/pkg/email"
 	"github.com/travelreys/travelreys/pkg/finance"
 	"github.com/travelreys/travelreys/pkg/images"
+	"github.com/travelreys/travelreys/pkg/invites"
 	"github.com/travelreys/travelreys/pkg/maps"
 	"github.com/travelreys/travelreys/pkg/media"
 	"github.com/travelreys/travelreys/pkg/ogp"
@@ -111,10 +112,16 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	wsSvr := trips.NewWebsocketServer(tripSyncSvc, logger)
 
 	// Trips Invite
-	tripInviteStore := trips.NewInviteStore(ctx, db, logger)
-	tripInviteSvc := trips.NewInviteService(tripSyncSvc, mailSvc, tripInviteStore, logger)
-	tripInviteSvc = trips.InviteSvcWithValidationMw(tripInviteSvc, logger)
-	tripInviteSvc = trips.InviteSvcWithRBACMw(tripInviteSvc, tripSvc, authSvc, logger)
+	inviteStore := invites.NewStore(ctx, db, logger)
+	inviteSvc := invites.NewService(
+		authSvc,
+		tripSyncSvc,
+		mailSvc,
+		inviteStore,
+		logger,
+	)
+	inviteSvc = invites.SvcWithValidationMw(inviteSvc, logger)
+	inviteSvc = invites.SvcWithRBACMw(inviteSvc, tripSvc, authSvc, logger)
 
 	// Social
 	socialStore := social.NewStore(ctx, db, logger)
@@ -143,7 +150,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
 	r.PathPrefix("/api/v1/social").Handler(social.MakeHandler(socialSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvcWithRBAC))
-	r.PathPrefix("/api/v1/trip-invites").Handler(trips.MakeInviteHandler(tripInviteSvc))
+	r.PathPrefix("/api/v1/trip-invites").Handler(invites.MakeHandler(inviteSvc))
 
 	return &http.Server{
 		Handler: r,

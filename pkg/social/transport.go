@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -44,6 +45,9 @@ func errToHttpCode() func(err error) int {
 		}
 		if common.ErrorContains(authErrors, err) {
 			return http.StatusUnauthorized
+		}
+		if errors.Is(err, common.ErrValidation) {
+			return http.StatusBadRequest
 		}
 		return http.StatusInternalServerError
 	}

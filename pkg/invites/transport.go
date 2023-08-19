@@ -1,8 +1,10 @@
-package trips
+package invites
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -11,7 +13,45 @@ import (
 	"github.com/travelreys/travelreys/pkg/reqctx"
 )
 
-func MakeInviteHandler(svc InviteService) http.Handler {
+const (
+	URLPathVarID = "id"
+)
+
+func errToHttpCode(err error) int {
+	notFoundErrors := []error{ErrInviteNotFound}
+	appErrors := []error{ErrUnexpectedStoreError}
+
+	if common.ErrorContains(notFoundErrors, err) {
+		return http.StatusNotFound
+	}
+	if common.ErrorContains(appErrors, err) {
+		return http.StatusUnprocessableEntity
+	}
+	if errors.Is(err, ErrRBAC) {
+		return http.StatusUnauthorized
+	}
+	if errors.Is(err, common.ErrValidation) {
+		return http.StatusBadRequest
+	}
+	return http.StatusInternalServerError
+}
+
+func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
+		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Encoding", "gzip")
+
+	gw := gzip.NewWriter(w)
+	defer gw.Close()
+
+	return json.NewEncoder(gw).Encode(response)
+}
+
+func MakeHandler(svc Service) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
@@ -20,22 +60,22 @@ func MakeInviteHandler(svc InviteService) http.Handler {
 	}
 
 	sendHandler := kithttp.NewServer(
-		NewSendEndpoint(svc),
+		NewSendTripInviteEndpoint(svc),
 		decodeSendRequest,
 		encodeResponse, opts...,
 	)
 	listHandler := kithttp.NewServer(
-		NewListInvitesEndpoint(svc),
+		NewListTripInvitesEndpoint(svc),
 		decodeListInvitesRequest,
 		encodeResponse, opts...,
 	)
 	acceptHandler := kithttp.NewServer(
-		NewAcceptEndpoint(svc),
+		NewAcceptTripInviteEndpoint(svc),
 		decodeAcceptInviteRequest,
 		encodeResponse, opts...,
 	)
 	declineHandler := kithttp.NewServer(
-		NewDeclineEndpoint(svc),
+		NewDeclineTripInviteEndpoint(svc),
 		decodeDeclineInviteRequest,
 		encodeResponse, opts...,
 	)
@@ -49,7 +89,7 @@ func MakeInviteHandler(svc InviteService) http.Handler {
 }
 
 func decodeSendRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	req := SendInviteRequest{}
+	req := SendTripInviteRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
 	}
@@ -57,9 +97,9 @@ func decodeSendRequest(_ context.Context, r *http.Request) (interface{}, error) 
 }
 
 func decodeListInvitesRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	req := ListInvitesRequest{}
-	ff := MakeListInvitesFilterFromURLParams(r.URL.Query())
-	req.ListInvitesFilter = ff
+	req := ListTripInvitesRequest{}
+	ff := MakeListTripInvitesFilterFromURLParams(r.URL.Query())
+	req.ListTripInvitesFilter = ff
 	return req, nil
 }
 
@@ -69,7 +109,7 @@ func decodeDeclineInviteRequest(_ context.Context, r *http.Request) (interface{}
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	return DeclineInviteRequest{ID}, nil
+	return DeclineTripInviteRequest{ID}, nil
 }
 
 func decodeAcceptInviteRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -78,5 +118,5 @@ func decodeAcceptInviteRequest(_ context.Context, r *http.Request) (interface{},
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	return AcceptInviteRequest{ID}, nil
+	return AcceptTripInviteRequest{ID}, nil
 }

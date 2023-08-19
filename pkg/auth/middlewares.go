@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/travelreys/travelreys/pkg/common"
 	"github.com/travelreys/travelreys/pkg/reqctx"
@@ -31,6 +32,7 @@ func (mw validationMiddleware) Login(
 	provider string,
 ) (User, *http.Cookie, error) {
 	if provider == "" || authCode == "" {
+		mw.logger.Warn("Login")
 		return User{}, nil, common.ErrValidation
 	}
 	if provider == OIDCProviderOTP && signature == "" {
@@ -41,13 +43,40 @@ func (mw validationMiddleware) Login(
 
 func (mw validationMiddleware) MagicLink(ctx context.Context, email string) error {
 	if !common.IsEmailValid(email) {
+		mw.logger.Warn("MagicLink")
 		return ErrProviderOTPInvalidEmail
 	}
 	return mw.next.MagicLink(ctx, email)
 }
 
+func (mw validationMiddleware) GenerateOTPAuthCodeAndSig(
+	ctx context.Context,
+	email string,
+	duration time.Duration,
+) (string, string, error) {
+	if email == "" {
+		mw.logger.Warn("GenerateOTPAuthCodeAndSig")
+		return "", "", common.ErrValidation
+	}
+	return mw.next.GenerateOTPAuthCodeAndSig(ctx, email, duration)
+}
+
+func (mw validationMiddleware) EmailLogin(
+	ctx context.Context,
+	authCode,
+	signature string,
+	isLoggedIn bool,
+) (User, *http.Cookie, error) {
+	if authCode == "" || signature == "" {
+		mw.logger.Warn("EmailLogin")
+		return User{}, nil, common.ErrValidation
+	}
+	return mw.next.EmailLogin(ctx, authCode, signature, isLoggedIn)
+}
+
 func (mw validationMiddleware) Read(ctx context.Context, ID string) (User, error) {
 	if ID == "" {
+		mw.logger.Warn("Read")
 		return User{}, common.ErrValidation
 	}
 	return mw.next.Read(ctx, ID)
@@ -55,6 +84,7 @@ func (mw validationMiddleware) Read(ctx context.Context, ID string) (User, error
 
 func (mw validationMiddleware) List(ctx context.Context, ff ListFilter) (UsersList, error) {
 	if err := ff.Validate(); err != nil {
+		mw.logger.Warn("List")
 		return nil, common.ErrValidation
 	}
 	return mw.next.List(ctx, ff)
@@ -62,6 +92,7 @@ func (mw validationMiddleware) List(ctx context.Context, ff ListFilter) (UsersLi
 
 func (mw validationMiddleware) Update(ctx context.Context, ID string, ff UpdateFilter) error {
 	if ID == "" {
+		mw.logger.Warn("Update")
 		return common.ErrValidation
 	}
 	if err := ff.Validate(); err != nil {
@@ -72,6 +103,7 @@ func (mw validationMiddleware) Update(ctx context.Context, ID string, ff UpdateF
 
 func (mw validationMiddleware) Delete(ctx context.Context, ID string) error {
 	if ID == "" {
+		mw.logger.Warn("Delete")
 		return common.ErrValidation
 	}
 	return mw.next.Delete(ctx, ID)
@@ -79,6 +111,7 @@ func (mw validationMiddleware) Delete(ctx context.Context, ID string) error {
 
 func (mw validationMiddleware) UploadAvatarPresignedURL(ctx context.Context, ID, mimeType string) (string, string, error) {
 	if ID == "" || mimeType == "" {
+		mw.logger.Warn("UploadAvatarPresignedURL")
 		return "", "", common.ErrValidation
 	}
 	return mw.next.UploadAvatarPresignedURL(ctx, ID, mimeType)
@@ -99,6 +132,23 @@ func (mw rbacMiddleware) Login(ctx context.Context, authCode, signature, provide
 
 func (mw rbacMiddleware) MagicLink(ctx context.Context, email string) error {
 	return mw.next.MagicLink(ctx, email)
+}
+
+func (mw rbacMiddleware) GenerateOTPAuthCodeAndSig(
+	ctx context.Context,
+	email string,
+	duration time.Duration,
+) (string, string, error) {
+	return "", "", nil
+}
+
+func (mw rbacMiddleware) EmailLogin(
+	ctx context.Context,
+	authCode,
+	signature string,
+	isLoggedIn bool,
+) (User, *http.Cookie, error) {
+	return User{}, nil, ErrRBAC
 }
 
 func (mw rbacMiddleware) Read(ctx context.Context, ID string) (User, error) {

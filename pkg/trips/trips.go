@@ -199,6 +199,7 @@ func NewMember(id, role string) Member {
 
 func (mem *Member) augmentMemberWithUser(user auth.User) {
 	mem.Labels[LabelMemberProfileImg] = user.GetProfileImgURL()
+	mem.Labels[LabelMemberUsername] = user.Username
 }
 
 func (t Trip) GetMemberIDs() []string {
