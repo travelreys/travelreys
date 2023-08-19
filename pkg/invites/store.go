@@ -12,6 +12,7 @@ import (
 
 const (
 	bsonKeyID            = "id"
+	CollAppInvites       = "app_invites"
 	CollTripInvites      = "trip_invites"
 	CollEmailTripInvites = "email_trip_invites"
 )
@@ -22,6 +23,10 @@ var (
 )
 
 type Store interface {
+	SaveAppInvite(ctx context.Context, inv AppInvite) error
+	DeleteAppInvite(ctx context.Context, ID string) error
+	ReadAppInvite(ctx context.Context, ID string) (AppInvite, error)
+
 	ListTripInvites(ctx context.Context, ff ListTripInvitesFilter) (TripInviteList, error)
 	ReadTripInvite(ctx context.Context, ID string) (TripInvite, error)
 	SaveTripInvite(ctx context.Context, invite TripInvite) error
@@ -35,6 +40,7 @@ type Store interface {
 
 type store struct {
 	db                  *mongo.Database
+	appInviteColl       *mongo.Collection
 	tripInviteColl      *mongo.Collection
 	emailTripInviteColl *mongo.Collection
 
@@ -46,6 +52,17 @@ func NewStore(
 	db *mongo.Database,
 	logger *zap.Logger,
 ) Store {
+	appInviteColl := db.Collection(CollAppInvites)
+	appInviteColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.M{bsonKeyID: 1}},
+		{
+			Keys: bson.M{"createdAt": 1},
+			Options: options.Index().SetExpireAfterSeconds(
+				int32(emailInviteDuration.Seconds()),
+			),
+		},
+	})
+
 	tripInviteColl := db.Collection(CollTripInvites)
 	tripInviteColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{bsonKeyID: 1}},
@@ -57,7 +74,7 @@ func NewStore(
 	emailTripInviteColl.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{bsonKeyID: 1}},
 		{Keys: bson.M{"tripID": 1}},
-		{Keys: bson.M{"userID": 1}},
+		{Keys: bson.M{"userEmail": 1}},
 		{
 			Keys: bson.M{"createdAt": 1},
 			Options: options.Index().SetExpireAfterSeconds(
@@ -68,11 +85,53 @@ func NewStore(
 
 	return &store{
 		db,
+		appInviteColl,
 		tripInviteColl,
 		emailTripInviteColl,
 		logger.Named("invites.store"),
 	}
 }
+
+// App Invites
+
+func (s *store) ReadAppInvite(ctx context.Context, ID string) (AppInvite, error) {
+	var invite AppInvite
+	err := s.appInviteColl.FindOne(ctx, bson.M{bsonKeyID: ID}).Decode(&invite)
+	if err == mongo.ErrNoDocuments {
+		return AppInvite{}, ErrInviteNotFound
+	}
+	if err != nil {
+		s.logger.Error("ReadAppInvite", zap.String("id", ID), zap.Error(err))
+		return AppInvite{}, ErrUnexpectedStoreError
+	}
+	return invite, err
+}
+
+func (s *store) SaveAppInvite(ctx context.Context, inv AppInvite) error {
+	saveFF := bson.M{bsonKeyID: inv.ID}
+	opts := options.Replace().SetUpsert(true)
+	_, err := s.appInviteColl.ReplaceOne(ctx, saveFF, inv, opts)
+	if err != nil {
+		s.logger.Error("SaveAppInvite", zap.Error(err))
+		return ErrUnexpectedStoreError
+	}
+	return nil
+}
+
+func (s *store) DeleteAppInvite(ctx context.Context, ID string) error {
+	_, err := s.appInviteColl.DeleteOne(ctx, bson.M{ID: ID})
+	if err != nil {
+		s.logger.Error(
+			"DeleteAppInvite",
+			zap.String("id", ID),
+			zap.Error(err),
+		)
+		return ErrUnexpectedStoreError
+	}
+	return err
+}
+
+// Trip Invites
 
 func (s *store) ListTripInvites(
 	ctx context.Context,
@@ -121,6 +180,8 @@ func (s *store) DeleteTripInvite(ctx context.Context, ID string) error {
 	}
 	return err
 }
+
+// Email Invite
 
 func (s *store) ListEmailTripInvites(ctx context.Context, ff ListEmailTripInvitesFilter) (EmailTripInviteList, error) {
 	list := EmailTripInviteList{}

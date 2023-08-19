@@ -5,12 +5,39 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/common"
 )
 
 var (
 	ErrInvalidInvite = errors.New("invites.ErrInvalidInvite")
 )
+
+type AppInvite struct {
+	ID         string        `json:"id" bson:"id"`
+	AuthorID   string        `json:"authorID" bson:"authorID"`
+	AuthorName string        `json:"authorName" bson:"-"`
+	UserEmail  string        `json:"userEmail" bson:"-"`
+	CreatedAt  time.Time     `json:"createdAt" bson:"createdAt"`
+	Labels     common.Labels `json:"labels" bson:"labels"`
+}
+
+func NewAppInvite(
+	authorID,
+	authorName,
+	userEmail string,
+) AppInvite {
+	return AppInvite{
+		ID:         uuid.NewString(),
+		AuthorID:   authorID,
+		AuthorName: authorName,
+		UserEmail:  userEmail,
+		CreatedAt:  time.Now(),
+		Labels:     common.Labels{},
+	}
+}
+
+type AppInvitesList []AppInvite
 
 type TripInvite struct {
 	ID         string        `json:"id" bson:"id"`
@@ -23,7 +50,7 @@ type TripInvite struct {
 	Labels     common.Labels `json:"labels" bson:"labels"`
 }
 
-func NewInvite(
+func NewTripInvite(
 	tripID,
 	tripName,
 	authorID,
@@ -39,6 +66,7 @@ func NewInvite(
 		TripName:   tripName,
 		UserID:     userID,
 		UserEmail:  userEmail,
+		Labels:     common.Labels{},
 	}
 }
 
@@ -70,6 +98,7 @@ func NewEmailTripInvite(
 		TripName:   tripName,
 		UserEmail:  userEmail,
 		CreatedAt:  time.Now(),
+		Labels:     common.Labels{},
 	}
 }
 

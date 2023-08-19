@@ -31,6 +31,33 @@ func SvcWithValidationMw(
 	}
 }
 
+// App Invites
+
+func (mw *validationMiddleware) SendAppInvite(
+	ctx context.Context,
+	authorID,
+	userEmail string,
+) error {
+	if authorID == "" || userEmail == "" {
+		return common.ErrValidation
+	}
+	return mw.next.SendAppInvite(ctx, authorID, userEmail)
+}
+
+func (mw *validationMiddleware) AcceptAppInvite(
+	ctx context.Context,
+	ID,
+	code,
+	sig string,
+) (auth.User, *http.Cookie, error) {
+	if ID == "" || code == "" || sig == "" {
+		return auth.User{}, nil, common.ErrValidation
+	}
+	return mw.next.AcceptAppInvite(ctx, ID, code, sig)
+}
+
+// Trip Invites
+
 func (mw *validationMiddleware) SendTripInvite(
 	ctx context.Context,
 	tripID,
@@ -77,6 +104,8 @@ func (mw *validationMiddleware) ListTripInvites(
 	return mw.next.ListTripInvites(ctx, ff)
 }
 
+// Email Trip Invites
+
 func (mw *validationMiddleware) SendEmailTripInvite(
 	ctx context.Context,
 	tripID,
@@ -95,9 +124,9 @@ func (mw *validationMiddleware) AcceptEmailTripInvite(
 	sig,
 	code string,
 	isLoggedIn bool,
-) (*http.Cookie, error) {
+) (auth.User, *http.Cookie, error) {
 	if ID == "" || sig == "" || code == "" {
-		return nil, common.ErrValidation
+		return auth.User{}, nil, common.ErrValidation
 	}
 	return mw.next.AcceptEmailTripInvite(ctx, ID, sig, code, isLoggedIn)
 }
@@ -142,6 +171,34 @@ func SvcWithRBACMw(
 		logger.Named("invites.rbacMiddleware"),
 	}
 }
+
+// App Invites
+
+func (mw *rbacMiddleware) SendAppInvite(
+	ctx context.Context,
+	authorID,
+	userEmail string,
+) error {
+	ci, err := reqctx.ClientInfoFromCtx(ctx)
+	if err != nil || ci.HasEmptyID() {
+		return ErrRBAC
+	}
+	if authorID != ci.UserID {
+		return ErrRBAC
+	}
+	return mw.next.SendAppInvite(ctx, authorID, userEmail)
+}
+
+func (mw *rbacMiddleware) AcceptAppInvite(
+	ctx context.Context,
+	ID,
+	code,
+	sig string,
+) (auth.User, *http.Cookie, error) {
+	return mw.next.AcceptAppInvite(ctx, ID, code, sig)
+}
+
+// Trip Invites
 
 func (mw *rbacMiddleware) SendTripInvite(
 	ctx context.Context,
@@ -243,6 +300,8 @@ func (mw *rbacMiddleware) ListTripInvites(
 	return mw.next.ListTripInvites(ctx, ff)
 }
 
+// Email Trip Invites
+
 func (mw *rbacMiddleware) SendEmailTripInvite(
 	ctx context.Context,
 	tripID,
@@ -253,7 +312,25 @@ func (mw *rbacMiddleware) SendEmailTripInvite(
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	return mw.next.SendEmailTripInvite(ctx, tripID, authorID, userEmail)
+
+	author, err := mw.authSvc.Read(ctx, authorID)
+	if err != nil {
+		return err
+	}
+	t, err := mw.tripSvc.Read(ctx, tripID)
+	if err != nil {
+		return err
+	}
+	if !common.StringContains(t.GetMemberIDs(), authorID) {
+		return ErrRBAC
+	}
+
+	return mw.next.SendEmailTripInvite(
+		ContextWithTripInviteMetaInfo(ctx, nil, &author, t),
+		tripID,
+		authorID,
+		userEmail,
+	)
 }
 
 func (mw *rbacMiddleware) AcceptEmailTripInvite(
@@ -262,26 +339,20 @@ func (mw *rbacMiddleware) AcceptEmailTripInvite(
 	sig,
 	code string,
 	isLoggedIn bool,
-) (*http.Cookie, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil || ci.HasEmptyID() {
-		return nil, ErrRBAC
-	}
+) (auth.User, *http.Cookie, error) {
 	return mw.next.AcceptEmailTripInvite(ctx, ID, sig, code, isLoggedIn)
 }
 
-func (mw *rbacMiddleware) ReadEmailTripInvite(ctx context.Context, ID string) (EmailTripInvite, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil || ci.HasEmptyID() {
-		return EmailTripInvite{}, ErrRBAC
-	}
-	return mw.next.ReadEmailTripInvite(ctx, ID)
+func (mw *rbacMiddleware) ReadEmailTripInvite(
+	ctx context.Context,
+	ID string,
+) (EmailTripInvite, error) {
+	return EmailTripInvite{}, ErrRBAC
 }
 
-func (mw *rbacMiddleware) ListEmailTripInvites(ctx context.Context, ff ListEmailTripInvitesFilter) (EmailTripInviteList, error) {
-	ci, err := reqctx.ClientInfoFromCtx(ctx)
-	if err != nil || ci.HasEmptyID() {
-		return nil, ErrRBAC
-	}
-	return mw.next.ListEmailTripInvites(ctx, ff)
+func (mw *rbacMiddleware) ListEmailTripInvites(
+	ctx context.Context,
+	ff ListEmailTripInvitesFilter,
+) (EmailTripInviteList, error) {
+	return EmailTripInviteList{}, ErrRBAC
 }
