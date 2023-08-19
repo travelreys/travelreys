@@ -1,4 +1,4 @@
-package trips
+package invites
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/travelreys/travelreys/pkg/email"
+	"github.com/travelreys/travelreys/pkg/trips"
 	"go.uber.org/zap"
 )
 
@@ -16,29 +17,31 @@ const (
 	defaultLoginSender     = "login@travelreys.com"
 	tripInviteTmplFilePath = "assets/tripInviteEmail.tmpl.html"
 	tripInviteTmplFileName = "tripInviteEmail.tmpl.html"
+
+	defaultCoverImgURL = "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzOTc1ODV8MHwxfHNlYXJjaHwzfHx0cmF2ZWx8ZW58MHwwfHx8MTY4ODc0MDUxNnww&ixlib=rb-4.0.3&q=80&w=1080"
 )
 
-type InviteService interface {
-	Send(ctx context.Context, tripID, authorID, userID string) error
-	Accept(ctx context.Context, ID string) error
-	Decline(ctx context.Context, ID string) error
-	Read(ctx context.Context, ID string) (Invite, error)
-	List(ctx context.Context, ff ListInvitesFilter) (InviteList, error)
+type Service interface {
+	SendTripInvite(ctx context.Context, tripID, authorID, userID string) error
+	AcceptTripInvite(ctx context.Context, ID string) error
+	DeclineTripInvite(ctx context.Context, ID string) error
+	ReadTripInvite(ctx context.Context, ID string) (TripInvite, error)
+	ListTripInvites(ctx context.Context, ff ListTripInvitesFilter) (TripInviteList, error)
 }
 
 type inviteService struct {
-	syncSvc SyncService
+	syncSvc trips.SyncService
 	mailSvc email.Service
-	store   InviteStore
+	store   Store
 	logger  *zap.Logger
 }
 
-func NewInviteService(
-	syncSvc SyncService,
+func NewService(
+	syncSvc trips.SyncService,
 	mailSvc email.Service,
-	store InviteStore,
+	store Store,
 	logger *zap.Logger,
-) InviteService {
+) Service {
 	return &inviteService{
 		syncSvc,
 		mailSvc,
@@ -47,13 +50,13 @@ func NewInviteService(
 	}
 }
 
-func (svc *inviteService) Send(
+func (svc *inviteService) SendTripInvite(
 	ctx context.Context,
 	tripID,
 	authorID,
 	userID string,
 ) error {
-	inviteMeta, err := InviteMetaInfoFromCtx(ctx)
+	inviteMeta, err := TripInviteMetaInfoFromCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -66,23 +69,23 @@ func (svc *inviteService) Send(
 		inviteMeta.User.Email,
 	)
 
-	err = svc.store.Save(ctx, invite)
+	err = svc.store.SaveTripInvite(ctx, invite)
 	if err == nil {
 		go func() {
-			svc.sendTripInviteEmail(ctx, invite)
+			svc.sendTripInviteEmail(ctx, invite, inviteMeta.Trip)
 		}()
 	}
 	return err
 }
 
-func (svc *inviteService) Accept(ctx context.Context, ID string) error {
-	invite, err := svc.store.Read(ctx, ID)
+func (svc *inviteService) AcceptTripInvite(ctx context.Context, ID string) error {
+	invite, err := svc.store.ReadTripInvite(ctx, ID)
 	if err != nil {
 		return err
 	}
 
 	connID := uuid.NewString()
-	joinMsg := MakeSyncMsgTOBTopicJoin(
+	joinMsg := trips.MakeSyncMsgTOBTopicJoin(
 		connID,
 		invite.TripID,
 		invite.AuthorID,
@@ -92,36 +95,40 @@ func (svc *inviteService) Accept(ctx context.Context, ID string) error {
 	}
 	time.Sleep(SyncMsgWaitInterval)
 
-	member := NewMember(invite.UserID, MemberRoleCollaborator)
-	addMemMsg := MakeSyncMsgTOBTopicUpdate(
+	member := trips.NewMember(invite.UserID, trips.MemberRoleCollaborator)
+	addMemMsg := trips.MakeSyncMsgTOBTopicUpdate(
 		connID,
 		invite.TripID,
 		invite.AuthorID,
-		SyncMsgTOBUpdateOpUpdateTripMembers,
-		MakeSyncMsgTOBUpdateOpUpdateTripMembersOps(member),
+		trips.SyncMsgTOBUpdateOpUpdateTripMembers,
+		trips.MakeSyncMsgTOBUpdateOpUpdateTripMembersOps(member),
 	)
 	if err := svc.syncSvc.Update(ctx, &addMemMsg); err != nil {
 		return err
 	}
 
-	return svc.store.Delete(ctx, ID)
+	return svc.store.DeleteTripInvite(ctx, ID)
 }
 
-func (svc *inviteService) Decline(ctx context.Context, ID string) error {
-	return svc.store.Delete(ctx, ID)
+func (svc *inviteService) DeclineTripInvite(ctx context.Context, ID string) error {
+	return svc.store.DeleteTripInvite(ctx, ID)
 }
 
-func (svc *inviteService) Read(ctx context.Context, ID string) (Invite, error) {
-	return svc.store.Read(ctx, ID)
+func (svc *inviteService) ReadTripInvite(ctx context.Context, ID string) (TripInvite, error) {
+	return svc.store.ReadTripInvite(ctx, ID)
 }
 
-func (svc *inviteService) List(ctx context.Context, ff ListInvitesFilter) (InviteList, error) {
-	return svc.store.List(ctx, ff)
+func (svc *inviteService) ListTripInvites(
+	ctx context.Context,
+	ff ListTripInvitesFilter,
+) (TripInviteList, error) {
+	return svc.store.ListTripInvites(ctx, ff)
 }
 
 func (svc *inviteService) sendTripInviteEmail(
 	ctx context.Context,
-	invite Invite,
+	invite TripInvite,
+	trip *trips.Trip,
 ) {
 	svc.logger.Info("sending trip invite email", zap.String("to", invite.UserEmail))
 	t, err := template.
@@ -132,15 +139,22 @@ func (svc *inviteService) sendTripInviteEmail(
 		return
 	}
 
+	coverImgURL := defaultCoverImgURL
+	if trip.CoverImage.Source == trips.CoverImageSourceWeb {
+		coverImgURL = trip.CoverImage.WebImage.Urls.Regular
+	}
+
 	var doc bytes.Buffer
 	data := struct {
-		ID         string
-		AuthorName string
-		TripName   string
+		ID          string
+		AuthorName  string
+		TripName    string
+		CoverImgURL string
 	}{
 		invite.ID,
 		invite.AuthorName,
 		invite.TripName,
+		coverImgURL,
 	}
 	if err := t.Execute(&doc, data); err != nil {
 		svc.logger.Error("sendTripInviteEmail", zap.Error(err))

@@ -194,11 +194,7 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 		return err
 	}
 	go func() {
-		mailBody, _ := svc.otp.GenerateMagicLinkEmail(usr, otp)
-		loginSubj := "Login to Travelreys!"
-		if err := svc.mailSvc.SendMail(ctx, email, loginMailSender, loginSubj, mailBody); err != nil {
-			svc.logger.Error("MagicLink", zap.Error(err))
-		}
+		svc.sendMagicLinkEmail(ctx, usr, otp, email)
 		if sendWelcomEmail {
 			svc.sendWelcomeEmail(ctx, usr.Name, email)
 		}
@@ -310,4 +306,34 @@ func (svc service) sendWelcomeEmail(ctx context.Context, name, to string) {
 	if err := svc.mailSvc.SendMail(ctx, to, loginMailSender, subj, mailBody); err != nil {
 		svc.logger.Error("sendWelcomeEmail", zap.Error(err))
 	}
+}
+
+func (svc service) sendMagicLinkEmail(
+	ctx context.Context,
+	usr User,
+	otp,
+	email string,
+) {
+	mailContentBody, err := svc.otp.GenerateMagicLinkEmail(usr, otp)
+	if err != nil {
+		svc.logger.Error("sendMagicLinkEmail", zap.Error(err))
+		return
+	}
+	mailBody, err := svc.mailSvc.InsertContentOnTemplate(mailContentBody)
+	if err != nil {
+		svc.logger.Error("sendMagicLinkEmail", zap.Error(err))
+		return
+	}
+
+	loginSubj := "Login to Travelreys!"
+	if err := svc.mailSvc.SendMail(
+		ctx,
+		email,
+		loginMailSender,
+		loginSubj,
+		mailBody,
+	); err != nil {
+		svc.logger.Error("sendMagicLinkEmail", zap.Error(err))
+	}
+
 }

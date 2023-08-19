@@ -1,4 +1,4 @@
-package trips
+package invites
 
 import (
 	"context"
@@ -10,43 +10,51 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	ErrInviteNotFound = errors.New("trips.ErrInviteNotFound")
+const (
+	bsonKeyID = "id"
 )
 
-type InviteStore interface {
-	List(ctx context.Context, ff ListInvitesFilter) (InviteList, error)
-	Read(ctx context.Context, ID string) (Invite, error)
-	Save(ctx context.Context, invite Invite) error
-	Delete(ctx context.Context, ID string) error
+var (
+	ErrInviteNotFound       = errors.New("invites.ErrInviteNotFound")
+	ErrUnexpectedStoreError = errors.New("invites.ErrUnexpectedStoreError")
+)
+
+type Store interface {
+	ListTripInvites(ctx context.Context, ff ListTripInvitesFilter) (TripInviteList, error)
+	ReadTripInvite(ctx context.Context, ID string) (TripInvite, error)
+	SaveTripInvite(ctx context.Context, invite TripInvite) error
+	DeleteTripInvite(ctx context.Context, ID string) error
+
+	// ListAppInvites(ctx context.Context, ff ListAppInvites) (AppTripInviteList, error)
+	// ReadAppInvite(ctx context.Context, ID string) AppInvite
 }
 
-type inviteStore struct {
+type store struct {
 	db   *mongo.Database
 	coll *mongo.Collection
 
 	logger *zap.Logger
 }
 
-func NewInviteStore(
+func NewStore(
 	ctx context.Context,
 	db *mongo.Database,
 	logger *zap.Logger,
-) InviteStore {
+) Store {
 	coll := db.Collection("trip_invites")
 	coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{bsonKeyID: 1}},
 		{Keys: bson.M{"tripID": 1}},
 		{Keys: bson.M{"userID": 1}},
 	})
-	return &inviteStore{db, coll, logger.Named("trips.inviteStore")}
+	return &store{db, coll, logger.Named("invites.store")}
 }
 
-func (s *inviteStore) List(
+func (s *store) ListTripInvites(
 	ctx context.Context,
-	ff ListInvitesFilter,
-) (InviteList, error) {
-	list := InviteList{}
+	ff ListTripInvitesFilter,
+) (TripInviteList, error) {
+	list := TripInviteList{}
 	bsonM, _ := ff.toBSON()
 	cursor, err := s.coll.Find(ctx, bsonM)
 	if err != nil {
@@ -57,20 +65,20 @@ func (s *inviteStore) List(
 	return list, err
 }
 
-func (s *inviteStore) Read(ctx context.Context, ID string) (Invite, error) {
-	var invite Invite
+func (s *store) ReadTripInvite(ctx context.Context, ID string) (TripInvite, error) {
+	var invite TripInvite
 	err := s.coll.FindOne(ctx, bson.M{bsonKeyID: ID}).Decode(&invite)
 	if err == mongo.ErrNoDocuments {
-		return Invite{}, ErrInviteNotFound
+		return TripInvite{}, ErrInviteNotFound
 	}
 	if err != nil {
 		s.logger.Error("Read", zap.String("id", ID), zap.Error(err))
-		return Invite{}, ErrUnexpectedStoreError
+		return TripInvite{}, ErrUnexpectedStoreError
 	}
 	return invite, err
 }
 
-func (s *inviteStore) Save(ctx context.Context, invite Invite) error {
+func (s *store) SaveTripInvite(ctx context.Context, invite TripInvite) error {
 	saveFF := bson.M{bsonKeyID: invite.ID}
 	opts := options.Replace().SetUpsert(true)
 	_, err := s.coll.ReplaceOne(ctx, saveFF, invite, opts)
@@ -81,7 +89,7 @@ func (s *inviteStore) Save(ctx context.Context, invite Invite) error {
 	return nil
 }
 
-func (s *inviteStore) Delete(ctx context.Context, ID string) error {
+func (s *store) DeleteTripInvite(ctx context.Context, ID string) error {
 	_, err := s.coll.DeleteOne(ctx, bson.M{ID: ID})
 	if err != nil {
 		s.logger.Error("Delete", zap.String("id", ID), zap.Error(err))

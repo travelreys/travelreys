@@ -3,9 +3,7 @@ package trips
 import (
 	"errors"
 	"fmt"
-	"net/url"
 
-	"github.com/travelreys/travelreys/pkg/common"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -68,43 +66,4 @@ func (f ListFilter) toBSON() (bson.M, bool) {
 
 	bsonAnd = append(bsonAnd, bson.M{bsonKeyDeleted: false})
 	return bson.M{"$and": bsonAnd}, isSet
-}
-
-type ListInvitesFilter struct {
-	UserID *string
-	TripID *string
-}
-
-func MakeListInvitesFilterFromURLParams(params url.Values) ListInvitesFilter {
-	ff := ListInvitesFilter{}
-
-	if params.Get("userID") != "" {
-		ff.UserID = common.StringPtr(params.Get("userID"))
-	}
-	if params.Get("tripID") != "" {
-		ff.TripID = common.StringPtr(params.Get("tripID"))
-	}
-	return ff
-}
-
-func (f ListInvitesFilter) Validate() error {
-	_, ok := f.toBSON()
-	if !ok {
-		return ErrInvalidFilter
-	}
-	return nil
-}
-
-func (f ListInvitesFilter) toBSON() (bson.M, bool) {
-	bsonM := bson.M{}
-	isSet := false
-	if f.TripID != nil && *f.TripID != "" {
-		bsonM["tripID"] = f.TripID
-		isSet = true
-	}
-	if f.UserID != nil && *f.UserID != "" {
-		bsonM["userID"] = f.UserID
-		isSet = true
-	}
-	return bsonM, isSet
 }

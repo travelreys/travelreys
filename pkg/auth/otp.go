@@ -1,15 +1,16 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"math"
 	"math/big"
@@ -22,6 +23,9 @@ import (
 
 const (
 	EnvOTPSecret = "TRAVELREYS_OTP_SECRET"
+
+	magicLinkTmplFilePath = "assets/magicLinkEmail.tmpl.html"
+	magicLinkTmplFileName = "magicLinkEmail.tmpl.html"
 )
 
 var (
@@ -32,9 +36,6 @@ var (
 	ErrProviderOTPInvalidEmail  = errors.New("auth.ErrProviderOTPInvalidEmail")
 	ErrProviderOTPInvalidPw     = errors.New("auth.ErrProviderOTPInvalidPw")
 	ErrProviderOTPInvalidSig    = errors.New("auth.ErrProviderOTPInvalidSig")
-
-	defaultOTPPeriod = 60
-	b32NoPadding     = base32.StdEncoding.WithPadding(base32.NoPadding)
 )
 
 type OTPProvider struct {
@@ -83,6 +84,9 @@ func (prv OTPProvider) TokenToUserInfo(ctx context.Context, code, sig string) (U
 	}
 
 	hashedPw, err := prv.store.GetOTP(ctx, usr.ID)
+	if err != nil {
+		return User{}, ErrProviderOTPNotSet
+	}
 	if err := prv.ValidateOTP([]byte(pw), []byte(hashedPw)); err != nil {
 		return User{}, err
 	}
@@ -117,17 +121,24 @@ func (prv OTPProvider) GenerateMagicLinkEmail(usr User, otp string) (string, err
 	authCode := fmt.Sprintf("%s|%s", usr.Email, otp)
 	sEnc := base64.StdEncoding.EncodeToString([]byte(authCode))
 	sha := prv.GenerateHMAC(sEnc)
-
 	magicLink := fmt.Sprintf("https://www.travelreys.com/magic-link?c=%s&sig=%s", sEnc, sha)
-	bodyTmpl := `
-	<div>
-	<p>Welcome to travelreys. Click on the following magic link to login.</p>
-	<br />
-	<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>
-	</div>
-	`
-	body := fmt.Sprintf(bodyTmpl, magicLink, magicLink)
-	return body, nil
+
+	t, err := template.
+		New(magicLinkTmplFileName).
+		ParseFiles(magicLinkTmplFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	var doc bytes.Buffer
+	data := struct {
+		MagicLink string
+	}{magicLink}
+	if err := t.Execute(&doc, data); err != nil {
+		return "", err
+	}
+
+	return doc.String(), nil
 }
 
 func (prv OTPProvider) GenerateHMAC(code string) string {
