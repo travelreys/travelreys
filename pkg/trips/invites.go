@@ -149,7 +149,7 @@ func NewInviteStore(
 	db *mongo.Database,
 	logger *zap.Logger,
 ) InviteStore {
-	coll := db.Collection("trip_inviates")
+	coll := db.Collection("trip_invites")
 	coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{bsonKeyID: 1}},
 		{Keys: bson.M{"tripID": 1}},

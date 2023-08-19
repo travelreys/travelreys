@@ -110,6 +110,12 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	)
 	wsSvr := trips.NewWebsocketServer(tripSyncSvc, logger)
 
+	// Trips Invite
+	tripInviteStore := trips.NewInviteStore(ctx, db, logger)
+	tripInviteSvc := trips.NewInviteService(tripSyncSvc, mailSvc, tripInviteStore, logger)
+	tripInviteSvc = trips.InviteSvcWithValidationMw(tripInviteSvc, logger)
+	tripInviteSvc = trips.InviteSvcWithRBACMw(tripInviteSvc, tripSvc, authSvc, logger)
+
 	// Social
 	socialStore := social.NewStore(ctx, db, logger)
 	socialSvc := social.NewService(socialStore, authSvc, tripSvc, mailSvc, logger)
@@ -137,6 +143,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
 	r.PathPrefix("/api/v1/social").Handler(social.MakeHandler(socialSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvcWithRBAC))
+	r.PathPrefix("/api/v1/trip-invites").Handler(trips.MakeInviteHandler(tripInviteSvc))
 
 	return &http.Server{
 		Handler: r,

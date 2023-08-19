@@ -72,8 +72,8 @@ type inviteRBACMiddleware struct {
 }
 
 func InviteSvcWithRBACMw(
-	tripSvc Service,
 	svc InviteService,
+	tripSvc Service,
 	authSvc auth.Service,
 	logger *zap.Logger,
 ) InviteService {
