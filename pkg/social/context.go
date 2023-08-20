@@ -11,19 +11,19 @@ var (
 	ErrNoInfoSet = errors.New("social.ErrNoInfoSet")
 )
 
-type FriendRequestInfo struct {
-	Req FriendRequest
+type FollowRequestInfo struct {
+	Req FollowRequest
 }
 
-func ContextWithFriendRequestInfo(ctx context.Context, req FriendRequest) context.Context {
-	return context.WithValue(ctx, common.ContextKeyFriendRequestInfo, FriendRequestInfo{Req: req})
+func ContextWithFollowRequestInfo(ctx context.Context, req FollowRequest) context.Context {
+	return context.WithValue(ctx, common.ContextKeyFollowRequestInfo, FollowRequestInfo{Req: req})
 }
 
-func FriendRequestInfoFromCtx(ctx context.Context) (FriendRequestInfo, error) {
-	val := ctx.Value(common.ContextKeyFriendRequestInfo)
+func FollowRequestInfoFromCtx(ctx context.Context) (FollowRequestInfo, error) {
+	val := ctx.Value(common.ContextKeyFollowRequestInfo)
 	if val == nil {
-		return FriendRequestInfo{}, ErrNoInfoSet
+		return FollowRequestInfo{}, ErrNoInfoSet
 	}
-	fi, _ := val.(FriendRequestInfo)
+	fi, _ := val.(FollowRequestInfo)
 	return fi, nil
 }

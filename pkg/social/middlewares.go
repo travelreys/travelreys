@@ -30,7 +30,7 @@ func (mw rbacMiddleware) GetProfile(ctx context.Context, id string) (UserProfile
 	return mw.next.GetProfile(ctx, id)
 }
 
-func (mw rbacMiddleware) SendFriendRequest(ctx context.Context, initiatorID, targetID string) error {
+func (mw rbacMiddleware) SendFollowRequest(ctx context.Context, initiatorID, targetID string) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
@@ -38,50 +38,59 @@ func (mw rbacMiddleware) SendFriendRequest(ctx context.Context, initiatorID, tar
 	if initiatorID != ci.UserID {
 		return ErrRBAC
 	}
-	return mw.next.SendFriendRequest(ctx, initiatorID, targetID)
+	return mw.next.SendFollowRequest(ctx, initiatorID, targetID)
 }
 
-func (mw rbacMiddleware) GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error) {
+func (mw rbacMiddleware) GetFollowRequestByID(ctx context.Context, id string) (FollowRequest, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
-		return FriendRequest{}, ErrRBAC
+		return FollowRequest{}, ErrRBAC
 	}
-	return mw.next.GetFriendRequestByID(ctx, id)
+	return mw.next.GetFollowRequestByID(ctx, id)
 }
 
-func (mw rbacMiddleware) AcceptFriendRequest(ctx context.Context, userid, reqid string) error {
+func (mw rbacMiddleware) AcceptFollowRequest(
+	ctx context.Context,
+	userID,
+	initiatorID,
+	reqID string,
+) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	req, err := mw.next.GetFriendRequestByID(ctx, reqid)
+	req, err := mw.next.GetFollowRequestByID(ctx, reqID)
 	if err != nil {
 		return err
 	}
-	if !(req.TargetID == ci.UserID && ci.UserID == userid) {
+	if !(req.TargetID == ci.UserID && ci.UserID == userID) {
 		return ErrRBAC
 	}
-	ctxWithFriendRequestInfo := ContextWithFriendRequestInfo(ctx, req)
-	return mw.next.AcceptFriendRequest(ctxWithFriendRequestInfo, userid, reqid)
+	return mw.next.AcceptFollowRequest(
+		ContextWithFollowRequestInfo(ctx, req),
+		userID,
+		initiatorID,
+		reqID,
+	)
 }
 
-func (mw rbacMiddleware) DeleteFriendRequest(ctx context.Context, userid, reqid string) error {
+func (mw rbacMiddleware) DeleteFollowRequest(ctx context.Context, userID, reqID string) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
 	}
-	req, err := mw.next.GetFriendRequestByID(ctx, reqid)
+	req, err := mw.next.GetFollowRequestByID(ctx, reqID)
 	if err != nil {
 		return err
 	}
-	if !(req.TargetID == ci.UserID && ci.UserID == userid) {
+	if !(req.TargetID == ci.UserID && ci.UserID == userID) {
 		return ErrRBAC
 	}
-	ctxWithFriendRequestInfo := ContextWithFriendRequestInfo(ctx, req)
-	return mw.next.DeleteFriendRequest(ctxWithFriendRequestInfo, userid, reqid)
+	ctxWithFollowRequestInfo := ContextWithFollowRequestInfo(ctx, req)
+	return mw.next.DeleteFollowRequest(ctxWithFollowRequestInfo, userID, reqID)
 }
 
-func (mw rbacMiddleware) ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error) {
+func (mw rbacMiddleware) ListFollowRequests(ctx context.Context, ff ListFollowRequestsFilter) (FollowRequestList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
@@ -92,34 +101,52 @@ func (mw rbacMiddleware) ListFriendRequests(ctx context.Context, ff ListFriendRe
 	if ff.TargetID != nil && *ff.TargetID != ci.UserID {
 		return nil, ErrRBAC
 	}
-	return mw.next.ListFriendRequests(ctx, ff)
+	return mw.next.ListFollowRequests(ctx, ff)
 }
 
-func (mw rbacMiddleware) ListFollowers(ctx context.Context, userID string) (FriendsList, error) {
+func (mw rbacMiddleware) ListFollowers(ctx context.Context, userID string) (FollowingsList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
 	}
 
-	if ci.UserID != ci.UserID {
-		return nil, ErrRBAC
+	if ci.UserID == userID {
+		return mw.next.ListFollowers(ctx, userID)
+	}
+
+	ok, err := mw.next.IsFollowing(ctx, ci.UserID, userID)
+	if err != nil {
+		return FollowingsList{}, err
+	}
+	if !ok {
+		return FollowingsList{}, ErrRBAC
 	}
 	return mw.next.ListFollowers(ctx, userID)
+
 }
 
-func (mw rbacMiddleware) ListFollowing(ctx context.Context, userID string) (FriendsList, error) {
+func (mw rbacMiddleware) ListFollowing(ctx context.Context, userID string) (FollowingsList, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return nil, ErrRBAC
 	}
 
-	if ci.UserID != ci.UserID {
-		return nil, ErrRBAC
+	if ci.UserID == userID {
+		return mw.next.ListFollowing(ctx, userID)
 	}
+
+	ok, err := mw.next.IsFollowing(ctx, ci.UserID, userID)
+	if err != nil {
+		return FollowingsList{}, err
+	}
+	if !ok {
+		return FollowingsList{}, ErrRBAC
+	}
+
 	return mw.next.ListFollowing(ctx, userID)
 }
 
-func (mw rbacMiddleware) DeleteFriend(ctx context.Context, userID, bindingKey string) error {
+func (mw rbacMiddleware) DeleteFollowing(ctx context.Context, userID, bindingKey string) error {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return ErrRBAC
@@ -127,10 +154,10 @@ func (mw rbacMiddleware) DeleteFriend(ctx context.Context, userID, bindingKey st
 	if ci.UserID != userID {
 		return ErrRBAC
 	}
-	return mw.next.DeleteFriend(ctx, userID, bindingKey)
+	return mw.next.DeleteFollowing(ctx, userID, bindingKey)
 }
 
-func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, initiatorID, targetID string) (bool, error) {
+func (mw rbacMiddleware) IsFollowing(ctx context.Context, initiatorID, targetID string) (bool, error) {
 	ci, err := reqctx.ClientInfoFromCtx(ctx)
 	if err != nil || ci.HasEmptyID() {
 		return false, ErrRBAC
@@ -138,7 +165,7 @@ func (mw rbacMiddleware) AreTheyFriends(ctx context.Context, initiatorID, target
 	if ci.UserID != initiatorID && ci.UserID != targetID {
 		return false, ErrRBAC
 	}
-	return mw.next.AreTheyFriends(ctx, initiatorID, targetID)
+	return mw.next.IsFollowing(ctx, initiatorID, targetID)
 }
 
 func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (*trips.Trip, UserProfile, error) {
@@ -170,7 +197,7 @@ func (mw rbacMiddleware) ReadTripPublicInfo(ctx context.Context, tripID, referre
 	// Allow access if you are friend of the member of the trip
 
 	if common.StringContains(membersID, referrerID) {
-		if _, err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
+		if _, err := mw.next.IsFollowing(ctx, ci.UserID, referrerID); err == nil {
 			return mw.next.ReadTripPublicInfo(ctxWithTripInfo, tripID, referrerID)
 		}
 	}
@@ -188,7 +215,7 @@ func (mw rbacMiddleware) ListTripPublicInfo(ctx context.Context, ff trips.ListFi
 		return mw.next.ListTripPublicInfo(ctx, ff)
 	}
 
-	ok, err := mw.next.AreTheyFriends(ctx, ci.UserID, *ff.UserID)
+	ok, err := mw.next.IsFollowing(ctx, ci.UserID, *ff.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +271,7 @@ func (mw rbacMiddleware) DuplicateTrip(
 	// ReferrerID should be a member ID.
 	// Allow access if you are friend of the member of the trip
 	if common.StringContains(membersID, referrerID) {
-		if _, err := mw.next.AreTheyFriends(ctx, ci.UserID, referrerID); err == nil {
+		if _, err := mw.next.IsFollowing(ctx, ci.UserID, referrerID); err == nil {
 			return mw.next.DuplicateTrip(ctxWithTripInfo, ci.UserID, referrerID, tripID, name, startDate)
 		}
 	}

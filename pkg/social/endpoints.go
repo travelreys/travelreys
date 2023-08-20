@@ -33,120 +33,126 @@ func NewGetProfileRequestEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-type SendFriendRequestRequest struct {
+type SendFollowRequestRequest struct {
 	InitiatorID string `json:"initiatorID"`
 	TargetID    string `json:"targetID"`
 }
-type SendFriendRequestResponse struct {
+type SendFollowRequestResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
-func (r SendFriendRequestResponse) Error() error {
+func (r SendFollowRequestResponse) Error() error {
 	return r.Err
 }
 
-func NewSendFriendRequestEndpoint(svc Service) endpoint.Endpoint {
+func NewSendFollowRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(SendFriendRequestRequest)
+		req, ok := epReq.(SendFollowRequestRequest)
 		if !ok {
-			return SendFriendRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
+			return SendFollowRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
-		err := svc.SendFriendRequest(ctx, req.InitiatorID, req.TargetID)
-		return SendFriendRequestResponse{Err: err}, nil
+		err := svc.SendFollowRequest(ctx, req.InitiatorID, req.TargetID)
+		return SendFollowRequestResponse{Err: err}, nil
 	}
 }
 
-type AcceptFriendRequestRequest struct {
-	UserID    string `json:"uid"`
-	RequestID string `json:"rid"`
+type AcceptFollowRequestRequest struct {
+	UserID      string `json:"userID"`
+	InitiatorID string `json:"initiatorID"`
+	RequestID   string `json:"requestID"`
 }
-type AcceptFriendRequestResponse struct {
+type AcceptFollowRequestResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
-func (r AcceptFriendRequestResponse) Error() error {
+func (r AcceptFollowRequestResponse) Error() error {
 	return r.Err
 }
 
-func NewAcceptFriendRequestEndpoint(svc Service) endpoint.Endpoint {
+func NewAcceptFollowRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(AcceptFriendRequestRequest)
+		req, ok := epReq.(AcceptFollowRequestRequest)
 		if !ok {
-			return AcceptFriendRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
+			return AcceptFollowRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
-		err := svc.AcceptFriendRequest(ctx, req.UserID, req.RequestID)
-		return AcceptFriendRequestResponse{Err: err}, nil
+		err := svc.AcceptFollowRequest(
+			ctx,
+			req.UserID,
+			req.InitiatorID,
+			req.RequestID,
+		)
+		return AcceptFollowRequestResponse{Err: err}, nil
 	}
 }
 
-type DeleteFriendRequestRequest struct {
-	UserID    string `json:"uid"`
-	RequestID string `json:"rid"`
+type DeleteFollowRequestRequest struct {
+	UserID    string `json:"userID"`
+	RequestID string `json:"requestID"`
 }
-type DeleteFriendRequestResponse struct {
+type DeleteFollowRequestResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
-func (r DeleteFriendRequestResponse) Error() error {
+func (r DeleteFollowRequestResponse) Error() error {
 	return r.Err
 }
 
-func NewDeleteFriendRequestEndpoint(svc Service) endpoint.Endpoint {
+func NewDeleteFollowRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(DeleteFriendRequestRequest)
+		req, ok := epReq.(DeleteFollowRequestRequest)
 		if !ok {
-			return DeleteFriendRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
+			return DeleteFollowRequestResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
-		err := svc.DeleteFriendRequest(ctx, req.UserID, req.RequestID)
-		return DeleteFriendRequestResponse{Err: err}, nil
+		err := svc.DeleteFollowRequest(ctx, req.UserID, req.RequestID)
+		return DeleteFollowRequestResponse{Err: err}, nil
 	}
 }
 
-type ListFriendRequestsRequest struct {
-	ListFriendRequestsFilter
+type ListFollowRequestsRequest struct {
+	ListFollowRequestsFilter
 }
-type ListFriendRequestsResponse struct {
-	Requests FriendRequestList `json:"requests"`
+type ListFollowRequestsResponse struct {
+	Requests FollowRequestList `json:"requests"`
 	Err      error             `json:"error,omitempty"`
 }
 
-func (r ListFriendRequestsResponse) Error() error {
+func (r ListFollowRequestsResponse) Error() error {
 	return r.Err
 }
 
-func NewListFriendRequestsRequestEndpoint(svc Service) endpoint.Endpoint {
+func NewListFollowRequestsRequestEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(ListFriendRequestsRequest)
+		req, ok := epReq.(ListFollowRequestsRequest)
 		if !ok {
-			return ListFriendRequestsResponse{Err: common.ErrEndpointReqMismatch}, nil
+			return ListFollowRequestsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
-		reqs, err := svc.ListFriendRequests(ctx, req.ListFriendRequestsFilter)
-		return ListFriendRequestsResponse{Requests: reqs, Err: err}, nil
+		reqs, err := svc.ListFollowRequests(ctx, req.ListFollowRequestsFilter)
+		return ListFollowRequestsResponse{Requests: reqs, Err: err}, nil
 	}
 }
 
-type AreTheyFriendsRequest struct {
+type IsFollowingRequest struct {
 	InitiatorID string `json:"initiatorID"`
 	TargetID    string `json:"targetID"`
 }
 
-type AreTheyFriendsResponse struct {
+type IsFollowingResponse struct {
 	OK  bool  `json:"ok"`
 	Err error `json:"error,omitempty"`
 }
 
-func (r AreTheyFriendsResponse) Error() error {
+func (r IsFollowingResponse) Error() error {
 	return r.Err
 }
 
-func NewAreTheyFriendsResponseEndpoint(svc Service) endpoint.Endpoint {
+func NewIsFollowingResponseEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(AreTheyFriendsRequest)
+		req, ok := epReq.(IsFollowingRequest)
 		if !ok {
-			return ListFriendRequestsResponse{Err: common.ErrEndpointReqMismatch}, nil
+			return ListFollowRequestsResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
-		ok, err := svc.AreTheyFriends(ctx, req.InitiatorID, req.TargetID)
-		return AreTheyFriendsResponse{OK: ok, Err: err}, nil
+		ok, err := svc.IsFollowing(ctx, req.InitiatorID, req.TargetID)
+		return IsFollowingResponse{OK: ok, Err: err}, nil
 	}
 }
 
@@ -154,8 +160,8 @@ type ListFriendsRequest struct {
 	UserID string `json:"userID"`
 }
 type ListFriendsResponse struct {
-	Friends FriendsList `json:"friends"`
-	Err     error       `json:"error,omitempty"`
+	Friends FollowingsList `json:"friends"`
+	Err     error          `json:"error,omitempty"`
 }
 
 func (r ListFriendsResponse) Error() error {
@@ -184,26 +190,26 @@ func NewListFollowingRequestEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-type DeleteFriendRequest struct {
+type DeleteFollowRequest struct {
 	UserID     string `json:"userID"`
 	BindingKey string `json:"bindingKey"`
 }
-type DeleteFriendResponse struct {
+type DeleteFollowResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
-func (r DeleteFriendResponse) Error() error {
+func (r DeleteFollowResponse) Error() error {
 	return r.Err
 }
 
-func NewDeleteFriendEndpoint(svc Service) endpoint.Endpoint {
+func NewDeleteFollowEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
-		req, ok := epReq.(DeleteFriendRequest)
+		req, ok := epReq.(DeleteFollowRequest)
 		if !ok {
-			return DeleteFriendResponse{Err: common.ErrEndpointReqMismatch}, nil
+			return DeleteFollowResponse{Err: common.ErrEndpointReqMismatch}, nil
 		}
-		err := svc.DeleteFriend(ctx, req.UserID, req.BindingKey)
-		return DeleteFriendResponse{Err: err}, nil
+		err := svc.DeleteFollowing(ctx, req.UserID, req.BindingKey)
+		return DeleteFollowResponse{Err: err}, nil
 	}
 }
 
