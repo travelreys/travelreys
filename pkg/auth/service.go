@@ -167,7 +167,7 @@ func (svc service) Login(
 	}
 
 	if isNewUser {
-		go svc.sendWelcomeEmail(ctx, usr.Name, usr.Email)
+		go svc.sendWelcomeEmail(context.Background(), usr.Name, usr.Email)
 	}
 
 	return usr, cookie, nil
@@ -184,7 +184,7 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 		return err
 	}
 	go func() {
-		svc.sendMagicLinkEmail(ctx, otp, email)
+		svc.sendMagicLinkEmail(context.Background(), otp, email)
 	}()
 	return nil
 }
@@ -351,7 +351,7 @@ func (svc service) EmailLogin(
 			svc.logger.Error("EmailLogin", zap.Error(err))
 			return User{}, nil, err
 		}
-		go svc.sendWelcomeEmail(ctx, usr.Name, usr.Email)
+		go svc.sendWelcomeEmail(context.Background(), usr.Name, usr.Email)
 	}
 
 	// The request could come from a new that is already

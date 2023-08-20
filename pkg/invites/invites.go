@@ -91,7 +91,7 @@ func NewEmailTripInvite(
 	userEmail string,
 ) EmailTripInvite {
 	return EmailTripInvite{
-		ID:         fmt.Sprintf("%s/%s", tripID, userEmail),
+		ID:         fmt.Sprintf("%s|%s", tripID, userEmail),
 		AuthorID:   authorID,
 		AuthorName: authorName,
 		TripID:     tripID,

@@ -92,7 +92,11 @@ func (svc *service) SendAppInvite(ctx context.Context, authorID, userEmail strin
 	if err == nil {
 		go func() {
 			svc.sendAppInviteEmail(
-				ctx, inv, *inviteMeta.Author, code, sig,
+				context.Background(),
+				inv,
+				*inviteMeta.Author,
+				code,
+				sig,
 			)
 		}()
 	}
@@ -195,7 +199,11 @@ func (svc *service) SendTripInvite(
 	err = svc.store.SaveTripInvite(ctx, invite)
 	if err == nil {
 		go func() {
-			svc.sendTripInviteEmail(ctx, invite, inviteMeta.Trip)
+			svc.sendTripInviteEmail(
+				context.Background(),
+				invite,
+				inviteMeta.Trip,
+			)
 		}()
 	}
 	return err
@@ -330,7 +338,7 @@ func (svc service) SendEmailTripInvite(
 	if err == nil {
 		go func() {
 			c, sig, err := svc.authSvc.GenerateOTPAuthCodeAndSig(
-				ctx,
+				context.Background(),
 				userEmail,
 				emailInviteDuration,
 			)
@@ -338,7 +346,9 @@ func (svc service) SendEmailTripInvite(
 				svc.logger.Error("GenerateOTPAuthCodeAndSig", zap.Error(err))
 			}
 
-			svc.sendEmailTripInviteEmail(ctx, inv, inviteMeta.Trip, sig, c)
+			svc.sendEmailTripInviteEmail(
+				context.Background(), inv, inviteMeta.Trip, c, sig,
+			)
 		}()
 	}
 	return err
@@ -406,8 +416,8 @@ func (svc *service) sendEmailTripInviteEmail(
 	ctx context.Context,
 	inv EmailTripInvite,
 	trip *trips.Trip,
-	sig,
-	c string,
+	code,
+	sig string,
 ) {
 	svc.logger.Info("sending email trip invite email", zap.String("to", inv.UserEmail))
 	t, err := template.
@@ -429,15 +439,15 @@ func (svc *service) sendEmailTripInviteEmail(
 		AuthorName  string
 		TripName    string
 		CoverImgURL string
-		Sig         string
 		Code        string
+		Sig         string
 	}{
 		inv.ID,
 		inv.AuthorName,
 		inv.TripName,
 		coverImgURL,
+		code,
 		sig,
-		c,
 	}
 	if err := t.Execute(&doc, data); err != nil {
 		svc.logger.Error("sendEmailTripInviteEmail", zap.Error(err))

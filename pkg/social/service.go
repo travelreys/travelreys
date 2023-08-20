@@ -152,7 +152,9 @@ func (svc service) SendFollowRequest(ctx context.Context, initiatorID, targetID 
 	if err := svc.store.UpsertFollowRequest(ctx, req); err != nil {
 		return err
 	}
-	go svc.sendFollowRequestEmail(ctx, initiator, target, req)
+	go svc.sendFollowRequestEmail(
+		context.Background(), initiator, target, req,
+	)
 	return nil
 }
 
