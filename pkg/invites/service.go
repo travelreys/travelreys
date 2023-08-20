@@ -3,7 +3,6 @@ package invites
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"html/template"
 	"net/http"
 	"time"
@@ -373,6 +372,8 @@ func (svc service) AcceptEmailTripInvite(
 		return auth.User{}, nil, err
 	}
 
+	time.Sleep(syncMsgWaitInterval)
+
 	connID := uuid.NewString()
 	joinMsg := trips.MakeSyncMsgTOBTopicJoin(
 		connID,
@@ -396,7 +397,7 @@ func (svc service) AcceptEmailTripInvite(
 		return auth.User{}, nil, err
 	}
 
-	go svc.store.DeleteTripInvite(ctx, ID)
+	go svc.store.DeleteTripInvite(context.Background(), ID)
 	return usr, cookie, nil
 }
 
@@ -449,8 +450,6 @@ func (svc *service) sendEmailTripInviteEmail(
 		code,
 		sig,
 	}
-	fmt.Println(code)
-	fmt.Println(sig)
 	if err := t.Execute(&doc, data); err != nil {
 		svc.logger.Error("sendEmailTripInviteEmail", zap.Error(err))
 		return

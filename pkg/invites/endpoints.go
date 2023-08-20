@@ -2,7 +2,6 @@ package invites
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/go-kit/kit/endpoint"
@@ -169,8 +168,6 @@ func NewAcceptEmailTripInviteEndpoint(svc Service) endpoint.Endpoint {
 				Err: common.ErrEndpointReqMismatch,
 			}, nil
 		}
-		fmt.Println("ep code", req.Code)
-		fmt.Println("ep sig", req.Sig)
 		user, cookie, err := svc.AcceptEmailTripInvite(
 			ctx, req.ID, req.Code, req.Sig, req.IsLoggedIn,
 		)

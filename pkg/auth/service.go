@@ -327,8 +327,6 @@ func (svc service) EmailLogin(
 	signature string,
 	isLoggedIn bool,
 ) (User, *http.Cookie, error) {
-	fmt.Println("code", code)
-	fmt.Println("sig", signature)
 	usr, err := svc.otp.TokenToUserInfo(ctx, code, signature)
 	if err != nil {
 		return User{}, nil, err
@@ -365,18 +363,18 @@ func (svc service) EmailLogin(
 			svc.logger.Error("EmailLogin", zap.Error(err))
 			return User{}, nil, err
 		}
-		cookie := &http.Cookie{
+		cookie = &http.Cookie{
 			Name:     AccessCookieName,
 			Value:    jwt,
 			HttpOnly: true,
 			Path:     "/",
 			MaxAge:   int(authCookieDuration.Seconds()),
 		}
+
 		if svc.secureCookie {
 			cookie.SameSite = http.SameSiteNoneMode
 			cookie.Secure = true
 		}
 	}
-
 	return usr, cookie, nil
 }
