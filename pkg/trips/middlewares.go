@@ -42,8 +42,7 @@ func (mw validationMiddleware) Create(
 }
 
 func (mw validationMiddleware) Save(ctx context.Context, trip *Trip) error {
-	mw.logger.Warn("Save")
-	return common.ErrValidation
+	return mw.next.Save(ctx, trip)
 }
 
 func (mw validationMiddleware) Read(ctx context.Context, ID string) (*Trip, error) {

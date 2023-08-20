@@ -416,6 +416,7 @@ func (svc *service) DuplicateTrip(
 			newItin.Activities[actKey] = newAct
 			actIDMap[act.ID] = newAct.ID
 		}
+		newItin.Labels[trips.LabelUiColor] = itin.Labels[trips.LabelUiColor]
 
 		for rKey, route := range itin.Routes {
 			tkns := strings.Split(rKey, "|")
