@@ -3,6 +3,7 @@ package invites
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"html/template"
 	"net/http"
 	"time"
@@ -345,7 +346,6 @@ func (svc service) SendEmailTripInvite(
 			if err != nil {
 				svc.logger.Error("GenerateOTPAuthCodeAndSig", zap.Error(err))
 			}
-
 			svc.sendEmailTripInviteEmail(
 				context.Background(), inv, inviteMeta.Trip, c, sig,
 			)
@@ -449,6 +449,8 @@ func (svc *service) sendEmailTripInviteEmail(
 		code,
 		sig,
 	}
+	fmt.Println(code)
+	fmt.Println(sig)
 	if err := t.Execute(&doc, data); err != nil {
 		svc.logger.Error("sendEmailTripInviteEmail", zap.Error(err))
 		return

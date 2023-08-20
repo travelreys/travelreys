@@ -3,6 +3,7 @@ package invites
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/travelreys/travelreys/pkg/auth"
@@ -137,7 +138,9 @@ func (mw *validationMiddleware) AcceptEmailTripInvite(
 		mw.logger.Warn("AcceptEmailTripInvite")
 		return auth.User{}, nil, common.ErrValidation
 	}
-	return mw.next.AcceptEmailTripInvite(ctx, ID, sig, code, isLoggedIn)
+	fmt.Println("val middleware code", code)
+	fmt.Println("val middleware sig", sig)
+	return mw.next.AcceptEmailTripInvite(ctx, ID, code, sig, isLoggedIn)
 }
 
 func (mw *validationMiddleware) ReadEmailTripInvite(
@@ -347,11 +350,13 @@ func (mw *rbacMiddleware) SendEmailTripInvite(
 func (mw *rbacMiddleware) AcceptEmailTripInvite(
 	ctx context.Context,
 	ID,
-	sig,
-	code string,
+	code,
+	sig string,
 	isLoggedIn bool,
 ) (auth.User, *http.Cookie, error) {
-	return mw.next.AcceptEmailTripInvite(ctx, ID, sig, code, isLoggedIn)
+	fmt.Println("auth middleware code", code)
+	fmt.Println("auth middleware sig", sig)
+	return mw.next.AcceptEmailTripInvite(ctx, ID, code, sig, isLoggedIn)
 }
 
 func (mw *rbacMiddleware) ReadEmailTripInvite(

@@ -323,11 +323,13 @@ func (svc service) sendMagicLinkEmail(
 
 func (svc service) EmailLogin(
 	ctx context.Context,
-	authCode,
+	code,
 	signature string,
 	isLoggedIn bool,
 ) (User, *http.Cookie, error) {
-	usr, err := svc.otp.TokenToUserInfo(ctx, authCode, signature)
+	fmt.Println("code", code)
+	fmt.Println("sig", signature)
+	usr, err := svc.otp.TokenToUserInfo(ctx, code, signature)
 	if err != nil {
 		return User{}, nil, err
 	}
