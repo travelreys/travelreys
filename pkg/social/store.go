@@ -19,22 +19,23 @@ const (
 	bsonKeyRevBindingKey = "revbinding"
 	bsonKeyInitiatorID   = "initiatorID"
 	bsonKeyTargetID      = "targetID"
-	friendsColl          = "friends"
-	friendsReqColl       = "friend_requests"
-	storeLoggerName      = "social.store"
+
+	friendsColl     = "friends"
+	friendsReqColl  = "friend_requests"
+	storeLoggerName = "social.store"
 )
 
 var (
-	ErrFriendNotFound       = errors.New("social.ErrFriendNotFound")
+	ErrFollowingNotFound    = errors.New("social.ErrFollowingNotFound")
 	ErrUnexpectedStoreError = errors.New("social.ErrUnexpectedStoreError")
 )
 
-type ListFriendRequestsFilter struct {
+type ListFollowRequestsFilter struct {
 	InitiatorID *string
 	TargetID    *string
 }
 
-func (ff ListFriendRequestsFilter) toBSON() bson.M {
+func (ff ListFollowRequestsFilter) toBSON() bson.M {
 	bsonA := bson.A{}
 	if ff.InitiatorID != nil && *ff.InitiatorID != "" {
 		bsonA = append(bsonA, bson.M{"initiatorID": *ff.InitiatorID})
@@ -46,16 +47,16 @@ func (ff ListFriendRequestsFilter) toBSON() bson.M {
 }
 
 type Store interface {
-	UpsertFriendRequest(ctx context.Context, freq FriendRequest) error
-	GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error)
-	DeleteFriendRequest(ctx context.Context, id string) error
-	ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error)
+	UpsertFollowRequest(ctx context.Context, freq FollowRequest) error
+	GetFollowRequestByID(ctx context.Context, id string) (FollowRequest, error)
+	DeleteFollowRequest(ctx context.Context, id string) error
+	ListFollowRequests(ctx context.Context, ff ListFollowRequestsFilter) (FollowRequestList, error)
 
-	GetFriend(ctx context.Context, bindingKey string) (Friend, error)
-	SaveFriend(ctx context.Context, friend Friend) error
-	ListFollowers(ctx context.Context, userID string) (FriendsList, error)
-	ListFollowing(ctx context.Context, userID string) (FriendsList, error)
-	DeleteFriend(ctx context.Context, bindingKey string) error
+	GetFollowing(ctx context.Context, bindingKey string) (Following, error)
+	SaveFollowing(ctx context.Context, following Following) error
+	ListFollowers(ctx context.Context, userID string) (FollowingsList, error)
+	ListFollowing(ctx context.Context, userID string) (FollowingsList, error)
+	DeleteFollowing(ctx context.Context, bindingKey string) error
 }
 
 type store struct {
@@ -88,29 +89,29 @@ func NewStore(ctx context.Context, db *mongo.Database, logger *zap.Logger) Store
 	return &store{db, friendsColl, friendReqColl, logger}
 }
 
-func (store *store) UpsertFriendRequest(ctx context.Context, freq FriendRequest) error {
+func (store *store) UpsertFollowRequest(ctx context.Context, freq FollowRequest) error {
 	opts := options.Replace().SetUpsert(true)
 	_, err := store.friendReqsColl.ReplaceOne(
 		ctx, bson.M{"binding": freq.BindingKey}, freq, opts,
 	)
 	if err != nil {
-		store.logger.Error("UpsertFriendRequest", zap.String("freq", common.FmtString(freq)), zap.Error(err))
+		store.logger.Error("UpsertFollowRequest", zap.String("freq", common.FmtString(freq)), zap.Error(err))
 		return ErrUnexpectedStoreError
 	}
 	return nil
 }
 
-func (store *store) GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error) {
-	var req FriendRequest
+func (store *store) GetFollowRequestByID(ctx context.Context, id string) (FollowRequest, error) {
+	var req FollowRequest
 	res := store.friendReqsColl.FindOne(ctx, bson.M{bsonKeyID: id})
 	if err := res.Decode(&req); err != nil {
-		store.logger.Error("GetFriendRequestByID", zap.String("id", id), zap.Error(err))
+		store.logger.Error("GetFollowRequestByID", zap.String("id", id), zap.Error(err))
 		return req, ErrUnexpectedStoreError
 	}
 	return req, nil
 }
 
-func (store *store) DeleteFriendRequest(ctx context.Context, id string) error {
+func (store *store) DeleteFollowRequest(ctx context.Context, id string) error {
 	_, err := store.friendReqsColl.DeleteOne(ctx, bson.M{bsonKeyID: id})
 	if err != nil {
 		store.logger.Error("Delete", zap.String("id", id), zap.Error(err))
@@ -119,42 +120,42 @@ func (store *store) DeleteFriendRequest(ctx context.Context, id string) error {
 	return nil
 }
 
-func (store *store) ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error) {
-	freqs := FriendRequestList{}
+func (store *store) ListFollowRequests(ctx context.Context, ff ListFollowRequestsFilter) (FollowRequestList, error) {
+	freqs := FollowRequestList{}
 
 	bsonFF := ff.toBSON()
 	cursor, err := store.friendReqsColl.Find(ctx, bsonFF)
 	if err != nil {
-		store.logger.Error("ListFriendRequests", zap.String("ff", common.FmtString(ff)), zap.Error(err))
+		store.logger.Error("ListFollowRequests", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return freqs, ErrUnexpectedStoreError
 	}
 	if err := cursor.All(ctx, &freqs); err != nil {
-		store.logger.Error("ListFriendRequests", zap.String("ff", common.FmtString(ff)), zap.Error(err))
+		store.logger.Error("ListFollowRequests", zap.String("ff", common.FmtString(ff)), zap.Error(err))
 		return freqs, ErrUnexpectedStoreError
 	}
 	return freqs, nil
 }
 
-func (store *store) SaveFriend(ctx context.Context, friend Friend) error {
+func (store *store) SaveFollowing(ctx context.Context, friend Following) error {
 	ff := bson.M{bsonKeyBindingKey: friend.BindingKey}
 	opts := options.Replace().SetUpsert(true)
 	_, err := store.friendsColl.ReplaceOne(ctx, ff, friend, opts)
 	if err != nil {
-		store.logger.Error("SaveFriend", zap.Error(err))
+		store.logger.Error("SaveFollowing", zap.Error(err))
 		return ErrUnexpectedStoreError
 	}
 	return nil
 }
 
-func (store *store) GetFriend(ctx context.Context, bindingKey string) (Friend, error) {
-	var friend Friend
+func (store *store) GetFollowing(ctx context.Context, bindingKey string) (Following, error) {
+	var friend Following
 
 	res := store.friendsColl.FindOne(ctx, bson.M{bsonKeyBindingKey: bindingKey})
 	if res.Err() == mongo.ErrNoDocuments {
-		return Friend{}, ErrFriendNotFound
+		return Following{}, ErrFollowingNotFound
 	}
 	if res.Err() != nil {
-		store.logger.Error("GetFriend",
+		store.logger.Error("GetFollowing",
 			zap.String("bindingKey", bindingKey),
 			zap.Error(res.Err()),
 		)
@@ -166,8 +167,8 @@ func (store *store) GetFriend(ctx context.Context, bindingKey string) (Friend, e
 	return friend, nil
 }
 
-func (store *store) ListFollowers(ctx context.Context, userID string) (FriendsList, error) {
-	list := FriendsList{}
+func (store *store) ListFollowers(ctx context.Context, userID string) (FollowingsList, error) {
+	list := FollowingsList{}
 	cursor, err := store.friendsColl.Find(ctx, bson.M{"targetID": userID})
 	if err != nil {
 		store.logger.Error("ListFollowers", zap.String("userID", userID), zap.Error(err))
@@ -180,8 +181,8 @@ func (store *store) ListFollowers(ctx context.Context, userID string) (FriendsLi
 	return list, nil
 }
 
-func (store *store) ListFollowing(ctx context.Context, userID string) (FriendsList, error) {
-	list := FriendsList{}
+func (store *store) ListFollowing(ctx context.Context, userID string) (FollowingsList, error) {
+	list := FollowingsList{}
 	cursor, err := store.friendsColl.Find(ctx, bson.M{"initiatorID": userID})
 	if err != nil {
 		store.logger.Error("ListFollowing", zap.String("userID", userID), zap.Error(err))
@@ -194,11 +195,11 @@ func (store *store) ListFollowing(ctx context.Context, userID string) (FriendsLi
 	return list, nil
 }
 
-func (store *store) DeleteFriend(ctx context.Context, bindingKey string) error {
+func (store *store) DeleteFollowing(ctx context.Context, bindingKey string) error {
 	ff := bson.M{bsonKeyBindingKey: bindingKey}
 	_, err := store.friendsColl.DeleteOne(ctx, ff)
 	if err != nil {
-		store.logger.Error("DeleteFriend", zap.Error(err))
+		store.logger.Error("DeleteFollowing", zap.Error(err))
 		return ErrUnexpectedStoreError
 	}
 	return nil

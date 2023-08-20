@@ -26,24 +26,24 @@ const (
 )
 
 var (
-	ErrInvalidFriendRequest = errors.New("social.ErrInvalidFriendRequest")
+	ErrInvalidFollowRequest = errors.New("social.ErrInvalidFollowRequest")
 	ErrAlreadyFriends       = errors.New("social.ErrAlreadyFriends")
-	ErrFriendRequestExists  = errors.New("social.ErrFriendRequestExists")
+	ErrFollowRequestExists  = errors.New("social.ErrFollowRequestExists")
 )
 
 type Service interface {
 	GetProfile(ctx context.Context, id string) (UserProfile, error)
 
-	SendFriendRequest(ctx context.Context, initiatorID, targetID string) error
-	GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error)
-	AcceptFriendRequest(ctx context.Context, userid, reqid string) error
-	ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error)
-	DeleteFriendRequest(ctx context.Context, userid, reqid string) error
+	SendFollowRequest(ctx context.Context, initiatorID, targetID string) error
+	GetFollowRequestByID(ctx context.Context, id string) (FollowRequest, error)
+	AcceptFollowRequest(ctx context.Context, userID, initiatorID, reqID string) error
+	ListFollowRequests(ctx context.Context, ff ListFollowRequestsFilter) (FollowRequestList, error)
+	DeleteFollowRequest(ctx context.Context, userID, reqID string) error
 
-	ListFollowers(ctx context.Context, userID string) (FriendsList, error)
-	ListFollowing(ctx context.Context, userID string) (FriendsList, error)
-	DeleteFriend(ctx context.Context, userID, friendID string) error
-	AreTheyFriends(ctx context.Context, initiatorID, targetID string) (bool, error)
+	ListFollowers(ctx context.Context, userID string) (FollowingsList, error)
+	ListFollowing(ctx context.Context, userID string) (FollowingsList, error)
+	DeleteFollowing(ctx context.Context, userID, friendID string) error
+	IsFollowing(ctx context.Context, initiatorID, targetID string) (bool, error)
 
 	ReadTripPublicInfo(ctx context.Context, tripID, referrerID string) (*trips.Trip, UserProfile, error)
 	ListTripPublicInfo(ctx context.Context, ff trips.ListFilter) (trips.TripsList, error)
@@ -96,7 +96,7 @@ func (svc service) GetProfile(ctx context.Context, ID string) (UserProfile, erro
 	return UserProfileFromUser(user), nil
 }
 
-func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID string) error {
+func (svc service) SendFollowRequest(ctx context.Context, initiatorID, targetID string) error {
 	// 1. Validate IDs exist
 	userFF := auth.ListFilter{IDs: []string{initiatorID, targetID}}
 	users, err := svc.authSvc.List(ctx, userFF)
@@ -104,7 +104,7 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 		return err
 	}
 	if len(users) != 2 {
-		return ErrInvalidFriendRequest
+		return ErrInvalidFollowRequest
 	}
 
 	var (
@@ -120,7 +120,7 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 	}
 
 	// 2. Validate if following relationship already exists
-	ok, err := svc.AreTheyFriends(ctx, initiatorID, targetID)
+	ok, err := svc.IsFollowing(ctx, initiatorID, targetID)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 		return ErrAlreadyFriends
 	}
 
-	reqs, err := svc.ListFriendRequests(ctx, ListFriendRequestsFilter{
+	reqs, err := svc.ListFollowRequests(ctx, ListFollowRequestsFilter{
 		InitiatorID: common.StringPtr(initiatorID),
 		TargetID:    common.StringPtr(targetID),
 	})
@@ -136,58 +136,71 @@ func (svc service) SendFriendRequest(ctx context.Context, initiatorID, targetID 
 		return nil
 	}
 	if len(reqs) > 0 {
-		return ErrFriendRequestExists
+		return ErrFollowRequestExists
 	}
 
-	req := NewFriendRequest(initiatorID, targetID)
+	req := NewFollowRequest(initiatorID, targetID)
 
 	// 3. If target has verified, can automatically follow,
 	// no need to wait for acceptance.
 	targetProfile := UserProfileFromUser(target)
 	if targetProfile.IsVerified() {
-		return svc.store.SaveFriend(ctx, NewFriendFromRequest(req))
+		return svc.store.SaveFollowing(ctx, NewFollowingFromRequest(req))
 	}
 
 	// 4. Else, send request
-	if err := svc.store.UpsertFriendRequest(ctx, req); err != nil {
+	if err := svc.store.UpsertFollowRequest(ctx, req); err != nil {
 		return err
 	}
 	go svc.sendFollowRequestEmail(ctx, initiator, target, req)
 	return nil
 }
 
-func (svc service) GetFriendRequestByID(ctx context.Context, id string) (FriendRequest, error) {
-	return svc.store.GetFriendRequestByID(ctx, id)
+func (svc service) GetFollowRequestByID(ctx context.Context, id string) (FollowRequest, error) {
+	return svc.store.GetFollowRequestByID(ctx, id)
 }
 
-func (svc service) AcceptFriendRequest(ctx context.Context, userid, reqid string) error {
-	var req FriendRequest
-	info, err := FriendRequestInfoFromCtx(ctx)
+func (svc service) AcceptFollowRequest(
+	ctx context.Context,
+	userID,
+	initiatorID,
+	reqID string,
+) error {
+	ok, err := svc.IsFollowing(ctx, initiatorID, userID)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+
+	var req FollowRequest
+	info, err := FollowRequestInfoFromCtx(ctx)
 	if err == nil {
 		req = info.Req
 	} else {
-		req, err = svc.store.GetFriendRequestByID(ctx, reqid)
+		req, err = svc.store.GetFollowRequestByID(ctx, reqID)
 		if err != nil {
 			return err
 		}
 	}
-	if err := svc.DeleteFriendRequest(ctx, userid, reqid); err != nil {
+	if err := svc.DeleteFollowRequest(ctx, userID, reqID); err != nil {
 		return err
 	}
-	return svc.store.SaveFriend(ctx, NewFriendFromRequest(req))
+	return svc.store.SaveFollowing(ctx, NewFollowingFromRequest(req))
 }
 
-func (svc service) DeleteFriendRequest(ctx context.Context, userid, reqid string) error {
-	return svc.store.DeleteFriendRequest(ctx, reqid)
+func (svc service) DeleteFollowRequest(ctx context.Context, userID, reqID string) error {
+	return svc.store.DeleteFollowRequest(ctx, reqID)
 }
 
-func (svc service) ListFriendRequests(ctx context.Context, ff ListFriendRequestsFilter) (FriendRequestList, error) {
-	reqs, err := svc.store.ListFriendRequests(ctx, ff)
+func (svc service) ListFollowRequests(ctx context.Context, ff ListFollowRequestsFilter) (FollowRequestList, error) {
+	reqs, err := svc.store.ListFollowRequests(ctx, ff)
 	if err != nil {
 		return nil, err
 	}
 	if len(reqs) == 0 {
-		return FriendRequestList{}, nil
+		return FollowRequestList{}, nil
 	}
 
 	initiatorIDs := reqs.GetInitiatorIDs()
@@ -205,13 +218,17 @@ func (svc service) ListFriendRequests(ctx context.Context, ff ListFriendRequests
 	return reqs, nil
 }
 
-func (svc service) ListFollowers(ctx context.Context, userID string) (FriendsList, error) {
-	friends, err := svc.store.ListFollowers(ctx, userID)
+func (svc service) ListFollowers(ctx context.Context, userID string) (FollowingsList, error) {
+	followers, err := svc.store.ListFollowers(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	initiatorIDs := friends.GetInitiatorIDs()
+	if len(followers) == 0 {
+		return FollowingsList{}, nil
+	}
+
+	initiatorIDs := followers.GetInitiatorIDs()
 	initiators, err := svc.authSvc.List(ctx, auth.ListFilter{IDs: initiatorIDs})
 	if err != nil {
 		return nil, err
@@ -220,25 +237,25 @@ func (svc service) ListFollowers(ctx context.Context, userID string) (FriendsLis
 	for _, usr := range initiators {
 		profiles[usr.ID] = UserProfileFromUser(usr)
 	}
-	for i := 0; i < len(friends); i++ {
-		friends[i].InitiatorProfile = profiles[friends[i].InitiatorID]
+	for i := 0; i < len(followers); i++ {
+		followers[i].InitiatorProfile = profiles[followers[i].InitiatorID]
 	}
-	return friends, err
+	return followers, err
 }
 
-func (svc service) ListFollowing(ctx context.Context, userID string) (FriendsList, error) {
-	friends, err := svc.store.ListFollowing(ctx, userID)
+func (svc service) ListFollowing(ctx context.Context, userID string) (FollowingsList, error) {
+	followings, err := svc.store.ListFollowing(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(friends) == 0 {
-		return FriendsList{}, nil
+	if len(followings) == 0 {
+		return FollowingsList{}, nil
 	}
 
 	targets, err := svc.authSvc.List(
 		ctx,
-		auth.ListFilter{IDs: friends.GetTargetIDs()},
+		auth.ListFilter{IDs: followings.GetTargetIDs()},
 	)
 	if err != nil {
 		return nil, err
@@ -247,20 +264,20 @@ func (svc service) ListFollowing(ctx context.Context, userID string) (FriendsLis
 	for _, usr := range targets {
 		profiles[usr.ID] = UserProfileFromUser(usr)
 	}
-	for i := 0; i < len(friends); i++ {
-		friends[i].TargetProfile = profiles[friends[i].TargetID]
+	for i := 0; i < len(followings); i++ {
+		followings[i].TargetProfile = profiles[followings[i].TargetID]
 	}
 
-	return friends, err
+	return followings, err
 }
 
-func (svc service) DeleteFriend(ctx context.Context, userID, bindingKey string) error {
-	return svc.store.DeleteFriend(ctx, bindingKey)
+func (svc service) DeleteFollowing(ctx context.Context, userID, bindingKey string) error {
+	return svc.store.DeleteFollowing(ctx, bindingKey)
 }
 
-func (svc service) AreTheyFriends(ctx context.Context, initiatorID, targetID string) (bool, error) {
-	_, err := svc.store.GetFriend(ctx, fmt.Sprintf("%s|%s", initiatorID, targetID))
-	if err == ErrFriendNotFound {
+func (svc service) IsFollowing(ctx context.Context, initiatorID, targetID string) (bool, error) {
+	_, err := svc.store.GetFollowing(ctx, fmt.Sprintf("%s|%s", initiatorID, targetID))
+	if err == ErrFollowingNotFound {
 		return false, nil
 	}
 	if err != nil {
@@ -416,7 +433,7 @@ func (svc service) sendFollowRequestEmail(
 	ctx context.Context,
 	initiator,
 	target auth.User,
-	req FriendRequest,
+	req FollowRequest,
 ) {
 	svc.logger.Info("sending friend req email", zap.String("to", target.Email))
 

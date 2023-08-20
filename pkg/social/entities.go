@@ -38,7 +38,7 @@ func (up UserProfile) IsVerified() bool {
 
 type UserProfileMap map[string]UserProfile
 
-type FriendRequest struct {
+type FollowRequest struct {
 	ID          string `json:"id" bson:"id"`
 	BindingKey  string `json:"binding" bson:"binding"`
 	InitiatorID string `json:"initiatorID" bson:"initiatorID"`
@@ -47,8 +47,8 @@ type FriendRequest struct {
 	InitiatorProfile UserProfile `json:"initiatorProfile" bson:"-"`
 }
 
-func NewFriendRequest(initiator, target string) FriendRequest {
-	return FriendRequest{
+func NewFollowRequest(initiator, target string) FollowRequest {
+	return FollowRequest{
 		ID:          uuid.NewString(),
 		BindingKey:  fmt.Sprintf("%s|%s", initiator, target),
 		InitiatorID: initiator,
@@ -56,9 +56,9 @@ func NewFriendRequest(initiator, target string) FriendRequest {
 	}
 }
 
-type FriendRequestList []FriendRequest
+type FollowRequestList []FollowRequest
 
-func (reqList FriendRequestList) GetInitiatorIDs() []string {
+func (reqList FollowRequestList) GetInitiatorIDs() []string {
 	ids := []string{}
 	for _, req := range reqList {
 		ids = append(ids, req.InitiatorID)
@@ -66,7 +66,7 @@ func (reqList FriendRequestList) GetInitiatorIDs() []string {
 	return ids
 }
 
-type Friend struct {
+type Following struct {
 	ID          string `json:"id" bson:"id"`
 	BindingKey  string `json:"binding" bson:"binding"`
 	InitiatorID string `json:"initiatorID" bson:"initiatorID"`
@@ -76,18 +76,18 @@ type Friend struct {
 	TargetProfile    UserProfile `json:"targetProfile" bson:"-"`
 }
 
-func NewFriendFromRequest(req FriendRequest) Friend {
-	return Friend{
-		ID:          uuid.NewString(),
+func NewFollowingFromRequest(req FollowRequest) Following {
+	return Following{
+		ID:          fmt.Sprintf("%s|%s", req.InitiatorID, req.TargetID),
 		BindingKey:  fmt.Sprintf("%s|%s", req.InitiatorID, req.TargetID),
 		InitiatorID: req.InitiatorID,
 		TargetID:    req.TargetID,
 	}
 }
 
-type FriendsList []Friend
+type FollowingsList []Following
 
-func (l FriendsList) GetTargetIDs() []string {
+func (l FollowingsList) GetTargetIDs() []string {
 	ids := []string{}
 	for _, req := range l {
 		ids = append(ids, req.TargetID)
@@ -95,7 +95,7 @@ func (l FriendsList) GetTargetIDs() []string {
 	return ids
 }
 
-func (l FriendsList) GetInitiatorIDs() []string {
+func (l FollowingsList) GetInitiatorIDs() []string {
 	ids := []string{}
 	for _, req := range l {
 		ids = append(ids, req.InitiatorID)

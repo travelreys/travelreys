@@ -24,11 +24,12 @@ const (
 
 func errToHttpCode() func(err error) int {
 	notFoundErrors := []error{
-		ErrFriendNotFound,
+		ErrFollowingNotFound,
 		trips.ErrTripNotFound,
 	}
 	appErrors := []error{
-		ErrInvalidFriendRequest,
+		ErrInvalidFollowRequest,
+		ErrFollowRequestExists,
 		ErrUnexpectedStoreError,
 	}
 	authErrors := []error{
@@ -89,30 +90,30 @@ func MakeHandler(svc Service) http.Handler {
 	)
 
 	sendFriendReqHandler := kithttp.NewServer(
-		NewSendFriendRequestEndpoint(svc),
-		decodeSendFriendRequestRequest,
+		NewSendFollowRequestEndpoint(svc),
+		decodeSendFollowRequestRequest,
 		encodeResponse, opts...,
 	)
 	listFriendReqHandler := kithttp.NewServer(
-		NewListFriendRequestsRequestEndpoint(svc),
-		decodeListFriendRequestsRequest,
+		NewListFollowRequestsRequestEndpoint(svc),
+		decodeListFollowRequestsRequest,
 		encodeResponse, opts...,
 	)
 	acceptFriendReqHandler := kithttp.NewServer(
-		NewAcceptFriendRequestEndpoint(svc),
-		decodeAcceptFriendRequestRequest,
+		NewAcceptFollowRequestEndpoint(svc),
+		decodeAcceptFollowRequestRequest,
 		encodeResponse, opts...,
 	)
 
-	deleteFriendReqHandler := kithttp.NewServer(
-		NewDeleteFriendRequestEndpoint(svc),
-		decodeDeleteFriendRequestRequest,
+	deleteFollowingReqHandler := kithttp.NewServer(
+		NewDeleteFollowRequestEndpoint(svc),
+		decodeDeleteFollowRequestRequest,
 		encodeResponse, opts...,
 	)
 
-	getFriendHandler := kithttp.NewServer(
-		NewAreTheyFriendsResponseEndpoint(svc),
-		decodeAreTheyFriendsRequest,
+	getFollowingHandler := kithttp.NewServer(
+		NewIsFollowingResponseEndpoint(svc),
+		decodeIsFollowingRequest,
 		encodeResponse, opts...,
 	)
 
@@ -128,9 +129,9 @@ func MakeHandler(svc Service) http.Handler {
 		encodeResponse, opts...,
 	)
 
-	deleteFriendHandler := kithttp.NewServer(
-		NewDeleteFriendEndpoint(svc),
-		decodeDeleteFriendRequest,
+	deleteFollowHandler := kithttp.NewServer(
+		NewDeleteFollowEndpoint(svc),
+		decodeDeleteFollowRequest,
 		encodeResponse, opts...,
 	)
 
@@ -158,12 +159,12 @@ func MakeHandler(svc Service) http.Handler {
 	r.Handle("/api/v1/social/{uid}/requests", sendFriendReqHandler).Methods(http.MethodPost)
 	r.Handle("/api/v1/social/{uid}/requests", listFriendReqHandler).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/{uid}/requests/{rid}/accept", acceptFriendReqHandler).Methods(http.MethodPut)
-	r.Handle("/api/v1/social/{uid}/requests/{rid}", deleteFriendReqHandler).Methods(http.MethodDelete)
+	r.Handle("/api/v1/social/{uid}/requests/{rid}", deleteFollowingReqHandler).Methods(http.MethodDelete)
 
-	r.Handle("/api/v1/social/{uid}/friends/following", listFollowingHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/social/{uid}/friends/followers", listFollowersHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/social/{uid}/friends/{targetID}", getFriendHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/social/{uid}/friends/{bindingKey}", deleteFriendHandler).Methods(http.MethodDelete)
+	r.Handle("/api/v1/social/{uid}/followers", listFollowersHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/following", listFollowingHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/following/{targetID}", getFollowingHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/social/{uid}/following/{bindingKey}", deleteFollowHandler).Methods(http.MethodDelete)
 
 	r.Handle("/api/v1/social/{uid}/trips", ListTripPublicInfo).Methods(http.MethodGet)
 	r.Handle("/api/v1/social/{uid}/trips/{tid}", readTripPublicInfoHandler).Methods(http.MethodGet)
@@ -192,13 +193,13 @@ func decodeListFollowingTripsRequest(ctx context.Context, r *http.Request) (inte
 	return req, nil
 }
 
-func decodeSendFriendRequestRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeSendFollowRequestRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID, ok := vars[URLPathVarUserID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	req := SendFriendRequestRequest{}
+	req := SendFollowRequestRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
 	}
@@ -206,7 +207,7 @@ func decodeSendFriendRequestRequest(ctx context.Context, r *http.Request) (inter
 	return req, nil
 }
 
-func decodeAcceptFriendRequestRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeAcceptFollowRequestRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID, ok := vars[URLPathVarUserID]
 	if !ok {
@@ -216,14 +217,17 @@ func decodeAcceptFriendRequestRequest(_ context.Context, r *http.Request) (inter
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	req := AcceptFriendRequestRequest{
-		UserID:    userID,
-		RequestID: requestID,
+	req := AcceptFollowRequestRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, common.ErrInvalidJSONBody
 	}
+
+	req.UserID = userID
+	req.RequestID = requestID
 	return req, nil
 }
 
-func decodeDeleteFriendRequestRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDeleteFollowRequestRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID, ok := vars[URLPathVarUserID]
 	if !ok {
@@ -233,25 +237,25 @@ func decodeDeleteFriendRequestRequest(_ context.Context, r *http.Request) (inter
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	req := DeleteFriendRequestRequest{UserID: userID, RequestID: requestID}
+	req := DeleteFollowRequestRequest{UserID: userID, RequestID: requestID}
 	return req, nil
 }
 
-func decodeListFriendRequestsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeListFollowRequestsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID, ok := vars[URLPathVarUserID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	req := ListFriendRequestsRequest{
-		ListFriendRequestsFilter: ListFriendRequestsFilter{
+	req := ListFollowRequestsRequest{
+		ListFollowRequestsFilter: ListFollowRequestsFilter{
 			TargetID: common.StringPtr(userID),
 		},
 	}
 	return req, nil
 }
 
-func decodeAreTheyFriendsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeIsFollowingRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID, ok := vars[URLPathVarUserID]
 	if !ok {
@@ -262,7 +266,7 @@ func decodeAreTheyFriendsRequest(ctx context.Context, r *http.Request) (interfac
 		return nil, common.ErrInvalidRequest
 	}
 
-	req := AreTheyFriendsRequest{
+	req := IsFollowingRequest{
 		InitiatorID: userID,
 		TargetID:    targetID,
 	}
@@ -279,7 +283,7 @@ func decodeListFriendsRequest(ctx context.Context, r *http.Request) (interface{}
 	return req, nil
 }
 
-func decodeDeleteFriendRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeDeleteFollowRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID, ok := vars[URLPathVarUserID]
 	if !ok {
@@ -289,7 +293,7 @@ func decodeDeleteFriendRequest(ctx context.Context, r *http.Request) (interface{
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
-	req := DeleteFriendRequest{
+	req := DeleteFollowRequest{
 		UserID:     userID,
 		BindingKey: bindingKey,
 	}
