@@ -167,7 +167,7 @@ func (svc service) Login(
 	}
 
 	if isNewUser {
-		go svc.sendWelcomeEmail(ctx, usr.Name, usr.Email)
+		go svc.sendWelcomeEmail(context.Background(), usr.Name, usr.Email)
 	}
 
 	return usr, cookie, nil
@@ -184,7 +184,7 @@ func (svc service) MagicLink(ctx context.Context, email string) error {
 		return err
 	}
 	go func() {
-		svc.sendMagicLinkEmail(ctx, otp, email)
+		svc.sendMagicLinkEmail(context.Background(), otp, email)
 	}()
 	return nil
 }
@@ -323,11 +323,11 @@ func (svc service) sendMagicLinkEmail(
 
 func (svc service) EmailLogin(
 	ctx context.Context,
-	authCode,
+	code,
 	signature string,
 	isLoggedIn bool,
 ) (User, *http.Cookie, error) {
-	usr, err := svc.otp.TokenToUserInfo(ctx, authCode, signature)
+	usr, err := svc.otp.TokenToUserInfo(ctx, code, signature)
 	if err != nil {
 		return User{}, nil, err
 	}
@@ -351,7 +351,7 @@ func (svc service) EmailLogin(
 			svc.logger.Error("EmailLogin", zap.Error(err))
 			return User{}, nil, err
 		}
-		go svc.sendWelcomeEmail(ctx, usr.Name, usr.Email)
+		go svc.sendWelcomeEmail(context.Background(), usr.Name, usr.Email)
 	}
 
 	// The request could come from a new that is already
@@ -363,18 +363,18 @@ func (svc service) EmailLogin(
 			svc.logger.Error("EmailLogin", zap.Error(err))
 			return User{}, nil, err
 		}
-		cookie := &http.Cookie{
+		cookie = &http.Cookie{
 			Name:     AccessCookieName,
 			Value:    jwt,
 			HttpOnly: true,
 			Path:     "/",
 			MaxAge:   int(authCookieDuration.Seconds()),
 		}
+
 		if svc.secureCookie {
 			cookie.SameSite = http.SameSiteNoneMode
 			cookie.Secure = true
 		}
 	}
-
 	return usr, cookie, nil
 }

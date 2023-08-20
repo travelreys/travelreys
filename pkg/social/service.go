@@ -152,7 +152,9 @@ func (svc service) SendFollowRequest(ctx context.Context, initiatorID, targetID 
 	if err := svc.store.UpsertFollowRequest(ctx, req); err != nil {
 		return err
 	}
-	go svc.sendFollowRequestEmail(ctx, initiator, target, req)
+	go svc.sendFollowRequestEmail(
+		context.Background(), initiator, target, req,
+	)
 	return nil
 }
 
@@ -416,6 +418,7 @@ func (svc *service) DuplicateTrip(
 			newItin.Activities[actKey] = newAct
 			actIDMap[act.ID] = newAct.ID
 		}
+		newItin.Labels[trips.LabelUiColor] = itin.Labels[trips.LabelUiColor]
 
 		for rKey, route := range itin.Routes {
 			tkns := strings.Split(rKey, "|")

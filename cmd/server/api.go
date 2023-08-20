@@ -66,12 +66,13 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		authStore, cfg.SecureCookie,
 		mailSvc, storageSvc, logger,
 	)
-	authSvc = auth.SvcWithValidationMw(authSvc, logger)
-	authSvcWithRBAC := auth.SvcWithRBACMw(authSvc, logger)
+	authSvcWithVal := auth.SvcWithValidationMw(authSvc, logger)
+	authSvcForAPI := auth.SvcWithRBACMw(authSvc, logger)
+	authSvcForAPI = auth.SvcWithValidationMw(authSvcForAPI, logger)
 
 	// Images
 	imageSvc := images.NewService(images.NewDefaultWebAPI(logger))
-	imageSvc = images.SvcWithRBACMw(imageSvc, logger)
+	imageSvcForAPI := images.SvcWithRBACMw(imageSvc, logger)
 
 	// Maps
 	mapsSvc, err := maps.NewDefaulService(logger)
@@ -83,12 +84,12 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Finance
 	finStore := finance.NewStore(rdb, logger)
 	finSvc := finance.NewService(finStore, logger)
-	finSvc = finance.SvcWithRBACMw(finSvc, logger)
+	finSvcForAPI := finance.SvcWithRBACMw(finSvc, logger)
 
 	// Ogp
 	ogpSvc := ogp.NewService()
-	ogpSvc = ogp.SvcWithValidation(ogpSvc, logger)
 	ogpSvc = ogp.SvcWithRBACMw(ogpSvc, logger)
+	ogpSvcForAPI := ogp.SvcWithValidation(ogpSvc, logger)
 
 	// Media
 	mediaStore := media.NewStore(ctx, db, logger)
@@ -101,9 +102,17 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	// Trips
 	tripStore := trips.NewStore(ctx, db, logger)
-	tripSvc := trips.NewService(tripStore, authSvc, imageSvc, mediaSvc, storageSvc, logger)
-	tripSvc = trips.SvcWithValidationMw(tripSvc, logger)
-	tripSvcWithRBAC := trips.SvcWithRBACMw(tripSvc, logger)
+	tripSvc := trips.NewService(
+		tripStore,
+		authSvcWithVal,
+		imageSvc,
+		mediaSvc,
+		storageSvc,
+		logger,
+	)
+	tripSvcWithVal := trips.SvcWithValidationMw(tripSvc, logger)
+	tripSvcForAPI := trips.SvcWithRBACMw(tripSvc, logger)
+	tripSvcForAPI = trips.SvcWithValidationMw(tripSvcForAPI, logger)
 	tripSyncSvc := trips.NewSyncService(
 		tripStore,
 		trips.NewSessionStore(rdb, logger),
@@ -114,19 +123,19 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	// Trips Invite
 	inviteStore := invites.NewStore(ctx, db, logger)
 	inviteSvc := invites.NewService(
-		authSvc,
+		authSvcWithVal,
 		tripSyncSvc,
 		mailSvc,
 		inviteStore,
 		logger,
 	)
 	inviteSvc = invites.SvcWithValidationMw(inviteSvc, logger)
-	inviteSvc = invites.SvcWithRBACMw(inviteSvc, tripSvc, authSvc, logger)
+	inviteSvc = invites.SvcWithRBACMw(inviteSvc, tripSvcWithVal, authSvcWithVal, logger)
 
 	// Social
 	socialStore := social.NewStore(ctx, db, logger)
-	socialSvc := social.NewService(socialStore, authSvc, tripSvc, mailSvc, logger)
-	socialSvc = social.SvcWithRBACMw(socialSvc, tripSvc, logger)
+	socialSvc := social.NewService(socialStore, authSvcWithVal, tripSvcWithVal, mailSvc, logger)
+	socialSvc = social.SvcWithRBACMw(socialSvc, tripSvcWithVal, logger)
 
 	r := mux.NewRouter()
 	securityMW := api.NewSecureHeadersMiddleware(cfg.CORSOrigin)
@@ -143,14 +152,14 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.HandleFunc("/healthz", api.HealthzHandler)
 	r.HandleFunc("/ws", wsSvr.HandleFunc)
 
-	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvcWithRBAC))
-	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvc))
-	r.PathPrefix("/api/v1/finance").Handler(finance.MakeHandler(finSvc))
+	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvcForAPI))
+	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvcForAPI))
+	r.PathPrefix("/api/v1/finance").Handler(finance.MakeHandler(finSvcForAPI))
 	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
-	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
+	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvcForAPI))
 	r.PathPrefix("/api/v1/social").Handler(social.MakeHandler(socialSvc))
-	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvcWithRBAC))
-	r.PathPrefix("/api/v1/trip-invites").Handler(invites.MakeHandler(inviteSvc))
+	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvcForAPI))
+	r.PathPrefix("/api/v1/invites").Handler(invites.MakeHandler(inviteSvc))
 
 	return &http.Server{
 		Handler: r,

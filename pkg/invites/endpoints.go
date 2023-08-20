@@ -2,10 +2,14 @@ package invites
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/travelreys/travelreys/pkg/auth"
 	"github.com/travelreys/travelreys/pkg/common"
 )
+
+// Trip Invites
 
 type SendTripInviteRequest struct {
 	UserID   string `json:"userID"`
@@ -106,5 +110,69 @@ func NewListTripInvitesEndpoint(svc Service) endpoint.Endpoint {
 		}
 		invites, err := svc.ListTripInvites(ctx, req.ListTripInvitesFilter)
 		return ListTripInvitesResponse{invites, err}, nil
+	}
+}
+
+// Email Trip Invites
+
+type SendEmailTripInviteRequest struct {
+	UserEmail string `json:"userEmail"`
+	AuthorID  string `json:"authorID"`
+	TripID    string `json:"tripID"`
+}
+
+type SendEmailTripInviteResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r SendEmailTripInviteResponse) Error() error {
+	return r.Err
+}
+
+func NewSendEmailTripInviteEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(SendEmailTripInviteRequest)
+		if !ok {
+			return SendEmailTripInviteResponse{
+				Err: common.ErrEndpointReqMismatch,
+			}, nil
+		}
+		err := svc.SendEmailTripInvite(
+			ctx, req.TripID, req.AuthorID, req.UserEmail,
+		)
+		return SendEmailTripInviteResponse{Err: err}, nil
+	}
+}
+
+type AcceptEmailTripInviteRequest struct {
+	ID         string `json:"id"`
+	Code       string `json:"code"`
+	Sig        string `json:"sig"`
+	IsLoggedIn bool   `json:"isLoggedIn"`
+}
+type AcceptEmailTripInviteResponse struct {
+	User   auth.User    `json:"user"`
+	Cookie *http.Cookie `json:"-"`
+	Err    error        `json:"error,omitempty"`
+}
+
+func (r AcceptEmailTripInviteResponse) Error() error {
+	return r.Err
+}
+
+func NewAcceptEmailTripInviteEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, epReq interface{}) (interface{}, error) {
+		req, ok := epReq.(AcceptEmailTripInviteRequest)
+		if !ok {
+			return AcceptEmailTripInviteResponse{
+				Err: common.ErrEndpointReqMismatch,
+			}, nil
+		}
+		user, cookie, err := svc.AcceptEmailTripInvite(
+			ctx, req.ID, req.Code, req.Sig, req.IsLoggedIn,
+		)
+		return AcceptEmailTripInviteResponse{
+			User: user, Cookie: cookie, Err: err,
+		}, nil
 	}
 }

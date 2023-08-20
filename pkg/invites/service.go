@@ -92,7 +92,11 @@ func (svc *service) SendAppInvite(ctx context.Context, authorID, userEmail strin
 	if err == nil {
 		go func() {
 			svc.sendAppInviteEmail(
-				ctx, inv, *inviteMeta.Author, code, sig,
+				context.Background(),
+				inv,
+				*inviteMeta.Author,
+				code,
+				sig,
 			)
 		}()
 	}
@@ -195,7 +199,11 @@ func (svc *service) SendTripInvite(
 	err = svc.store.SaveTripInvite(ctx, invite)
 	if err == nil {
 		go func() {
-			svc.sendTripInviteEmail(ctx, invite, inviteMeta.Trip)
+			svc.sendTripInviteEmail(
+				context.Background(),
+				invite,
+				inviteMeta.Trip,
+			)
 		}()
 	}
 	return err
@@ -330,25 +338,28 @@ func (svc service) SendEmailTripInvite(
 	if err == nil {
 		go func() {
 			c, sig, err := svc.authSvc.GenerateOTPAuthCodeAndSig(
-				ctx,
+				context.Background(),
 				userEmail,
 				emailInviteDuration,
 			)
 			if err != nil {
 				svc.logger.Error("GenerateOTPAuthCodeAndSig", zap.Error(err))
 			}
-
-			svc.sendEmailTripInviteEmail(ctx, inv, inviteMeta.Trip, sig, c)
+			svc.sendEmailTripInviteEmail(
+				context.Background(), inv, inviteMeta.Trip, c, sig,
+			)
 		}()
 	}
 	return err
 }
 
+// AcceptEmailTripInvite accepts an email trip invitation.
+// Such invite operation should be idempotent.
 func (svc service) AcceptEmailTripInvite(
 	ctx context.Context,
 	ID,
-	sig,
-	c string,
+	code,
+	sig string,
 	isLoggedIn bool,
 ) (auth.User, *http.Cookie, error) {
 	invite, err := svc.store.ReadEmailTripInvite(ctx, ID)
@@ -356,10 +367,12 @@ func (svc service) AcceptEmailTripInvite(
 		return auth.User{}, nil, err
 	}
 
-	usr, cookie, err := svc.authSvc.EmailLogin(ctx, c, sig, isLoggedIn)
+	usr, cookie, err := svc.authSvc.EmailLogin(ctx, code, sig, isLoggedIn)
 	if err != nil {
 		return auth.User{}, nil, err
 	}
+
+	time.Sleep(syncMsgWaitInterval)
 
 	connID := uuid.NewString()
 	joinMsg := trips.MakeSyncMsgTOBTopicJoin(
@@ -384,7 +397,7 @@ func (svc service) AcceptEmailTripInvite(
 		return auth.User{}, nil, err
 	}
 
-	go svc.store.DeleteTripInvite(ctx, ID)
+	go svc.store.DeleteTripInvite(context.Background(), ID)
 	return usr, cookie, nil
 }
 
@@ -404,13 +417,13 @@ func (svc *service) sendEmailTripInviteEmail(
 	ctx context.Context,
 	inv EmailTripInvite,
 	trip *trips.Trip,
-	sig,
-	c string,
+	code,
+	sig string,
 ) {
 	svc.logger.Info("sending email trip invite email", zap.String("to", inv.UserEmail))
 	t, err := template.
-		New(tripInviteTmplFileName).
-		ParseFiles(tripInviteTmplFilePath)
+		New(emailTripInviteTmplFileName).
+		ParseFiles(emailTripInviteTmplFilePath)
 	if err != nil {
 		svc.logger.Error("sendEmailTripInviteEmail", zap.Error(err))
 		return
@@ -427,15 +440,15 @@ func (svc *service) sendEmailTripInviteEmail(
 		AuthorName  string
 		TripName    string
 		CoverImgURL string
-		Sig         string
 		Code        string
+		Sig         string
 	}{
 		inv.ID,
 		inv.AuthorName,
 		inv.TripName,
 		coverImgURL,
+		code,
 		sig,
-		c,
 	}
 	if err := t.Execute(&doc, data); err != nil {
 		svc.logger.Error("sendEmailTripInviteEmail", zap.Error(err))
