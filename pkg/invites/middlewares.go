@@ -129,8 +129,8 @@ func (mw *validationMiddleware) SendEmailTripInvite(
 func (mw *validationMiddleware) AcceptEmailTripInvite(
 	ctx context.Context,
 	ID,
-	sig,
-	code string,
+	code,
+	sig string,
 	isLoggedIn bool,
 ) (auth.User, *http.Cookie, error) {
 	if ID == "" || sig == "" || code == "" {

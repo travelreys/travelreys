@@ -344,11 +344,13 @@ func (svc service) SendEmailTripInvite(
 	return err
 }
 
+// AcceptEmailTripInvite accepts an email trip invitation.
+// Such invite operation should be idempotent.
 func (svc service) AcceptEmailTripInvite(
 	ctx context.Context,
 	ID,
-	sig,
-	c string,
+	code,
+	sig string,
 	isLoggedIn bool,
 ) (auth.User, *http.Cookie, error) {
 	invite, err := svc.store.ReadEmailTripInvite(ctx, ID)
@@ -356,7 +358,7 @@ func (svc service) AcceptEmailTripInvite(
 		return auth.User{}, nil, err
 	}
 
-	usr, cookie, err := svc.authSvc.EmailLogin(ctx, c, sig, isLoggedIn)
+	usr, cookie, err := svc.authSvc.EmailLogin(ctx, code, sig, isLoggedIn)
 	if err != nil {
 		return auth.User{}, nil, err
 	}
@@ -409,8 +411,8 @@ func (svc *service) sendEmailTripInviteEmail(
 ) {
 	svc.logger.Info("sending email trip invite email", zap.String("to", inv.UserEmail))
 	t, err := template.
-		New(tripInviteTmplFileName).
-		ParseFiles(tripInviteTmplFilePath)
+		New(emailTripInviteTmplFileName).
+		ParseFiles(emailTripInviteTmplFilePath)
 	if err != nil {
 		svc.logger.Error("sendEmailTripInviteEmail", zap.Error(err))
 		return

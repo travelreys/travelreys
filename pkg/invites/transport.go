@@ -59,36 +59,54 @@ func MakeHandler(svc Service) http.Handler {
 		kithttp.ServerErrorEncoder(common.EncodeErrorFactory(errToHttpCode)),
 	}
 
-	sendHandler := kithttp.NewServer(
+	sendTripInviteHandler := kithttp.NewServer(
 		NewSendTripInviteEndpoint(svc),
-		decodeSendRequest,
+		decodeSendTripInviteRequest,
 		encodeResponse, opts...,
 	)
-	listHandler := kithttp.NewServer(
+	listTripInviteHandler := kithttp.NewServer(
 		NewListTripInvitesEndpoint(svc),
-		decodeListInvitesRequest,
+		decodeListTripInvitesRequest,
 		encodeResponse, opts...,
 	)
-	acceptHandler := kithttp.NewServer(
+	acceptTripInviteHandler := kithttp.NewServer(
 		NewAcceptTripInviteEndpoint(svc),
-		decodeAcceptInviteRequest,
+		decodeAcceptTripInviteRequest,
 		encodeResponse, opts...,
 	)
-	declineHandler := kithttp.NewServer(
+	declineTripInviteHandler := kithttp.NewServer(
 		NewDeclineTripInviteEndpoint(svc),
-		decodeDeclineInviteRequest,
+		decodeDeclineTripInviteRequest,
 		encodeResponse, opts...,
 	)
 
-	r.Handle("/api/v1/trip-invites", sendHandler).Methods(http.MethodPost)
-	r.Handle("/api/v1/trip-invites", listHandler).Methods(http.MethodGet)
-	r.Handle("/api/v1/trip-invites/{id}/accept", acceptHandler).Methods(http.MethodPut)
-	r.Handle("/api/v1/trip-invites/{id}/decline", declineHandler).Methods(http.MethodPut)
+	r.Handle("/api/v1/invites/trip", sendTripInviteHandler).Methods(http.MethodPost)
+	r.Handle("/api/v1/invites/trip", listTripInviteHandler).Methods(http.MethodGet)
+	r.Handle("/api/v1/invites/trip/{id}/accept", acceptTripInviteHandler).Methods(http.MethodPut)
+	r.Handle("/api/v1/invites/trip/{id}/decline", declineTripInviteHandler).Methods(http.MethodPut)
+
+	sendEmailTripInviteHandler := kithttp.NewServer(
+		NewSendEmailTripInviteEndpoint(svc),
+		decodeSendEmailTripInviteRequest,
+		encodeResponse,
+		opts...,
+	)
+
+	acceptEmailTripInviteHandler := kithttp.NewServer(
+		NewAcceptEmailTripInviteEndpoint(svc),
+		decodeAcceptEmailTripInviteRequest,
+		encodeAcceptEmailTripInviteResponse, opts...,
+	)
+
+	r.Handle("/api/v1/invites/email-trip", sendEmailTripInviteHandler).Methods(http.MethodPost)
+	r.Handle("/api/v1/invites/email-trip/{id}/accept", acceptEmailTripInviteHandler).Methods(http.MethodPut)
 
 	return r
 }
 
-func decodeSendRequest(_ context.Context, r *http.Request) (interface{}, error) {
+// Trip Invites
+
+func decodeSendTripInviteRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	req := SendTripInviteRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, common.ErrInvalidJSONBody
@@ -96,14 +114,14 @@ func decodeSendRequest(_ context.Context, r *http.Request) (interface{}, error) 
 	return req, nil
 }
 
-func decodeListInvitesRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeListTripInvitesRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	req := ListTripInvitesRequest{}
 	ff := MakeListTripInvitesFilterFromURLParams(r.URL.Query())
 	req.ListTripInvitesFilter = ff
 	return req, nil
 }
 
-func decodeDeclineInviteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDeclineTripInviteRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]
 	if !ok {
@@ -112,11 +130,52 @@ func decodeDeclineInviteRequest(_ context.Context, r *http.Request) (interface{}
 	return DeclineTripInviteRequest{ID}, nil
 }
 
-func decodeAcceptInviteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeAcceptTripInviteRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	ID, ok := vars[URLPathVarID]
 	if !ok {
 		return nil, common.ErrInvalidRequest
 	}
 	return AcceptTripInviteRequest{ID}, nil
+}
+
+// Email Trip Invites
+
+func decodeSendEmailTripInviteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := SendEmailTripInviteRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, common.ErrInvalidJSONBody
+	}
+	return req, nil
+}
+
+func decodeAcceptEmailTripInviteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ID, ok := vars[URLPathVarID]
+	if !ok {
+		return nil, common.ErrInvalidRequest
+	}
+	req := AcceptEmailTripInviteRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, common.ErrInvalidJSONBody
+	}
+	req.ID = ID
+	return req, nil
+}
+
+func encodeAcceptEmailTripInviteResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(common.Errorer); ok && e.Error() != nil {
+		common.EncodeErrorFactory(errToHttpCode)(ctx, e.Error(), w)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	resp, ok := response.(AcceptEmailTripInviteResponse)
+	if !ok {
+		return common.ErrorEncodeInvalidResponse
+	}
+
+	if resp.Cookie != nil {
+		http.SetCookie(w, resp.Cookie)
+	}
+	return json.NewEncoder(w).Encode(response)
 }

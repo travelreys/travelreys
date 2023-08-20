@@ -150,7 +150,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvc))
 	r.PathPrefix("/api/v1/social").Handler(social.MakeHandler(socialSvc))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvcWithRBAC))
-	r.PathPrefix("/api/v1/trip-invites").Handler(invites.MakeHandler(inviteSvc))
+	r.PathPrefix("/api/v1/invites").Handler(invites.MakeHandler(inviteSvc))
 
 	return &http.Server{
 		Handler: r,
