@@ -80,6 +80,7 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 		logger.Error("unable to connect map service", zap.Error(err))
 		return nil, err
 	}
+	mapSvcForAPI := maps.SvcWithRBACMw(mapsSvc, logger)
 
 	// Finance
 	finStore := finance.NewStore(rdb, logger)
@@ -134,8 +135,14 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 
 	// Social
 	socialStore := social.NewStore(ctx, db, logger)
-	socialSvc := social.NewService(socialStore, authSvcWithVal, tripSvcWithVal, mailSvc, logger)
-	socialSvc = social.SvcWithRBACMw(socialSvc, tripSvcWithVal, logger)
+	socialSvc := social.NewService(
+		socialStore,
+		authSvcWithVal,
+		tripSvcWithVal,
+		mailSvc,
+		logger,
+	)
+	socialSvcForAPI := social.SvcWithRBACMw(socialSvc, tripSvcWithVal, logger)
 
 	r := mux.NewRouter()
 	securityMW := api.NewSecureHeadersMiddleware(cfg.CORSOrigin)
@@ -155,9 +162,9 @@ func MakeAPIServer(cfg ServerConfig, logger *zap.Logger) (*http.Server, error) {
 	r.PathPrefix("/api/v1/auth").Handler(auth.MakeHandler(authSvcForAPI))
 	r.PathPrefix("/api/v1/images").Handler(images.MakeHandler(imageSvcForAPI))
 	r.PathPrefix("/api/v1/finance").Handler(finance.MakeHandler(finSvcForAPI))
-	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapsSvc))
+	r.PathPrefix("/api/v1/maps").Handler(maps.MakeHandler(mapSvcForAPI))
 	r.PathPrefix("/api/v1/ogp").Handler(ogp.MakeHandler(ogpSvcForAPI))
-	r.PathPrefix("/api/v1/social").Handler(social.MakeHandler(socialSvc))
+	r.PathPrefix("/api/v1/social").Handler(social.MakeHandler(socialSvcForAPI))
 	r.PathPrefix("/api/v1/trips").Handler(trips.MakeHandler(tripSvcForAPI))
 	r.PathPrefix("/api/v1/invites").Handler(invites.MakeHandler(inviteSvc))
 

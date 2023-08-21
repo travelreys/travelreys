@@ -2,6 +2,8 @@ package maps
 
 import (
 	"errors"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,6 +24,10 @@ const (
 	DefaultDirectionMode = DirectionModeDriving
 
 	DefaultWalkingMaxDuration = 20 * time.Minute
+)
+
+const (
+	maxNumMapsPhotos = 7
 )
 
 var (
@@ -63,7 +69,12 @@ func PlaceFromPlaceDetailsResult(result maps.PlaceDetailsResult) Place {
 		},
 	}
 	if len(result.Photos) > 0 {
-		place.Labels[LabelPhotoReference] = result.Photos[0].PhotoReference
+		minPhotos := math.Min(maxNumMapsPhotos, float64(len(result.Photos)))
+		photoURLs := []string{}
+		for i := 0; i < int(minPhotos); i++ {
+			photoURLs = append(photoURLs, result.Photos[i].PhotoReference)
+		}
+		place.Labels[LabelPhotoReference] = strings.Join(photoURLs, "|")
 	}
 	for _, adr := range result.AddressComponents {
 		for _, typ := range adr.Types {
