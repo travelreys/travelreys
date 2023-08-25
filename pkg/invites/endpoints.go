@@ -145,10 +145,9 @@ func NewSendEmailTripInviteEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type AcceptEmailTripInviteRequest struct {
-	ID         string `json:"id"`
-	Code       string `json:"code"`
-	Sig        string `json:"sig"`
-	IsLoggedIn bool   `json:"isLoggedIn"`
+	ID   string `json:"id"`
+	Code string `json:"code"`
+	Sig  string `json:"sig"`
 }
 type AcceptEmailTripInviteResponse struct {
 	User   auth.User    `json:"user"`
@@ -169,7 +168,7 @@ func NewAcceptEmailTripInviteEndpoint(svc Service) endpoint.Endpoint {
 			}, nil
 		}
 		user, cookie, err := svc.AcceptEmailTripInvite(
-			ctx, req.ID, req.Code, req.Sig, req.IsLoggedIn,
+			ctx, req.ID, req.Code, req.Sig,
 		)
 		return AcceptEmailTripInviteResponse{
 			User: user, Cookie: cookie, Err: err,

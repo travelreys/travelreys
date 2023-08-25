@@ -61,19 +61,6 @@ func (mw validationMiddleware) GenerateOTPAuthCodeAndSig(
 	return mw.next.GenerateOTPAuthCodeAndSig(ctx, email, duration)
 }
 
-func (mw validationMiddleware) EmailLogin(
-	ctx context.Context,
-	authCode,
-	signature string,
-	isLoggedIn bool,
-) (User, *http.Cookie, error) {
-	if authCode == "" || signature == "" {
-		mw.logger.Warn("EmailLogin")
-		return User{}, nil, common.ErrValidation
-	}
-	return mw.next.EmailLogin(ctx, authCode, signature, isLoggedIn)
-}
-
 func (mw validationMiddleware) Read(ctx context.Context, ID string) (User, error) {
 	if ID == "" {
 		mw.logger.Warn("Read")

@@ -42,7 +42,7 @@ type Service interface {
 	ListTripInvites(ctx context.Context, ff ListTripInvitesFilter) (TripInviteList, error)
 
 	SendEmailTripInvite(ctx context.Context, tripID, authorID, userEmail string) error
-	AcceptEmailTripInvite(ctx context.Context, ID, code, sig string, isLoggedIn bool) (auth.User, *http.Cookie, error)
+	AcceptEmailTripInvite(ctx context.Context, ID, code, sig string) (auth.User, *http.Cookie, error)
 	ReadEmailTripInvite(ctx context.Context, ID string) (EmailTripInvite, error)
 	ListEmailTripInvites(ctx context.Context, ff ListEmailTripInvitesFilter) (EmailTripInviteList, error)
 }
@@ -115,7 +115,7 @@ func (svc *service) AcceptAppInvite(
 	}
 
 	go svc.store.DeleteAppInvite(ctx, ID)
-	return svc.authSvc.EmailLogin(ctx, code, sig, false)
+	return svc.authSvc.Login(ctx, code, sig, auth.OIDCProviderOTP)
 }
 
 func (svc *service) sendAppInviteEmail(
@@ -360,14 +360,15 @@ func (svc service) AcceptEmailTripInvite(
 	ID,
 	code,
 	sig string,
-	isLoggedIn bool,
 ) (auth.User, *http.Cookie, error) {
 	invite, err := svc.store.ReadEmailTripInvite(ctx, ID)
 	if err != nil {
 		return auth.User{}, nil, err
 	}
 
-	usr, cookie, err := svc.authSvc.EmailLogin(ctx, code, sig, isLoggedIn)
+	usr, cookie, err := svc.authSvc.Login(
+		ctx, code, sig, auth.OIDCProviderOTP,
+	)
 	if err != nil {
 		return auth.User{}, nil, err
 	}
@@ -397,7 +398,7 @@ func (svc service) AcceptEmailTripInvite(
 		return auth.User{}, nil, err
 	}
 
-	go svc.store.DeleteTripInvite(context.Background(), ID)
+	go svc.store.DeleteEmailTripInvite(context.Background(), ID)
 	return usr, cookie, nil
 }
 

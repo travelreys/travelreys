@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	AuthHeader     = "authorization"
 	AuthCookieName = "_travelreysAuth"
 )
 

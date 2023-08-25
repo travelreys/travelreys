@@ -85,6 +85,7 @@ func NewGoogleProvider(cfgFile string) (GoogleProvider, error) {
 }
 
 func (gp *GoogleProvider) TokenToUserInfo(ctx context.Context, code string) (GoogleUser, error) {
+	fmt.Println(code)
 	token, err := gp.cfg.Exchange(ctx, code)
 	if err != nil {
 		return GoogleUser{}, err
