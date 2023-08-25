@@ -131,13 +131,12 @@ func (mw *validationMiddleware) AcceptEmailTripInvite(
 	ID,
 	code,
 	sig string,
-	isLoggedIn bool,
 ) (auth.User, *http.Cookie, error) {
 	if ID == "" || sig == "" || code == "" {
 		mw.logger.Warn("AcceptEmailTripInvite")
 		return auth.User{}, nil, common.ErrValidation
 	}
-	return mw.next.AcceptEmailTripInvite(ctx, ID, code, sig, isLoggedIn)
+	return mw.next.AcceptEmailTripInvite(ctx, ID, code, sig)
 }
 
 func (mw *validationMiddleware) ReadEmailTripInvite(
@@ -349,9 +348,8 @@ func (mw *rbacMiddleware) AcceptEmailTripInvite(
 	ID,
 	code,
 	sig string,
-	isLoggedIn bool,
 ) (auth.User, *http.Cookie, error) {
-	return mw.next.AcceptEmailTripInvite(ctx, ID, code, sig, isLoggedIn)
+	return mw.next.AcceptEmailTripInvite(ctx, ID, code, sig)
 }
 
 func (mw *rbacMiddleware) ReadEmailTripInvite(

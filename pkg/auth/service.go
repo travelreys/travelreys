@@ -38,16 +38,19 @@ var (
 )
 
 type Service interface {
+	// Web Login
 	Login(ctx context.Context, authCode, signature, provider string) (User, *http.Cookie, error)
-	MagicLink(ctx context.Context, email string) error
-	GenerateOTPAuthCodeAndSig(ctx context.Context, email string, duration time.Duration) (string, string, error)
 
-	EmailLogin(
+	// MagicLink sends a OTP email to the user
+	MagicLink(ctx context.Context, email string) error
+
+	// MobileLogin(ctx context.Context, idToken string)
+
+	GenerateOTPAuthCodeAndSig(
 		ctx context.Context,
-		authCode,
-		signature string,
-		isLoggedIn bool,
-	) (User, *http.Cookie, error)
+		email string,
+		duration time.Duration,
+	) (string, string, error)
 
 	Read(ctx context.Context, ID string) (User, error)
 	List(ctx context.Context, ff ListFilter) (UsersList, error)
@@ -317,64 +320,4 @@ func (svc service) sendMagicLinkEmail(
 		svc.logger.Error("sendMagicLinkEmail", zap.Error(err))
 	}
 
-}
-
-// Invite Service
-
-func (svc service) EmailLogin(
-	ctx context.Context,
-	code,
-	signature string,
-	isLoggedIn bool,
-) (User, *http.Cookie, error) {
-	usr, err := svc.otp.TokenToUserInfo(ctx, code, signature)
-	if err != nil {
-		return User{}, nil, err
-	}
-
-	isNewUser := false
-	existUsr, err := svc.store.Read(
-		ctx,
-		ReadFilter{Email: usr.Email},
-	)
-	if err == ErrUserNotFound {
-		isNewUser = true
-	} else if err != nil {
-		return User{}, nil, err
-	} else {
-		usr = existUsr
-	}
-
-	if isNewUser {
-		usr.CreatedAt = time.Now()
-		if err := svc.store.Save(ctx, usr); err != nil {
-			svc.logger.Error("EmailLogin", zap.Error(err))
-			return User{}, nil, err
-		}
-		go svc.sendWelcomeEmail(context.Background(), usr.Name, usr.Email)
-	}
-
-	// The request could come from a new that is already
-	// logged in, or a user that is not logged in.
-	var cookie *http.Cookie
-	if !isLoggedIn {
-		jwt, err := svc.issueJwtToken(usr)
-		if err != nil {
-			svc.logger.Error("EmailLogin", zap.Error(err))
-			return User{}, nil, err
-		}
-		cookie = &http.Cookie{
-			Name:     AccessCookieName,
-			Value:    jwt,
-			HttpOnly: true,
-			Path:     "/",
-			MaxAge:   int(authCookieDuration.Seconds()),
-		}
-
-		if svc.secureCookie {
-			cookie.SameSite = http.SameSiteNoneMode
-			cookie.Secure = true
-		}
-	}
-	return usr, cookie, nil
 }
