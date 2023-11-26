@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -16,10 +17,10 @@ import (
 
 var (
 	FxApiEndpoints = []string{
-		"https://api.exchangerate.host",
-		"https://api-eu.exchangerate.host",
-		"https://api-us.exchangerate.host",
+		"http://api.exchangerate.host",
 	}
+
+	FxApiKey = os.Getenv("TRAVELREYS_EXCHANGE_RATE_KEY")
 )
 
 type Service interface {
@@ -49,7 +50,11 @@ func (svc service) GetFxRates(ctx context.Context, base string) (ExchangeRates, 
 	client := http.Client{}
 	request, err := http.NewRequest(
 		"GET",
-		fmt.Sprintf("%s/latest?base=%s", FxApiEndpoints[rand.Intn(len(FxApiEndpoints))], base),
+		fmt.Sprintf("%s/live?access_key=%s&source=%s",
+			FxApiEndpoints[rand.Intn(len(FxApiEndpoints))],
+			FxApiKey,
+			base,
+		),
 		nil,
 	)
 	if err != nil {
@@ -63,11 +68,13 @@ func (svc service) GetFxRates(ctx context.Context, base string) (ExchangeRates, 
 		return ExchangeRates{}, err
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&rates); err != nil {
+	var exRateResp ExchangeRateHostResponse
+	if err := json.NewDecoder(resp.Body).Decode(&exRateResp); err != nil {
 		svc.logger.Error("GetFxRates", zap.Error(err))
 		return ExchangeRates{}, err
 	}
 
+	rates = NewExchangeRatesFromExchangeRateHostResponse(exRateResp)
 	svc.store.SaveFxRates(ctx, rates, 60*time.Minute)
 	return rates, nil
 }
